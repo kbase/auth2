@@ -788,7 +788,7 @@ public class MongoStorage implements AuthStorage {
 		boolean complete = false;
 		while (!complete) {
 			complete = addIdentity(user, remoteID);
-		} //TODO CODE have a max loop limit to protect against bugs
+		} //TODO CODE RACE have a max loop limit to protect against bugs
 	}
 	
 	private boolean addIdentity(

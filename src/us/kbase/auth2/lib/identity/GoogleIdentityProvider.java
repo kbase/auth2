@@ -128,7 +128,7 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		final Map<String, Object> id = googleGetRequest(
 				accessToken, target);
 		if (id.containsKey("error")) {
-			//TODO ERROR better error handling
+			//TODO IDPROVERROR better error handling
 			throw new IdentityRetrievalException(
 					"Provider error: " + id.get("error"));
 		}

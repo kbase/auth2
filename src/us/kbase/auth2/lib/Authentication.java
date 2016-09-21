@@ -51,7 +51,6 @@ public class Authentication {
 	//TODO TEST test logging on calls
 	//TODO JAVADOC 
 	//TODO AUTH schema version
-	//TODO AUTH handle root user somehow (spec chars unallowed in usernames?)
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO AUTH check workspace for other useful things like the schema manager
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token
@@ -62,9 +61,9 @@ public class Authentication {
 	//TODO ADMIN deactivate account
 	//TODO ADMIN force user pwd reset
 	//TODO TOKEN tokens - redirect to standard login if not logged in (other pages as well)
-	//TODO USERPROFILE email & username change propagation
-	//TODO USERCONFIG set email & username privacy & respect (in both legacy apis)
-	//TODO USERCONFIG set email & username
+	//TODO USER_PROFILE_SERVICE email & username change propagation
+	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
+	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	//TODO CONFIG set token cache time to be sent to client via api
 	//TODO UI set keep me logged in on login page
@@ -557,7 +556,7 @@ public class Authentication {
 			final boolean privateNameEmail)
 			throws AuthStorageException, AuthenticationException,
 				UserExistsException, UnauthorizedException {
-		//TODO USER_CONFIG handle sessionLogin, privateNameEmail
+		//TODO CONFIG_USER handle sessionLogin, privateNameEmail
 		//TODO INPUT check all inputs, check fullname and email are reasonable - probably class for email that does basic validation
 		if (userName == null) {
 			throw new NullPointerException("userName");

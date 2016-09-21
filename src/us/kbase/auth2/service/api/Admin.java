@@ -134,8 +134,7 @@ public class Admin {
 		final Date lastLogin = au.getLastLogin();
 		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
 		final Set<Role> r = au.getRoles();
-		//TODO ADMIN only show admin button if root user
-		//TODO ADMIN only allow changing admin status if root user
+		//TODO ADMIN only show create-admin & admin buttons when appropriate
 		ret.put("admin", Role.ADMIN.isSatisfiedBy(r));
 		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(r));
 		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(r));
