@@ -1,7 +1,7 @@
-Temporary and experimental code for the auth server rewrite. Eventually 
-useful code will be migrated (with unit tests & documentation) to kbase/auth2.
+KBase authentication server
+===========================
 
-Unit tests & documentation for code in this repo is not required.
+This repo contains the second iteration of the KBase authentication server.
 
 Current endpoints
 -----------------
@@ -31,10 +31,10 @@ Self explanatory.
 User page.
 
 /tokens  
-list and create tokens
+list and create tokens.
 
 /api/legacy/KBase/Sessions/Login  
-the legacy KBase API
+the legacy KBase API.
 
 /api/legacy/globus  
 the legacy globus API. Endpoints are /goauth/token and /users.
@@ -96,4 +96,7 @@ Start & stop server w/o a pid
 
 Omit the stop key to have jetty generate one for you.
 
+Ancient history
+---------------
 
+https://github.com/kbaseIncubator/auth2proto
