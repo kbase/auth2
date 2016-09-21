@@ -40,7 +40,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	private static final String TOKEN_PATH = "/v2/oauth2/token";
 	private static final String INTROSPECT_PATH = TOKEN_PATH + "/introspect";
 	private static final String IDENTITIES_PATH = "/v2/api/identities";
-	private static final String AUTH_CODE_PARAM = "code";
 	
 	//thread safe
 	private static final Client CLI = ClientBuilder.newClient();
@@ -83,11 +82,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return toURL(target);
 	}
 	
-	@Override
-	public String getAuthCodeQueryParamName() {
-		return AUTH_CODE_PARAM;
-	}
-
 	//Assumes valid URL in URI form
 	private URL toURL(final URI baseURI) {
 		try {

@@ -114,7 +114,7 @@ public class Link {
 	
 	@GET
 	@Path("/complete/{provider}")
-	public Response login(
+	public Response link(
 			@PathParam("provider") String provider,
 			@CookieParam("statevar") final String state,
 			@CookieParam("token") final String token,
@@ -127,8 +127,7 @@ public class Link {
 		final MultivaluedMap<String, String> qps =
 				uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
-		final IdentityProvider idp = auth.getIdentityProvider(provider);
-		final String authcode = qps.getFirst(idp.getAuthCodeQueryParamName());
+		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		if (state == null || state.trim().isEmpty()) {
 			throw new MissingParameterException(
