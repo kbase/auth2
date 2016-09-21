@@ -39,7 +39,6 @@ Auth service work
 * Admin functionality
   * Find users
   * revoke single / user's / all tokens
-  * Bootstrap root user
   * View / modify server config
   * Disable account (revoke all tokens & prevent logins)
   * Force pwd reset for local accounts (per user and all)
