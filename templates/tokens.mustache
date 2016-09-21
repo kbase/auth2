@@ -1,0 +1,45 @@
+<html>
+<body>
+<p>User: {{user}}<br/>
+Expiration and creation dates are in seconds from the epoch.
+</p>
+{{#dev}}
+Create a token:
+<form action="{{targeturl}}" method="post">
+	Token name: <input type="text" name="tokenname"/><br/>
+{{#serv}}
+	<input type="checkbox" name="tokentype" value="server"/>Server token<br/>
+{{/serv}}
+	<input type="submit" value="Submit"/>
+</form>
+{{/dev}}
+<form action="{{revokeallurl}}" method="post">
+	<input type="submit" value="Revoke all tokens and logout"/>
+</form>
+Current token:<br/>
+{{#current}}
+{{#name}}
+Name: {{name}}<br/>
+{{/name}}
+ID: {{id}}<br/>
+Type: {{type}}<br/>
+Created: {{created}}<br/>
+Expires: {{expires}}<br/>
+<br/>
+{{/current}}
+<p>Tokens:</p>
+{{#tokens}}
+{{#name}}
+Name: {{name}}<br/>
+{{/name}}
+ID: {{id}}<br/>
+Type: {{type}}<br/>
+Created: {{created}}<br/>
+Expires: {{expires}}<br/>
+<form action="{{tokenurl}}{{id}}" method="post">
+	<input type="submit" value="Revoke"/>
+</form>
+<br/>
+{{/tokens}}
+</body>
+</html>

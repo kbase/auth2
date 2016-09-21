@@ -1,0 +1,26 @@
+<html>
+<body>
+
+{{#hasprov}}
+<h3>Login to KBase with:</h3>
+{{/hasprov}}
+
+{{#providers}}
+<p><a href="{{urlpre}}{{name}}{{#redirect}}&redirect={{.}}{{/redirect}}">
+	<img src="{{img}}" alt="{{name}}"/></a>
+</p> 
+{{/providers}}
+
+{{#hasprov}}
+You will be redirected to the identity provider website where you will be asked
+to allow KBase to view your account information - your account ID, email
+address, and name.<br/>
+You will have 30 minutes to complete the identity provider's login process.
+{{/hasprov}}
+
+{{^hasprov}}
+Sorry, login to KBase is currently disabled.
+{{/hasprov}}
+
+</body>
+</html>

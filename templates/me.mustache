@@ -1,0 +1,36 @@
+<html>
+<body>
+
+<h2>User: {{user}}</h2>
+Created: {{created}}<br/>
+Last login: {{lastlogin}}<br/>
+{{#local}}
+Local account<br/>
+{{/local}}
+<h3>Roles:</h3>
+{{#roles}}
+{{.}}<br/>
+{{/roles}}
+<h3>Custom roles:</h3>
+{{#customroles}}
+{{.}}<br/>
+{{/customroles}}
+<h3>User details</h3>
+<form action="{{userupdateurl}}" method="post">
+	Full name: <input type="text" name="fullname" value="{{fullname}}"/><br/>
+	Email: <input type="text" name="email" value="{{email}}"/><br/>
+	<input type="submit" value="Update"/>
+</form>
+<h3>Identities:</h3>
+{{#idents}}
+Provider: {{provider}}<br/>
+User id: {{username}}<br/>
+{{#unlink}}
+<form action="{{unlinkprefixurl}}{{id}}" method="post">
+	<input type="submit" value="Unlink"/>
+</form>
+{{/unlink}}
+{{/idents}}
+
+</html>
+</body>

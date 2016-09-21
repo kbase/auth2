@@ -1,0 +1,220 @@
+<project name="KBase Authentication Service MKII" default="test" basedir=".">
+
+  <description>
+      Build file for the second KBase Authentication Service 
+  </description>
+
+  <!-- set global properties for this build -->
+  <property name="package" value="KBase authentication service"/>
+  <property name="src" location="src"/>
+  <property name="lib" location="lib"/>
+  <property name="dist" location="dist"/>
+  <property name="test" location="test"/>
+  <property name="jardir" location="../jars/lib/jars/"/>
+  <property name="doc_server_doc_loc" location="/server_docs"/>
+  <property name="classes" location="classes"/>
+  <property name="doc" location="docs/javadoc"/>
+  <property name="tempunpack" location="unpackedjars"/>
+  <property name="jar.file" value="KBaseAuth2.jar"/>
+  <property name="war.file" value="KBaseAuth2.war"/>
+  <property name="clientjar.file" value="UserAndJobStateClient.jar"/>
+  <property name="war.dir" value="war"/>
+
+  <fileset dir="${jardir}" id="lib">
+    <!-- don't compile with the jetty jar, just use for test code -->
+    <include name="apache_commons/commons-codec-1.8.jar"/>
+    <include name="google/guava-18.0.jar"/>
+    <include name="ini4j/ini4j-0.5.2.jar"/>
+    <include name="jcommander/jcommander-1.48.jar"/>
+    <include name="mongo/mongo-java-driver-3.3.0.jar"/>
+    <include name="mustache/compiler-0.9.3.jar"/>
+  </fileset>
+
+  <fileset dir="${jardir}" id="logging">
+    <include name="kbase/common/kbase-common-0.0.22.jar"/>
+    <include name="jna/jna-3.4.0.jar"/>
+    <include name="logback/logback-core-1.1.2.jar"/>
+    <include name="logback/logback-classic-1.1.2.jar"/>
+    <include name="slf4j/slf4j-api-1.7.7.jar"/>
+    <include name="syslog4j/syslog4j-0.9.46.jar"/>
+  </fileset>
+
+  <fileset dir="${jardir}" id="jackson">
+    <include name="jackson/jackson-annotations-2.5.4.jar"/>
+    <include name="jackson/jackson-core-2.5.4.jar"/>
+    <include name="jackson/jackson-databind-2.5.4.jar"/>
+    <include name="jackson/jackson-jaxrs-base-2.5.4.jar"/>
+    <include name="jackson/jackson-jaxrs-json-provider-2.5.4.jar"/>
+    <include name="jackson/jackson-module-jaxb-annotations-2.5.4.jar"/>
+  </fileset>
+	
+  <fileset dir="${jardir}" id="jersey">
+    <include name="jersey/entity-filtering/jersey-entity-filtering-2.23.2.jar"/>
+    <include name="jersey/entity-filtering/jersey-media-json-jackson-2.23.2.jar"/>
+    <include name="jersey/mvc/jersey-mvc-2.23.2.jar"/>
+    <include name="jersey/mvc/jersey-mvc-mustache-2.23.2.jar"/>
+    <include name="jersey/jersey-client-2.23.2.jar"/>
+    <include name="jersey/jersey-common-2.23.2.jar"/>
+    <include name="jersey/jersey-container-servlet-2.23.2.jar"/>
+    <include name="jersey/jersey-container-servlet-core-2.23.2.jar"/>
+    <include name="jersey/jersey-guava-2.23.2.jar"/>
+    <include name="jersey/jersey-media-jaxb-2.23.2.jar"/>
+    <include name="jersey/jersey-server-2.23.2.jar"/>
+  </fileset>
+
+  <fileset dir="${jardir}" id="jerseydeps">
+    <include name="annotation/javax.annotation-api-1.2.jar"/>
+    <include name="asm/asm-debug-all-5.0.4.jar"/>
+    <include name="inject/javax.inject-2.5.0-b05.jar"/>
+    <include name="javassist/javassist-3.20.0-GA.jar"/>
+    <include name="jaxb/jaxb-api-2.2.7.jar"/>
+    <include name="jaxrs/javax.ws.rs-api-2.0.1.jar"/>
+    <include name="osgi/org.osgi.core-4.2.0.jar"/>
+    <include name="persistence/persistence-api-1.0.jar"/>
+    <include name="servlet/javax.servlet-api-3.0.1.jar"/>
+    <include name="validationapi/validation-api-1.1.0.Final.jar"/>
+  </fileset>
+
+  <fileset dir="${jardir}" id="jerseydep_hk2">
+    <include name="hk2/aopalliance-repackaged-2.5.0-b05.jar"/>
+    <include name="hk2/hk2-api-2.5.0-b05.jar"/>
+    <include name="hk2/hk2-locator-2.5.0-b05.jar"/>
+    <include name="hk2/hk2-utils-2.5.0-b05.jar"/>
+    <include name="hk2/osgi-resource-locator-1.0.1.jar"/>
+  </fileset>
+	
+  <union id="serverside">
+    <fileset refid="jerseydeps"/>
+    <fileset refid="jerseydep_hk2"/>
+    <fileset refid="jackson"/>
+    <fileset refid="jersey"/>
+    <fileset refid="lib"/>
+    <fileset refid="logging"/>
+  </union>
+
+  <path id="compile.classpath">
+    <union refid="serverside"/>
+  </path>
+
+  <path id="test.classpath">
+    <path refid="compile.classpath"/>
+    <fileset file="${dist}/${jar.file}"/>
+  </path>
+	
+  <target name="build" depends="compile,buildwar,script"
+    description="build everything"/>
+
+  <target name="init" description="make directories">
+    <!-- Create the output directory structure-->
+    <mkdir dir="${classes}"/>
+    <mkdir dir="${dist}"/>
+  </target>
+
+  <target name="compile" depends="init" description="compile the source">
+    <!-- Compile class files-->
+    <javac srcdir="${src}"
+           destdir="${classes}"
+           excludes="helloserver/**, us/kbase/test/auth2/**"
+           includeantruntime="false"
+           debug="true"
+           classpathref="compile.classpath"
+           target="1.8"
+           source="1.8">
+    </javac>
+    <!-- Copy resource files-->
+      <copy todir="${classes}">
+        <fileset dir="${src}">
+          <patternset>
+            <include name="**/*.cfg"/>
+            <include name="**/*.py"/>
+            <include name="**/*.html"/>
+          </patternset>
+        </fileset>
+      </copy>
+    <!-- Make main jar file-->
+    <jar destfile="${dist}/${jar.file}" basedir="${classes}"/>
+  </target>
+
+  <target name="buildwar" description="build the WAR file. Assumes compile has been run">
+    <!-- make the war file for the server-->
+    <mkdir dir="${war.dir}/lib"/>
+    <copy todir="${war.dir}/lib/" flatten="true">
+      <union refid="serverside"/>
+    </copy>
+    <war destfile="${dist}/${war.file}" webxml="${war.dir}/web.xml">
+      <classes dir="${classes}"/>
+      <lib dir="${war.dir}/lib/"/>
+    </war>
+    <!-- Remove uncompressed class files and libs-->
+    <delete dir="${war.dir}/lib"/>
+    <!-- copy war to jettybase -->
+    <copy tofile="./jettybase/webapps/ROOT.war" file="${dist}/${war.file}" />
+    <!-- probably a better way to do this -->
+    <delete dir="./jettybase/webapps/assets"/>
+    <mkdir dir="./jettybase/webapps/assets"/>
+    <copy todir="./jettybase/webapps/assets">
+      <fileset dir="./webapps/assets" includes="**"/>  
+    </copy>
+    <delete dir="./jettybase/templates"/>
+    <mkdir dir="./jettybase/templates"/>
+    <copy todir="./jettybase/templates">
+      <fileset dir="./templates" includes="**"/>  
+    </copy>
+  </target>
+
+  <target name="javadoc" description="build javadocs">
+    <javadoc access="protected" author="false" classpathref="compile.classpath"
+      destdir="${doc}" nodeprecated="false" nodeprecatedlist="false"
+      noindex="false" nonavbar="false" notree="false"
+      source="1.8" splitindex="true" use="true" version="true">
+      <link href="http://download.oracle.com/javase/7/docs/api/"/>
+      <link href="http://fasterxml.github.io/jackson-core/javadoc/2.2.0/"/>
+      <link href="http://fasterxml.github.io/jackson-databind/javadoc/2.2.0/"/>
+      <fileset refid="client-jdoc-files"/>
+      <fileset refid="sources-jdoc-files"/>
+    </javadoc>
+    <delete dir="${tempunpack}"/>
+  </target>
+
+  <target name="test" depends="compile" description="run tests">
+    <fail unless="test.globus.url" message="property test.globus.url not set."/>
+    <fail unless="test.mongo.exe" message="property test.mongo.exe not set."/>
+    <fail unless="test.temp.dir" message="property test.temp.dir not set."/>
+    <echo message="starting ${package} tests"/>
+    <junit failureproperty="test.failed" fork="yes">
+      <classpath refid="test.classpath"/>
+      <formatter type="plain" usefile="false" />
+      <sysproperty key="test.globus.url" value="${test.globus.url}" />
+      <sysproperty key="test.mongo.exe" value="${test.mongo.exe}"/>
+      <sysproperty key="test.temp.dir" value="${test.temp.dir}"/>
+      <sysproperty key="test.temp.dir.keep" value="${test.temp.dir.keep}"/>
+      <test name="us.kbase.userandjobstate.test.jobstate.JobStateTests"/>
+      <test name="us.kbase.userandjobstate.test.jobstate.JobResultsTest"/>
+      <test name="us.kbase.userandjobstate.test.userstate.UserStateTests"/>
+      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCLayerTest"/>
+      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCWithWSAuth"/>
+      <test name="us.kbase.userandjobstate.test.kbase.WorkspaceAuthTest"/>
+      <test name="us.kbase.userandjobstate.test.kbase.PullWSJobWithoutWSTest"/>
+      <test name="us.kbase.userandjobstate.test.authorization.AuthorizationTest"/>
+      <test name="us.kbase.userandjobstate.test.docserver.DocServerTest"/>
+      <test name="us.kbase.common.test.schemamanager.SchemaManagerTest"/>
+    </junit>
+    <fail message="Test failure detected, check test results." if="test.failed" />
+  </target>
+	
+  <target name="script" depends="compile" description="create cli script">
+    <pathconvert targetos="unix" property="lib.classpath" refid="compile.classpath"/>
+    <echo file="./manage_auth">#!/bin/sh
+java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
+    </echo>
+    <chmod file="./manage_auth" perm="a+x"/>
+  </target>
+	
+  <target name="clean" description="clean up" >
+    <!-- Clean up internal temporary files and folders-->
+    <delete dir="${classes}"/>
+    <delete dir="${dist}"/>
+    <!--<delete dir="${test}"/>-->
+  </target>
+</project>
+

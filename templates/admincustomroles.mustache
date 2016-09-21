@@ -1,0 +1,20 @@
+<html>
+<body>
+<h3>Custom roles:</h3>
+{{#roles}}
+<p>
+ID: {{ID}}<br/>
+Description:<br/>
+{{desc}}
+</p>
+{{/roles}}
+
+<form action="{{custroleurl}}" method="post" id="custroleform">
+ID: <input type="text" name="id"/><br/>
+Description:<br/>
+<textarea name="desc" form="custroleform" cols="40" rows="5"></textarea><br/>
+<input type="submit" value="Create or update">
+</form>
+
+</html>
+</body>

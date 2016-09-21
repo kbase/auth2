@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset='utf-8'>
+    <title>{{code}} {{status}}</title>
+  </head>
+  <body>
+    <p>
+    Gee whiz, I sure am sorry, but an error occurred. Gosh!
+    </p>
+    Timestamp: {{time}}<br/>
+    {{#callID}}
+        Call ID: {{callID}}</br>
+    {{/callID}}
+    Http code: {{httpCode}}<br/>
+    Http status: {{httpStatus}}<br/>
+    {{#appCode}}
+        Application code: {{appCode}}</br>
+    {{/appCode}}
+    {{#appError}}
+        Application error: {{appError}}</br>
+    {{/appError}}
+    Message: {{message}}<br/>
+    {{#hasException}}
+    Exception:<br/>
+    <pre>
+    {{#exceptionLines}}
+        {{{.}}}
+    {{/exceptionLines}}
+    </pre>
+    {{/hasException}}
+  </body>
+</html>

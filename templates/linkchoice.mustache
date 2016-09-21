@@ -1,0 +1,16 @@
+<html>
+<body>
+<h2>Link {{provider}} account</h2>
+<p>Link one of the following accounts to your <strong>{{user}}</strong>
+KBase acccount:</p>
+
+{{#ids}}
+Provider username: {{prov_username}}<br/>
+<form action="{{pickurl}}" method="post">
+	<input type="hidden" name="id" value="{{id}}"/>
+	<input type="submit" value="Link"/>
+</form>
+{{/ids}}
+
+</html>
+</body>

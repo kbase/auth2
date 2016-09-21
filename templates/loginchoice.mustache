@@ -1,0 +1,34 @@
+<html>
+<body>
+
+<h2>Provider: {{provider}}</h2>
+
+<h3>Login</h3>
+<p>The login information from the provider allows you to access these KBase
+accounts:</p>
+{{#login}}
+Provider username: {{prov_username}}<br/>
+KBase username: {{username}}<br/>
+<form action="{{pickurl}}" method="post">
+	<input type="hidden" name="id" value="{{id}}"/>
+	<input type="submit" value="Login"/>
+</form>
+{{/login}}
+
+<h3>Create account</h3>
+{{#create}}
+<p>Create a KBase account linked to {{prov_username}}</p>
+</p>
+<form action="{{createurl}}" method="post">
+	User name: <input type="text" name="user" value="{{usernamesugg}}"/><br/>
+	Full name: <input type="text" name="full" value="{{prov_fullname}}"/><br/>
+	Email: <input type="text" name="email" value="{{prov_email}}"/></br/>
+	Don't expire my sessions when I close my browser: <input type="checkbox" name="stayLoggedIn"/></br/>
+	Keep name and email private: <input type="checkbox" name="private"/></br/>
+	<input type="hidden" name="id" value="{{id}}"/>
+	<input type="submit" value="Create"/>
+</form>
+{{/create}}
+
+</html>
+</body>

@@ -1,0 +1,36 @@
+<html>
+<body>
+<h3>User info</h3>
+User name: {{user}}<br/>
+Full name: {{full}}<br/>
+Email: {{email}}<br/>
+Created: {{created}}<br/>
+Last login: {{lastlogin}}<br/>
+Local: {{local}}<br/>
+<h3>Roles:</h3>
+<form action="{{roleurl}}" method="post">
+	Create developer token: <input type="checkbox" name="dev" {{#dev}}checked{{/dev}}/><br/>
+	Create server token: <input type="checkbox" name="serv" {{#serv}}checked{{/serv}}/><br/>
+	Admin: <input type="checkbox" name="admin" {{#admin}}checked{{/admin}}/><br/>
+	Create admin: <input type="checkbox" name="createadmin" {{#createadmin}}checked{{/createadmin}}/><br/>
+<input type="submit" value="Update"/>
+</form>
+
+<h3>Custom roles:</h3>
+{{#hascustom}}
+<form action="{{customroleurl}}" method="post">
+{{/hascustom}}
+{{#custom}}
+<p>
+ID: {{id}} <input type="checkbox" name="{{id}}" {{#has}}checked{{/has}}/><br/>
+Description:<br/>
+{{desc}}
+</p>
+{{/custom}}
+{{#hascustom}}
+<input type="submit" value="Update"/>
+</form>
+{{/hascustom}}
+
+</body>
+</html>

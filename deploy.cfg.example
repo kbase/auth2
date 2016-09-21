@@ -1,0 +1,33 @@
+# Example deployment configuration file for the KBase authentication server
+# MKII.
+# Make a copy, fill in as required, and set KB_DEPLOYMENT_CFG to point to the
+# new file before starting the server.
+
+[authserv2]
+
+mongo-host=
+mongo-db=
+mongo-user=
+mongo-pwd=
+
+# the name of the service to report when logging to syslog.
+log-name=KBaseAuthServ2
+
+identity-providers=Globus, Google
+
+identity-provider-Globus-login-url=https://auth.globus.org
+identity-provider-Globus-api-url=https://auth.globus.org
+# note path from the webapps folder to the image, starting with /, or absolute path to image
+identity-provider-Globus-image-uri=/assets/globus.png
+identity-provider-Globus-client-id=
+identity-provider-Globus-client-secret=
+identity-provider-Globus-login-redirect-url=https://kbase.us/services/authorization2/login/complete/globus
+identity-provider-Globus-link-redirect-url=https://kbase.us/services/authorization2/link/complete/globus
+
+identity-provider-Google-login-url=https://accounts.google.com/
+identity-provider-Google-api-url=https://www.googleapis.com/
+identity-provider-Google-image-uri=/assets/google.png
+identity-provider-Google-client-id=
+identity-provider-Google-client-secret=
+identity-provider-Google-login-redirect-url=https://kbase.us/services/authorization2/login/complete/google
+identity-provider-Google-link-redirect-url=https://kbase.us/services/authorization2/link/complete/google
