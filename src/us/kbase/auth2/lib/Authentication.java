@@ -19,6 +19,7 @@ import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.TokenGenerator;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -94,7 +95,6 @@ public class Authentication {
 	public Authentication(
 			final AuthStorage storage,
 			final IdentityProviderFactory identityProviderFactory) {
-		System.out.println("starting application");
 		try {
 			tokens = new TokenGenerator();
 			pwdcrypt = new PasswordCrypt();
@@ -135,6 +135,7 @@ public class Authentication {
 			throws AuthStorageException, UserExistsException,
 			MissingParameterException, UnauthorizedException,
 			InvalidTokenException {
+		//TODO INPUT check reasonable email - probably wrapper class
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		if (userName == null) {
 			throw new NullPointerException("userName");
@@ -557,6 +558,7 @@ public class Authentication {
 			throws AuthStorageException, AuthenticationException,
 				UserExistsException, UnauthorizedException {
 		//TODO USER_CONFIG handle sessionLogin, privateNameEmail
+		//TODO INPUT check all inputs, check fullname and email are reasonable - probably class for email that does basic validation
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
@@ -731,5 +733,46 @@ public class Authentication {
 			throw new AuthStorageException("Token without a user: " +
 					ht.getId());
 		}
+	}
+
+	// do not expose this method in the public API
+	// note token is for contacting the provider, not an auth token
+	public void importUser(
+			final IncomingToken providerToken,
+			final String provider,
+			final String user)
+			throws NoSuchIdentityProviderException, UserExistsException,
+			IllegalParameterException, AuthStorageException,
+			IdentityRetrievalException {
+		if (providerToken == null) {
+			throw new NullPointerException("providerToken");
+		}
+		final IdentityProvider idp = getIdentityProvider(provider);
+		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
+		String username = ri.getDetails().getUsername();
+		/* Do NOT otherwise change the username here - this is importing
+		 * existing users, and so changing the username will mean erroneous
+		 * resource assignments
+		 */
+		if (username.contains("@")) {
+			username = username.split("@")[0];
+			if (username.isEmpty()) {
+				throw new IllegalParameterException(
+						ErrorType.ILLEGAL_USER_NAME,
+						ri.getDetails().getUsername());
+			}
+		}
+		final UserName un;
+		try {
+			un = new UserName(username);
+		} catch (MissingParameterException e) {
+			throw new RuntimeException("Impossible", e);
+		}
+		final Date now = new Date();
+		storage.createUser(new AuthUser(un,
+				ri.getDetails().getEmail(),
+				ri.getDetails().getFullname(),
+				new HashSet<>(Arrays.asList(ri.withID())),
+				null, null, now, now));
 	}
 }

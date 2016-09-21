@@ -77,10 +77,15 @@ cd into the auth2 repo
 ant build  
 copy deploy.cfg.example to deploy.cfg and fill in appropriately  
 `export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
-set a root password
-`./manageauth -d <path to deploy.cfg> -r`
+set a root password  
+`./manageauth -d <path to deploy.cfg> -r`  
 cd jettybase  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
+
+Import Globus users
+------------
+Use the `manageauth` script to import Globus users - run with the `--help`
+option for instructions. 
 
 Administer the server
 ---------------------

@@ -7,6 +7,7 @@ public class RemoteIdentityID {
 	
 	private final String provider;
 	private final String id;
+
 	public RemoteIdentityID(final String provider, final String id) {
 		if (provider == null || provider.trim().isEmpty()) {
 			throw new IllegalArgumentException(

@@ -21,6 +21,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.token.IncomingToken;
 
 public class GlobusIdentityProvider implements IdentityProvider {
 
@@ -134,7 +135,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 
 	private Set<RemoteIdentity> getSecondaryIdentities(
 			final String accessToken,
-			final Set<String> secondaryIDs) {
+			final Set<String> secondaryIDs)
+			throws IdentityRetrievalException {
 		if (secondaryIDs.isEmpty()) {
 			return new HashSet<>();
 		}
@@ -149,7 +151,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		final List<Map<String, String>> sids =
 				(List<Map<String, String>>) ids.get("identities");
 		//TODO CODE check that all identities are in returned list
-		final Set<RemoteIdentity> secondaries = makeSecondaryIdents(sids);
+		final Set<RemoteIdentity> secondaries = makeIdentities(sids);
 		return secondaries;
 	}
 
@@ -189,7 +191,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return new Idents(primary, new HashSet<>(secids));
 	}
 
-	private Set<RemoteIdentity> makeSecondaryIdents(
+	private Set<RemoteIdentity> makeIdentities(
 			final List<Map<String, String>> sids) {
 		final Set<RemoteIdentity> ret = new HashSet<>();
 		for (final Map<String, String> id: sids) {
@@ -207,7 +209,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 
 	private Map<String, Object> globusGetRequest(
 			final String accessToken,
-			final URI idtarget) {
+			final URI idtarget)
+			throws IdentityRetrievalException {
 		final WebTarget wt = CLI.target(idtarget);
 		Response r = null;
 		try {
@@ -217,7 +220,17 @@ public class GlobusIdentityProvider implements IdentityProvider {
 			//TODO TEST with 500s with HTML
 			@SuppressWarnings("unchecked")
 			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code
+			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
+			if (mtemp.containsKey("errors")) {
+				@SuppressWarnings("unchecked")
+				final List<Map<String, String>> errors =
+						(List<Map<String, String>>) mtemp.get("errors");
+				// just deal with the first error for now, change later if necc
+				final Map<String, String> err = errors.get(0);
+				throw new IdentityRetrievalException(String.format(
+						"Identity provider returned an error: %s: %s; id: %s",
+						err.get("code"), err.get("detail"), err.get("id")));
+			}
 			return mtemp;
 		} finally {
 			if (r != null) {
@@ -267,6 +280,37 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 	
+	@Override
+	public RemoteIdentity getIdentity(
+			final IncomingToken providerToken,
+			final String user) throws IdentityRetrievalException {
+		if (user == null || user.trim().isEmpty()) {
+			throw new IllegalArgumentException("user cannot be null or empty");
+		}
+		final URI idtarget = UriBuilder.fromUri(toURI(cfg.getApiURL()))
+				.path(IDENTITIES_PATH)
+				.queryParam("usernames", user.trim())
+				.build();
+		
+		final Map<String, Object> id = globusGetRequest(
+				providerToken.getToken(), idtarget);
+		@SuppressWarnings("unchecked")
+		final List<Map<String, String>> sids =
+				(List<Map<String, String>>) id.get("identities");
+		final String status = sids.get(0).get("status");
+		if (!(status.equals("used") || status.equals("private"))) {
+			throw new IdentityRetrievalException(String.format(
+					"Identity %s is unclaimed or retired", user));
+		}
+		final Set<RemoteIdentity> rid = makeIdentities(sids);
+		if (rid.isEmpty()) {
+			throw new IdentityRetrievalException(
+					"Provider returned no identity for user " + user);
+		}
+		// could check for multiple ids in the set but seems unlikely
+		return rid.iterator().next();
+	}
+
 	public static class GlobusIdentityProviderConfigurator implements
 			IdentityProviderConfigurator {
 
@@ -280,4 +324,5 @@ public class GlobusIdentityProvider implements IdentityProvider {
 			return NAME;
 		}
 	}
+
 }

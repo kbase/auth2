@@ -40,12 +40,10 @@ Auth service work
   * Find users
   * revoke single / user's / all tokens
   * Bootstrap root user
-  * Create admins role
   * View / modify server config
   * Disable account (revoke all tokens & prevent logins)
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
-  * Admin checking for all /admin functions
 * API
   * Introspect token (e.g. not the legacy apis, provide complete info)
   * /user/<name> - get user details
@@ -54,7 +52,6 @@ Auth service work
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
-* User import - import current Globus users
 * Deploy
   * Dockerization
 
