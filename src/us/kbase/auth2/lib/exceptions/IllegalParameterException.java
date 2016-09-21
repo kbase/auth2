@@ -7,11 +7,27 @@ package us.kbase.auth2.lib.exceptions;
 @SuppressWarnings("serial")
 public class IllegalParameterException extends AuthException {
 
-	public IllegalParameterException(String message) {
+	public IllegalParameterException(final String message) {
 		super(ErrorType.ILLEGAL_PARAMETER, message);
 	}
 
-	public IllegalParameterException(String message, Throwable cause) {
+	public IllegalParameterException(
+			final ErrorType type,
+			final String message) {
+		super(type, message);
+	}
+
+	public IllegalParameterException(
+			final String message,
+			final Throwable cause) {
 		super(ErrorType.ILLEGAL_PARAMETER, message, cause);
+	}
+	
+
+	public IllegalParameterException(
+			final ErrorType type,
+			final String message,
+			final Throwable cause) {
+		super(type, message, cause);
 	}
 }

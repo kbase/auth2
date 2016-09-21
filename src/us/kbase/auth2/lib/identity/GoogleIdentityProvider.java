@@ -21,6 +21,8 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.UnimplementedException;
+import us.kbase.auth2.lib.token.IncomingToken;
 
 public class GoogleIdentityProvider implements IdentityProvider {
 
@@ -214,6 +216,13 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		public String getProviderName() {
 			return NAME;
 		}
+	}
+
+	@Override
+	public RemoteIdentity getIdentity(
+			final IncomingToken providerToken,
+			final String user) {
+		throw new UnimplementedException();
 	}
 
 }

@@ -5,30 +5,30 @@ public class RemoteIdentityDetails {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	private String username;
-	private String fullname;
-	private String email;
+	private final String username;
+	private final String fullname;
+	private final String email;
 	
 	public RemoteIdentityDetails(
 			final String username,
-			final String fullname,
-			final String email) {
+			String fullname,
+			String email) {
 		super();
 		if (username == null || username.trim().isEmpty()) {
 			throw new IllegalArgumentException(
-					"fullname cannot be null or emtpy");
-		}
-		if (fullname == null || fullname.trim().isEmpty()) {
-			throw new IllegalArgumentException(
-					"fullname cannot be null or emtpy");
-		}
-		if (email == null || email.trim().isEmpty()) {
-			throw new IllegalArgumentException(
-					"email cannot be null or emtpy");
+					"fullname cannot be null or empty");
 		}
 		this.username = username.trim();
-		this.fullname = fullname.trim();
-		this.email = email.trim();
+		if (fullname == null || fullname.trim().isEmpty()) {
+			this.fullname = null;
+		} else {
+			this.fullname = fullname.trim();
+		}
+		if (email == null || email.trim().isEmpty()) {
+			this.email = null;
+		} else {
+			this.email = email.trim();
+		}
 	}
 
 	public String getUsername() {

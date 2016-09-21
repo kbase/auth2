@@ -82,6 +82,11 @@ set a root password
 cd jettybase  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
 
+Import Globus users
+------------
+Use the `manageauth` script to import Globus users - run with the `--help`
+option for instructions. 
+
 Administer the server
 ---------------------
 Login to a local account as `***ROOT***` with the password you set. Create a
