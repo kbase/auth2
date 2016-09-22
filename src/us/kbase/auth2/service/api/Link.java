@@ -44,7 +44,6 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -72,10 +71,9 @@ public class Link {
 		
 		//TODO CONFIG allow enable & disable of id providers.
 		if (provider != null && !provider.trim().isEmpty()) {
-			final IdentityProvider idp = auth.getIdentityProvider(
-					provider);
 			final String state = auth.getBareToken();
-			final URI target = toURI(idp.getLoginURL(state, true));
+			final URI target = toURI(
+					auth.getProviderURL(provider, state, true));
 			return Response.seeOther(target)
 					.cookie(getStateCookie(state))
 					.build();
@@ -86,10 +84,10 @@ public class Link {
 			ret.put("local", u.isLocal());
 			final List<Map<String, String>> provs = new LinkedList<>();
 			ret.put("providers", provs);
-			for (final IdentityProvider idp: auth.getIdentityProviders()) {
+			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", idp.getProviderName());
-				final URI i = idp.getImageURI();
+				rep.put("name", prov);
+				final URI i = auth.getProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {

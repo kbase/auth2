@@ -3,6 +3,8 @@ package us.kbase.auth2.lib;
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 
+import java.net.URI;
+import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
@@ -446,20 +448,26 @@ public class Authentication {
 	}
 
 
-	//TODO CODE don't expose id providers. Expose a smaller interface mainly to hide the client secret.
-	public List<IdentityProvider> getIdentityProviders() {
+	public List<String> getIdentityProviders() {
 		return idFactory.getProviders();
+	}
+	
+	public URI getProviderImageURI(final String provider)
+			throws NoSuchIdentityProviderException {
+		return idFactory.getProvider(provider).getImageURI();
+	}
+	
+	public URL getProviderURL(
+			final String provider,
+			final String state,
+			final boolean link)
+			throws NoSuchIdentityProviderException {
+		return idFactory.getProvider(provider).getLoginURL(state, link);
 	}
 
 	// note not saved in DB
 	public String getBareToken() {
 		return tokens.getToken();
-	}
-
-	//TODO CODE don't expose id providers. Expose a smaller interface mainly to hide the client secret.
-	public IdentityProvider getIdentityProvider(final String provider)
-			throws NoSuchIdentityProviderException {
-		return idFactory.getProvider(provider);
 	}
 
 	// split from getloginstate since the user may need to make a choice
@@ -469,7 +477,7 @@ public class Authentication {
 	public LoginToken login(final String provider, final String authcode)
 			throws MissingParameterException, IdentityRetrievalException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		final IdentityProvider idp = getIdentityProvider(provider);
+		final IdentityProvider idp = idFactory.getProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
@@ -633,7 +641,7 @@ public class Authentication {
 			throw new LinkFailedException(
 					"Cannot link identities to local accounts");
 		}
-		final IdentityProvider idp = getIdentityProvider(provider);
+		final IdentityProvider idp = idFactory.getProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
@@ -746,7 +754,7 @@ public class Authentication {
 		if (providerToken == null) {
 			throw new NullPointerException("providerToken");
 		}
-		final IdentityProvider idp = getIdentityProvider(provider);
+		final IdentityProvider idp = idFactory.getProvider(provider);
 		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
 		String username = ri.getDetails().getUsername();
 		/* Do NOT otherwise change the username here - this is importing

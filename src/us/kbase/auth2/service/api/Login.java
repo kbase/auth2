@@ -48,7 +48,6 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -73,10 +72,9 @@ public class Login {
 		//TODO REDIRECT check redirect url matches allowed config & is valid URL
 		//TODO CONFIG allow enable & disable of id providers.
 		if (provider != null && !provider.trim().isEmpty()) {
-			final IdentityProvider idp = auth.getIdentityProvider(
-					provider);
 			final String state = auth.getBareToken();
-			final URI target = toURI(idp.getLoginURL(state, false));
+			final URI target = toURI(
+					auth.getProviderURL(provider, state, false));
 			
 			final ResponseBuilder r = Response.seeOther(target)
 					.cookie(getStateCookie(state));
@@ -88,10 +86,10 @@ public class Login {
 			final Map<String, Object> ret = new HashMap<>();
 			final List<Map<String, String>> provs = new LinkedList<>();
 			ret.put("providers", provs);
-			for (final IdentityProvider idp: auth.getIdentityProviders()) {
+			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", idp.getProviderName());
-				final URI i = idp.getImageURI();
+				rep.put("name", prov);
+				final URI i = auth.getProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {
