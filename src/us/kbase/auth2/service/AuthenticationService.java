@@ -32,12 +32,12 @@ public class AuthenticationService extends ResourceConfig {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	private static AuthConfig cfg = null;
+	private static AuthStartupConfig cfg = null;
 	private static MongoClient mc;
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
-	public static void setConfig(final AuthConfig config) {
+	public static void setConfig(final AuthStartupConfig config) {
 		if (config == null) {
 			throw new NullPointerException("cfg");
 		}
@@ -75,7 +75,7 @@ public class AuthenticationService extends ResourceConfig {
 				.setLevel(Level.INFO);
 	}
 
-	private void buildApp(final AuthConfig c)
+	private void buildApp(final AuthStartupConfig c)
 			throws StorageInitException, AuthConfigurationException {
 		final AuthBuilder ab;
 		synchronized(this) {

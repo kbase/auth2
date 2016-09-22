@@ -22,7 +22,7 @@ public class AuthBuilder {
 	private MongoClient mc;
 	private Authentication auth;
 	
-	public AuthBuilder(final AuthConfig cfg)
+	public AuthBuilder(final AuthStartupConfig cfg)
 			throws StorageInitException, AuthConfigurationException {
 		if (cfg == null) {
 			throw new NullPointerException("cfg");
@@ -31,7 +31,7 @@ public class AuthBuilder {
 		auth = buildAuth(cfg, mc);
 	}
 	
-	public AuthBuilder(final AuthConfig cfg, final MongoClient mc)
+	public AuthBuilder(final AuthStartupConfig cfg, final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
 		if (cfg == null) {
 			throw new NullPointerException("cfg");
@@ -43,7 +43,7 @@ public class AuthBuilder {
 		auth = buildAuth(cfg, mc);
 	}
 	
-	private MongoClient buildMongo(final AuthConfig c) {
+	private MongoClient buildMongo(final AuthStartupConfig c) {
 		//TODO ZLATER handle shards
 		try {
 			return new MongoClient(c.getMongoHost());
@@ -54,7 +54,9 @@ public class AuthBuilder {
 		}
 	}
 	
-	private Authentication buildAuth(final AuthConfig c, final MongoClient mc)
+	private Authentication buildAuth(
+			final AuthStartupConfig c,
+			final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
 		final MongoDatabase db;
 		try {
@@ -70,7 +72,8 @@ public class AuthBuilder {
 		return new Authentication(s, getIdentityProviders(c));
 	}
 	
-	private IdentityProviderFactory getIdentityProviders(final AuthConfig c)
+	private IdentityProviderFactory getIdentityProviders(
+			final AuthStartupConfig c)
 			throws AuthConfigurationException {
 		final IdentityProviderFactory fac =
 				IdentityProviderFactory.getInstance();
