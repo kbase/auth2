@@ -51,6 +51,10 @@ Auth service work
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
+* User import
+  * Need list of every username that exists in any KBase data source
+    * Not clear if current metrics list is comprehensive
+  * Need solution for KBase users not appearing in Globus v2 API
 * Deploy
   * Dockerization
 
