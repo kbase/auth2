@@ -38,10 +38,12 @@ import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -946,23 +948,23 @@ public class MongoStorage implements AuthStorage {
 		final Document c = new Document(
 				Fields.CONFIG_KEY, Fields.CONFIG_APP_VALUE);
 		c.append(Fields.CONFIG_APP_EXTERNAL,
-				mapToList(cfgSet.getExtcfg().toMap()));
+				alterMap(cfgSet.getExtcfg().toMap(), KEY_SANITIZE));
+		
 		final AuthConfig cfg = cfgSet.getCfg();
 		c.append(Fields.CONFIG_APP_ALLOW_LOGIN, cfg.getLoginAllowed());
 		for (final Entry<TokenLifetimeType, Long> e:
 				cfg.getTokenLifetimeMS().entrySet()) {
 			c.append(TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()), e.getValue());
 		}
-		final List<Map<String, Object>> provs = new LinkedList<>();
+		final Map<String, Map<String, Object>> provs = new HashMap<>();
 		for (final Entry<String, ProviderConfig> e:
 				cfg.getProviders().entrySet()) {
 			final Map<String, Object> val = new HashMap<>();
-			val.put(Fields.CONFIG_APP_PROVIDER_NAME, e.getKey());
 			val.put(Fields.CONFIG_APP_PROVIDER_ENABLED,
 					e.getValue().isEnabled());
 			val.put(Fields.CONFIG_APP_PROVIDER_FORCE_LINK_CHOICE,
 					e.getValue().isForceLinkChoice());
-			provs.add(val);
+			provs.put(KEY_SANITIZE.modify(e.getKey()), val);
 		}
 		c.append(Fields.CONFIG_APP_PROVIDERS, provs);
 		try {
@@ -982,15 +984,60 @@ public class MongoStorage implements AuthStorage {
 		}
 		
 	}
-
-	private Object mapToList(final Map<String, String> map) {
-		final List<Map<String, String>> ret = new LinkedList<>();
+	
+	public Map<String, String> alterMap(
+			final Map<String, String> map,
+			final KeyModifier km) {
+		final Map<String, String> ret = new HashMap<>();
 		for (final Entry<String, String> e: map.entrySet()) {
-			final Map<String, String> val = new HashMap<>();
-			val.put(Fields.MAP_KEY, e.getKey());
-			val.put(Fields.MAP_VALUE, e.getValue());
-			ret.add(val);
+			ret.put(km.modify(e.getKey()), e.getValue());
 		}
 		return ret;
+	}
+	
+	private static interface KeyModifier {
+		public String modify(String key);
+	}
+	
+	private final static KeyModifier KEY_SANITIZE =
+			//slightly inefficient, but meh
+			s -> s.replace("%", "%25").replace("$", "%24").replace(".", "%2e");
+			
+	private final static KeyModifier KEY_BEFOUL =
+			//slightly inefficient, but meh
+			s -> s.replace("%2e", ".").replace("%24", "$").replace("%25", "%");
+
+	@Override
+	public AuthConfigSet getConfig(final ExternalConfigMapper<?> mapper)
+			throws AuthStorageException, ExternalConfigMappingException {
+		final Document c = findOne(COL_CONFIG, new Document(
+				Fields.CONFIG_KEY, Fields.CONFIG_APP_VALUE));
+		@SuppressWarnings("unchecked")
+		final Map<String, String> extdirty =
+				(Map<String, String>) c.get(Fields.CONFIG_APP_EXTERNAL);
+		@SuppressWarnings("unchecked")
+		final Map<String, Document> provdirty =
+				(Map<String, Document>) c.get(Fields.CONFIG_APP_PROVIDERS);
+		
+		final Map<String, ProviderConfig> prov = new HashMap<>();
+		for (final Entry<String, Document> e: provdirty.entrySet()) {
+			final Document d = e.getValue();
+			final ProviderConfig pc = new ProviderConfig(
+					d.getBoolean(Fields.CONFIG_APP_PROVIDER_ENABLED),
+					d.getBoolean(
+							Fields.CONFIG_APP_PROVIDER_FORCE_LINK_CHOICE));
+			prov.put(KEY_BEFOUL.modify(e.getKey()), pc);
+		}
+		
+		final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
+		for (final Entry<TokenLifetimeType, String> e:
+				TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
+			tokens.put(e.getKey(), c.getLong(e.getValue()));
+		}
+		
+		return new AuthConfigSet(
+				new AuthConfig(c.getBoolean(Fields.CONFIG_APP_ALLOW_LOGIN),
+						prov, tokens),
+				mapper.fromMap(alterMap(extdirty, KEY_BEFOUL)));
 	}
 }

@@ -70,12 +70,26 @@ public class AuthExternalConfig implements ExternalConfig {
 		}
 		return FALSE;
 	}
+	
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("AuthExternalConfig [allowedRedirectPrefix=");
+		builder.append(allowedRedirectPrefix);
+		builder.append(", ignoreIPHeaders=");
+		builder.append(ignoreIPHeaders);
+		builder.append(", includeStackTraceInResponse=");
+		builder.append(includeStackTraceInResponse);
+		builder.append("]");
+		return builder.toString();
+	}
+
 
 	public static class AuthExternalConfigMapper implements
-			ExternalConfigMapper {
+			ExternalConfigMapper<AuthExternalConfig> {
 
 		@Override
-		public ExternalConfig fromMap(final Map<String, String> config)
+		public AuthExternalConfig fromMap(final Map<String, String> config)
 				throws ExternalConfigMappingException {
 			final String url = config.get("allowedRedirectPrefix");
 			final URL allowed;

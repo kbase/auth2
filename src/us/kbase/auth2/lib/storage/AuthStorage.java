@@ -7,10 +7,12 @@ import java.util.UUID;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -127,4 +129,7 @@ public interface AuthStorage {
 
 	void setInitialConfig(AuthConfigSet authConfigSet)
 			throws StorageInitException;
+
+	AuthConfigSet getConfig(ExternalConfigMapper<?> mapper)
+			throws AuthStorageException, ExternalConfigMappingException;
 }

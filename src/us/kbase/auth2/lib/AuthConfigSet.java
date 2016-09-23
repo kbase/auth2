@@ -26,4 +26,15 @@ public class AuthConfigSet {
 	public ExternalConfig getExtcfg() {
 		return extcfg;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("AuthConfigSet [cfg=");
+		builder.append(cfg);
+		builder.append(", extcfg=");
+		builder.append(extcfg);
+		builder.append("]");
+		return builder.toString();
+	}
 }

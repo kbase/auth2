@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.TokenGenerator;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
@@ -94,6 +95,7 @@ public class Authentication {
 	private final IdentityProviderFactory idFactory;
 	private final TokenGenerator tokens;
 	private final PasswordCrypt pwdcrypt;
+	private final ConfigManager cfg;
 	
 	public Authentication(
 			final AuthStorage storage,
@@ -117,6 +119,72 @@ public class Authentication {
 		this.idFactory = identityProviderFactory;
 		storage.setInitialConfig(new AuthConfigSet(
 				getDefaultConfig(), defaultExternalConfig));
+		try {
+			cfg = new ConfigManager(storage);
+		} catch (AuthStorageException e) {
+			throw new StorageInitException(
+					"Failed to initialize config manager: " +
+							e.getMessage(), e);
+		}
+	}
+	
+	private static class CollectingExternalConfig implements ExternalConfig {
+		
+		private final Map<String, String> cfg;
+		
+		private CollectingExternalConfig(
+				final Map<String, String> map) {
+			cfg = map;
+		}
+		
+		@Override
+		public Map<String, String> toMap() {
+			return cfg;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("CollectingExternalConfig [cfg=");
+			builder.append(cfg);
+			builder.append("]");
+			return builder.toString();
+		}
+	}
+	
+	private class ConfigManager {
+	
+		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
+		
+		private AuthConfigSet cfg;
+		private Date nextConfigUpdate;
+		private AuthStorage storage;
+		
+		public ConfigManager(final AuthStorage storage)
+				throws AuthStorageException {
+			this.storage = storage;
+			updateConfig();
+		}
+		
+		//TODO NOW use
+		public synchronized AuthConfigSet getConfig()
+				throws AuthStorageException {
+			if (new Date().after(nextConfigUpdate)) {
+				updateConfig();
+			}
+			return cfg;
+		}
+	
+		//don't call this method!
+		private synchronized void updateConfig() throws AuthStorageException {
+			try {
+				cfg = storage.getConfig(m -> new CollectingExternalConfig(m));
+			} catch (ExternalConfigMappingException e) {
+				throw new RuntimeException("This should be impossible", e);
+			}
+			nextConfigUpdate = new Date(new Date().getTime() +
+					CFG_UPDATE_INTERVAL_SEC * 1000);
+		}
 	}
 
 	private AuthConfig getDefaultConfig() {

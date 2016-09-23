@@ -63,7 +63,6 @@ public class Fields {
 	public static final String CONFIG_APP_VALUE = "appconfig";
 	public static final String CONFIG_APP_EXTERNAL = "ext";
 	public static final String CONFIG_APP_PROVIDERS = "provs";
-	public static final String CONFIG_APP_PROVIDER_NAME = "prov";
 	public static final String CONFIG_APP_PROVIDER_ENABLED = "enabled";
 	public static final String CONFIG_APP_PROVIDER_FORCE_LINK_CHOICE =
 			"linkchoice";

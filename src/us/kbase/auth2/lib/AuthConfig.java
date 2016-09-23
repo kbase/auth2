@@ -53,6 +53,17 @@ public class AuthConfig {
 		public boolean isForceLinkChoice() {
 			return forceLinkChoice;
 		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("ProviderConfig [enabled=");
+			builder.append(enabled);
+			builder.append(", forceLinkChoice=");
+			builder.append(forceLinkChoice);
+			builder.append("]");
+			return builder.toString();
+		}
 	}
 	
 	private final Boolean loginAllowed;
@@ -85,5 +96,18 @@ public class AuthConfig {
 
 	public Map<TokenLifetimeType, Long> getTokenLifetimeMS() {
 		return tokenLifetimeMS;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("AuthConfig [loginAllowed=");
+		builder.append(loginAllowed);
+		builder.append(", providers=");
+		builder.append(providers);
+		builder.append(", tokenLifetimeMS=");
+		builder.append(tokenLifetimeMS);
+		builder.append("]");
+		return builder.toString();
 	}
 }

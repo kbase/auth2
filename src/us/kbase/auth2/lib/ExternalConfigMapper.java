@@ -4,11 +4,11 @@ import java.util.Map;
 
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 
-public interface ExternalConfigMapper {
+public interface ExternalConfigMapper<T extends ExternalConfig> {
 
 	//TODO JAVADOC
 	
-	ExternalConfig fromMap(Map<String, String> config)
+	T fromMap(Map<String, String> config)
 			throws ExternalConfigMappingException;
 	
 }
