@@ -7,6 +7,7 @@ import com.mongodb.MongoException;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -22,16 +23,24 @@ public class AuthBuilder {
 	private MongoClient mc;
 	private Authentication auth;
 	
-	public AuthBuilder(final AuthStartupConfig cfg)
+	public AuthBuilder(
+			final AuthStartupConfig cfg,
+			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
 		if (cfg == null) {
 			throw new NullPointerException("cfg");
 		}
+		if (defaultExternalConfig == null) {
+			throw new NullPointerException("defaultExternalConfig");
+		}
 		mc = buildMongo(cfg);
-		auth = buildAuth(cfg, mc);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
-	public AuthBuilder(final AuthStartupConfig cfg, final MongoClient mc)
+	public AuthBuilder(
+			final AuthStartupConfig cfg,
+			final ExternalConfig defaultExternalConfig,
+			final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
 		if (cfg == null) {
 			throw new NullPointerException("cfg");
@@ -39,8 +48,11 @@ public class AuthBuilder {
 		if (mc == null) {
 			throw new NullPointerException("mc");
 		}
+		if (defaultExternalConfig == null) {
+			throw new NullPointerException("defaultExternalConfig");
+		}
 		this.mc = mc;
-		auth = buildAuth(cfg, mc);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) {
@@ -56,7 +68,8 @@ public class AuthBuilder {
 	
 	private Authentication buildAuth(
 			final AuthStartupConfig c,
-			final MongoClient mc)
+			final MongoClient mc,
+			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
 		final MongoDatabase db;
 		try {
@@ -69,7 +82,8 @@ public class AuthBuilder {
 		}
 		//TODO MONGO & TEST authenticate to db with user/pwd
 		final AuthStorage s = new MongoStorage(db);
-		return new Authentication(s, getIdentityProviders(c));
+		return new Authentication(
+				s, getIdentityProviders(c), defaultExternalConfig);
 	}
 	
 	private IdentityProviderFactory getIdentityProviders(

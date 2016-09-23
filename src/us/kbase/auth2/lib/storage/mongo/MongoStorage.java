@@ -11,12 +11,14 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
+import org.bson.conversions.Bson;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
@@ -30,6 +32,10 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
+import us.kbase.auth2.lib.AuthConfig;
+import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.LocalUser;
@@ -94,6 +100,17 @@ public class MongoStorage implements AuthStorage {
 	private static final String COL_TOKEN = "tokens";
 	private static final String COL_TEMP_TOKEN = "temptokens";
 	private static final String COL_CUST_ROLES = "cust_roles";
+	
+	private static final Map<TokenLifetimeType, String>
+			TOKEN_LIFETIME_FIELD_MAP;
+	static {
+		final Map<TokenLifetimeType, String> m = new HashMap<>();
+		m.put(TokenLifetimeType.EXT_CACHE, Fields.CONFIG_APP_TOKEN_LIFE_CACHE);
+		m.put(TokenLifetimeType.LOGIN, Fields.CONFIG_APP_TOKEN_LIFE_LOGIN);
+		m.put(TokenLifetimeType.DEV, Fields.CONFIG_APP_TOKEN_LIFE_DEV);
+		m.put(TokenLifetimeType.SERV, Fields.CONFIG_APP_TOKEN_LIFE_SERV);
+		TOKEN_LIFETIME_FIELD_MAP = Collections.unmodifiableMap(m);
+	}
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ =
@@ -184,13 +201,15 @@ public class MongoStorage implements AuthStorage {
 			}
 			//ok, the version doc is already there, this isn't the first
 			//startup
-			if (col.count() != 1) {
+			final Bson filter = Filters.eq(
+					Fields.CONFIG_KEY, Fields.CONFIG_VALUE);
+			if (col.count(filter) != 1) {
 				throw new StorageInitException(
 						"Multiple config objects found in the database. " +
 						"This should not happen, something is very wrong.");
 			}
 			final FindIterable<Document> cur = db.getCollection(COL_CONFIG)
-					.find(Filters.eq(Fields.CONFIG_KEY, Fields.CONFIG_VALUE));
+					.find(filter);
 			final Document doc = cur.first();
 			if ((Integer) doc.get(Fields.CONFIG_SCHEMA_VERSION) !=
 					SCHEMA_VERSION) {
@@ -919,5 +938,59 @@ public class MongoStorage implements AuthStorage {
 			throws NoSuchUserException, AuthStorageException {
 		final Document d = new Document(Fields.USER_LAST_LOGIN, lastLogin);
 		updateUser(user, d);
+	}
+
+	@Override
+	public void setInitialConfig(final AuthConfigSet cfgSet)
+			throws StorageInitException {
+		final Document c = new Document(
+				Fields.CONFIG_KEY, Fields.CONFIG_APP_VALUE);
+		c.append(Fields.CONFIG_APP_EXTERNAL,
+				mapToList(cfgSet.getExtcfg().toMap()));
+		final AuthConfig cfg = cfgSet.getCfg();
+		c.append(Fields.CONFIG_APP_ALLOW_LOGIN, cfg.getLoginAllowed());
+		for (final Entry<TokenLifetimeType, Long> e:
+				cfg.getTokenLifetimeMS().entrySet()) {
+			c.append(TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()), e.getValue());
+		}
+		final List<Map<String, Object>> provs = new LinkedList<>();
+		for (final Entry<String, ProviderConfig> e:
+				cfg.getProviders().entrySet()) {
+			final Map<String, Object> val = new HashMap<>();
+			val.put(Fields.CONFIG_APP_PROVIDER_NAME, e.getKey());
+			val.put(Fields.CONFIG_APP_PROVIDER_ENABLED,
+					e.getValue().isEnabled());
+			val.put(Fields.CONFIG_APP_PROVIDER_FORCE_LINK_CHOICE,
+					e.getValue().isForceLinkChoice());
+			provs.add(val);
+		}
+		c.append(Fields.CONFIG_APP_PROVIDERS, provs);
+		try {
+			db.getCollection(COL_CONFIG).insertOne(c);
+		} catch (MongoWriteException dk) {
+			if (!isDuplicateKeyException(dk)) {
+				throw new StorageInitException(
+						"There was a problem communicating with the " +
+						"database: " + dk.getMessage(), dk);
+			}
+			//ok, the config doc is already there, this isn't the first
+			//startup
+		} catch (MongoException me) {
+			throw new StorageInitException(
+					"There was a problem communicating with the database: " +
+					me.getMessage(), me);
+		}
+		
+	}
+
+	private Object mapToList(final Map<String, String> map) {
+		final List<Map<String, String>> ret = new LinkedList<>();
+		for (final Entry<String, String> e: map.entrySet()) {
+			final Map<String, String> val = new HashMap<>();
+			val.put(Fields.MAP_KEY, e.getKey());
+			val.put(Fields.MAP_VALUE, e.getValue());
+			ret.add(val);
+		}
+		return ret;
 	}
 }

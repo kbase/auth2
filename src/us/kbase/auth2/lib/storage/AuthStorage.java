@@ -4,6 +4,7 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.LocalUser;
@@ -18,6 +19,7 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
@@ -122,4 +124,7 @@ public interface AuthStorage {
 
 	void unlink(UserName userName, UUID id)
 			throws AuthStorageException, UnLinkFailedException;
+
+	void setInitialConfig(AuthConfigSet authConfigSet)
+			throws StorageInitException;
 }

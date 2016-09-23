@@ -22,6 +22,7 @@ import us.kbase.auth2.cryptutils.TokenGenerator;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -39,6 +40,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenSet;
@@ -95,7 +97,10 @@ public class Authentication {
 	
 	public Authentication(
 			final AuthStorage storage,
-			final IdentityProviderFactory identityProviderFactory) {
+			final IdentityProviderFactory identityProviderFactory,
+			final ExternalConfig defaultExternalConfig)
+			throws StorageInitException {
+		
 		try {
 			tokens = new TokenGenerator();
 			pwdcrypt = new PasswordCrypt();
@@ -110,6 +115,17 @@ public class Authentication {
 		}
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
+		storage.setInitialConfig(new AuthConfigSet(
+				getDefaultConfig(), defaultExternalConfig));
+	}
+
+	private AuthConfig getDefaultConfig() {
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		for (final String provname: idFactory.getProviders()) {
+			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		}
+		return new AuthConfig(false, provs,
+				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 	}
 
 	// don't expose this method to general users, blatantly obviously
