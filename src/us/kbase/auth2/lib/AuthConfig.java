@@ -86,7 +86,7 @@ public class AuthConfig {
 		this.tokenLifetimeMS = Collections.unmodifiableMap(tokenLifetimeMS);
 	}
 
-	public Boolean getLoginAllowed() {
+	public Boolean isLoginAllowed() {
 		return loginAllowed;
 	}
 
