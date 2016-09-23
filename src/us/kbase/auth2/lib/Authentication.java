@@ -24,6 +24,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -174,6 +175,10 @@ public class Authentication {
 			}
 			return cfg;
 		}
+		
+		public AuthConfig getAppConfig() throws AuthStorageException {
+			return getConfig().getCfg();
+		}
 	
 		//don't call this method!
 		private synchronized void updateConfig() throws AuthStorageException {
@@ -259,13 +264,17 @@ public class Authentication {
 		}
 		pwd.clear();
 		//TODO PWD if reset required, make reset token
-		final NewToken t = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				userName,
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(t.getHashedToken());
+		return login(userName);
+	}
+	
+	private NewToken login(final UserName userName)
+			throws AuthStorageException {
+		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
+				userName, cfg.getAppConfig().getTokenLifetimeMS(
+						TokenLifetimeType.LOGIN));
+		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
-		return t;
+		return nt;
 	}
 
 	// used when it's known that the user exists
@@ -318,11 +327,11 @@ public class Authentication {
 					"User %s is not authorized to create this token type.");
 		}
 		final long life;
-		//TODO CONFIG make token lifetime configurable
+		final AuthConfig c = cfg.getAppConfig();
 		if (serverToken) {
-			life = Long.MAX_VALUE;
+			life = c.getTokenLifetimeMS(TokenLifetimeType.SERV);
 		} else {
-			life = 90L * 24L * 60L * 60L * 1000L;
+			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
 		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
 				tokenName, tokens.getToken(), au.getUserName(), life);
@@ -579,12 +588,7 @@ public class Authentication {
 		final LoginToken lr;
 		if (hasUser.size() == 1 && noUser.isEmpty()) {
 			final AuthUser user = hasUser.values().iterator().next();
-			final NewToken t = new NewToken(TokenType.LOGIN, tokens.getToken(),
-					//TODO CONFIG make token lifetime configurable
-					user.getUserName(), 14 * 24 * 60 * 60 * 1000);
-			storage.storeToken(t.getHashedToken());
-			setLastLogin(user.getUserName());
-			lr = new LoginToken(t);
+			lr = new LoginToken(login(user.getUserName()));
 		} else {
 			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
 					10 * 60 * 1000);
@@ -662,12 +666,7 @@ public class Authentication {
 		final Date now = new Date();
 		storage.createUser(new AuthUser(userName, email, fullName,
 				new HashSet<>(Arrays.asList(match)), null, null, now, now));
-		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				userName,
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(nt.getHashedToken());
-		return nt;
+		return login(userName);
 	}
 
 
@@ -682,13 +681,7 @@ public class Authentication {
 					"There is no account linked to the provided identity");
 		}
 		
-		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				u.getUserName(),
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(nt.getHashedToken());
-		setLastLogin(u.getUserName());
-		return nt;
+		return login(u.getUserName());
 	}
 	
 	private RemoteIdentityWithID getIdentity(

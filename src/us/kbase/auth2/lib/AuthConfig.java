@@ -97,6 +97,13 @@ public class AuthConfig {
 	public Map<TokenLifetimeType, Long> getTokenLifetimeMS() {
 		return tokenLifetimeMS;
 	}
+	
+	public Long getTokenLifetimeMS(final TokenLifetimeType type) {
+		if (!tokenLifetimeMS.containsKey(type)) {
+			return DEFAULT_TOKEN_LIFETIMES_MS.get(type);
+		}
+		return tokenLifetimeMS.get(type);
+	}
 
 	@Override
 	public String toString() {
