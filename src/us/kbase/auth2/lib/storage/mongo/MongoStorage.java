@@ -37,6 +37,7 @@ import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
@@ -1000,7 +1001,8 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void setInitialConfig(final AuthConfigSet cfgSet)
+	public <T extends ExternalConfig> void setInitialConfig(
+			final AuthConfigSet<T> cfgSet)
 			throws StorageInitException {
 		final boolean overwrite = false;
 		
@@ -1055,7 +1057,8 @@ public class MongoStorage implements AuthStorage {
 	}
 			
 	@Override
-	public AuthConfigSet getConfig(final ExternalConfigMapper<?> mapper)
+	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
 		try {
 			final FindIterable<Document> extiter =
@@ -1088,7 +1091,7 @@ public class MongoStorage implements AuthStorage {
 				tokens.put(e.getKey(), appcfg.get(e.getValue())
 						.getLong(Fields.CONFIG_VALUE));
 			}
-			return new AuthConfigSet(
+			return new AuthConfigSet<T>(
 					new AuthConfig(allowLogin, provs, tokens),
 					mapper.fromMap(ext));
 		} catch (MongoException me) {

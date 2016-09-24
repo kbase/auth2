@@ -53,7 +53,7 @@ Auth service work
   * auto configure server for ease of use
 * User import
   * Need list of every username that exists in any KBase data source
-    * Not clear if current metrics list is comprehensive
+    * Needs a new script
   * Need solution for KBase users not appearing in Globus v2 API
 * Deploy
   * Dockerization

@@ -1,14 +1,14 @@
 package us.kbase.auth2.lib;
 
-public class AuthConfigSet {
+public class AuthConfigSet<T extends ExternalConfig> {
 
 	//TODO TEST
 	//TODO JAVADOC
 	
 	private AuthConfig cfg;
-	private ExternalConfig extcfg;
+	private T extcfg;
 	
-	public AuthConfigSet(final AuthConfig cfg, final ExternalConfig extcfg) {
+	public AuthConfigSet(final AuthConfig cfg, final T extcfg) {
 		if (cfg == null) {
 			throw new NullPointerException("cfg");
 		}
@@ -23,7 +23,7 @@ public class AuthConfigSet {
 		return cfg;
 	}
 
-	public ExternalConfig getExtcfg() {
+	public T getExtcfg() {
 		return extcfg;
 	}
 

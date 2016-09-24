@@ -118,7 +118,7 @@ public class Authentication {
 		}
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
-		storage.setInitialConfig(new AuthConfigSet(
+		storage.setInitialConfig(new AuthConfigSet<ExternalConfig>(
 				getDefaultConfig(), defaultExternalConfig));
 		try {
 			cfg = new ConfigManager(storage);
@@ -157,7 +157,7 @@ public class Authentication {
 	
 		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
 		
-		private AuthConfigSet cfg;
+		private AuthConfigSet<CollectingExternalConfig> cfg;
 		private Date nextConfigUpdate;
 		private AuthStorage storage;
 		
@@ -168,7 +168,7 @@ public class Authentication {
 		}
 		
 		//TODO NOW use
-		public synchronized AuthConfigSet getConfig()
+		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
 				throws AuthStorageException {
 			if (new Date().after(nextConfigUpdate)) {
 				updateConfig();

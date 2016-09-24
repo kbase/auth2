@@ -7,6 +7,7 @@ import java.util.UUID;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
@@ -127,9 +128,11 @@ public interface AuthStorage {
 	void unlink(UserName userName, UUID id)
 			throws AuthStorageException, UnLinkFailedException;
 
-	void setInitialConfig(AuthConfigSet authConfigSet)
+	<T extends ExternalConfig> void setInitialConfig(
+			AuthConfigSet<T> authConfigSet)
 			throws StorageInitException;
 
-	AuthConfigSet getConfig(ExternalConfigMapper<?> mapper)
+	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException;
 }
