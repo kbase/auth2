@@ -128,8 +128,9 @@ public interface AuthStorage {
 	void unlink(UserName userName, UUID id)
 			throws AuthStorageException, UnLinkFailedException;
 
-	<T extends ExternalConfig> void setInitialConfig(
-			AuthConfigSet<T> authConfigSet)
+	<T extends ExternalConfig> void updateConfig(
+			AuthConfigSet<T> authConfigSet,
+			boolean overwrite)
 			throws StorageInitException;
 
 	<T extends ExternalConfig> AuthConfigSet<T> getConfig(

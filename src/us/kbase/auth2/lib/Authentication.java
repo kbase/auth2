@@ -118,8 +118,8 @@ public class Authentication {
 		}
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
-		storage.setInitialConfig(new AuthConfigSet<ExternalConfig>(
-				getDefaultConfig(), defaultExternalConfig));
+		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
+				getDefaultConfig(), defaultExternalConfig), false);
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {

@@ -976,6 +976,9 @@ public class MongoStorage implements AuthStorage {
 			final Object value,
 			final boolean overwrite)
 			throws StorageInitException {
+		if (value == null) {
+			return;
+		}
 		final String op = overwrite ? "$set" : "$setOnInsert";
 		final Document u = new Document(op,
 				new Document(Fields.CONFIG_VALUE, value));
@@ -1001,10 +1004,10 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public <T extends ExternalConfig> void setInitialConfig(
-			final AuthConfigSet<T> cfgSet)
+	public <T extends ExternalConfig> void updateConfig(
+			final AuthConfigSet<T> cfgSet,
+			final boolean overwrite)
 			throws StorageInitException {
-		final boolean overwrite = false;
 		
 		updateConfig(COL_CONFIG_APPLICATION, Fields.CONFIG_APP_ALLOW_LOGIN,
 				cfgSet.getCfg().isLoginAllowed(), overwrite);

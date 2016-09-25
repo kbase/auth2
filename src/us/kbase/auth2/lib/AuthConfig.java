@@ -35,22 +35,22 @@ public class AuthConfig {
 	
 	public static class ProviderConfig {
 		
-		private final boolean enabled;
-		private final boolean forceLinkChoice;
+		private final Boolean enabled;
+		private final Boolean forceLinkChoice;
 		
 		public ProviderConfig(
-				final boolean enabled,
-				final boolean forceLinkChoice) {
+				final Boolean enabled,
+				final Boolean forceLinkChoice) {
 			super();
 			this.enabled = enabled;
 			this.forceLinkChoice = forceLinkChoice;
 		}
 
-		public boolean isEnabled() {
+		public Boolean isEnabled() {
 			return enabled;
 		}
 
-		public boolean isForceLinkChoice() {
+		public Boolean isForceLinkChoice() {
 			return forceLinkChoice;
 		}
 
