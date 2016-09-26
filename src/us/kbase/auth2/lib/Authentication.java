@@ -167,7 +167,6 @@ public class Authentication {
 			updateConfig();
 		}
 		
-		//TODO NOW use
 		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
 				throws AuthStorageException {
 			if (new Date().after(nextConfigUpdate)) {
@@ -180,8 +179,7 @@ public class Authentication {
 			return getConfig().getCfg();
 		}
 	
-		//don't call this method!
-		private synchronized void updateConfig() throws AuthStorageException {
+		public synchronized void updateConfig() throws AuthStorageException {
 			try {
 				cfg = storage.getConfig(m -> new CollectingExternalConfig(m));
 			} catch (ExternalConfigMappingException e) {
@@ -367,7 +365,6 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
 			}
 		}
-		
 		return u;
 	}
 
@@ -545,12 +542,12 @@ public class Authentication {
 		return idFactory.getProviders();
 	}
 	
-	public URI getProviderImageURI(final String provider)
+	public URI getIdentityProviderImageURI(final String provider)
 			throws NoSuchIdentityProviderException {
 		return idFactory.getProvider(provider).getImageURI();
 	}
 	
-	public URL getProviderURL(
+	public URL getIdentityProviderURL(
 			final String provider,
 			final String state,
 			final boolean link)
@@ -802,7 +799,6 @@ public class Authentication {
 		
 	}
 
-
 	public void updateUser(
 			final IncomingToken token,
 			final UserUpdate update)
@@ -817,6 +813,28 @@ public class Authentication {
 			throw new AuthStorageException("Token without a user: " +
 					ht.getId());
 		}
+	}
+	
+	public <T extends ExternalConfig> void updateConfig(
+			final IncomingToken token,
+			final AuthConfigSet<T> acs)
+			throws InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		getUser(token, Role.ADMIN);
+		storage.updateConfig(acs, true);
+		cfg.updateConfig();
+	}
+	
+	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			final IncomingToken token,
+			final ExternalConfigMapper<T> mapper)
+			throws InvalidTokenException, UnauthorizedException,
+			AuthStorageException, ExternalConfigMappingException {
+		getUser(token, Role.ADMIN);
+		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
+		//TODO CONFIG remove and add providers as appropriate
+		return new AuthConfigSet<T>(acs.getCfg(),
+				mapper.fromMap(acs.getExtcfg().toMap()));
 	}
 
 	// do not expose this method in the public API

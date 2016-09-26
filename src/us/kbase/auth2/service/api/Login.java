@@ -74,7 +74,7 @@ public class Login {
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
 			final URI target = toURI(
-					auth.getProviderURL(provider, state, false));
+					auth.getIdentityProviderURL(provider, state, false));
 			
 			final ResponseBuilder r = Response.seeOther(target)
 					.cookie(getStateCookie(state));
@@ -89,7 +89,7 @@ public class Login {
 			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
 				rep.put("name", prov);
-				final URI i = auth.getProviderImageURI(prov);
+				final URI i = auth.getIdentityProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {

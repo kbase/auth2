@@ -1,0 +1,66 @@
+<html>
+<body>
+<h2>Server Configuration</h2>
+<h3>Basic</h3>
+
+<form action="{{basicurl}}" method="post">
+
+<p>Allow non-admin login:
+<input type="checkbox" name="allowlogin" {{#allowlogin}}checked{{/allowlogin}}/>
+</p>
+
+<p>Show stack trace in returned errors: 
+<input type="checkbox" name="showstack" {{#showstack}}checked{{/showstack}}/><br/>
+The stack trace is always logged.
+</p>
+
+<p>Ignore the X-Forwarded-For and X-Real-IP headers when logging IP addresses:
+<input type="checkbox" name="ignoreip" {{#ignoreip}}checked{{/ignoreip}}/>
+</p>
+
+<p>Allowed post-login redirect URL prefix:
+<input type="text" name="allowedredirect" {{#allowedredirect}}value="{{.}}"{{/allowedredirect}}/>
+</p>
+
+<input type="submit" value="Update"/>
+</form>
+
+<h3>Token lifetimes</h3>
+<form action="{{tokenurl}}" method="post">
+
+<p>Suggested cache lifetime (minutes):
+<input type="number" name="tokensugcache" {{#tokensugcache}}value="{{.}}"{{/tokensugcache}}/>
+</p>
+
+<p>Login token (days):
+<input type="number" name="tokenlogin" {{#tokenlogin}}value="{{.}}"{{/tokenlogin}}/>
+</p>
+
+<p>Developer token (days):
+<input type="number" name="tokendev" {{#tokendev}}value="{{.}}"{{/tokendev}}/>
+</p>
+
+<p>Server token (days):
+<input type="number" name="tokenserv" {{#tokenserv}}value="{{.}}"{{/tokenserv}}/>
+</p>
+
+<input type="submit" value="Update"/>
+</form>
+
+<h3>Identity Providers</h3>
+
+{{#providers}}
+<h4>{{name}}</h4>
+<form action="{{providerurl}}" method="post">
+<input type="hidden" name="provname" value="{{name}}"/>
+<p>Enabled: <input type="checkbox" name="enabled" {{#enabled}}checked{{/enabled}}/>
+</p>
+<p>When linking accounts show link choices even if there's only one choice:
+<input type="checkbox" name="forcelinkchoice" {{#forcelinkchoice}}checked{{/forcelinkchoice}}/>
+</p>
+<input type="submit" value="Update"/>
+</form>
+{{/providers}}
+
+</body>
+</html>

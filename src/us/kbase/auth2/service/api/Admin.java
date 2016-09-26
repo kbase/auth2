@@ -3,12 +3,14 @@ package us.kbase.auth2.service.api;
 import static us.kbase.auth2.service.api.APIUtils.getToken;
 import static us.kbase.auth2.service.api.APIUtils.relativize;
 
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -29,12 +31,16 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -45,6 +51,8 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 @Path("/admin")
 public class Admin {
@@ -234,6 +242,55 @@ public class Admin {
 			InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException {
 		auth.setCustomRole(getToken(incToken), roleId, description);
+	}
+	
+	@GET
+	@Path("/config")
+	@Template(name = "/config")
+	@Produces(MediaType.TEXT_HTML)
+	public Map<String, Object> getConfig(
+			@CookieParam("token") final String token,
+			@Context final UriInfo uriInfo)
+			throws InvalidTokenException, UnauthorizedException,
+			NoTokenProvidedException, AuthStorageException {
+		final AuthConfigSet<AuthExternalConfig> cfg;
+		try {
+			cfg = auth.getConfig(getToken(token),
+					new AuthExternalConfigMapper());
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException(
+					"There's something very wrong in the database config", e);
+		}
+		
+		final Map<String, Object> ret = new HashMap<>();
+		final List<Map<String, Object>> prov = new ArrayList<>();
+		ret.put("providers", prov);
+		for (final Entry<String, ProviderConfig> e:
+				cfg.getCfg().getProviders().entrySet()) {
+			final Map<String, Object> p = new HashMap<>();
+			p.put("name", e.getKey());
+			p.put("enabled", e.getValue().isEnabled());
+			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
+			prov.add(p);
+		}
+		ret.put("showtrace", cfg.getExtcfg().isIncludeStackTraceInResponse());
+		ret.put("ignoreip", cfg.getExtcfg().isIgnoreIPHeaders());
+		ret.put("allowedredirect", cfg.getExtcfg().getAllowedRedirectPrefix());
+		
+		ret.put("allowlogin", cfg.getCfg().isLoginAllowed());
+		ret.put("tokensugcache", cfg.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.EXT_CACHE) / (60 * 1000));
+		ret.put("tokenlogin", cfg.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.LOGIN) / (24 * 60 * 60 * 1000));
+		ret.put("tokendev", cfg.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.DEV) / (24 * 60 * 60 * 1000));
+		ret.put("tokenserv", cfg.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.SERV) / (24 * 60 * 60 * 1000));
+
+		ret.put("basicurl", relativize(uriInfo, "/admin/config/basic"));
+		ret.put("tokenurl", relativize(uriInfo, "/admin/config/token"));
+		ret.put("providerurl", relativize(uriInfo, "/admin/config/provider"));
+		return ret;
 	}
 
 }

@@ -73,7 +73,7 @@ public class Link {
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
 			final URI target = toURI(
-					auth.getProviderURL(provider, state, true));
+					auth.getIdentityProviderURL(provider, state, true));
 			return Response.seeOther(target)
 					.cookie(getStateCookie(state))
 					.build();
@@ -87,7 +87,7 @@ public class Link {
 			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
 				rep.put("name", prov);
-				final URI i = auth.getProviderImageURI(prov);
+				final URI i = auth.getIdentityProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {
