@@ -71,7 +71,8 @@ public class Authentication {
 	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
 	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
-	//TODO CONFIG set token cache time to be sent to client via api
+	//TODO CONFIG send token cache time to client via api
+	//TODO CONFIG disable logins
 	//TODO UI set keep me logged in on login page
 	//TODO PWD last pwd reset field for local users
 	//TODO CONFIG service 1st start should start with id providers disabled (thus no logins possible except for root)
@@ -723,8 +724,9 @@ public class Authentication {
 		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true);
 		filterLinkCandidates(ids);
 		final LinkToken lt;
-		//TODO CONFIG allow forcing choice per id provider
-		if (ids.size() == 1) {
+		final ProviderConfig pc = cfg.getAppConfig()
+				.getProviderConfig(provider);
+		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
 				storage.link(u.getUserName(), ids.iterator().next().withID());
 			} catch (NoSuchUserException e) {
@@ -840,6 +842,14 @@ public class Authentication {
 		//TODO CONFIG remove and add providers as appropriate
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().toMap()));
+	}
+	
+	// don't expose in public api
+	public <T extends ExternalConfig> T getExternalConfig(
+			final ExternalConfigMapper<T> mapper)
+			throws AuthStorageException, ExternalConfigMappingException {
+		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
+		return mapper.fromMap(acs.getExtcfg().toMap());
 	}
 
 	// do not expose this method in the public API

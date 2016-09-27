@@ -124,6 +124,14 @@ public class AuthConfig {
 		}
 		return tokenLifetimeMS.get(type);
 	}
+	
+	public ProviderConfig getProviderConfig(final String provider) {
+		if (!providers.containsKey(provider)) {
+			throw new IllegalArgumentException("No such provider: " +
+					provider);
+		}
+		return providers.get(provider);
+	}
 
 	@Override
 	public String toString() {

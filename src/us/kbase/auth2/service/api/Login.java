@@ -69,7 +69,7 @@ public class Login {
 			@QueryParam("redirect") final String redirect,
 			@Context UriInfo uriInfo)
 					throws NoSuchIdentityProviderException {
-		//TODO REDIRECT check redirect url matches allowed config & is valid URL
+		//TODO CONFIG REDIRECT check redirect url matches allowed config & is valid URL
 		//TODO CONFIG allow enable & disable of id providers.
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
