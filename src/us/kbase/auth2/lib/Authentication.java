@@ -118,6 +118,7 @@ public class Authentication {
 		}
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
+		idFactory.lock();
 		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
 				getDefaultConfig(), defaultExternalConfig), false);
 		try {
@@ -819,8 +820,12 @@ public class Authentication {
 			final IncomingToken token,
 			final AuthConfigSet<T> acs)
 			throws InvalidTokenException, UnauthorizedException,
-			AuthStorageException {
+			AuthStorageException, NoSuchIdentityProviderException {
 		getUser(token, Role.ADMIN);
+		for (final String provider: acs.getCfg().getProviders().keySet()) {
+			//throws an exception if no provider by given name
+			idFactory.getProvider(provider);
+		}
 		storage.updateConfig(acs, true);
 		cfg.updateConfig();
 	}

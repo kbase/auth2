@@ -45,8 +45,7 @@ the legacy globus API. Endpoints are /goauth/token and /users.
 Note that the current UI is a minimal implementation for the purposes of
 testing. In many cases a manual refresh of the page will be required to see
 changes. Further, once a checkbox is manually checked or unchecked, that state
-will not change, even with a refresh - to see changes the page must be closed
-and reopened.
+will not change, even with a refresh - to see changes reset the form.
 
 Admin notes
 -----------

@@ -78,8 +78,28 @@ public class AuthConfig {
 		if (providers == null) {
 			providers = new HashMap<>();
 		}
+		for (final String p: providers.keySet()) {
+			if (p == null || p.isEmpty()) {
+				throw new IllegalArgumentException(
+						"provider names cannot be null or empty");
+			}
+			if (providers.get(p) == null) {
+				throw new NullPointerException(
+						"Provider config cannot be null");
+			}
+		}
 		if (tokenLifetimeMS == null) {
 			tokenLifetimeMS = new HashMap<>();
+		}
+		for (final TokenLifetimeType t: tokenLifetimeMS.keySet()) {
+			if (t == null) {
+				throw new NullPointerException(
+						"null key in token life time map");
+			}
+			if (tokenLifetimeMS.get(t) < 60 * 1000) {
+				throw new IllegalArgumentException(
+						"token lifetimes must be at least 60,000 ms");
+			}
 		}
 		this.loginAllowed = loginAllowed;
 		this.providers = Collections.unmodifiableMap(providers);

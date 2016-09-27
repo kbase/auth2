@@ -3,6 +3,8 @@ package us.kbase.auth2.service.api;
 import static us.kbase.auth2.service.api.APIUtils.getToken;
 import static us.kbase.auth2.service.api.APIUtils.relativize;
 
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -31,6 +33,7 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
@@ -44,6 +47,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -246,7 +250,7 @@ public class Admin {
 	
 	@GET
 	@Path("/config")
-	@Template(name = "/config")
+	@Template(name = "/config") //TODO NOW rename to adminconfig
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> getConfig(
 			@CookieParam("token") final String token,
@@ -273,7 +277,7 @@ public class Admin {
 			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
 			prov.add(p);
 		}
-		ret.put("showtrace", cfg.getExtcfg().isIncludeStackTraceInResponse());
+		ret.put("showstack", cfg.getExtcfg().isIncludeStackTraceInResponse());
 		ret.put("ignoreip", cfg.getExtcfg().isIgnoreIPHeaders());
 		ret.put("allowedredirect", cfg.getExtcfg().getAllowedRedirectPrefix());
 		
@@ -291,6 +295,122 @@ public class Admin {
 		ret.put("tokenurl", relativize(uriInfo, "/admin/config/token"));
 		ret.put("providerurl", relativize(uriInfo, "/admin/config/provider"));
 		return ret;
+	}
+	
+	@POST
+	@Path("/config/basic")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void updateBasic(
+			@CookieParam("token") final String token,
+			@FormParam("allowlogin") final String allowLogin,
+			@FormParam("showstack") final String showstack,
+			@FormParam("ignoreip") final String ignoreip,
+			@FormParam("allowedredirect") final String allowedredirect)
+			throws IllegalParameterException, InvalidTokenException,
+			UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
+		final URL redirect;
+		if (allowedredirect == null || allowedredirect.isEmpty()) {
+			redirect = null;
+		} else {
+			try {
+				redirect = new URL(allowedredirect);
+			} catch (MalformedURLException e) {
+				throw new IllegalParameterException(
+						"Illegal URL: " + allowedredirect, e);
+			}
+		}
+		
+		final AuthExternalConfig ext = new AuthExternalConfig(
+				redirect, !nullOrEmpty(ignoreip), !nullOrEmpty(showstack));
+		try {
+			auth.updateConfig(getToken(token), new AuthConfigSet<>(
+					new AuthConfig(!nullOrEmpty(allowLogin), null, null),
+					ext));
+		} catch (NoSuchIdentityProviderException e) {
+			throw new RuntimeException("OK, that's not supposed to happen", e);
+		}
+	}
+	
+	@POST
+	@Path("/config/provider")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void configProvider(
+			@CookieParam("token") final String token,
+			@FormParam("provname") final String provname,
+			@FormParam("enabled") final String enabled,
+			@FormParam("forcelinkchoice") final String forcelink)
+			throws MissingParameterException, InvalidTokenException,
+			UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException, NoSuchIdentityProviderException {
+		final ProviderConfig pc = new ProviderConfig(
+				!nullOrEmpty(enabled), !nullOrEmpty(forcelink));
+		if (provname == null || provname.isEmpty()) {
+			throw new MissingParameterException("provname");
+		}
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		provs.put(provname, pc);
+		auth.updateConfig(getToken(token), new AuthConfigSet<>(
+				new AuthConfig(null, provs, null),
+				new AuthExternalConfig(null, null, null)));
+	}
+	
+	@POST
+	@Path("/config/token")
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void configTokens(
+			@CookieParam("token") final String token,
+			@FormParam("tokensugcache") final int sugcache,
+			@FormParam("tokenlogin") final int login,
+			@FormParam("tokendev") final int dev,
+			@FormParam("tokenserv") final long serv)
+			throws IllegalParameterException, InvalidTokenException,
+			UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
+		if (sugcache < 1) {
+			throw new IllegalParameterException(
+					"Suggested token cache time must be at least 1");
+		}
+		if (login < 1) {
+			throw new IllegalParameterException(
+					"Suggested login token expiration time must be at " +
+					"least 1");
+		}
+		if (dev < 1) {
+			throw new IllegalParameterException(
+					"Suggested developer token expiration time must be at " +
+					"least 1");
+		}
+		if (serv < 1) {
+			throw new IllegalParameterException(
+					"Suggested server token expiration time must be at " +
+					"least 1");
+		}
+		final Map<TokenLifetimeType, Long> t = new HashMap<>();
+		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, 60 * 1000L));
+		t.put(TokenLifetimeType.LOGIN, safeMult(login, 24 * 60 * 60 * 1000L));
+		t.put(TokenLifetimeType.DEV, safeMult(dev, 24 * 60 * 60 * 1000L));
+		t.put(TokenLifetimeType.SERV, safeMult(serv, 24 * 60 * 60 * 1000L));
+		System.out.println(t);
+		try {
+			auth.updateConfig(getToken(token), new AuthConfigSet<>(
+					new AuthConfig(null, null, t),
+					new AuthExternalConfig(null, null, null)));
+		} catch (NoSuchIdentityProviderException e) {
+			throw new RuntimeException("OK, that's not supposed to happen", e);
+		}
+	}
+	
+	private Long safeMult(final long l1, final long l2) {
+		
+		if (Long.MAX_VALUE / l2 < l1) {
+			return Long.MAX_VALUE;
+		}
+		return l1 * l2;
+	}
+
+	private boolean nullOrEmpty(final String s) {
+		return s == null || s.isEmpty();
 	}
 
 }
