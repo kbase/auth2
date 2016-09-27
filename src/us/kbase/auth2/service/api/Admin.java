@@ -250,7 +250,7 @@ public class Admin {
 	
 	@GET
 	@Path("/config")
-	@Template(name = "/config") //TODO NOW rename to adminconfig
+	@Template(name = "/adminconfig")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> getConfig(
 			@CookieParam("token") final String token,
