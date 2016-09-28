@@ -69,7 +69,6 @@ public class Link {
 
 		final IncomingToken incToken = getToken(token);
 		
-		//TODO CONFIG allow enable & disable of id providers.
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
 			final URI target = toURI(

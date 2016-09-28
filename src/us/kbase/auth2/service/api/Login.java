@@ -74,8 +74,6 @@ public class Login {
 			@Context UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 			IllegalParameterException {
-		//TODO CONFIG REDIRECT check redirect url matches allowed config & is valid URL
-		//TODO CONFIG allow enable & disable of id providers.
 		checkRedirectURL(redirect);
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();

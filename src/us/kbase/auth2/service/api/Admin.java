@@ -391,7 +391,6 @@ public class Admin {
 		t.put(TokenLifetimeType.LOGIN, safeMult(login, 24 * 60 * 60 * 1000L));
 		t.put(TokenLifetimeType.DEV, safeMult(dev, 24 * 60 * 60 * 1000L));
 		t.put(TokenLifetimeType.SERV, safeMult(serv, 24 * 60 * 60 * 1000L));
-		System.out.println(t);
 		try {
 			auth.updateConfig(getToken(token), new AuthConfigSet<>(
 					new AuthConfig(null, null, t),

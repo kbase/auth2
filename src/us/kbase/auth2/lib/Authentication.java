@@ -74,7 +74,6 @@ public class Authentication {
 	//TODO CONFIG send token cache time to client via api
 	//TODO UI set keep me logged in on login page
 	//TODO PWD last pwd reset field for local users
-	//TODO CONFIG service 1st start should start with id providers disabled (thus no logins possible except for root)
 	
 	/* TODO ROLES feature: delete custom roles (see below)
 	 * Delete role from all users
@@ -869,7 +868,6 @@ public class Authentication {
 			AuthStorageException, ExternalConfigMappingException {
 		getUser(token, Role.ADMIN);
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		//TODO CONFIG remove and add providers as appropriate
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().toMap()));
 	}
