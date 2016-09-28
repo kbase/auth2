@@ -5,6 +5,7 @@ import static us.kbase.auth2.service.api.APIUtils.getLoginCookie;
 import static us.kbase.auth2.service.api.APIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.api.APIUtils.upperCase;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -41,6 +42,7 @@ import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -53,6 +55,8 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 @Path("/login")
 public class Login {
@@ -68,9 +72,11 @@ public class Login {
 			@QueryParam("provider") final String provider,
 			@QueryParam("redirect") final String redirect,
 			@Context UriInfo uriInfo)
-					throws NoSuchIdentityProviderException {
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			IllegalParameterException {
 		//TODO CONFIG REDIRECT check redirect url matches allowed config & is valid URL
 		//TODO CONFIG allow enable & disable of id providers.
+		checkRedirectURL(redirect);
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
 			final URI target = toURI(
@@ -104,6 +110,32 @@ public class Login {
 			}
 			return Response.ok().entity(new Viewable("/loginstart", ret))
 					.build();
+		}
+	}
+
+	private void checkRedirectURL(final String redirect)
+			throws AuthStorageException, IllegalParameterException {
+		if (redirect != null && !redirect.trim().isEmpty()) {
+			final AuthExternalConfig ext;
+			try {
+				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
+			} catch (ExternalConfigMappingException e) {
+				throw new RuntimeException("Dude, like, what just happened?",
+						e);
+			}
+			try {
+				new URL(redirect);
+			} catch (MalformedURLException e) {
+				throw new IllegalParameterException("Illegal redirect URL: " +
+						redirect);
+			}
+			if (ext.getAllowedRedirectPrefix() != null) {
+				if (!redirect.startsWith(
+						ext.getAllowedRedirectPrefix().toString())) {
+					throw new IllegalParameterException(
+							"Illegal redirect url: " + redirect);
+				}
+			}
 		}
 	}
 
