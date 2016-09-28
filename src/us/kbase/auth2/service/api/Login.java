@@ -131,7 +131,8 @@ public class Login {
 			@CookieParam("redirect") final String redirect,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
-			NoSuchProviderException, AuthStorageException {
+			NoSuchProviderException, AuthStorageException,
+			UnauthorizedException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps =
@@ -239,7 +240,7 @@ public class Login {
 			@CookieParam("redirect") final String redirect,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException {
+			AuthStorageException, UnauthorizedException {
 		
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException(

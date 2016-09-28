@@ -29,6 +29,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.NewToken;
 
@@ -61,7 +62,8 @@ public class LocalAccounts {
 			//checkbox, so "on" = checked, null = not checked
 			@FormParam("stayLoggedIn") final String stayLoggedIn)
 			throws AuthStorageException, MissingParameterException,
-			AuthenticationException, IllegalParameterException {
+			AuthenticationException, IllegalParameterException,
+			UnauthorizedException {
 		if (userName == null || userName.isEmpty()) {
 			throw new MissingParameterException("user");
 		}

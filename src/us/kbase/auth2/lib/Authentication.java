@@ -72,7 +72,6 @@ public class Authentication {
 	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	//TODO CONFIG send token cache time to client via api
-	//TODO CONFIG disable logins
 	//TODO UI set keep me logged in on login page
 	//TODO PWD last pwd reset field for local users
 	//TODO CONFIG service 1st start should start with id providers disabled (thus no logins possible except for root)
@@ -249,7 +248,8 @@ public class Authentication {
 	}
 	
 	public NewToken localLogin(final UserName userName, final Password pwd)
-			throws AuthenticationException, AuthStorageException {
+			throws AuthenticationException, AuthStorageException,
+			UnauthorizedException {
 		final LocalUser u;
 		try {
 			u = storage.getLocalUser(userName);
@@ -261,6 +261,12 @@ public class Authentication {
 				u.getSalt())) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
+		}
+		if (!cfg.getAppConfig().isLoginAllowed() &&
+				!Role.isAdmin(u.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Non-admin login is disabled");
+			
 		}
 		pwd.clear();
 		//TODO PWD if reset required, make reset token
@@ -494,7 +500,7 @@ public class Authentication {
 		}
 		storage.setRoles(userName, roles);
 	}
-
+	
 	private void throwUnauth(final String action, final Set<Role> roles)
 			throws UnauthorizedException {
 		throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -568,7 +574,8 @@ public class Authentication {
 	// token instead of returning the choices directly
 	public LoginToken login(final String provider, final String authcode)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException {
+			AuthStorageException, NoSuchIdentityProviderException,
+			UnauthorizedException {
 		final IdentityProvider idp = idFactory.getProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
@@ -587,6 +594,11 @@ public class Authentication {
 		final LoginToken lr;
 		if (hasUser.size() == 1 && noUser.isEmpty()) {
 			final AuthUser user = hasUser.values().iterator().next();
+			if (!cfg.getAppConfig().isLoginAllowed() &&
+					!Role.isAdmin(user.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Non-admin login is disabled");
+			}
 			lr = new LoginToken(login(user.getUserName()));
 		} else {
 			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
@@ -651,6 +663,10 @@ public class Authentication {
 			final boolean privateNameEmail)
 			throws AuthStorageException, AuthenticationException,
 				UserExistsException, UnauthorizedException {
+		if (!cfg.getAppConfig().isLoginAllowed()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Account creation is disabled");
+		}
 		//TODO CONFIG_USER handle sessionLogin, privateNameEmail
 		//TODO INPUT check all inputs, check fullname and email are reasonable - probably class for email that does basic validation
 		if (userName == null) {
@@ -670,7 +686,8 @@ public class Authentication {
 
 
 	public NewToken login(final IncomingToken token, final UUID identityID)
-			throws AuthenticationException, AuthStorageException {
+			throws AuthenticationException, AuthStorageException,
+			UnauthorizedException {
 		final RemoteIdentity ri = getIdentity(token, identityID);
 		final AuthUser u = storage.getUser(ri);
 		if (u == null) {
@@ -679,7 +696,11 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"There is no account linked to the provided identity");
 		}
-		
+		if (!cfg.getAppConfig().isLoginAllowed() &&
+				!Role.isAdmin(u.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Non-admin login is disabled");
+		}
 		return login(u.getUserName());
 	}
 	
