@@ -1,10 +1,10 @@
 <html>
 <body>
-<p>User: {{user}}<br/>
+<h2>User: {{user}}</h2>
 Expiration and creation dates are in seconds from the epoch.
 </p>
 {{#dev}}
-Create a token:
+<h3>Create a token:</h3>
 <form action="{{targeturl}}" method="post">
 	Token name: <input type="text" name="tokenname"/><br/>
 {{#serv}}
@@ -16,7 +16,7 @@ Create a token:
 <form action="{{revokeallurl}}" method="post">
 	<input type="submit" value="Revoke all tokens and logout"/>
 </form>
-Current token:<br/>
+<h3>Current token:</h3>
 {{#current}}
 {{#name}}
 Name: {{name}}<br/>
@@ -27,7 +27,7 @@ Created: {{created}}<br/>
 Expires: {{expires}}<br/>
 <br/>
 {{/current}}
-<p>Tokens:</p>
+<h3>Tokens:</h3>
 {{#tokens}}
 {{#name}}
 Name: {{name}}<br/>

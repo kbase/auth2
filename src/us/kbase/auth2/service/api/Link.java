@@ -44,7 +44,6 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -70,12 +69,10 @@ public class Link {
 
 		final IncomingToken incToken = getToken(token);
 		
-		//TODO CONFIG allow enable & disable of id providers.
 		if (provider != null && !provider.trim().isEmpty()) {
-			final IdentityProvider idp = auth.getIdentityProvider(
-					provider);
 			final String state = auth.getBareToken();
-			final URI target = toURI(idp.getLoginURL(state, true));
+			final URI target = toURI(
+					auth.getIdentityProviderURL(provider, state, true));
 			return Response.seeOther(target)
 					.cookie(getStateCookie(state))
 					.build();
@@ -86,10 +83,10 @@ public class Link {
 			ret.put("local", u.isLocal());
 			final List<Map<String, String>> provs = new LinkedList<>();
 			ret.put("providers", provs);
-			for (final IdentityProvider idp: auth.getIdentityProviders()) {
+			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", idp.getProviderName());
-				final URI i = idp.getImageURI();
+				rep.put("name", prov);
+				final URI i = auth.getIdentityProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {
@@ -114,7 +111,7 @@ public class Link {
 	
 	@GET
 	@Path("/complete/{provider}")
-	public Response login(
+	public Response link(
 			@PathParam("provider") String provider,
 			@CookieParam("statevar") final String state,
 			@CookieParam("token") final String token,
@@ -127,8 +124,7 @@ public class Link {
 		final MultivaluedMap<String, String> qps =
 				uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
-		final IdentityProvider idp = auth.getIdentityProvider(provider);
-		final String authcode = qps.getFirst(idp.getAuthCodeQueryParamName());
+		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		if (state == null || state.trim().isEmpty()) {
 			throw new MissingParameterException(

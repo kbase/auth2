@@ -7,7 +7,7 @@ public class Fields {
 	public static final String FIELD_SEP = ".";
 
 	public static final String MONGO_ID = "_id";
-
+	
 	//user fields
 	public static final String USER_NAME = "user";
 	public static final String USER_FULL_NAME = "full";
@@ -51,10 +51,22 @@ public class Fields {
 	public static final String ROLES_ID = "id";
 	public static final String ROLES_DESC = "desc";
 	
-	// configuration fields
-	public static final String CONFIG_KEY = "config";
-	public static final String CONFIG_VALUE = "config";
-	public static final String CONFIG_UPDATE = "inupdate";
-	public static final String CONFIG_SCHEMA_VERSION = "schemaver";
+	// database configuration fields
+	public static final String DB_CONFIG_KEY = "config";
+	public static final String DB_CONFIG_VALUE = "config";
+	public static final String DB_CONFIG_UPDATE = "inupdate";
+	public static final String DB_CONFIG_SCHEMA_VERSION = "schemaver";
 
+	// application configuration fields for storable config values
+	public static final String CONFIG_KEY = "key";
+	public static final String CONFIG_VALUE = "val";
+	public static final String CONFIG_APP_ALLOW_LOGIN = "allowlogin";
+	public static final String CONFIG_PROVIDER = "prov";
+	public static final String CONFIG_PROVIDER_ENABLED = "enabled";
+	public static final String CONFIG_PROVIDER_FORCE_LINK_CHOICE =
+			"linkchoice";
+	public static final String CONFIG_APP_TOKEN_LIFE_CACHE = "tokenlifecache";
+	public static final String CONFIG_APP_TOKEN_LIFE_LOGIN = "tokenlifelogin";
+	public static final String CONFIG_APP_TOKEN_LIFE_DEV = "tokenlifedev";
+	public static final String CONFIG_APP_TOKEN_LIFE_SERV = "tokenlifeserv";
 }

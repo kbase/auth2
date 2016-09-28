@@ -1,7 +1,8 @@
 package us.kbase.auth2.lib.identity;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
@@ -16,9 +17,11 @@ public class IdentityProviderFactory {
 	private static final IdentityProviderFactory instance =
 			new IdentityProviderFactory();
 	
-	private final Map<String, IdentityProvider> providers = new TreeMap<>();
+	private final TreeMap<String, IdentityProvider> providers =
+			new TreeMap<>();
 	private final Map<String, IdentityProviderConfigurator> configs =
 			new HashMap<>();
+	private boolean locked = false;
 	
 	
 	public static IdentityProviderFactory getInstance() {
@@ -42,6 +45,9 @@ public class IdentityProviderFactory {
 	
 	// note overwrites providers with the same name
 	public void configure(final IdentityProviderConfig cfg) {
+		if (locked) {
+			throw new IllegalStateException("Factory is locked");
+		}
 		if (!configs.containsKey(cfg.getIdentityProviderName())) {
 			throw new IllegalArgumentException(
 					"Register a configurator before attempting to " +
@@ -60,8 +66,17 @@ public class IdentityProviderFactory {
 		
 	}
 	
-	public List<IdentityProvider> getProviders() {
-		return new LinkedList<>(providers.values());
+	public List<String> getProviders() {
+		return Collections.unmodifiableList(new ArrayList<>(
+				providers.navigableKeySet()));
+	}
+
+	public void lock() {
+		locked = true;
+	}
+	
+	public boolean isLocked() {
+		return locked;
 	}
 
 }

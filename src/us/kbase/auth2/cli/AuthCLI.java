@@ -32,7 +32,8 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthBuilder;
-import us.kbase.auth2.service.AuthConfig;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.auth2.service.kbase.KBaseAuthConfig;
 
@@ -67,9 +68,9 @@ public class AuthCLI {
 		}
 		final Authentication auth;
 		try {
-			final AuthConfig cfg = new KBaseAuthConfig(
+			final AuthStartupConfig cfg = new KBaseAuthConfig(
 					Paths.get(a.deploy), true);
-			auth = new AuthBuilder(cfg).getAuth();
+			auth = new AuthBuilder(cfg, AuthExternalConfig.DEFAULT).getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			error(e, a);
 			throw new RuntimeException(); // error() stops execution

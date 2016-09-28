@@ -45,7 +45,6 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	private static final String LOGIN_PATH = "/o/oauth2/v2/auth";
 	private static final String TOKEN_PATH = "/oauth2/v4/token";
 	private static final String IDENTITY_PATH = "/plus/v1/people/me";
-	private static final String AUTH_CODE_PARAM = "code";
 	
 	//thread safe
 	private static final Client CLI = ClientBuilder.newClient();
@@ -108,11 +107,6 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	}
 
 	@Override
-	public String getAuthCodeQueryParamName() {
-		return AUTH_CODE_PARAM;
-	}
-
-	@Override
 	public Set<RemoteIdentity> getIdentities(
 			final String authcode,
 			final boolean link) throws IdentityRetrievalException {
@@ -128,7 +122,7 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		final Map<String, Object> id = googleGetRequest(
 				accessToken, target);
 		if (id.containsKey("error")) {
-			//TODO ERROR better error handling
+			//TODO IDPROVERROR better error handling
 			throw new IdentityRetrievalException(
 					"Provider error: " + id.get("error"));
 		}

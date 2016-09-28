@@ -4,12 +4,16 @@ import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -18,6 +22,7 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
@@ -122,4 +127,13 @@ public interface AuthStorage {
 
 	void unlink(UserName userName, UUID id)
 			throws AuthStorageException, UnLinkFailedException;
+
+	<T extends ExternalConfig> void updateConfig(
+			AuthConfigSet<T> authConfigSet,
+			boolean overwrite)
+			throws StorageInitException;
+
+	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			ExternalConfigMapper<T> mapper)
+			throws AuthStorageException, ExternalConfigMappingException;
 }

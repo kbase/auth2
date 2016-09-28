@@ -16,6 +16,11 @@ import org.slf4j.LoggerFactory;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.template.TemplateProcessor;
 
@@ -32,6 +37,8 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 	private final ObjectMapper mapper = new ObjectMapper();
 	@Inject
 	private SLF4JAutoLogger logger;
+	@Inject
+	private Authentication auth;
 
 	@Override
 	public Response toResponse(Throwable ex) {
@@ -39,8 +46,18 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 		final MediaType mt = getMediaType();
 		LoggerFactory.getLogger(getClass()).error("Logging exception:", ex);
 
-		//TODO AUTH make including trace configurable
-		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(), true);
+		boolean includeStack = false;
+		try {
+			final AuthExternalConfig ext = auth.getExternalConfig(
+					new AuthExternalConfigMapper());
+			includeStack = ext.isIncludeStackTraceInResponse();
+		} catch (AuthStorageException | ExternalConfigMappingException e) {
+			LoggerFactory.getLogger(getClass()).error(
+					"An error occurred in the error handler when attempting " +
+					"to get the server configuration", e); 
+		}
+		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(),
+				includeStack);
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {
 			final Map<String, Object> err = new HashMap<>();

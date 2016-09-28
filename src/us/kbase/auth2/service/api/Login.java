@@ -5,6 +5,7 @@ import static us.kbase.auth2.service.api.APIUtils.getLoginCookie;
 import static us.kbase.auth2.service.api.APIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.api.APIUtils.upperCase;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -41,6 +42,7 @@ import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -48,12 +50,13 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 @Path("/login")
 public class Login {
@@ -69,14 +72,13 @@ public class Login {
 			@QueryParam("provider") final String provider,
 			@QueryParam("redirect") final String redirect,
 			@Context UriInfo uriInfo)
-					throws NoSuchIdentityProviderException {
-		//TODO REDIRECT check redirect url matches allowed config & is valid URL
-		//TODO CONFIG allow enable & disable of id providers.
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			IllegalParameterException {
+		checkRedirectURL(redirect);
 		if (provider != null && !provider.trim().isEmpty()) {
-			final IdentityProvider idp = auth.getIdentityProvider(
-					provider);
 			final String state = auth.getBareToken();
-			final URI target = toURI(idp.getLoginURL(state, false));
+			final URI target = toURI(
+					auth.getIdentityProviderURL(provider, state, false));
 			
 			final ResponseBuilder r = Response.seeOther(target)
 					.cookie(getStateCookie(state));
@@ -88,10 +90,10 @@ public class Login {
 			final Map<String, Object> ret = new HashMap<>();
 			final List<Map<String, String>> provs = new LinkedList<>();
 			ret.put("providers", provs);
-			for (final IdentityProvider idp: auth.getIdentityProviders()) {
+			for (final String prov: auth.getIdentityProviders()) {
 				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", idp.getProviderName());
-				final URI i = idp.getImageURI();
+				rep.put("name", prov);
+				final URI i = auth.getIdentityProviderImageURI(prov);
 				if (i.isAbsolute()) {
 					rep.put("img", i.toString());
 				} else {
@@ -106,6 +108,32 @@ public class Login {
 			}
 			return Response.ok().entity(new Viewable("/loginstart", ret))
 					.build();
+		}
+	}
+
+	private void checkRedirectURL(final String redirect)
+			throws AuthStorageException, IllegalParameterException {
+		if (redirect != null && !redirect.trim().isEmpty()) {
+			final AuthExternalConfig ext;
+			try {
+				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
+			} catch (ExternalConfigMappingException e) {
+				throw new RuntimeException("Dude, like, what just happened?",
+						e);
+			}
+			try {
+				new URL(redirect);
+			} catch (MalformedURLException e) {
+				throw new IllegalParameterException("Illegal redirect URL: " +
+						redirect);
+			}
+			if (ext.getAllowedRedirectPrefix() != null) {
+				if (!redirect.startsWith(
+						ext.getAllowedRedirectPrefix().toString())) {
+					throw new IllegalParameterException(
+							"Illegal redirect url: " + redirect);
+				}
+			}
 		}
 	}
 
@@ -133,14 +161,14 @@ public class Login {
 			@CookieParam("redirect") final String redirect,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
-			NoSuchProviderException, AuthStorageException {
+			NoSuchProviderException, AuthStorageException,
+			UnauthorizedException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps =
 				uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
-		final IdentityProvider idp = auth.getIdentityProvider(provider);
-		final String authcode = qps.getFirst(idp.getAuthCodeQueryParamName());
+		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		if (state == null || state.trim().isEmpty()) {
 			throw new MissingParameterException(
@@ -242,7 +270,7 @@ public class Login {
 			@CookieParam("redirect") final String redirect,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException {
+			AuthStorageException, UnauthorizedException {
 		
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException(

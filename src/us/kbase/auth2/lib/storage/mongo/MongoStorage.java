@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -30,12 +31,19 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
+import us.kbase.auth2.lib.AuthConfig;
+import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -89,11 +97,25 @@ public class MongoStorage implements AuthStorage {
 	
 	private static final int SCHEMA_VERSION = 1;
 	
-	private static final String COL_USERS = "users";
 	private static final String COL_CONFIG = "config";
+	private static final String COL_CONFIG_APPLICATION = "config_app";
+	private static final String COL_CONFIG_PROVIDERS = "config_prov";
+	private static final String COL_CONFIG_EXTERNAL = "config_ext";
+	private static final String COL_USERS = "users";
 	private static final String COL_TOKEN = "tokens";
 	private static final String COL_TEMP_TOKEN = "temptokens";
 	private static final String COL_CUST_ROLES = "cust_roles";
+	
+	private static final Map<TokenLifetimeType, String>
+			TOKEN_LIFETIME_FIELD_MAP;
+	static {
+		final Map<TokenLifetimeType, String> m = new HashMap<>();
+		m.put(TokenLifetimeType.EXT_CACHE, Fields.CONFIG_APP_TOKEN_LIFE_CACHE);
+		m.put(TokenLifetimeType.LOGIN, Fields.CONFIG_APP_TOKEN_LIFE_LOGIN);
+		m.put(TokenLifetimeType.DEV, Fields.CONFIG_APP_TOKEN_LIFE_DEV);
+		m.put(TokenLifetimeType.SERV, Fields.CONFIG_APP_TOKEN_LIFE_SERV);
+		TOKEN_LIFETIME_FIELD_MAP = Collections.unmodifiableMap(m);
+	}
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ =
@@ -149,8 +171,25 @@ public class MongoStorage implements AuthStorage {
 		//config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
 		//ensure only one config object
-		cfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
+		cfg.put(Arrays.asList(Fields.DB_CONFIG_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG, cfg);
+		
+		// application config indexes
+		final Map<List<String>, IndexOptions> appcfg = new HashMap<>();
+		appcfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
+		INDEXES.put(COL_CONFIG_APPLICATION, appcfg);
+		
+		// provider config indexes
+		final Map<List<String>, IndexOptions> provcfg = new HashMap<>();
+		provcfg.put(Arrays.asList(Fields.CONFIG_PROVIDER, Fields.CONFIG_KEY),
+				IDX_UNIQ);
+		INDEXES.put(COL_CONFIG_PROVIDERS, provcfg);
+		
+		// external config indexes
+		final Map<List<String>, IndexOptions> extcfg = new HashMap<>();
+		extcfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
+		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
+
 
 	}
 	
@@ -171,9 +210,9 @@ public class MongoStorage implements AuthStorage {
 	private void checkConfig() throws StorageInitException  {
 		final MongoCollection<Document> col = db.getCollection(COL_CONFIG);
 		final Document cfg = new Document(
-				Fields.CONFIG_KEY, Fields.CONFIG_VALUE);
-		cfg.put(Fields.CONFIG_UPDATE, false);
-		cfg.put(Fields.CONFIG_SCHEMA_VERSION, SCHEMA_VERSION);
+				Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE);
+		cfg.put(Fields.DB_CONFIG_UPDATE, false);
+		cfg.put(Fields.DB_CONFIG_SCHEMA_VERSION, SCHEMA_VERSION);
 		try {
 			col.insertOne(cfg);
 		} catch (MongoWriteException dk) {
@@ -190,20 +229,20 @@ public class MongoStorage implements AuthStorage {
 						"This should not happen, something is very wrong.");
 			}
 			final FindIterable<Document> cur = db.getCollection(COL_CONFIG)
-					.find(Filters.eq(Fields.CONFIG_KEY, Fields.CONFIG_VALUE));
+					.find(Filters.eq(Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE));
 			final Document doc = cur.first();
-			if ((Integer) doc.get(Fields.CONFIG_SCHEMA_VERSION) !=
+			if ((Integer) doc.get(Fields.DB_CONFIG_SCHEMA_VERSION) !=
 					SCHEMA_VERSION) {
 				throw new StorageInitException(String.format(
 						"Incompatible database schema. Server is v%s, " +
 						"DB is v%s", SCHEMA_VERSION,
-						doc.get(Fields.CONFIG_SCHEMA_VERSION)));
+						doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
 			}
-			if ((Boolean) doc.get(Fields.CONFIG_UPDATE)) {
+			if ((Boolean) doc.get(Fields.DB_CONFIG_UPDATE)) {
 				throw new StorageInitException(String.format(
 						"The database is in the middle of an update from " +
 								"v%s of the schema. Aborting startup.", 
-								doc.get(Fields.CONFIG_SCHEMA_VERSION)));
+								doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
 			}
 		} catch (MongoException me) {
 			throw new StorageInitException(
@@ -788,7 +827,7 @@ public class MongoStorage implements AuthStorage {
 		boolean complete = false;
 		while (!complete) {
 			complete = addIdentity(user, remoteID);
-		} //TODO CODE have a max loop limit to protect against bugs
+		} //TODO CODE RACE have a max loop limit to protect against bugs
 	}
 	
 	private boolean addIdentity(
@@ -919,5 +958,149 @@ public class MongoStorage implements AuthStorage {
 			throws NoSuchUserException, AuthStorageException {
 		final Document d = new Document(Fields.USER_LAST_LOGIN, lastLogin);
 		updateUser(user, d);
+	}
+
+	private void updateConfig(
+			final String collection,
+			final String key,
+			final Object value,
+			final boolean overwrite)
+			throws StorageInitException {
+		final Document q = new Document(Fields.CONFIG_KEY, key);
+		updateConfig(collection, q, value, overwrite);
+	}
+
+	private void updateConfig(
+			final String collection,
+			final Document query,
+			final Object value,
+			final boolean overwrite)
+			throws StorageInitException {
+		if (value == null) {
+			return;
+		}
+		final String op = overwrite ? "$set" : "$setOnInsert";
+		final Document u = new Document(op,
+				new Document(Fields.CONFIG_VALUE, value));
+		try {
+			db.getCollection(collection).updateOne(query, u,
+					new UpdateOptions().upsert(true));
+		} catch (MongoException me) {
+			throw new StorageInitException(
+					"There was a problem communicating with the database: " +
+					me.getMessage(), me);
+		}
+	}
+	
+	private void updateProviderConfig(
+			final String provider,
+			final String key,
+			final Object value,
+			final boolean overwrite)
+			throws StorageInitException {
+		final Document q = new Document(Fields.CONFIG_KEY, key)
+				.append(Fields.CONFIG_PROVIDER, provider);
+		updateConfig(COL_CONFIG_PROVIDERS, q, value, overwrite);
+	}
+	
+	@Override
+	public <T extends ExternalConfig> void updateConfig(
+			final AuthConfigSet<T> cfgSet,
+			final boolean overwrite)
+			throws StorageInitException {
+		
+		updateConfig(COL_CONFIG_APPLICATION, Fields.CONFIG_APP_ALLOW_LOGIN,
+				cfgSet.getCfg().isLoginAllowed(), overwrite);
+		for (final Entry<TokenLifetimeType, Long> e:
+				cfgSet.getCfg().getTokenLifetimeMS().entrySet()) {
+			updateConfig(COL_CONFIG_APPLICATION,
+					TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()),
+					e.getValue(), overwrite);
+		}
+		for (final Entry<String, ProviderConfig> e:
+				cfgSet.getCfg().getProviders().entrySet()) {
+			updateProviderConfig(e.getKey(),
+					Fields.CONFIG_PROVIDER_ENABLED,
+					e.getValue().isEnabled(), overwrite);
+			updateProviderConfig(e.getKey(),
+					Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE,
+					e.getValue().isForceLinkChoice(), overwrite);
+		}
+		
+		for (final Entry<String, String> e:
+				cfgSet.getExtcfg().toMap().entrySet()) {
+			updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue(),
+					overwrite);
+		}
+	}
+	
+	private Map<String, Document> getAppConfig() {
+		final FindIterable<Document> i =
+				db.getCollection(COL_CONFIG_APPLICATION).find();
+		final Map<String, Document> ret = new HashMap<>();
+		for (final Document d: i) {
+			ret.put(d.getString(Fields.CONFIG_KEY), d);
+		}
+		return ret;
+	}
+	
+	private Map<String, Map<String, Document>> getProviderConfig() {
+		final FindIterable<Document> proviter =
+				db.getCollection(COL_CONFIG_PROVIDERS).find();
+		final Map<String, Map<String, Document>> ret = new HashMap<>();
+		for (final Document d: proviter) {
+			final String p = d.getString(Fields.CONFIG_PROVIDER);
+			final String key = d.getString(Fields.CONFIG_KEY);
+			if (!ret.containsKey(p)) {
+				ret.put(p, new HashMap<>());
+			}
+			ret.get(p).put(key, d);
+		}
+		return ret;
+	}
+			
+	@Override
+	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			final ExternalConfigMapper<T> mapper)
+			throws AuthStorageException, ExternalConfigMappingException {
+		try {
+			final FindIterable<Document> extiter =
+					db.getCollection(COL_CONFIG_EXTERNAL).find();
+			final Map<String, String> ext = new HashMap<>();
+			for (final Document d: extiter) {
+				ext.put(d.getString(Fields.CONFIG_KEY),
+						d.getString(Fields.CONFIG_VALUE));
+			}
+			final Map<String, Map<String, Document>> provcfg =
+					getProviderConfig();
+			final Map<String, ProviderConfig> provs = new HashMap<>();
+			for (final Entry<String, Map<String, Document>> d:
+					provcfg.entrySet()) {
+				final ProviderConfig pc = new ProviderConfig(
+						d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
+								.getBoolean(Fields.CONFIG_VALUE),
+						d.getValue().get(
+								Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
+										.getBoolean(Fields.CONFIG_VALUE));
+				provs.put(d.getKey(), pc);
+			}
+			final Map<String, Document> appcfg = getAppConfig();
+			final Boolean allowLogin = appcfg.get(
+					Fields.CONFIG_APP_ALLOW_LOGIN)
+					.getBoolean(Fields.CONFIG_VALUE);
+			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
+			for (final Entry<TokenLifetimeType, String> e:
+					TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
+				tokens.put(e.getKey(), appcfg.get(e.getValue())
+						.getLong(Fields.CONFIG_VALUE));
+			}
+			return new AuthConfigSet<T>(
+					new AuthConfig(allowLogin, provs, tokens),
+					mapper.fromMap(ext));
+		} catch (MongoException me) {
+			throw new StorageInitException(
+					"There was a problem communicating with the database: " +
+					me.getMessage(), me);
+		}
 	}
 }

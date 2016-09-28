@@ -12,6 +12,11 @@ import javax.ws.rs.core.Context;
 
 import org.slf4j.LoggerFactory;
 
+import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+
 public class LoggingFilter implements ContainerRequestFilter,
 		ContainerResponseFilter {
 	
@@ -27,17 +32,28 @@ public class LoggingFilter implements ContainerRequestFilter,
 	
 	@Inject
 	private SLF4JAutoLogger logger;
+	@Inject
+	private Authentication auth;
 	
 	@Override
 	public void filter(final ContainerRequestContext reqcon)
 			throws IOException {
+		boolean ignoreIPheaders = true;
+		try {
+			final AuthExternalConfig ext = auth.getExternalConfig(
+					new AuthExternalConfigMapper());
+			ignoreIPheaders = ext.isIgnoreIPHeaders();
+		} catch (AuthStorageException | ExternalConfigMappingException e) {
+			LoggerFactory.getLogger(getClass()).error(
+					"An error occurred in the logger when attempting " +
+					"to get the server configuration", e); 
+		}
 		logger.setCallInfo(reqcon.getMethod(),
 				("" + Math.random()).substring(2),
-				//TODO AUTH get config and set ignoreIPs appropriately
-				getIpAddress(reqcon, false));
+				getIpAddress(reqcon, ignoreIPheaders));
 	}
 	
-	//TODO AUTH TEST xff and realip headers
+	//TODO TEST xff and realip headers
 	public String getIpAddress(
 			final ContainerRequestContext request,
 			final boolean ignoreIPsInHeaders) {

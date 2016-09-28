@@ -6,14 +6,17 @@ This repo contains the second iteration of the KBase authentication server.
 Current endpoints
 -----------------
 
+/admin/customroles  
+View and add custom roles.
+
+/admin/config  
+View and edit the server configuration.
+
 /admin/localaccount  
 create a local account.
 
 /admin/user/&lt;user name&gt;  
 View user and modify user roles.
-
-/admin/customroles  
-View and add custom roles.
 
 /link  
 Link accounts.
@@ -38,6 +41,11 @@ the legacy KBase API.
 
 /api/legacy/globus  
 the legacy globus API. Endpoints are /goauth/token and /users.
+
+Note that the current UI is a minimal implementation for the purposes of
+testing. In many cases a manual refresh of the page will be required to see
+changes. Further, once a checkbox is manually checked or unchecked, that state
+will not change, even with a refresh - to see changes reset the form.
 
 Admin notes
 -----------
@@ -77,8 +85,6 @@ cd into the auth2 repo
 ant build  
 copy deploy.cfg.example to deploy.cfg and fill in appropriately  
 `export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
-set a root password  
-`./manageauth -d <path to deploy.cfg> -r`  
 cd jettybase  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
 
@@ -89,6 +95,9 @@ option for instructions.
 
 Administer the server
 ---------------------
+Set a root password:  
+`./manageauth -d <path to deploy.cfg> -r`  
+
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without

@@ -71,6 +71,15 @@ public enum Role {
 		return new LinkedList<>();
 	}
 	
+	public static boolean isAdmin(final Set<Role> possessed) {
+		if (possessed.contains(Role.ADMIN) ||
+				possessed.contains(Role.CREATE_ADMIN) ||
+				possessed.contains(Role.ROOT)) {
+			return true;
+		}
+		return false;
+	}
+	
 	public boolean isSatisfiedBy(final Set<Role> possessed) {
 		final Set<Role> granted = possessed.stream()
 				.flatMap(r -> r.included().stream())

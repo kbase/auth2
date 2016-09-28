@@ -15,7 +15,6 @@ public interface IdentityProvider {
 	URI getImageURI();
 	//note state will be url encoded.
 	URL getLoginURL(String state, boolean link);
-	String getAuthCodeQueryParamName();
 	Set<RemoteIdentity> getIdentities(String authcode, boolean link)
 			throws IdentityRetrievalException;
 	// note incoming token is a provider token, not a local token

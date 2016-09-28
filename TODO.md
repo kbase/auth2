@@ -39,7 +39,6 @@ Auth service work
 * Admin functionality
   * Find users
   * revoke single / user's / all tokens
-  * View / modify server config
   * Disable account (revoke all tokens & prevent logins)
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
@@ -51,6 +50,10 @@ Auth service work
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
+* User import
+  * Need list of every username that exists in any KBase data source
+    * Needs a new script
+  * Need solution for KBase users not appearing in Globus v2 API
 * Deploy
   * Dockerization
 

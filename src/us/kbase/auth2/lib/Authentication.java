@@ -3,6 +3,8 @@ package us.kbase.auth2.lib;
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 
+import java.net.URI;
+import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Date;
@@ -18,8 +20,11 @@ import java.util.stream.Collectors;
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.TokenGenerator;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -37,6 +42,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenSet;
@@ -51,7 +57,6 @@ public class Authentication {
 	//TODO TEST test logging on calls
 	//TODO JAVADOC 
 	//TODO AUTH schema version
-	//TODO AUTH handle root user somehow (spec chars unallowed in usernames?)
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO AUTH check workspace for other useful things like the schema manager
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token
@@ -62,14 +67,13 @@ public class Authentication {
 	//TODO ADMIN deactivate account
 	//TODO ADMIN force user pwd reset
 	//TODO TOKEN tokens - redirect to standard login if not logged in (other pages as well)
-	//TODO USERPROFILE email & username change propagation
-	//TODO USERCONFIG set email & username privacy & respect (in both legacy apis)
-	//TODO USERCONFIG set email & username
+	//TODO USER_PROFILE_SERVICE email & username change propagation
+	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
+	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
-	//TODO CONFIG set token cache time to be sent to client via api
+	//TODO CONFIG send token cache time to client via api
 	//TODO UI set keep me logged in on login page
 	//TODO PWD last pwd reset field for local users
-	//TODO CONFIG service 1st start should start with id providers disabled (thus no logins possible except for root)
 	
 	/* TODO ROLES feature: delete custom roles (see below)
 	 * Delete role from all users
@@ -91,10 +95,14 @@ public class Authentication {
 	private final IdentityProviderFactory idFactory;
 	private final TokenGenerator tokens;
 	private final PasswordCrypt pwdcrypt;
+	private final ConfigManager cfg;
 	
 	public Authentication(
 			final AuthStorage storage,
-			final IdentityProviderFactory identityProviderFactory) {
+			final IdentityProviderFactory identityProviderFactory,
+			final ExternalConfig defaultExternalConfig)
+			throws StorageInitException {
+		
 		try {
 			tokens = new TokenGenerator();
 			pwdcrypt = new PasswordCrypt();
@@ -109,6 +117,83 @@ public class Authentication {
 		}
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
+		idFactory.lock();
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		for (final String provname: idFactory.getProviders()) {
+			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		}
+		final AuthConfig ac =  new AuthConfig(false, provs,
+				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
+				ac, defaultExternalConfig), false);
+		try {
+			cfg = new ConfigManager(storage);
+		} catch (AuthStorageException e) {
+			throw new StorageInitException(
+					"Failed to initialize config manager: " +
+							e.getMessage(), e);
+		}
+	}
+	
+	private static class CollectingExternalConfig implements ExternalConfig {
+		
+		private final Map<String, String> cfg;
+		
+		private CollectingExternalConfig(
+				final Map<String, String> map) {
+			cfg = map;
+		}
+		
+		@Override
+		public Map<String, String> toMap() {
+			return cfg;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("CollectingExternalConfig [cfg=");
+			builder.append(cfg);
+			builder.append("]");
+			return builder.toString();
+		}
+	}
+	
+	private class ConfigManager {
+	
+		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
+		
+		private AuthConfigSet<CollectingExternalConfig> cfg;
+		private Date nextConfigUpdate;
+		private AuthStorage storage;
+		
+		public ConfigManager(final AuthStorage storage)
+				throws AuthStorageException {
+			this.storage = storage;
+			updateConfig();
+		}
+		
+		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
+				throws AuthStorageException {
+			if (new Date().after(nextConfigUpdate)) {
+				updateConfig();
+			}
+			return cfg;
+		}
+		
+		public AuthConfig getAppConfig() throws AuthStorageException {
+			return getConfig().getCfg();
+		}
+	
+		public synchronized void updateConfig() throws AuthStorageException {
+			try {
+				cfg = storage.getConfig(m -> new CollectingExternalConfig(m));
+			} catch (ExternalConfigMappingException e) {
+				throw new RuntimeException("This should be impossible", e);
+			}
+			nextConfigUpdate = new Date(new Date().getTime() +
+					CFG_UPDATE_INTERVAL_SEC * 1000);
+		}
 	}
 
 	// don't expose this method to general users, blatantly obviously
@@ -159,7 +244,8 @@ public class Authentication {
 	}
 	
 	public NewToken localLogin(final UserName userName, final Password pwd)
-			throws AuthenticationException, AuthStorageException {
+			throws AuthenticationException, AuthStorageException,
+			UnauthorizedException {
 		final LocalUser u;
 		try {
 			u = storage.getLocalUser(userName);
@@ -172,15 +258,25 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
 		}
+		if (!cfg.getAppConfig().isLoginAllowed() &&
+				!Role.isAdmin(u.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Non-admin login is disabled");
+			
+		}
 		pwd.clear();
 		//TODO PWD if reset required, make reset token
-		final NewToken t = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				userName,
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(t.getHashedToken());
+		return login(userName);
+	}
+	
+	private NewToken login(final UserName userName)
+			throws AuthStorageException {
+		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
+				userName, cfg.getAppConfig().getTokenLifetimeMS(
+						TokenLifetimeType.LOGIN));
+		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
-		return t;
+		return nt;
 	}
 
 	// used when it's known that the user exists
@@ -233,11 +329,11 @@ public class Authentication {
 					"User %s is not authorized to create this token type.");
 		}
 		final long life;
-		//TODO CONFIG make token lifetime configurable
+		final AuthConfig c = cfg.getAppConfig();
 		if (serverToken) {
-			life = Long.MAX_VALUE;
+			life = c.getTokenLifetimeMS(TokenLifetimeType.SERV);
 		} else {
-			life = 90L * 24L * 60L * 60L * 1000L;
+			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
 		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
 				tokenName, tokens.getToken(), au.getUserName(), life);
@@ -273,7 +369,6 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
 			}
 		}
-		
 		return u;
 	}
 
@@ -401,7 +496,7 @@ public class Authentication {
 		}
 		storage.setRoles(userName, roles);
 	}
-
+	
 	private void throwUnauth(final String action, final Set<Role> roles)
 			throws UnauthorizedException {
 		throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -447,20 +542,38 @@ public class Authentication {
 	}
 
 
-	//TODO CODE don't expose id providers. Expose a smaller interface mainly to hide the client secret.
-	public List<IdentityProvider> getIdentityProviders() {
-		return idFactory.getProviders();
+	public List<String> getIdentityProviders() throws AuthStorageException {
+		final AuthConfig ac = cfg.getAppConfig();
+		return idFactory.getProviders().stream()
+				.filter(p -> ac.getProviderConfig(p).isEnabled())
+				.collect(Collectors.toList());
+	}
+	
+	private IdentityProvider getIdentityProvider(final String provider)
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		final IdentityProvider ip = idFactory.getProvider(provider);
+		if (!cfg.getAppConfig().getProviderConfig(provider).isEnabled()) {
+			throw new NoSuchIdentityProviderException(provider);
+		}
+		return ip;
+	}
+	
+	public URI getIdentityProviderImageURI(final String provider)
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		return getIdentityProvider(provider).getImageURI();
+	}
+	
+	public URL getIdentityProviderURL(
+			final String provider,
+			final String state,
+			final boolean link)
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		return getIdentityProvider(provider).getLoginURL(state, link);
 	}
 
 	// note not saved in DB
 	public String getBareToken() {
 		return tokens.getToken();
-	}
-
-	//TODO CODE don't expose id providers. Expose a smaller interface mainly to hide the client secret.
-	public IdentityProvider getIdentityProvider(final String provider)
-			throws NoSuchIdentityProviderException {
-		return idFactory.getProvider(provider);
 	}
 
 	// split from getloginstate since the user may need to make a choice
@@ -469,7 +582,8 @@ public class Authentication {
 	// token instead of returning the choices directly
 	public LoginToken login(final String provider, final String authcode)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException {
+			AuthStorageException, NoSuchIdentityProviderException,
+			UnauthorizedException {
 		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
@@ -488,12 +602,12 @@ public class Authentication {
 		final LoginToken lr;
 		if (hasUser.size() == 1 && noUser.isEmpty()) {
 			final AuthUser user = hasUser.values().iterator().next();
-			final NewToken t = new NewToken(TokenType.LOGIN, tokens.getToken(),
-					//TODO CONFIG make token lifetime configurable
-					user.getUserName(), 14 * 24 * 60 * 60 * 1000);
-			storage.storeToken(t.getHashedToken());
-			setLastLogin(user.getUserName());
-			lr = new LoginToken(t);
+			if (!cfg.getAppConfig().isLoginAllowed() &&
+					!Role.isAdmin(user.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Non-admin login is disabled");
+			}
+			lr = new LoginToken(login(user.getUserName()));
 		} else {
 			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
 					10 * 60 * 1000);
@@ -557,7 +671,11 @@ public class Authentication {
 			final boolean privateNameEmail)
 			throws AuthStorageException, AuthenticationException,
 				UserExistsException, UnauthorizedException {
-		//TODO USER_CONFIG handle sessionLogin, privateNameEmail
+		if (!cfg.getAppConfig().isLoginAllowed()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Account creation is disabled");
+		}
+		//TODO CONFIG_USER handle sessionLogin, privateNameEmail
 		//TODO INPUT check all inputs, check fullname and email are reasonable - probably class for email that does basic validation
 		if (userName == null) {
 			throw new NullPointerException("userName");
@@ -571,17 +689,13 @@ public class Authentication {
 		final Date now = new Date();
 		storage.createUser(new AuthUser(userName, email, fullName,
 				new HashSet<>(Arrays.asList(match)), null, null, now, now));
-		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				userName,
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(nt.getHashedToken());
-		return nt;
+		return login(userName);
 	}
 
 
 	public NewToken login(final IncomingToken token, final UUID identityID)
-			throws AuthenticationException, AuthStorageException {
+			throws AuthenticationException, AuthStorageException,
+			UnauthorizedException {
 		final RemoteIdentity ri = getIdentity(token, identityID);
 		final AuthUser u = storage.getUser(ri);
 		if (u == null) {
@@ -590,14 +704,12 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"There is no account linked to the provided identity");
 		}
-		
-		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				u.getUserName(),
-				//TODO CONFIG make token lifetime configurable
-				14 * 24 * 60 * 60 * 1000);
-		storage.storeToken(nt.getHashedToken());
-		setLastLogin(u.getUserName());
-		return nt;
+		if (!cfg.getAppConfig().isLoginAllowed() &&
+				!Role.isAdmin(u.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Non-admin login is disabled");
+		}
+		return login(u.getUserName());
 	}
 	
 	private RemoteIdentityWithID getIdentity(
@@ -641,8 +753,9 @@ public class Authentication {
 		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true);
 		filterLinkCandidates(ids);
 		final LinkToken lt;
-		//TODO CONFIG allow forcing choice per id provider
-		if (ids.size() == 1) {
+		final ProviderConfig pc = cfg.getAppConfig()
+				.getProviderConfig(provider);
+		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
 				storage.link(u.getUserName(), ids.iterator().next().withID());
 			} catch (NoSuchUserException e) {
@@ -718,7 +831,6 @@ public class Authentication {
 		
 	}
 
-
 	public void updateUser(
 			final IncomingToken token,
 			final UserUpdate update)
@@ -734,6 +846,39 @@ public class Authentication {
 					ht.getId());
 		}
 	}
+	
+	public <T extends ExternalConfig> void updateConfig(
+			final IncomingToken token,
+			final AuthConfigSet<T> acs)
+			throws InvalidTokenException, UnauthorizedException,
+			AuthStorageException, NoSuchIdentityProviderException {
+		getUser(token, Role.ADMIN);
+		for (final String provider: acs.getCfg().getProviders().keySet()) {
+			//throws an exception if no provider by given name
+			idFactory.getProvider(provider);
+		}
+		storage.updateConfig(acs, true);
+		cfg.updateConfig();
+	}
+	
+	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+			final IncomingToken token,
+			final ExternalConfigMapper<T> mapper)
+			throws InvalidTokenException, UnauthorizedException,
+			AuthStorageException, ExternalConfigMappingException {
+		getUser(token, Role.ADMIN);
+		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
+		return new AuthConfigSet<T>(acs.getCfg(),
+				mapper.fromMap(acs.getExtcfg().toMap()));
+	}
+	
+	// don't expose in public api
+	public <T extends ExternalConfig> T getExternalConfig(
+			final ExternalConfigMapper<T> mapper)
+			throws AuthStorageException, ExternalConfigMappingException {
+		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
+		return mapper.fromMap(acs.getExtcfg().toMap());
+	}
 
 	// do not expose this method in the public API
 	// note token is for contacting the provider, not an auth token
@@ -747,7 +892,7 @@ public class Authentication {
 		if (providerToken == null) {
 			throw new NullPointerException("providerToken");
 		}
-		final IdentityProvider idp = getIdentityProvider(provider);
+		final IdentityProvider idp = idFactory.getProvider(provider);
 		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
 		String username = ri.getDetails().getUsername();
 		/* Do NOT otherwise change the username here - this is importing

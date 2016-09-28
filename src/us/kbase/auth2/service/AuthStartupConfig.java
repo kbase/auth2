@@ -4,7 +4,7 @@ import java.util.Set;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 
-public interface AuthConfig {
+public interface AuthStartupConfig {
 
 	//TODO JAVADOC
 	

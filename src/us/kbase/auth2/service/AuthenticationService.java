@@ -13,6 +13,7 @@ import com.mongodb.MongoClient;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.identity.GlobusIdentityProvider
 		.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.GoogleIdentityProvider
@@ -32,12 +33,12 @@ public class AuthenticationService extends ResourceConfig {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	private static AuthConfig cfg = null;
+	private static AuthStartupConfig cfg = null;
 	private static MongoClient mc;
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
-	public static void setConfig(final AuthConfig config) {
+	public static void setConfig(final AuthStartupConfig config) {
 		if (config == null) {
 			throw new NullPointerException("cfg");
 		}
@@ -57,7 +58,7 @@ public class AuthenticationService extends ResourceConfig {
 		fac.register(new GoogleIdentityProviderConfigurator());
 		logger = cfg.getLogger();
 		try {
-			buildApp(cfg);
+			buildApp(cfg, AuthExternalConfig.DEFAULT);
 		} catch (StorageInitException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"Failed to initialize storage engine: " + e.getMessage(),
@@ -75,15 +76,17 @@ public class AuthenticationService extends ResourceConfig {
 				.setLevel(Level.INFO);
 	}
 
-	private void buildApp(final AuthConfig c)
+	private void buildApp(
+			final AuthStartupConfig c,
+			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
 		final AuthBuilder ab;
 		synchronized(this) {
 			if (mc == null) {
-				ab = new AuthBuilder(c);
+				ab = new AuthBuilder(c, defaultExternalConfig);
 				mc = ab.getMongoClient();
 			} else {
-				ab = new AuthBuilder(c, mc);
+				ab = new AuthBuilder(c, defaultExternalConfig, mc);
 			}
 		}
 		packages("us.kbase.auth2.service.api");
