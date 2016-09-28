@@ -119,8 +119,14 @@ public class Authentication {
 		this.storage = storage;
 		this.idFactory = identityProviderFactory;
 		idFactory.lock();
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		for (final String provname: idFactory.getProviders()) {
+			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		}
+		final AuthConfig ac =  new AuthConfig(false, provs,
+				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
-				getDefaultConfig(), defaultExternalConfig), false);
+				ac, defaultExternalConfig), false);
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {
@@ -189,15 +195,6 @@ public class Authentication {
 			nextConfigUpdate = new Date(new Date().getTime() +
 					CFG_UPDATE_INTERVAL_SEC * 1000);
 		}
-	}
-
-	private AuthConfig getDefaultConfig() {
-		final Map<String, ProviderConfig> provs = new HashMap<>();
-		for (final String provname: idFactory.getProviders()) {
-			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
-		}
-		return new AuthConfig(false, provs,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 	}
 
 	// don't expose this method to general users, blatantly obviously
@@ -546,21 +543,33 @@ public class Authentication {
 	}
 
 
-	public List<String> getIdentityProviders() {
-		return idFactory.getProviders();
+	public List<String> getIdentityProviders() throws AuthStorageException {
+		final AuthConfig ac = cfg.getAppConfig();
+		return idFactory.getProviders().stream()
+				.filter(p -> ac.getProviderConfig(p).isEnabled())
+				.collect(Collectors.toList());
+	}
+	
+	private IdentityProvider getIdentityProvider(final String provider)
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		final IdentityProvider ip = idFactory.getProvider(provider);
+		if (!cfg.getAppConfig().getProviderConfig(provider).isEnabled()) {
+			throw new NoSuchIdentityProviderException(provider);
+		}
+		return ip;
 	}
 	
 	public URI getIdentityProviderImageURI(final String provider)
-			throws NoSuchIdentityProviderException {
-		return idFactory.getProvider(provider).getImageURI();
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		return getIdentityProvider(provider).getImageURI();
 	}
 	
 	public URL getIdentityProviderURL(
 			final String provider,
 			final String state,
 			final boolean link)
-			throws NoSuchIdentityProviderException {
-		return idFactory.getProvider(provider).getLoginURL(state, link);
+			throws NoSuchIdentityProviderException, AuthStorageException {
+		return getIdentityProvider(provider).getLoginURL(state, link);
 	}
 
 	// note not saved in DB
@@ -576,7 +585,7 @@ public class Authentication {
 			throws MissingParameterException, IdentityRetrievalException,
 			AuthStorageException, NoSuchIdentityProviderException,
 			UnauthorizedException {
-		final IdentityProvider idp = idFactory.getProvider(provider);
+		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
@@ -738,7 +747,7 @@ public class Authentication {
 			throw new LinkFailedException(
 					"Cannot link identities to local accounts");
 		}
-		final IdentityProvider idp = idFactory.getProvider(provider);
+		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
