@@ -53,7 +53,9 @@ Auth service work
 * User import
   * Need list of every username that exists in any KBase data source
     * Needs a new script
-  * Need solution for KBase users not appearing in Globus v2 API
+  * May need to add a call to the v2 Globus API if looking up the user in the
+    Nexus API fails (occurs when user is set to private and not in kbase_users
+    group)
 * Deploy
   * Dockerization
 

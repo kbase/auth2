@@ -894,6 +894,16 @@ public class Authentication {
 		}
 		final IdentityProvider idp = idFactory.getProvider(provider);
 		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
+		importUser(ri);
+	}
+
+	// do not expose this method in the public API
+	public void importUser(final RemoteIdentity ri)
+			throws IllegalParameterException, UserExistsException,
+			AuthStorageException {
+		if (ri == null) {
+			throw new NullPointerException("ri");
+		}
 		String username = ri.getDetails().getUsername();
 		/* Do NOT otherwise change the username here - this is importing
 		 * existing users, and so changing the username will mean erroneous
@@ -920,4 +930,5 @@ public class Authentication {
 				new HashSet<>(Arrays.asList(ri.withID())),
 				null, null, now, now));
 	}
+
 }

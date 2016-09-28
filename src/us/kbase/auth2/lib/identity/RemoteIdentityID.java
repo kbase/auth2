@@ -11,11 +11,11 @@ public class RemoteIdentityID {
 	public RemoteIdentityID(final String provider, final String id) {
 		if (provider == null || provider.trim().isEmpty()) {
 			throw new IllegalArgumentException(
-					"provider cannot be null or emtpy");
+					"provider cannot be null or empty");
 		}
 		if (id == null || id.trim().isEmpty()) {
 			throw new IllegalArgumentException(
-					"id cannot be null or emtpy");
+					"id cannot be null or empty");
 		}
 		this.provider = provider.trim();
 		this.id = id.trim();
