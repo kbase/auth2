@@ -74,7 +74,7 @@ Java 8 (OpenJDK OK)
 MongoDB 2.4+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  
-This repo (git clone https://github.com/kbaseIncubator/auth2proto)  
+This repo (git clone https://github.com/kbase/auth2)  
 The jars repo (git clone https://github.com/kbase/jars)  
 The two repos above need to be in the same parent folder.
 

@@ -22,6 +22,8 @@ accounts and tests if any, allow setting auth service url
 * Narrative Method Store
 * Data Import Export
 * Search
+* Solar auth
+* Bulk IO
 
 Auth service work
 -----------------
@@ -43,6 +45,8 @@ Auth service work
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
 * API
+  * Token name in config
+  * Configure redirect urls for login and link intermediate steps
   * Introspect token (e.g. not the legacy apis, provide complete info)
   * /user/<name> - get user details
   * /me
@@ -64,7 +68,7 @@ Auth service work
 
 External dependencies
 ---------------------
-* JGI updates kbase<->JGI account linking
+* JGI updates kbase<->JGI account linking (on dev server as of 16/11/18)
 * JGI stops using uid/pwd to login for jgidm account
 
 Future work
