@@ -22,6 +22,8 @@ accounts and tests if any, allow setting auth service url
 * Narrative Method Store
 * Data Import Export
 * Search
+* Solar auth
+* Bulk IO
 
 Auth service work
 -----------------
@@ -43,6 +45,8 @@ Auth service work
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
 * API
+  * Token name in config
+  * Configure redirect urls for login and link intermediate steps
   * Introspect token (e.g. not the legacy apis, provide complete info)
   * /user/<name> - get user details
   * /me
@@ -53,7 +57,9 @@ Auth service work
 * User import
   * Need list of every username that exists in any KBase data source
     * Needs a new script
-  * Need solution for KBase users not appearing in Globus v2 API
+  * May need to add a call to the v2 Globus API if looking up the user in the
+    Nexus API fails (occurs when user is set to private and not in kbase_users
+    group)
 * Deploy
   * Dockerization
 
@@ -62,7 +68,7 @@ Auth service work
 
 External dependencies
 ---------------------
-* JGI updates kbase<->JGI account linking
+* JGI updates kbase<->JGI account linking (on dev server as of 16/11/18)
 * JGI stops using uid/pwd to login for jgidm account
 
 Future work
