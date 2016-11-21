@@ -881,23 +881,6 @@ public class Authentication {
 	}
 
 	// do not expose this method in the public API
-	// note token is for contacting the provider, not an auth token
-	public void importUser(
-			final IncomingToken providerToken,
-			final String provider,
-			final String user)
-			throws NoSuchIdentityProviderException, UserExistsException,
-			IllegalParameterException, AuthStorageException,
-			IdentityRetrievalException {
-		if (providerToken == null) {
-			throw new NullPointerException("providerToken");
-		}
-		final IdentityProvider idp = idFactory.getProvider(provider);
-		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
-		importUser(ri);
-	}
-
-	// do not expose this method in the public API
 	public void importUser(final RemoteIdentity ri)
 			throws IllegalParameterException, UserExistsException,
 			AuthStorageException {

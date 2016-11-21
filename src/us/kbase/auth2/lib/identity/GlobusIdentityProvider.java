@@ -21,7 +21,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
-import us.kbase.auth2.lib.token.IncomingToken;
 
 public class GlobusIdentityProvider implements IdentityProvider {
 
@@ -274,37 +273,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 	
-	@Override
-	public RemoteIdentity getIdentity(
-			final IncomingToken providerToken,
-			final String user) throws IdentityRetrievalException {
-		if (user == null || user.trim().isEmpty()) {
-			throw new IllegalArgumentException("user cannot be null or empty");
-		}
-		final URI idtarget = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-				.path(IDENTITIES_PATH)
-				.queryParam("usernames", user.trim())
-				.build();
-		
-		final Map<String, Object> id = globusGetRequest(
-				providerToken.getToken(), idtarget);
-		@SuppressWarnings("unchecked")
-		final List<Map<String, String>> sids =
-				(List<Map<String, String>>) id.get("identities");
-		final String status = sids.get(0).get("status");
-		if (!(status.equals("used") || status.equals("private"))) {
-			throw new IdentityRetrievalException(String.format(
-					"Identity %s is unclaimed or retired", user));
-		}
-		final Set<RemoteIdentity> rid = makeIdentities(sids);
-		if (rid.isEmpty()) {
-			throw new IdentityRetrievalException(
-					"Provider returned no identity for user " + user);
-		}
-		// could check for multiple ids in the set but seems unlikely
-		return rid.iterator().next();
-	}
-
 	public static class GlobusIdentityProviderConfigurator implements
 			IdentityProviderConfigurator {
 

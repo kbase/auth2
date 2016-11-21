@@ -55,6 +55,7 @@ public class AuthCLI {
 	//TODO TEST
 	//TODO JAVADOC
 	//TODO TEST Move as much code as possible into a class to make things easier to test
+	//TODO NOW Make 2 queries: 1) nexus to get email and full name, 2) globus-auth to get ID
 	
 	private static final String NAME = "manageauth";
 	private static final String GLOBUS = "Globus";
@@ -141,15 +142,13 @@ public class AuthCLI {
 				continue;
 			}
 			System.out.println("\tID       : " + ri.getRemoteID().getId());
-			System.out.println("\tUsername : " +
-					ri.getDetails().getUsername());
+			System.out.println("\tUsername : " + ri.getDetails().getUsername());
 			System.out.println("\tFull name: " + ri.getDetails().getFullname());
 			System.out.println("\tEmail    : " + ri.getDetails().getEmail());
 			try {
 				auth.importUser(ri);
 				success++;
-			} catch (UserExistsException | IllegalParameterException |
-					AuthStorageException e) {
+			} catch (UserExistsException | IllegalParameterException | AuthStorageException e) {
 				error("\tError for user " + user, e, a, true);
 			}
 		}
