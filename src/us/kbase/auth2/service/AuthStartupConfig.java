@@ -14,4 +14,5 @@ public interface AuthStartupConfig {
 	String getMongoDatabase();
 	String getMongoUser();
 	char[] getMongoPwd();
+	String getTokenCookieName();
 }

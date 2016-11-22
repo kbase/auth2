@@ -55,6 +55,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
@@ -66,6 +67,9 @@ public class Login {
 
 	@Inject
 	private Authentication auth;
+	
+	@Inject
+	private AuthAPIStaticConfig cfg;
 	
 	@GET
 	public Response loginStart(
@@ -186,7 +190,7 @@ public class Login {
 		if (lr.isLoggedIn()) {
 			r = Response.seeOther(getRedirectURI(redirect, "/me"))
 			//TODO LOGIN get keep me logged in from cookie set at start of login
-					.cookie(getLoginCookie(lr.getToken(), true))
+					.cookie(getLoginCookie(cfg.getTokenCookieName(), lr.getToken(), true))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(null)).build();
 		} else {
@@ -273,14 +277,12 @@ public class Login {
 			AuthStorageException, UnauthorizedException {
 		
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing in-process-login-token");
 		}
-		final NewToken newtoken = auth.login(
-				new IncomingToken(token), identityID);
+		final NewToken newtoken = auth.login(new IncomingToken(token), identityID);
 		return Response.seeOther(getRedirectURI(redirect, "/me"))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
-				.cookie(getLoginCookie(newtoken, true))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getRedirectCookie(null)).build();
 	}
@@ -305,10 +307,8 @@ public class Login {
 					"Missing in-process-login-token");
 		}
 		//TODO INPUT sanity check inputs
-		final boolean sessionLogin = stayLoggedIn == null ||
-				stayLoggedIn.isEmpty();
-		final boolean priv = nameAndEmailPrivate != null &&
-				nameAndEmailPrivate.isEmpty();
+		final boolean sessionLogin = stayLoggedIn == null || stayLoggedIn.isEmpty();
+		final boolean priv = nameAndEmailPrivate != null && nameAndEmailPrivate.isEmpty();
 		
 		
 		// might want to enapsulate the user data in a NewUser class
@@ -317,7 +317,7 @@ public class Login {
 				fullName, email, sessionLogin, priv);
 		return Response.seeOther(getRedirectURI(redirect, "/me"))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
-				.cookie(getLoginCookie(newtoken, true))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getRedirectCookie(null)).build();
 	}

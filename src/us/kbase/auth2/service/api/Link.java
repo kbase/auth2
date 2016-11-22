@@ -1,7 +1,7 @@
 package us.kbase.auth2.service.api;
 
-import static us.kbase.auth2.service.api.APIUtils.getToken;
 import static us.kbase.auth2.service.api.APIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.api.APIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.api.APIUtils.relativize;
 import static us.kbase.auth2.service.api.APIUtils.upperCase;
 
@@ -25,6 +25,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
@@ -48,6 +49,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path("/link")
 public class Link {
@@ -59,15 +61,18 @@ public class Link {
 	@Inject
 	private Authentication auth;
 	
+	@Inject
+	private AuthAPIStaticConfig cfg;
+	
 	@GET
 	public Response linkStart(
-			@CookieParam("token") final String token,
+			@Context final HttpHeaders headers,
 			@QueryParam("provider") final String provider,
 			@Context UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {
 
-		final IncomingToken incToken = getToken(token);
+		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
@@ -112,9 +117,9 @@ public class Link {
 	@GET
 	@Path("/complete/{provider}")
 	public Response link(
+			@Context final HttpHeaders headers,
 			@PathParam("provider") String provider,
 			@CookieParam("statevar") final String state,
-			@CookieParam("token") final String token,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
@@ -134,8 +139,8 @@ public class Link {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"State values do not match, this may be a CXRF attack");
 		}
-		final LinkToken lt = auth.link(getToken(token), provider,
-				authcode);
+		final LinkToken lt = auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				provider, authcode);
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
 		// note nginx will rewrite the redirect appropriately so absolute
@@ -163,8 +168,8 @@ public class Link {
 	@Path("/complete")
 	@Template(name = "/linkchoice")
 	public Map<String, Object> linkComplete(
+			@Context final HttpHeaders headers,
 			@CookieParam("in-process-link-token") final String linktoken,
-			@CookieParam("token") final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException, LinkFailedException {
@@ -172,12 +177,8 @@ public class Link {
 			throw new NoTokenProvidedException(
 					"Missing in-process-link-token");
 		}
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing user token");
-		}
 		final LinkIdentities ids = auth.getLinkState(
-				new IncomingToken(token.trim()),
+				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new IncomingToken(linktoken.trim()));
 		/* there's a possibility here that between the redirects the number
 		 * of identities that aren't already linked was reduced 1. The
@@ -204,8 +205,8 @@ public class Link {
 	@POST
 	@Path("/pick")
 	public Response pickAccount(
+			@Context final HttpHeaders headers,
 			@CookieParam("in-process-link-token") final String linktoken,
-			@CookieParam("token") final String token,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException {
@@ -214,12 +215,8 @@ public class Link {
 			throw new NoTokenProvidedException(
 					"Missing in-process-link-token");
 		}
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing user token");
-		}
-		auth.link(new IncomingToken(token), new IncomingToken(linktoken),
-				identityID);
+		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				new IncomingToken(linktoken), identityID);
 		return Response.seeOther(toURI("/me"))
 				.cookie(getLinkInProcessCookie(null)).build();
 	}

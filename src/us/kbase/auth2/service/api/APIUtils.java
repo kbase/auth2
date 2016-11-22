@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.util.Date;
 
 import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
@@ -48,15 +49,16 @@ public class APIUtils {
 		return rel;
 	}
 
-	public static NewCookie getLoginCookie(final NewToken token) {
-		return getLoginCookie(token, false);
+	public static NewCookie getLoginCookie(final String cookieName, final NewToken token) {
+		return getLoginCookie(cookieName, token, false);
 	}
 
 	public static NewCookie getLoginCookie(
+			final String cookieName,
 			final NewToken token,
 			final boolean session) {
-		return new NewCookie(new Cookie("token",
-				token == null ? "no token" :token.getToken(), "/", null),
+		return new NewCookie(
+				new Cookie(cookieName, token == null ? "no token" : token.getToken(), "/", null),
 				"authtoken",
 				token == null ? 0 : getMaxCookieAge(token, session),
 				APIConstants.SECURE_COOKIES);
@@ -81,9 +83,7 @@ public class APIUtils {
 		if (session) {
 			return NewCookie.DEFAULT_MAX_AGE;
 		}
-		final long exp = (long) Math.floor((
-				expiration.getTime() - new Date().getTime()) /
-				1000.0);
+		final long exp = (long) Math.floor((expiration.getTime() - new Date().getTime()) / 1000.0);
 		if (exp > Integer.MAX_VALUE) {
 			return Integer.MAX_VALUE;
 		}
@@ -103,10 +103,40 @@ public class APIUtils {
 		return first + provider.substring(first.length());
 	}
 	
+	public static IncomingToken getTokenFromCookie(
+			final HttpHeaders headers,
+			final String tokenCookieName)
+			throws NoTokenProvidedException {
+		return getTokenFromCookie(headers, tokenCookieName, true);
+	}
+	
+	public static IncomingToken getTokenFromCookie(
+			final HttpHeaders headers,
+			final String tokenCookieName,
+			final boolean throwException)
+			throws NoTokenProvidedException {
+		
+		final Cookie c = headers.getCookies().get(tokenCookieName);
+		if (c == null) {
+			if (throwException) {
+				throw new NoTokenProvidedException("No user token provided");
+			}
+			return null;
+		}
+		final String val = c.getValue();
+		if (val == null || val.trim().isEmpty()) {
+			if (throwException) {
+				throw new NoTokenProvidedException("No user token provided");
+			}
+			return null;
+		}
+		return new IncomingToken(val.trim());
+	}
+	
 	public static IncomingToken getToken(final String token)
 			throws NoTokenProvidedException {
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException();
+			throw new NoTokenProvidedException("No user token provided");
 		}
 		return new IncomingToken(token.trim());
 	}

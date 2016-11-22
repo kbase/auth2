@@ -101,10 +101,11 @@ public class AuthenticationService extends ResourceConfig {
 			@Override
 			protected void configure() {
 				bind(auth).to(Authentication.class);
-				bind(new MustacheProcessor(Paths.get(templatePath)
-						.toAbsolutePath()))
+				bind(new MustacheProcessor(Paths.get(templatePath).toAbsolutePath()))
 					.to(TemplateProcessor.class);
 				bind(c.getLogger()).to(SLF4JAutoLogger.class);
+				bind(new AuthAPIStaticConfig(c.getTokenCookieName()))
+						.to(AuthAPIStaticConfig.class);
 			}
 		});
 	}
