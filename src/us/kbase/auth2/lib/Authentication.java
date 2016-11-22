@@ -122,10 +122,8 @@ public class Authentication {
 		for (final String provname: idFactory.getProviders()) {
 			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		}
-		final AuthConfig ac =  new AuthConfig(false, provs,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
-		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
-				ac, defaultExternalConfig), false);
+		final AuthConfig ac =  new AuthConfig(false, provs, AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		storage.updateConfig(new AuthConfigSet<ExternalConfig>(ac, defaultExternalConfig), false);
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {
@@ -878,23 +876,6 @@ public class Authentication {
 			throws AuthStorageException, ExternalConfigMappingException {
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return mapper.fromMap(acs.getExtcfg().toMap());
-	}
-
-	// do not expose this method in the public API
-	// note token is for contacting the provider, not an auth token
-	public void importUser(
-			final IncomingToken providerToken,
-			final String provider,
-			final String user)
-			throws NoSuchIdentityProviderException, UserExistsException,
-			IllegalParameterException, AuthStorageException,
-			IdentityRetrievalException {
-		if (providerToken == null) {
-			throw new NullPointerException("providerToken");
-		}
-		final IdentityProvider idp = idFactory.getProvider(provider);
-		final RemoteIdentity ri = idp.getIdentity(providerToken, user);
-		importUser(ri);
 	}
 
 	// do not expose this method in the public API

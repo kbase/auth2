@@ -41,7 +41,7 @@ Auth service work
 * Admin functionality
   * Find users
   * revoke single / user's / all tokens
-  * Disable account (revoke all tokens & prevent logins)
+  * Disable account (revoke all tokens & prevent logins), record admin and reason
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
 * API
