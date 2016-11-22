@@ -122,10 +122,8 @@ public class Authentication {
 		for (final String provname: idFactory.getProviders()) {
 			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		}
-		final AuthConfig ac =  new AuthConfig(false, provs,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
-		storage.updateConfig(new AuthConfigSet<ExternalConfig>(
-				ac, defaultExternalConfig), false);
+		final AuthConfig ac =  new AuthConfig(false, provs, AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		storage.updateConfig(new AuthConfigSet<ExternalConfig>(ac, defaultExternalConfig), false);
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {

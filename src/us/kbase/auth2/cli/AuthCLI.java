@@ -2,6 +2,8 @@ package us.kbase.auth2.cli;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.AccessDeniedException;
 import java.nio.file.Files;
@@ -13,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 
@@ -42,6 +45,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.GoogleIdentityProvider.GoogleIdentityProviderConfigurator;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.AuthBuilder;
@@ -54,19 +58,21 @@ public class AuthCLI {
 	
 	//TODO TEST
 	//TODO JAVADOC
-	//TODO TEST Move as much code as possible into a class to make things easier to test
-	//TODO NOW Make 2 queries: 1) nexus to get email and full name, 2) globus-auth to get ID
+	//TODO TEST Move as much code as possible into a class to make things easier to test, will require significant refactoring
 	
 	private static final String NAME = "manageauth";
 	private static final String GLOBUS = "Globus";
+	
+	private static final String GLOBUS_USER_URL = "https://nexus.api.globusonline.org/users/";
+	private static final String GLOBUS_IDENTITES_PATH  = "/v2/api/identities";
+	private static final String GLOBUS_NEXUS_TOKEN_HEADER = "X-Globus-Goauthtoken";
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
 	public static void main(String[] args) {
 		quietLogger();
 		
-		final IdentityProviderFactory fac =
-				IdentityProviderFactory.getInstance();
+		final IdentityProviderFactory fac = IdentityProviderFactory.getInstance();
 		fac.register(new GlobusIdentityProviderConfigurator());
 		fac.register(new GoogleIdentityProviderConfigurator());
 		
@@ -84,9 +90,9 @@ public class AuthCLI {
 			System.exit(0);
 		}
 		final Authentication auth;
+		final AuthStartupConfig cfg;
 		try {
-			final AuthStartupConfig cfg = new KBaseAuthConfig(
-					Paths.get(a.deploy), true);
+			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
 			auth = new AuthBuilder(cfg, AuthExternalConfig.DEFAULT).getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			error(e, a);
@@ -107,18 +113,34 @@ public class AuthCLI {
 		}
 		
 		if (a.globus_users != null && !a.globus_users.trim().isEmpty()) {
-			importUsers(a, auth);
+			URL globusAPIURL = null;
+			for (final IdentityProviderConfig idc: cfg.getIdentityProviderConfigs()) {
+				if (idc.getIdentityProviderName().equals(GLOBUS)) {
+					globusAPIURL = idc.getApiURL();
+				}
+			}
+			if (globusAPIURL == null) {
+				System.out.println("No globus API url included in the deployment config file");
+				System.exit(1);
+			}
+			importUsers(a, auth, globusAPIURL);
 			System.exit(0);
 		}
 		
 		jc.usage();
 	}
 
-
-
-	private static void importUsers(final Args a, final Authentication auth) {
-		if (a.token == null || a.token.trim().isEmpty()) {
-			System.out.println("Must supply a token in the -t parameter " +
+	private static void importUsers(
+			final Args a,
+			final Authentication auth,
+			final URL globusAPIURL) {
+		if (a.nexusToken == null || a.nexusToken.trim().isEmpty()) {
+			System.out.println("Must supply a Nexus token in the -n parameter " +
+					"if importing users");
+			System.exit(1);
+		}
+		if (a.oauth2Token == null || a.oauth2Token.trim().isEmpty()) {
+			System.out.println("Must supply an OAuth2 token in the -g parameter " +
 					"if importing users");
 			System.exit(1);
 		}
@@ -128,16 +150,28 @@ public class AuthCLI {
 		final Client cli = ClientBuilder.newClient();
 		int success = 0;
 		for (final String user: users) {
-			if (user.isEmpty()) {
-				continue;
-			}
 			System.out.println("Importing user " + user);
+			
+			final URI nexusUserURL = UriBuilder.fromPath(GLOBUS_USER_URL + user).build();
+			String nexusEmail = null;
+			String nexusFullname = null;
+			try {
+				final Map<String, Object> nexusRet = globusGetRequest(
+						cli, a.nexusToken, nexusUserURL);
+				// response includes a Globus v2 Oauth id but Globus says not to rely on it
+				nexusFullname = ((String) nexusRet.get("full_name")).trim();
+				nexusEmail = ((String) nexusRet.get("email")).trim();
+			} catch (IdentityRetrievalException | IOException e) {
+				if (printNexusErrorAndCheckIfFatal(user, a, e)) {
+					continue;
+				}
+			}
 			final RemoteIdentity ri;
 			try {
-				ri = getGlobusNexusIdentity(cli, a.token, user);
-			} catch (IdentityRetrievalException | IOException e) {
-				//TODO IMPORT if this happens, make an account from the v2 API. Write the user finding script first though.
-				error("\tError in identity retrieval for user " + user,
+				ri = getGlobusV2AuthIdentity(cli, globusAPIURL, a.oauth2Token,
+						user + "@globusid.org", nexusFullname, nexusEmail);
+			} catch (IdentityRetrievalException e) {
+				error("\tError in identity retrieval from Globus OAuth2 API for user " + user,
 						e, a, true);
 				continue;
 			}
@@ -153,9 +187,103 @@ public class AuthCLI {
 			}
 		}
 		final Duration d = Duration.between(now, LocalDateTime.now());
-		System.out.println(String.format(
-				"Imported %s out of %s users from file %s in %s",
+		System.out.println(String.format("Imported %s out of %s users from file %s in %s",
 				success, users.size(), p, getDurationString(d)));
+	}
+
+	private static boolean printNexusErrorAndCheckIfFatal(
+			final String user,
+			final Args a,
+			final Exception e) {
+		boolean skip = false;
+		String append = "getting data soley from Globus OAuth V2 API";
+		if (e instanceof IdentityRetrievalException) {
+			if (((IdentityRetrievalException) e).getMessage().endsWith("User does not exist")) {
+				skip = true;
+				append = "skipping user";
+				System.out.println("msg");
+			}
+		}
+		error("\tError in identity retrieval from Globus Nexus API for user " + user + 
+				", " + append, e, a, true);
+		return skip;
+	}
+
+	private static RemoteIdentity getGlobusV2AuthIdentity(
+			final Client cli,
+			final URL globusAPIURL,
+			final String globusOAuthV2Token,
+			final String username,
+			final String nexusFullname,
+			final String nexusEmail) throws IdentityRetrievalException {
+		/* we use the globusV2 OAuth full name & email if it exists, otherwise use Nexus
+		 * we don't check for used / unused status because the nexus user may not exist in globus
+		 * Oauth v2. If so a v2 record will be created, but will be marked as unused. If a nexus
+		 * user has used the v2 Oauth a record will already exist corresponding to the nexus
+		 * account.
+		 */
+		final URI idtarget = UriBuilder.fromUri(toURI(globusAPIURL))
+				.path(GLOBUS_IDENTITES_PATH)
+				.queryParam("usernames", username)
+				.build();
+						
+		final Map<String, Object> ret = globusOAuthV2GetRequest(
+				cli, globusOAuthV2Token, idtarget);
+		@SuppressWarnings("unchecked")
+		final List<Map<String, String>> sids =
+				(List<Map<String, String>>) ret.get("identities");
+		final Map<String, String> id = sids.get(0);
+		final String uid = (String) id.get("id");
+		final String glusername = (String) id.get("username");
+		final String name = (String) id.get("name");
+		final String email = (String) id.get("email");
+		final RemoteIdentity rid = new RemoteIdentity(
+				new RemoteIdentityID(NAME, uid),
+				new RemoteIdentityDetails(glusername, name == null ? nexusFullname : name,
+						email == null ? nexusEmail : email));
+		return rid;
+	}
+	
+	//Assumes valid URI in URL form
+	private static URI toURI(final URL url) {
+		try {
+			return url.toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	private static Map<String, Object> globusOAuthV2GetRequest(
+			final Client cli,
+			final String accessToken,
+			final URI idtarget)
+			throws IdentityRetrievalException {
+		final WebTarget wt = cli.target(idtarget);
+		Response r = null;
+		try {
+			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
+					.header("Authorization", "Bearer " + accessToken)
+					.get();
+			//TODO TEST with 500s with HTML
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> mtemp = r.readEntity(Map.class);
+			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
+			if (mtemp.containsKey("errors")) {
+				@SuppressWarnings("unchecked")
+				final List<Map<String, String>> errors =
+						(List<Map<String, String>>) mtemp.get("errors");
+				// just deal with the first error for now, change later if necc
+				final Map<String, String> err = errors.get(0);
+				throw new IdentityRetrievalException(String.format(
+						"Identity provider returned an error: %s: %s; id: %s",
+						err.get("code"), err.get("detail"), err.get("id")));
+			}
+			return mtemp;
+		} finally {
+			if (r != null) {
+				r.close();
+			}
+		}
 	}
 
 	private static Object getDurationString(Duration d) {
@@ -168,30 +296,6 @@ public class AuthCLI {
 		return String.format("%sD %sH %sM %sS", days, hours, min, sec);
 	}
 
-
-
-	private static RemoteIdentity getGlobusNexusIdentity(
-			final Client cli,
-			final String token,
-			final String user)
-			throws IdentityRetrievalException, IOException {
-		
-		//TODO NOW make the url a class var
-		final URI idtarget = UriBuilder.fromPath(
-				"https://nexus.api.globusonline.org/users/" + user)
-				.build();
-		
-		final Map<String, Object> ret = globusGetRequest(cli, token, idtarget);
-		final String username = ((String) ret.get("username"))
-				+ "@globusid.org";
-		final String fullname = (String) ret.get("full_name");
-		final String email = (String) ret.get("email");
-		final String id = (String) ret.get("identity_id");
-		return new RemoteIdentity(
-				new RemoteIdentityID(GLOBUS, id),
-				new RemoteIdentityDetails(username, fullname, email));
-	}
-	
 	private static Map<String, Object> globusGetRequest(
 			final Client cli,
 			final String accessToken,
@@ -201,10 +305,12 @@ public class AuthCLI {
 		Response r = null;
 		try {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
-					//TODO NOW class var
-					.header("X-Globus-Goauthtoken", accessToken)
+					.header(GLOBUS_NEXUS_TOKEN_HEADER, accessToken)
 					.header("Accept", MediaType.APPLICATION_JSON)
 					.get();
+			if (r.getStatus() == 404) { // other errors returned in JSON
+				throw new IdentityRetrievalException("User does not exist");
+			}
 			//TODO TEST with 500s with HTML
 			// on error globus returns JSON with content-type = text/html
 			// and jersey pukes if you directly try to read a Map
@@ -225,8 +331,6 @@ public class AuthCLI {
 		}
 	}
 
-
-
 	private static List<String> getUserList(final Args a, final Path p) {
 		final String userstr;
 		try {
@@ -244,6 +348,12 @@ public class AuthCLI {
 		}
 		final List<String> users = new ArrayList<>(new HashSet<>(
 				Arrays.asList(userstr.split("[\\s,;]"))));
+		final Iterator<String> uiter = users.iterator();
+		while (uiter.hasNext()) {
+			if (uiter.next().isEmpty()) {
+				uiter.remove();
+			}
+		}
 		users.sort(null);
 		return users;
 	}
@@ -296,17 +406,22 @@ public class AuthCLI {
 				"other specified operations will be executed.")
 		private boolean setroot;
 		
-		@Parameter(names = {"-t", "--token"}, description =
-				"A user token for use when importing users. Providing " +
+		@Parameter(names = {"-n", "--nexus-token"}, description =
+				"A Globus Nexus user token for use when importing users. Providing " +
 				"a token without a users file does nothing.")
-		private String token;
+		private String nexusToken;
+		
+		@Parameter(names = {"-g", "--globus-token"}, description =
+				"A Globus OAuth2 user token for use when importing users. Providing " +
+				"a token without a users file does nothing.")
+		private String oauth2Token;
 		
 		@Parameter(names = {"--import-globus-users"}, description = 
 				"A UTF-8 encoded file of whitespace, comma, or semicolon " +
-				"separated Globus user names in the user@provider format " +
-				"(for example. foo@globusid.org). A Nexus Globus token for " +
+				"separated Globus user names in the Nexus format " +
+				"(for example, kbasetest). A Nexus Globus token for " +
 				"an admin of the kbase_users group must be provided in the " +
-				"-t option.")
+				"-t option, and a OAuth2 Globus token in the -g option.")
 		private String globus_users;
 	}
 }
