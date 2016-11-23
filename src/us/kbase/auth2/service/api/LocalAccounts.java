@@ -32,6 +32,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path("/localaccount")
 public class LocalAccounts {
@@ -43,6 +44,9 @@ public class LocalAccounts {
 
 	@Inject
 	private Authentication auth;
+	
+	@Inject
+	private AuthAPIStaticConfig cfg;
 	
 	@GET
 	@Path("/login")
@@ -76,7 +80,7 @@ public class LocalAccounts {
 		pwd = null; // try to get pwd GC'd as quickly as possible
 		//TODO PWD if reset required, do reset
 		return Response.seeOther(toURI("/me"))
-				.cookie(getLoginCookie(t, stayLoggedIn == null))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), t, stayLoggedIn == null))
 				.build();
 	}
 	

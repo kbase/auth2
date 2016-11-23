@@ -9,6 +9,7 @@ public class CustomRole {
 	
 	//TODO ROLES The id should be sanity checked for length and url safety. Note that the id is permanent.
 	//TODO ZLATER ROLES remove role from all users function
+	//TODO ROLES note in documentation that the role description is arbitrary text and should be html escaped before display
 	
 	public CustomRole(final String id, final String desc)
 			throws MissingParameterException {

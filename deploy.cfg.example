@@ -5,10 +5,17 @@
 
 [authserv2]
 
+# The host name (and port if required) of the mongo server to be used as auth storage.
 mongo-host=
+# The name of the mongo database to be used as auth storage.
 mongo-db=
+# If the mongo database is authenticated, the user name of a read/write account.
 mongo-user=
+# If the mongo data base is authenticated, the password for the given username.
 mongo-pwd=
+
+# The name of the cookie in which tokens should be stored in the browser.
+token-cookie-name = kbase_session
 
 # the name of the service to report when logging to syslog.
 log-name=KBaseAuthServ2

@@ -38,6 +38,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_MONGO_DB = "mongo-db";
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
+	private static final String KEY_COOKIE_NAME = "token-cookie-name";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
 	private static final String KEY_SUFFIX_ID_PROVS_IMG = "-image-uri";
@@ -56,6 +57,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final String mongoDB;
 	private final String mongoUser;
 	private final char[] mongoPwd;
+	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
 
 	public KBaseAuthConfig() throws AuthConfigurationException {
@@ -90,6 +92,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 						cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 			}
 			mongoPwd = mongop == null ? null : mongop.toCharArray();
+			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
 			mongop = null; //gc
 			providers = getProviders(cfg);
 		} catch (AuthConfigurationException e) {
@@ -225,8 +228,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			return s.trim();
 		} else if (except) {
 			throw new AuthConfigurationException(String.format(
-					"Required parameter %s not provided in configuration " +
-					"file %s, section %s",
+					"Required parameter %s not provided in configuration file %s, section %s",
 					paramName, config.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 		} else {
 			return null;
@@ -294,5 +296,9 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	public char[] getMongoPwd() {
 		return mongoPwd;
 	}
-
+	
+	@Override
+	public String getTokenCookieName() {
+		return cookieName;
+	}
 }
