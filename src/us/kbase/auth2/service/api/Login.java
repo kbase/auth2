@@ -81,8 +81,7 @@ public class Login {
 		checkRedirectURL(redirect);
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
-			final URI target = toURI(
-					auth.getIdentityProviderURL(provider, state, false));
+			final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 			
 			final ResponseBuilder r = Response.seeOther(target)
 					.cookie(getStateCookie(state));

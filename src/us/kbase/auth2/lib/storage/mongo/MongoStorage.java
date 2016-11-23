@@ -65,27 +65,6 @@ import us.kbase.auth2.lib.token.TokenType;
 
 public class MongoStorage implements AuthStorage {
 
-	/* To add provider:
-	 * 1) pull the document
-	 * 		If it's a local account fail
-	 * 2) Add the provider to the array if it's not there already
-	 * 		If it is and non-indexed fields are the same, no-op, otherwise replace and proceed
-	 * 3) update the document with the new array, querying on the contents of the old array with $all and $elemMatch to assure no changes have been made
-	 * 4) If fail, go to 1
-	 * 		Except if it's a duplicate key, then fail permanently
-	 * 
-	 * This ensures that the same provider / user id combination only exists in the users db once at most
-	 * $addToSet will add the same provider /user id combo to an array if the email etc. is different
-	 * Unique indexes don't ensure that the contents of arrays are unique, just that no two documents have the same array elements
-	 * Splitting the user doc from the provider docs has a whole host of other issues, mostly wrt deletion
-	 * 
-	 * Only remove identities from users with at least two identities
-	 * (see unlink fn)
-	 *	This ensures that all accounts always have one provider
-	 * 
-	 * 
-	 */
-	
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
 	 * Instead, if needed, create classes specific to the implementation for
@@ -736,7 +715,7 @@ public class MongoStorage implements AuthStorage {
 				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname()));
 		try {
 			// id might have been unlinked, so we just assume
-			// the update worked.
+			// the update worked. If it was just unlinked we don't care.
 			db.getCollection(COL_USERS).updateOne(query, update);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed", e);
@@ -771,8 +750,7 @@ public class MongoStorage implements AuthStorage {
 	private Document toDocument(final RemoteIdentityWithID id) {
 		final RemoteIdentityDetails rid = id.getDetails();
 		return new Document(Fields.IDENTITIES_ID, id.getID().toString())
-				.append(Fields.IDENTITIES_PROVIDER,
-						id.getRemoteID().getProvider())
+				.append(Fields.IDENTITIES_PROVIDER, id.getRemoteID().getProvider())
 				.append(Fields.IDENTITIES_PROV_ID, id.getRemoteID().getId())
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
@@ -824,60 +802,80 @@ public class MongoStorage implements AuthStorage {
 	public void link(final UserName user, final RemoteIdentityWithID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
+		int count = 0;
 		boolean complete = false;
+		// could just put addIdentity into the while loop but this is more readable IMO
 		while (!complete) {
+			count++;
+			if (count > 5) {
+				throw new LinkFailedException("Attempted link update 5 times without success. " +
+						"There's probably a programming error here.");
+			}
 			complete = addIdentity(user, remoteID);
-		} //TODO CODE RACE have a max loop limit to protect against bugs
+		}
 	}
 	
 	private boolean addIdentity(
-			final UserName user,
+			final UserName userName,
 			final RemoteIdentityWithID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
-		//TODO DOCS_CODE document this thoroughly
-		final AuthUser u = getUser(user);
-		if (u.isLocal()) {
-			throw new LinkFailedException(
-					"Cannot link accounts to a local user");
+		/* This method is written as it is to avoid adding the same provider ID to a user twice.
+		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
+		 * documents, adding the same provider ID to a single document twice is possible without
+		 * careful db updates.
+		 * Other alternatives were explored:
+		 * $addToSet will add the same provider /user id combo to an array if the email etc. is
+		 * different
+		 * Splitting the user doc from the provider docs has a whole host of other issues, mostly
+		 * wrt deletion
+		 */
+		
+		final AuthUser user = getUser(userName);
+		if (user.isLocal()) {
+			throw new LinkFailedException("Cannot link accounts to a local user");
 		}
-		//check for race conditions such that the id is already linked
-		for (final RemoteIdentityWithID ri: u.getIdentities()) {
+		// firstly check to see if the ID is already linked. If so, just update the associated
+		// user info.
+		for (final RemoteIdentityWithID ri: user.getIdentities()) {
 			if (ri.getRemoteID().equals(remoteID.getRemoteID())) {
-				if (ri.getDetails().equals(remoteID.getDetails())) {
-					return true; //nothing to do
-				} else {
+				// if the details are the same, there's nothing to do, user is already linked and
+				// user info is the same
+				if (!ri.getDetails().equals(remoteID.getDetails())) {
 					updateIdentity(remoteID);
-					return true;
 				}
+				return true; // update complete
 			}
 		}
-		final Set<Document> olddoc = toDocument(u.getIdentities());
-		final Set<Document> newdoc = new HashSet<>(olddoc);
-		newdoc.add(toDocument(remoteID));
-		final List<Document> arrayQuery = olddoc.stream().map(
-				d -> new Document("$elemMatch", d))
+		/* ok, we need to link. To ensure we don't add the identity twice, we search for a user
+		 * that has the *exact* identity linkages as the current user, and then add one more. If
+		 * another ID has been linked since we pulled the user from the DB, the update will fail
+		 * and we try again by calling this function again.
+		 */
+		final Set<Document> oldIDs = toDocument(user.getIdentities()); // current ID linkages
+		final Set<Document> newIDs = new HashSet<>(oldIDs);
+		newIDs.add(toDocument(remoteID));
+		
+		final List<Document> idQuery = oldIDs.stream().map(d -> new Document("$elemMatch", d))
 				.collect(Collectors.toList());
-		final Document q = new Document(
-				Fields.USER_NAME, u.getUserName().getName())
-				.append(Fields.USER_IDENTITIES, new Document(
-						"$all", arrayQuery));
+		final Document query = new Document(Fields.USER_NAME, user.getUserName().getName())
+				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery));
 		
 		try {
-			final UpdateResult r = db.getCollection(COL_USERS).updateOne(
-					q, new Document("$set",
-					new Document(Fields.USER_IDENTITIES, newdoc)));
+			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query,
+					new Document("$set", new Document(Fields.USER_IDENTITIES, newIDs)));
+			// return true if the user was updated, false otherwise (meaning retry and call this
+			// method again)
 			return r.getModifiedCount() == 1;
 		} catch (MongoWriteException mwe) {
 			if (isDuplicateKeyException(mwe)) {
-				throw new LinkFailedException(
-						"Provider identity is already linked");
+				// another user already is linked to this ID, fail permanently, no retry
+				throw new LinkFailedException("Provider identity is already linked");
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
 			}
 		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+			throw new AuthStorageException("Connection to database failed", me);
 		}
 	}
 	
@@ -888,14 +886,12 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException, UnLinkFailedException {
 		final Document q = new Document(Fields.USER_NAME, username.getName())
 				/* this a neat trick to ensure that there's at least 2
-				 * identities for the user. See
-				 * http://stackoverflow.com/a/15224544/643675
+				 * identities for the user. See http://stackoverflow.com/a/15224544/643675
+				 * Normal users must always have at least one identity.
 				 */
-				.append(Fields.USER_IDENTITIES + ".1",
-						new Document("$exists", true));
+				.append(Fields.USER_IDENTITIES + ".1", new Document("$exists", true));
 		final Document a = new Document("$pull", new Document(
-				Fields.USER_IDENTITIES, new Document(
-						Fields.IDENTITIES_ID, id.toString())));
+				Fields.USER_IDENTITIES, new Document(Fields.IDENTITIES_ID, id.toString())));
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(q, a);
 			if (r.getMatchedCount() != 1) {
@@ -904,19 +900,15 @@ public class MongoStorage implements AuthStorage {
 						"exist or only has one associated identity");
 			}
 			if (r.getModifiedCount() != 1) {
-				throw new UnLinkFailedException("The user is not linked to " +
-						"the provided identity");
+				throw new UnLinkFailedException("The user is not linked to the provided identity");
 			}
 		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+			throw new AuthStorageException("Connection to database failed", me);
 		}
-		
 	}
 
 	private Set<Document> toDocument(final Set<RemoteIdentityWithID> rids) {
-		return rids.stream().map(ri -> toDocument(ri))
-				.collect(Collectors.toSet());
+		return rids.stream().map(ri -> toDocument(ri)).collect(Collectors.toSet());
 	}
 
 	@Override
