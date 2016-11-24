@@ -24,9 +24,11 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
@@ -64,6 +66,8 @@ public class Login {
 
 	//TODO TEST
 	//TODO JAVADOC
+	
+	//TODO CODE rename service.api -> service.ui. service.api will be for the actual API code, including legacy stuff
 
 	@Inject
 	private Authentication auth;
@@ -83,8 +87,7 @@ public class Login {
 			final String state = auth.getBareToken();
 			final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 			
-			final ResponseBuilder r = Response.seeOther(target)
-					.cookie(getStateCookie(state));
+			final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state));
 			if (redirect != null && !redirect.trim().isEmpty()) {
 					r.cookie(getRedirectCookie(redirect));
 			}
@@ -109,8 +112,7 @@ public class Login {
 			if (redirect != null && !redirect.trim().isEmpty()) {
 				ret.put("redirect", redirect);
 			}
-			return Response.ok().entity(new Viewable("/loginstart", ret))
-					.build();
+			return Response.ok().entity(new Viewable("/loginstart", ret)).build();
 		}
 	}
 
@@ -121,18 +123,15 @@ public class Login {
 			try {
 				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
 			} catch (ExternalConfigMappingException e) {
-				throw new RuntimeException("Dude, like, what just happened?",
-						e);
+				throw new RuntimeException("Dude, like, what just happened?", e);
 			}
 			try {
 				new URL(redirect);
 			} catch (MalformedURLException e) {
-				throw new IllegalParameterException("Illegal redirect URL: " +
-						redirect);
+				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
 			if (ext.getAllowedRedirectPrefix() != null) {
-				if (!redirect.startsWith(
-						ext.getAllowedRedirectPrefix().toString())) {
+				if (!redirect.startsWith(ext.getAllowedRedirectPrefix().toString())) {
 					throw new IllegalParameterException(
 							"Illegal redirect url: " + redirect);
 				}
@@ -142,18 +141,16 @@ public class Login {
 
 	private NewCookie getRedirectCookie(final String redirect) {
 		return new NewCookie(new Cookie(
-				"redirect", redirect == null ? "no redirect" : redirect,
-						"/login", null),
-				"redirect url", redirect == null ? 0 : 30 * 60,
-						APIConstants.SECURE_COOKIES);
+				"redirect", redirect == null ? "no redirect" : redirect, "/login", null),
+				"redirect url",
+				redirect == null ? 0 : 30 * 60, APIConstants.SECURE_COOKIES);
 	}
 
 	private NewCookie getStateCookie(final String state) {
 		return new NewCookie(new Cookie(
-				"statevar", state == null ? "no state" : state,
-						"/login/complete", null),
-				"loginstate", state == null ? 0 : 30 * 60,
-						APIConstants.SECURE_COOKIES);
+				"statevar", state == null ? "no state" : state, "/login/complete", null),
+				"loginstate",
+				state == null ? 0 : 30 * 60, APIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
@@ -168,14 +165,12 @@ public class Login {
 			UnauthorizedException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
-		final MultivaluedMap<String, String> qps =
-				uriInfo.getQueryParameters();
+		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		if (state == null || state.trim().isEmpty()) {
-			throw new MissingParameterException(
-					"Couldn't retrieve state value from cookie");
+			throw new MissingParameterException("Couldn't retrieve state value from cookie");
 		}
 		if (!state.equals(retstate)) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
@@ -193,8 +188,9 @@ public class Login {
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(null)).build();
 		} else {
-			r = Response.seeOther(toURI("/login/complete")).cookie(
-					getLoginInProcessCookie(lr.getTemporaryToken()))
+			//TODO LOGIN make target configurable
+			r = Response.seeOther(toURI("/login/choice"))
+					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
 		}
@@ -218,16 +214,33 @@ public class Login {
 	}
 
 	@GET
-	@Path("/complete")
+	@Path("/choice")
 	@Template(name = "/loginchoice")
-	public Map<String, Object> loginComplete(
+	@Produces(MediaType.TEXT_HTML)
+	public Map<String, Object> loginChoiceHTML(
 			@CookieParam("in-process-login-token") final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException {
+		return loginChoice(token, uriInfo);
+	}
+
+	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
+	@GET
+	@Path("/choice")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> loginChoiceJSON(
+			@CookieParam("in-process-login-token") final String token,
+			@Context final UriInfo uriInfo)
+			throws NoTokenProvidedException, AuthStorageException,
+			InvalidTokenException {
+		return loginChoice(token, uriInfo);
+	}
+	
+	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing in-process-login-token");
 		}
 		final Map<RemoteIdentityWithID, AuthUser> ids = auth.getLoginState(
 				new IncomingToken(token.trim()));
@@ -235,8 +248,7 @@ public class Login {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, "/login/create"));
 		ret.put("pickurl", relativize(uriInfo, "/login/pick"));
-		ret.put("provider", ids.keySet().iterator().next().getRemoteID()
-				.getProvider());
+		ret.put("provider", ids.keySet().iterator().next().getRemoteID().getProvider());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, String>> login = new LinkedList<>();
@@ -249,8 +261,7 @@ public class Login {
 				final Map<String, String> c = new HashMap<>();
 				c.put("id", id.getID().toString());
 				//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
-				c.put("usernamesugg", id.getDetails().getUsername()
-						.split("@")[0]);
+				c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
 				c.put("prov_username", id.getDetails().getUsername());
 				c.put("prov_fullname", id.getDetails().getFullname());
 				c.put("prov_email", id.getDetails().getEmail());
@@ -266,6 +277,7 @@ public class Login {
 		return ret;
 	}
 	
+	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
 	@Path("/pick")
 	public Response pickAccount(
@@ -286,6 +298,7 @@ public class Login {
 				.cookie(getRedirectCookie(null)).build();
 	}
 	
+	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
 	@Path("/create")
 	public Response createUser(
@@ -302,18 +315,15 @@ public class Login {
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException {
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing in-process-login-token");
 		}
 		//TODO INPUT sanity check inputs
 		final boolean sessionLogin = stayLoggedIn == null || stayLoggedIn.isEmpty();
 		final boolean priv = nameAndEmailPrivate != null && nameAndEmailPrivate.isEmpty();
 		
-		
 		// might want to enapsulate the user data in a NewUser class
 		final NewToken newtoken = auth.createUser(new IncomingToken(token),
-				identityID, new UserName(userName),
-				fullName, email, sessionLogin, priv);
+				identityID, new UserName(userName), fullName, email, sessionLogin, priv);
 		return Response.seeOther(getRedirectURI(redirect, "/me"))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))

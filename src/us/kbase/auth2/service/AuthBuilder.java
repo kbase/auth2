@@ -76,21 +76,18 @@ public class AuthBuilder {
 			db = mc.getDatabase(c.getMongoDatabase());
 		} catch (MongoException e) {
 			LoggerFactory.getLogger(getClass()).error(
-					"Failed to get database from MongoDB: " + e.getMessage(),
-					e);
+					"Failed to get database from MongoDB: " + e.getMessage(), e);
 			throw e;
 		}
 		//TODO MONGO & TEST authenticate to db with user/pwd
 		final AuthStorage s = new MongoStorage(db);
-		return new Authentication(
-				s, getIdentityProviders(c), defaultExternalConfig);
+		return new Authentication(s, getIdentityProviders(c), defaultExternalConfig);
 	}
 	
 	private IdentityProviderFactory getIdentityProviders(
 			final AuthStartupConfig c)
 			throws AuthConfigurationException {
-		final IdentityProviderFactory fac =
-				IdentityProviderFactory.getInstance();
+		final IdentityProviderFactory fac = IdentityProviderFactory.getInstance();
 		for (final IdentityProviderConfig idc:
 				c.getIdentityProviderConfigs()) {
 			try {
