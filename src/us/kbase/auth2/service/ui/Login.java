@@ -1,9 +1,9 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.APIUtils.getLoginCookie;
-import static us.kbase.auth2.service.ui.APIUtils.getMaxCookieAge;
-import static us.kbase.auth2.service.ui.APIUtils.relativize;
-import static us.kbase.auth2.service.ui.APIUtils.upperCase;
+import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.upperCase;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -67,8 +67,6 @@ public class Login {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	//TODO CODE rename service.api -> service.ui. service.api will be for the actual API code, including legacy stuff
-
 	@Inject
 	private Authentication auth;
 	
@@ -143,14 +141,14 @@ public class Login {
 		return new NewCookie(new Cookie(
 				"redirect", redirect == null ? "no redirect" : redirect, "/login", null),
 				"redirect url",
-				redirect == null ? 0 : 30 * 60, APIConstants.SECURE_COOKIES);
+				redirect == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 
 	private NewCookie getStateCookie(final String state) {
 		return new NewCookie(new Cookie(
 				"statevar", state == null ? "no state" : state, "/login/complete", null),
 				"loginstate",
-				state == null ? 0 : 30 * 60, APIConstants.SECURE_COOKIES);
+				state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
@@ -210,7 +208,7 @@ public class Login {
 				token == null ? "no token" : token.getToken(), "/login", null),
 				"logintoken",
 				token == null ? 0 : getMaxCookieAge(token, false),
-				APIConstants.SECURE_COOKIES);
+				UIConstants.SECURE_COOKIES);
 	}
 
 	@GET

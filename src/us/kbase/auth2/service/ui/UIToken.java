@@ -9,7 +9,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 
-public class APIToken {
+public class UIToken {
 	
 	//TODO TEST
 	//TODO JAVADOC
@@ -21,13 +21,13 @@ public class APIToken {
 	private final String name;
 	private final String user;
 
-	public APIToken(final HashedToken token) {
+	public UIToken(final HashedToken token) {
 		this(token.getTokenType(), token.getTokenName(), token.getId(),
 				token.getUserName(),
 				token.getCreationDate(), token.getExpirationDate());
 	}
 
-	APIToken(
+	UIToken(
 			final TokenType type,
 			final String tokenName,
 			final UUID id,

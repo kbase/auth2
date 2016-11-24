@@ -1,7 +1,7 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.APIUtils.getTokenFromCookie;
-import static us.kbase.auth2.service.ui.APIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.MalformedURLException;
 import java.net.URL;
