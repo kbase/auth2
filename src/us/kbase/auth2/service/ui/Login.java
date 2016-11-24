@@ -1,9 +1,9 @@
-package us.kbase.auth2.service.api;
+package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.api.APIUtils.relativize;
-import static us.kbase.auth2.service.api.APIUtils.getLoginCookie;
-import static us.kbase.auth2.service.api.APIUtils.getMaxCookieAge;
-import static us.kbase.auth2.service.api.APIUtils.upperCase;
+import static us.kbase.auth2.service.ui.APIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.APIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.ui.APIUtils.relativize;
+import static us.kbase.auth2.service.ui.APIUtils.upperCase;
 
 import java.net.MalformedURLException;
 import java.net.URI;

@@ -1,4 +1,4 @@
-package us.kbase.auth2.service.api;
+package us.kbase.auth2.service.ui;
 
 public class APIConstants {
 

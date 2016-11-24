@@ -1,9 +1,9 @@
-package us.kbase.auth2.service.api;
+package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.api.APIUtils.getLoginCookie;
-import static us.kbase.auth2.service.api.APIUtils.getToken;
-import static us.kbase.auth2.service.api.APIUtils.getTokenFromCookie;
-import static us.kbase.auth2.service.api.APIUtils.relativize;
+import static us.kbase.auth2.service.ui.APIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.APIUtils.getToken;
+import static us.kbase.auth2.service.ui.APIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.APIUtils.relativize;
 
 import java.util.HashMap;
 import java.util.List;
