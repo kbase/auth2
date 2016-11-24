@@ -1,9 +1,9 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.APIUtils.getLoginCookie;
-import static us.kbase.auth2.service.ui.APIUtils.getToken;
-import static us.kbase.auth2.service.ui.APIUtils.getTokenFromCookie;
-import static us.kbase.auth2.service.ui.APIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getToken;
+import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.util.HashMap;
 import java.util.List;
@@ -64,7 +64,7 @@ public class Tokens {
 			NoTokenProvidedException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put("user", ((APIToken) t.get("current")).getUser());
+		t.put("user", ((UIToken) t.get("current")).getUser());
 		t.put("targeturl", relativize(uriInfo, "/tokens/create"));
 		t.put("tokenurl", relativize(uriInfo, "/tokens/"));
 		t.put("revokeallurl", relativize(uriInfo, "/tokens/revokeall"));
@@ -87,7 +87,7 @@ public class Tokens {
 	@Path("/create")
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
-	public APINewToken createTokenHTML(
+	public UINewToken createTokenHTML(
 			@Context final HttpHeaders headers,
 			@FormParam("tokenname") final String tokenName,
 			@FormParam("tokentype") final String tokenType)
@@ -102,7 +102,7 @@ public class Tokens {
 	@Path("/create")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public APINewToken createTokenJSON(
+	public UINewToken createTokenJSON(
 			@Context final HttpHeaders headers,
 			@HeaderParam("authentication") final String headerToken,
 			final CreateTokenParams input)
@@ -162,14 +162,14 @@ public class Tokens {
 	}
 			
 
-	private APINewToken createtoken(
+	private UINewToken createtoken(
 			final String tokenName,
 			final String tokenType,
 			final IncomingToken userToken)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException {
-		return new APINewToken(auth.createToken(userToken, tokenName, "server".equals(tokenType)));
+		return new UINewToken(auth.createToken(userToken, tokenName, "server".equals(tokenType)));
 	}
 
 	private Map<String, Object> getTokens(final IncomingToken token)
@@ -178,10 +178,10 @@ public class Tokens {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("current", new APIToken(ts.getCurrentToken()));
+		ret.put("current", new UIToken(ts.getCurrentToken()));
 		
-		final List<APIToken> ats = ts.getTokens().stream()
-				.map(t -> new APIToken(t)).collect(Collectors.toList());
+		final List<UIToken> ats = ts.getTokens().stream()
+				.map(t -> new UIToken(t)).collect(Collectors.toList());
 		ret.put("tokens", ats);
 		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
 		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));

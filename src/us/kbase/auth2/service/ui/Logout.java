@@ -1,8 +1,8 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.APIUtils.getLoginCookie;
-import static us.kbase.auth2.service.ui.APIUtils.getTokenFromCookie;
-import static us.kbase.auth2.service.ui.APIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.util.Map;
 

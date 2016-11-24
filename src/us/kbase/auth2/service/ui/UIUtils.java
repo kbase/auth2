@@ -15,7 +15,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 
-public class APIUtils {
+public class UIUtils {
 
 	//TODO TEST
 	//TODO JAVADOC
@@ -61,7 +61,7 @@ public class APIUtils {
 				new Cookie(cookieName, token == null ? "no token" : token.getToken(), "/", null),
 				"authtoken",
 				token == null ? 0 : getMaxCookieAge(token, session),
-				APIConstants.SECURE_COOKIES);
+				UIConstants.SECURE_COOKIES);
 	}
 
 	public static int getMaxCookieAge(

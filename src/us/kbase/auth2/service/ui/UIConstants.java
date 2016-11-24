@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.ui;
 
-public class APIConstants {
+public class UIConstants {
 
 	//TODO JAVADOC
 	

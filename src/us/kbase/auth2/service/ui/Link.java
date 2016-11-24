@@ -1,9 +1,9 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.APIUtils.getMaxCookieAge;
-import static us.kbase.auth2.service.ui.APIUtils.getTokenFromCookie;
-import static us.kbase.auth2.service.ui.APIUtils.relativize;
-import static us.kbase.auth2.service.ui.APIUtils.upperCase;
+import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.upperCase;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -114,7 +114,7 @@ public class Link {
 				"statevar", state == null ? "no state" : state,
 						"/link/complete", null),
 				"linkstate", state == null ? 0 : 30 * 60,
-						APIConstants.SECURE_COOKIES);
+						UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
@@ -164,7 +164,7 @@ public class Link {
 		return new NewCookie(new Cookie("in-process-link-token",
 				token == null ? "no token" : token.getToken(), "/link", null),
 				"linktoken", token == null ? 0 : getMaxCookieAge(token, false),
-				APIConstants.SECURE_COOKIES);
+				UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
