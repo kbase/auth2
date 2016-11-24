@@ -18,28 +18,27 @@ public class AuthExternalConfig implements ExternalConfig {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	public static final ExternalConfig DEFAULT =
-			new AuthExternalConfig(null, false, false);
+	public static final ExternalConfig DEFAULT = new AuthExternalConfig(null, false, false);
 	
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
 	
-	private final URL allowedRedirectPrefix;
+	private final URL allowedPostLoginRedirectPrefix;
 	private final Boolean ignoreIPHeaders;
 	private final Boolean includeStackTraceInResponse;
 	
 	public AuthExternalConfig(
-			final URL allowedRedirectPrefix,
+			final URL allowedPostLoginRedirectPrefix,
 			final Boolean ignoreIPHeaders,
 			final Boolean includeStackTraceInResponse) {
 		// nulls indicate no value or no change depending on context
-		this.allowedRedirectPrefix = allowedRedirectPrefix; //null ok
+		this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix; //null ok
 		this.ignoreIPHeaders = ignoreIPHeaders;
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
 	}
 
 	public URL getAllowedRedirectPrefix() {
-		return allowedRedirectPrefix;
+		return allowedPostLoginRedirectPrefix;
 	}
 
 	public Boolean isIgnoreIPHeaders() {
@@ -53,8 +52,8 @@ public class AuthExternalConfig implements ExternalConfig {
 	@Override
 	public Map<String, String> toMap() {
 		final Map<String, String> ret = new HashMap<String, String>();
-		ret.put("allowedRedirectPrefix", allowedRedirectPrefix == null ?
-				null : allowedRedirectPrefix.toString());
+		ret.put("allowedPostLoginRedirectPrefix", allowedPostLoginRedirectPrefix == null ?
+				null : allowedPostLoginRedirectPrefix.toString());
 		ret.put("ignoreIPHeaders", getBooleanRepresentation(ignoreIPHeaders));
 		ret.put("includeStackTraceInResponse",
 				getBooleanRepresentation(includeStackTraceInResponse));
@@ -74,8 +73,8 @@ public class AuthExternalConfig implements ExternalConfig {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("AuthExternalConfig [allowedRedirectPrefix=");
-		builder.append(allowedRedirectPrefix);
+		builder.append("AuthExternalConfig [allowedPostLoginRedirectPrefix=");
+		builder.append(allowedPostLoginRedirectPrefix);
 		builder.append(", ignoreIPHeaders=");
 		builder.append(ignoreIPHeaders);
 		builder.append(", includeStackTraceInResponse=");
@@ -91,7 +90,15 @@ public class AuthExternalConfig implements ExternalConfig {
 		@Override
 		public AuthExternalConfig fromMap(final Map<String, String> config)
 				throws ExternalConfigMappingException {
-			final String url = config.get("allowedRedirectPrefix");
+			final URL allowed = getURL(config, "allowedPostLoginRedirectPrefix");
+			final boolean ignoreIPs = getBoolean(config, "ignoreIPHeaders");
+			final boolean includeStack = getBoolean(config, "includeStackTraceInResponse");
+			return new AuthExternalConfig(allowed, ignoreIPs, includeStack);
+		}
+
+		private URL getURL(final Map<String, String> config, final String key)
+				throws ExternalConfigMappingException {
+			final String url = config.get(key);
 			final URL allowed;
 			if (url == null) {
 				allowed = null;
@@ -100,15 +107,10 @@ public class AuthExternalConfig implements ExternalConfig {
 					allowed = new URL(url);
 				} catch (MalformedURLException e) {
 					throw new ExternalConfigMappingException(
-							"Bad allowed redirect prefix URL: " +
-							e.getMessage(), e);
+							"Bad allowed redirect prefix URL: " + e.getMessage(), e);
 				}
 			}
-			
-			final boolean ignoreIPs = getBoolean(config, "ignoreIPHeaders");
-			final boolean includeStack = getBoolean(
-					config, "includeStackTraceInResponse");
-			return new AuthExternalConfig(allowed, ignoreIPs, includeStack);
+			return allowed;
 		}
 
 		private boolean getBoolean(

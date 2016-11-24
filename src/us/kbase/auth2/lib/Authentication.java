@@ -89,6 +89,9 @@ public class Authentication {
 	 * semantics, which would mean that users that erroneously have the role
 	 * would be granted the new semantics, which is wrong
 	 * Might not be worth worrying about
+	 * 
+	 * Maybe just disable instead? Still possible for race conditions to add to a user after
+	 * disable.
 	 */
 	
 	private final AuthStorage storage;
@@ -251,13 +254,11 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
 		}
-		if (!pwdcrypt.authenticate(pwd.getPassword(), u.getPasswordHash(),
-				u.getSalt())) {
+		if (!pwdcrypt.authenticate(pwd.getPassword(), u.getPasswordHash(), u.getSalt())) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
 		}
-		if (!cfg.getAppConfig().isLoginAllowed() &&
-				!Role.isAdmin(u.getRoles())) {
+		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Non-admin login is disabled");
 			
@@ -466,8 +467,7 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot change ROOT roles");
 		}
-		final AuthUser admin = getUser(adminToken,
-				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		final AuthUser admin = getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		/* TODO CODE RACE fix race condition when updating roles
 		 * Send the prior roles in with the new roles. Have the storage system
 		 * throw a special exception when the roles aren't the same, then
@@ -600,15 +600,13 @@ public class Authentication {
 		final LoginToken lr;
 		if (hasUser.size() == 1 && noUser.isEmpty()) {
 			final AuthUser user = hasUser.values().iterator().next();
-			if (!cfg.getAppConfig().isLoginAllowed() &&
-					!Role.isAdmin(user.getRoles())) {
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Non-admin login is disabled");
 			}
 			lr = new LoginToken(login(user.getUserName()));
 		} else {
-			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
-					10 * 60 * 1000);
+			final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithID> store = noUser.stream()
 					.map(id -> id.withID()).collect(Collectors.toSet());
 			hasUser.keySet().stream().forEach(id -> store.add(id));
@@ -702,8 +700,7 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"There is no account linked to the provided identity");
 		}
-		if (!cfg.getAppConfig().isLoginAllowed() &&
-				!Role.isAdmin(u.getRoles())) {
+		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Non-admin login is disabled");
 		}

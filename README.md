@@ -6,6 +6,9 @@ This repo contains the second iteration of the KBase authentication server.
 Current endpoints
 -----------------
 
+### UI
+
+
 /admin/customroles  
 View and add custom roles.
 
@@ -36,16 +39,18 @@ User page.
 /tokens  
 list and create tokens.
 
+Note that the current UI is a minimal implementation for the purposes of
+testing. In many cases a manual refresh of the page will be required to see
+changes. Further, once a checkbox is manually checked or unchecked, that state
+will not change, even with a refresh - to see changes reset the form.
+
+### API
+
 /api/legacy/KBase/Sessions/Login  
 the legacy KBase API.
 
 /api/legacy/globus  
 the legacy globus API. Endpoints are /goauth/token and /users.
-
-Note that the current UI is a minimal implementation for the purposes of
-testing. In many cases a manual refresh of the page will be required to see
-changes. Further, once a checkbox is manually checked or unchecked, that state
-will not change, even with a refresh - to see changes reset the form.
 
 Admin notes
 -----------

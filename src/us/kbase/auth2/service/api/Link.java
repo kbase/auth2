@@ -20,12 +20,15 @@ import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
@@ -126,14 +129,12 @@ public class Link {
 			NoTokenProvidedException, LinkFailedException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
-		final MultivaluedMap<String, String> qps =
-				uriInfo.getQueryParameters();
+		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		if (state == null || state.trim().isEmpty()) {
-			throw new MissingParameterException(
-					"Couldn't retrieve state value from cookie");
+			throw new MissingParameterException("Couldn't retrieve state value from cookie");
 		}
 		if (!state.equals(retstate)) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
@@ -146,10 +147,12 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lt.isLinked()) {
+			//TODO LINK make target configurable
 			r = Response.seeOther(toURI("/me"))
 					.cookie(getStateCookie(null)).build();
 		} else {
-			r = Response.seeOther(toURI("/link/complete")).cookie(
+			//TODO LINK make target configurable
+			r = Response.seeOther(toURI("/link/choice")).cookie(
 					getLinkInProcessCookie(lt.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
@@ -165,14 +168,37 @@ public class Link {
 	}
 	
 	@GET
-	@Path("/complete")
+	@Path("/choice")
 	@Template(name = "/linkchoice")
-	public Map<String, Object> linkComplete(
+	@Produces(MediaType.TEXT_HTML)
+	public Map<String, Object> linkChoiceHTML(
 			@Context final HttpHeaders headers,
 			@CookieParam("in-process-link-token") final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException, LinkFailedException {
+		return linkChoice(headers, linktoken, uriInfo);
+	}
+	
+	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
+	@GET
+	@Path("/choice")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> linkChoiceJSON(
+			@Context final HttpHeaders headers,
+			@CookieParam("in-process-link-token") final String linktoken,
+			@Context final UriInfo uriInfo)
+			throws NoTokenProvidedException, AuthStorageException,
+			InvalidTokenException, LinkFailedException {
+		return linkChoice(headers, linktoken, uriInfo);
+	}
+
+	private Map<String, Object> linkChoice(
+			final HttpHeaders headers,
+			final String linktoken,
+			final UriInfo uriInfo)
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+			LinkFailedException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
 			throw new NoTokenProvidedException(
 					"Missing in-process-link-token");
@@ -202,23 +228,47 @@ public class Link {
 		return ret;
 	}
 	
+	// for dumb HTML pages that use forms
 	@POST
 	@Path("/pick")
-	public Response pickAccount(
+	public Response pickAccountPOST(
 			@Context final HttpHeaders headers,
 			@CookieParam("in-process-link-token") final String linktoken,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException {
 		
+		pickAccount(headers, linktoken, identityID);
+		//TODO LINK make target configurable
+		return Response.seeOther(toURI("/me")).cookie(getLinkInProcessCookie(null)).build();
+	}
+	
+	// for AJAX pages that can decide for themselves where to go next
+	@PUT
+	@Path("/pick")
+	public Response pickAccountPUT(
+			@Context final HttpHeaders headers,
+			@CookieParam("in-process-link-token") final String linktoken,
+			@QueryParam("id") final UUID identityID)
+			throws NoTokenProvidedException, AuthenticationException,
+			AuthStorageException, LinkFailedException {
+		
+		pickAccount(headers, linktoken, identityID);
+		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
+	}
+
+	private void pickAccount(
+			final HttpHeaders headers,
+			final String linktoken,
+			final UUID identityID)
+			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
+			LinkFailedException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
 			throw new NoTokenProvidedException(
 					"Missing in-process-link-token");
 		}
 		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new IncomingToken(linktoken), identityID);
-		return Response.seeOther(toURI("/me"))
-				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
 	//Assumes valid URI in URL form
