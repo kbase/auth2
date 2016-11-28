@@ -1,6 +1,7 @@
 package us.kbase.auth2.service;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 
 public class AuthExternalConfig implements ExternalConfig {
 
@@ -26,11 +28,17 @@ public class AuthExternalConfig implements ExternalConfig {
 	private static final String POST_LINK_REDIRECT = "postLinkRedirect";
 	private static final String COMPLETE_LINK_REDIRECT = "completeLinkRedirect";
 
-	public static final ExternalConfig DEFAULT = new AuthExternalConfig(
-			null, null, null, null, false, false);
+	public static final ExternalConfig DEFAULT;
+	public static final ExternalConfig NO_CHANGE;
 	
-	public static final ExternalConfig NO_CHANGE = new AuthExternalConfig(
-			null, null, null, null, null, null);
+	static {
+		try {
+			DEFAULT = new AuthExternalConfig(null, null, null, null, false, false);
+			NO_CHANGE = new AuthExternalConfig(null, null, null, null, null, null);
+		} catch (IllegalParameterException e) {
+			throw new RuntimeException("this should be impossible", e);
+		}
+	}
 	
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
@@ -48,14 +56,29 @@ public class AuthExternalConfig implements ExternalConfig {
 			final URL postLinkRedirect,
 			final URL completeLinkRedirect,
 			final Boolean ignoreIPHeaders,
-			final Boolean includeStackTraceInResponse) {
+			final Boolean includeStackTraceInResponse) throws IllegalParameterException {
 		// nulls indicate no value or no change depending on context
+		checkURI(allowedPostLoginRedirectPrefix);
 		this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix; //null ok
+		checkURI(completeLoginRedirect);
 		this.completeLoginRedirect = completeLoginRedirect;
+		checkURI(postLinkRedirect);
 		this.postLinkRedirect = postLinkRedirect;
+		checkURI(completeLinkRedirect);
 		this.completeLinkRedirect = completeLinkRedirect;
 		this.ignoreIPHeaders = ignoreIPHeaders;
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
+	}
+
+	private void checkURI(final URL url) throws IllegalParameterException {
+		if (url == null) {
+			return;
+		}
+		try {
+			url.toURI();
+		} catch (URISyntaxException e) {
+			throw new IllegalParameterException("Illegal URL " + url + ":" + e.getMessage(), e);
+		}
 	}
 
 	public URL getAllowedLoginRedirectPrefix() {
@@ -134,8 +157,13 @@ public class AuthExternalConfig implements ExternalConfig {
 			final URL completeLink = getURL(config, COMPLETE_LINK_REDIRECT);
 			final boolean ignoreIPs = getBoolean(config, "ignoreIPHeaders");
 			final boolean includeStack = getBoolean(config, "includeStackTraceInResponse");
-			return new AuthExternalConfig(allowedPostLogin, completeLogin, postLink, completeLink,
-					ignoreIPs, includeStack);
+			try {
+				return new AuthExternalConfig(allowedPostLogin, completeLogin, postLink,
+						completeLink, ignoreIPs, includeStack);
+			} catch (IllegalParameterException e) {
+				throw new ExternalConfigMappingException(
+						"Error in incoming config: " + e.getMessage(), e);
+			}
 		}
 
 		private URL getURL(final Map<String, String> config, final String key)
@@ -147,9 +175,10 @@ public class AuthExternalConfig implements ExternalConfig {
 			} else {
 				try {
 					allowed = new URL(url);
-				} catch (MalformedURLException e) {
+					allowed.toURI();
+				} catch (MalformedURLException | URISyntaxException e) {
 					throw new ExternalConfigMappingException(
-							"Bad allowed redirect prefix URL: " + e.getMessage(), e);
+							"Bad URL: " + e.getMessage(), e);
 				}
 			}
 			return allowed;
