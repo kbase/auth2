@@ -18,27 +18,60 @@ public class AuthExternalConfig implements ExternalConfig {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	public static final ExternalConfig DEFAULT = new AuthExternalConfig(null, false, false);
+	//TODO CONFIG nulls = no change doesn't work. What if you want to remove the url?
+	
+	private static final String ALLOWED_POST_LOGIN_REDIRECT_PREFIX =
+			"allowedPostLoginRedirectPrefix";
+	private static final String COMPLETE_LOGIN_REDIRECT = "completeLoginRedirect";
+	private static final String POST_LINK_REDIRECT = "postLinkRedirect";
+	private static final String COMPLETE_LINK_REDIRECT = "completeLinkRedirect";
+
+	public static final ExternalConfig DEFAULT = new AuthExternalConfig(
+			null, null, null, null, false, false);
+	
+	public static final ExternalConfig NO_CHANGE = new AuthExternalConfig(
+			null, null, null, null, null, null);
 	
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
 	
 	private final URL allowedPostLoginRedirectPrefix;
+	private final URL completeLoginRedirect;
+	private final URL postLinkRedirect;
+	private final URL completeLinkRedirect;
 	private final Boolean ignoreIPHeaders;
 	private final Boolean includeStackTraceInResponse;
 	
 	public AuthExternalConfig(
 			final URL allowedPostLoginRedirectPrefix,
+			final URL completeLoginRedirect,
+			final URL postLinkRedirect,
+			final URL completeLinkRedirect,
 			final Boolean ignoreIPHeaders,
 			final Boolean includeStackTraceInResponse) {
 		// nulls indicate no value or no change depending on context
 		this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix; //null ok
+		this.completeLoginRedirect = completeLoginRedirect;
+		this.postLinkRedirect = postLinkRedirect;
+		this.completeLinkRedirect = completeLinkRedirect;
 		this.ignoreIPHeaders = ignoreIPHeaders;
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
 	}
 
-	public URL getAllowedRedirectPrefix() {
+	public URL getAllowedLoginRedirectPrefix() {
 		return allowedPostLoginRedirectPrefix;
+	}
+	
+	public URL getCompleteLoginRedirect() {
+		return completeLoginRedirect;
+	}
+	
+	public URL getPostLinkRedirect() {
+		return postLinkRedirect;
+	}
+	
+	public URL getCompleteLinkRedirect() {
+		return completeLinkRedirect;
 	}
 
 	public Boolean isIgnoreIPHeaders() {
@@ -52,8 +85,13 @@ public class AuthExternalConfig implements ExternalConfig {
 	@Override
 	public Map<String, String> toMap() {
 		final Map<String, String> ret = new HashMap<String, String>();
-		ret.put("allowedPostLoginRedirectPrefix", allowedPostLoginRedirectPrefix == null ?
-				null : allowedPostLoginRedirectPrefix.toString());
+		ret.put(ALLOWED_POST_LOGIN_REDIRECT_PREFIX, allowedPostLoginRedirectPrefix == null ? null :
+			allowedPostLoginRedirectPrefix.toString());
+		ret.put(COMPLETE_LOGIN_REDIRECT, completeLoginRedirect == null ? null :
+			completeLoginRedirect.toString());
+		ret.put(POST_LINK_REDIRECT, postLinkRedirect == null ? null : postLinkRedirect.toString());
+		ret.put(COMPLETE_LINK_REDIRECT, completeLinkRedirect == null ? null :
+			completeLinkRedirect.toString());
 		ret.put("ignoreIPHeaders", getBooleanRepresentation(ignoreIPHeaders));
 		ret.put("includeStackTraceInResponse",
 				getBooleanRepresentation(includeStackTraceInResponse));
@@ -90,10 +128,14 @@ public class AuthExternalConfig implements ExternalConfig {
 		@Override
 		public AuthExternalConfig fromMap(final Map<String, String> config)
 				throws ExternalConfigMappingException {
-			final URL allowed = getURL(config, "allowedPostLoginRedirectPrefix");
+			final URL allowedPostLogin = getURL(config, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
+			final URL completeLogin = getURL(config, COMPLETE_LOGIN_REDIRECT);
+			final URL postLink = getURL(config, POST_LINK_REDIRECT);
+			final URL completeLink = getURL(config, COMPLETE_LINK_REDIRECT);
 			final boolean ignoreIPs = getBoolean(config, "ignoreIPHeaders");
 			final boolean includeStack = getBoolean(config, "includeStackTraceInResponse");
-			return new AuthExternalConfig(allowed, ignoreIPs, includeStack);
+			return new AuthExternalConfig(allowedPostLogin, completeLogin, postLink, completeLink,
+					ignoreIPs, includeStack);
 		}
 
 		private URL getURL(final Map<String, String> config, final String key)

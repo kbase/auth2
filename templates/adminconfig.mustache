@@ -19,7 +19,25 @@ The stack trace is always logged.
 </p>
 
 <p>Allowed post-login redirect URL prefix:
-<input type="text" name="allowedredirect" {{#allowedredirect}}value="{{.}}"{{/allowedredirect}}/>
+<input type="text" name="allowedloginredirect"
+	{{#allowedloginredirect}}value="{{.}}"{{/allowedloginredirect}}/>
+</p>
+
+<p>Redirect URL when a user cannot be logged in immediately after return from 3rd party provider,
+ e.g. a choice of accounts is required or an account must be created.
+<input type="text" name="completeloginredirect"
+	{{#completeloginredirect}}value="{{.}}"{{/completeloginredirect}}/>
+</p>
+
+<p>Redirect URL after an account link (usually to a user page showing their identities).
+<input type="text" name="postlinkredirect"
+	{{#postlinkredirect}}value="{{.}}"{{/postlinkredirect}}/>
+</p>
+
+<p>Redirect URL when a user account cannot be linked immediately after return from 3rd party
+provider, e.g. a choice of accounts is required.
+<input type="text" name="completelinkredirect"
+	{{#completelinkredirect}}value="{{.}}"{{/completelinkredirect}}/>
 </p>
 
 <input type="reset" value="Reset"/>

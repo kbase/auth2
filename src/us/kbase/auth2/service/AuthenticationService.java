@@ -89,7 +89,7 @@ public class AuthenticationService extends ResourceConfig {
 				ab = new AuthBuilder(c, defaultExternalConfig, mc);
 			}
 		}
-		packages("us.kbase.auth2.service.api");
+		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");
 		register(JacksonFeature.class);
 		register(MustacheMvcFeature.class);
 		final String templatePath = "templates";

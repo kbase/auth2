@@ -128,8 +128,8 @@ public class Login {
 			} catch (MalformedURLException e) {
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
-			if (ext.getAllowedRedirectPrefix() != null) {
-				if (!redirect.startsWith(ext.getAllowedRedirectPrefix().toString())) {
+			if (ext.getAllowedLoginRedirectPrefix() != null) {
+				if (!redirect.startsWith(ext.getAllowedLoginRedirectPrefix().toString())) {
 					throw new IllegalParameterException(
 							"Illegal redirect url: " + redirect);
 				}

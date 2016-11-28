@@ -70,6 +70,10 @@ public class Admin {
 	
 	//TODO ROLES html escape role wherever it's displayed (/me, admin custom roles, elsewhere?)
 	
+	private static final int MIN_IN_MS = 60 * 1000;
+
+	private static final int DAY_IN_MS = 24 * 60 * MIN_IN_MS;
+
 	@Inject
 	private Authentication auth;
 	
@@ -254,6 +258,7 @@ public class Admin {
 				roleId, description);
 	}
 	
+	//TODO CONFIG reset to defaults
 	@GET
 	@Path("/config")
 	@Template(name = "/adminconfig")
@@ -285,17 +290,20 @@ public class Admin {
 		}
 		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponse());
 		ret.put("ignoreip", cfgset.getExtcfg().isIgnoreIPHeaders());
-		ret.put("allowedredirect", cfgset.getExtcfg().getAllowedRedirectPrefix());
+		ret.put("allowedloginredirect", cfgset.getExtcfg().getAllowedLoginRedirectPrefix());
+		ret.put("completeloginredirect", cfgset.getExtcfg().getCompleteLoginRedirect());
+		ret.put("postlinkredirect", cfgset.getExtcfg().getPostLinkRedirect());
+		ret.put("completelinkredirect", cfgset.getExtcfg().getCompleteLinkRedirect());
 		
 		ret.put("allowlogin", cfgset.getCfg().isLoginAllowed());
 		ret.put("tokensugcache", cfgset.getCfg().getTokenLifetimeMS(
-				TokenLifetimeType.EXT_CACHE) / (60 * 1000));
+				TokenLifetimeType.EXT_CACHE) / MIN_IN_MS);
 		ret.put("tokenlogin", cfgset.getCfg().getTokenLifetimeMS(
-				TokenLifetimeType.LOGIN) / (24 * 60 * 60 * 1000));
+				TokenLifetimeType.LOGIN) / DAY_IN_MS);
 		ret.put("tokendev", cfgset.getCfg().getTokenLifetimeMS(
-				TokenLifetimeType.DEV) / (24 * 60 * 60 * 1000));
+				TokenLifetimeType.DEV) / DAY_IN_MS);
 		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
-				TokenLifetimeType.SERV) / (24 * 60 * 60 * 1000));
+				TokenLifetimeType.SERV) / DAY_IN_MS);
 
 		ret.put("basicurl", relativize(uriInfo, "/admin/config/basic"));
 		ret.put("tokenurl", relativize(uriInfo, "/admin/config/token"));
@@ -311,24 +319,21 @@ public class Admin {
 			@FormParam("allowlogin") final String allowLogin,
 			@FormParam("showstack") final String showstack,
 			@FormParam("ignoreip") final String ignoreip,
-			@FormParam("allowedredirect") final String allowedredirect)
+			@FormParam("allowedloginredirect") final String allowedloginredirect,
+			@FormParam("completeloginredirect") final String completeloginredirect,
+			@FormParam("postlinkredirect") final String postlinkredirect,
+			@FormParam("completelinkredirect") final String completelinkredirect)
 			throws IllegalParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
-		final URL redirect;
-		if (allowedredirect == null || allowedredirect.isEmpty()) {
-			redirect = null;
-		} else {
-			try {
-				redirect = new URL(allowedredirect);
-			} catch (MalformedURLException e) {
-				throw new IllegalParameterException(
-						"Illegal URL: " + allowedredirect, e);
-			}
-		}
+		final URL postlogin = getURL(allowedloginredirect);
+		final URL completelogin = getURL(completeloginredirect);
+		final URL postlink = getURL(postlinkredirect);
+		final URL completelink = getURL(completelinkredirect);
 		
 		final AuthExternalConfig ext = new AuthExternalConfig(
-				redirect, !nullOrEmpty(ignoreip), !nullOrEmpty(showstack));
+				postlogin, completelogin, postlink, completelink,
+				!nullOrEmpty(ignoreip), !nullOrEmpty(showstack));
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthConfigSet<>(new AuthConfig(!nullOrEmpty(allowLogin), null, null),
@@ -336,6 +341,20 @@ public class Admin {
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
+	}
+
+	private URL getURL(final String putativeURL) throws IllegalParameterException {
+		final URL redirect;
+		if (putativeURL == null || putativeURL.isEmpty()) {
+			redirect = null;
+		} else {
+			try {
+				redirect = new URL(putativeURL);
+			} catch (MalformedURLException e) {
+				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
+			}
+		}
+		return redirect;
 	}
 	
 	@POST
@@ -358,7 +377,7 @@ public class Admin {
 		provs.put(provname, pc);
 		auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new AuthConfigSet<>(new AuthConfig(null, provs, null),
-						new AuthExternalConfig(null, null, null)));
+						AuthExternalConfig.NO_CHANGE));
 	}
 	
 	@POST
@@ -379,18 +398,15 @@ public class Admin {
 		}
 		if (login < 1) {
 			throw new IllegalParameterException(
-					"Suggested login token expiration time must be at " +
-					"least 1");
+					"Login token expiration time must be at least 1");
 		}
 		if (dev < 1) {
 			throw new IllegalParameterException(
-					"Suggested developer token expiration time must be at " +
-					"least 1");
+					"Developer token expiration time must be at least 1");
 		}
 		if (serv < 1) {
 			throw new IllegalParameterException(
-					"Suggested server token expiration time must be at " +
-					"least 1");
+					"Server token expiration time must be at least 1");
 		}
 		final Map<TokenLifetimeType, Long> t = new HashMap<>();
 		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, 60 * 1000L));
@@ -400,7 +416,7 @@ public class Admin {
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthConfigSet<>(new AuthConfig(null, null, t),
-							new AuthExternalConfig(null, null, null)));
+							AuthExternalConfig.NO_CHANGE));
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
