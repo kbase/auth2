@@ -76,26 +76,9 @@ public class Authentication {
 	//TODO PWD last pwd reset field for local users
 	
 	/* TODO ROLES feature: delete custom roles (see below)
-	 * Should use role IDs and keep role IDs in the user record. On delete, delete the ID. This prevents semantic changes being a problem.
 	 * 1) delete role from system
 	 * 2) delete role from all users
-	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role, although semantic changes are an issue
-	 * Delete role from all users
-	 * Delete role from system:
-	 * 1) Remove role from all users
-	 * 2) delete role from system
-	 * 3) Remove role from all users again
-	 * 4) On getting a user, any roles that aren't in the system should be
-	 * removed
-	 * 
-	 * Still a possibility of a race condition allowing adding a deleted role to
-	 * a user after step 3, and then the role being re-added with different
-	 * semantics, which would mean that users that erroneously have the role
-	 * would be granted the new semantics, which is wrong
-	 * Might not be worth worrying about
-	 * 
-	 * Maybe just disable instead? Still possible for race conditions to add to a user after
-	 * disable.
+	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role 
 	 */
 	
 	private final AuthStorage storage;
