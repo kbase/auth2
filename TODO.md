@@ -40,13 +40,17 @@ Auth service work
   * Login & signup very different
 * Admin functionality
   * Find users
+    * By name (regex)
+    * By role
+    * By full name (regex) (combine with name?)
   * revoke single / user's / all tokens
   * Disable account (revoke all tokens & prevent logins), record admin and reason
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
+  * Delete custom role
 * API
-  * Configure redirect urls for login and link intermediate steps
   * Introspect token (e.g. not the legacy apis, provide complete info)
+  * Email & full name privacy option
   * /user/<name> - get user details
   * /me
 * Memory based data storage
