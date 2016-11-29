@@ -76,6 +76,10 @@ public class Authentication {
 	//TODO PWD last pwd reset field for local users
 	
 	/* TODO ROLES feature: delete custom roles (see below)
+	 * Should use role IDs and keep role IDs in the user record. On delete, delete the ID. This prevents semantic changes being a problem.
+	 * 1) delete role from system
+	 * 2) delete role from all users
+	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role, although semantic changes are an issue
 	 * Delete role from all users
 	 * Delete role from system:
 	 * 1) Remove role from all users
@@ -236,8 +240,8 @@ public class Authentication {
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(
 				pwd.getPassword(), salt);
-		final LocalUser lu = new LocalUser(userName, email, fullName, null,
-				null, new Date(), null, passwordHash, salt, true);
+		final LocalUser lu = new NewLocalUser(userName, email, fullName, new Date(), null,
+				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
 		clear(salt);
@@ -677,14 +681,12 @@ public class Authentication {
 			throw new NullPointerException("userName");
 		}
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Cannot create ROOT user");
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
-		final RemoteIdentityWithID match =
-				getIdentity(token, identityID);
+		final RemoteIdentityWithID match = getIdentity(token, identityID);
 		final Date now = new Date();
-		storage.createUser(new AuthUser(userName, email, fullName,
-				new HashSet<>(Arrays.asList(match)), null, null, now, now));
+		storage.createUser(new NewUser(userName, email, fullName,
+				new HashSet<>(Arrays.asList(match)), now, now));
 		return login(userName);
 	}
 
@@ -902,11 +904,11 @@ public class Authentication {
 			throw new RuntimeException("Impossible", e);
 		}
 		final Date now = new Date();
-		storage.createUser(new AuthUser(un,
+		storage.createUser(new NewUser(un,
 				ri.getDetails().getEmail(),
 				ri.getDetails().getFullname(),
 				new HashSet<>(Arrays.asList(ri.withID())),
-				null, null, now, now));
+				now, now));
 	}
 
 }

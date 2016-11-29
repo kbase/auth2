@@ -8,6 +8,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -336,21 +337,18 @@ public class MongoStorage implements AuthStorage {
 				(List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream()
 				.map(s -> Role.getRole(s)).collect(Collectors.toList());
-		@SuppressWarnings("unchecked")
-		final List<String> croles = (List<String>) user.get(
-				Fields.USER_CUSTOM_ROLES);
-		return new LocalUser(
+		return new MongoLocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				user.getString(Fields.USER_EMAIL),
 				user.getString(Fields.USER_FULL_NAME),
 				new HashSet<>(roles),
-				new HashSet<>(croles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
 				Base64.getDecoder().decode(
 						user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
-				user.getBoolean(Fields.USER_RESET_PWD));
+				user.getBoolean(Fields.USER_RESET_PWD),
+				this);
 	}
 	
 	@Override
@@ -526,20 +524,17 @@ public class MongoStorage implements AuthStorage {
 		final List<Role> roles = rolestr.stream()
 				.map(s -> Role.getRole(s)).collect(Collectors.toList());
 		@SuppressWarnings("unchecked")
-		final List<String> croles = (List<String>) user.get(
-				Fields.USER_CUSTOM_ROLES);
-		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>)
 				user.get(Fields.USER_IDENTITIES);
-		return new AuthUser(
+		return new MongoUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				user.getString(Fields.USER_EMAIL),
 				user.getString(Fields.USER_FULL_NAME),
 				toIdentities(ids),
 				new HashSet<>(roles),
-				new HashSet<>(croles),
 				user.getDate(Fields.USER_CREATED),
-				user.getDate(Fields.USER_LAST_LOGIN));
+				user.getDate(Fields.USER_LAST_LOGIN),
+				this);
 	}
 
 	@Override
@@ -644,6 +639,47 @@ public class MongoStorage implements AuthStorage {
 		return getCustomRoles(new Document(Fields.ROLES_ID,
 				new Document("$in", roleIds)));
 	}
+	
+	Set<String> getCustomRoles(final UserName user)
+			throws AuthStorageException, NoSuchUserException {
+		final Document query = new Document(Fields.USER_NAME, user.getName());
+		final Document proj = new Document(Fields.USER_CUSTOM_ROLES, 1);
+		final Document udoc = findOne(COL_USERS, query, proj);
+		if (udoc == null) {
+			throw new NoSuchUserException(user.toString());
+		}
+		@SuppressWarnings("unchecked")
+		final List<String> rl = udoc.get(Fields.USER_CUSTOM_ROLES, List.class);
+		final Set<String> roles = new HashSet<>(rl);
+		if (roles.isEmpty()) {
+			return roles;
+		}
+		final Set<CustomRole> allcustroles = getCustomRoles(roles);
+		final Set<String> allroles = allcustroles.stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		final Iterator<String> riter = roles.iterator();
+		while (riter.hasNext()) {
+			final String role = riter.next();
+			if (!allroles.contains(role)) {
+				//TODO TEST need to come up with a fiendish test to exercise this, might need to split into methods
+				removeCustomRole(user, role);
+				riter.remove();
+			}
+		}
+		return roles;
+	}
+
+	private void removeCustomRole(final UserName user, final String role)
+			throws AuthStorageException {
+		final Document query = new Document(Fields.USER_NAME, user.getName());
+		final Document mod = new Document("$pull", new Document(Fields.USER_CUSTOM_ROLES, role));
+		try {
+			// don't care if no changes are made, just means the role is already gone
+			db.getCollection(COL_USERS).updateOne(query, mod);
+		} catch (MongoException me) {
+			throw new AuthStorageException("Connection to database failed", me);
+		}
+	}
 
 	@Override
 	public void setCustomRoles(
@@ -683,10 +719,9 @@ public class MongoStorage implements AuthStorage {
 					user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new AuthUser(user.getUserName(), user.getEmail(),
-					user.getFullName(), newIDs,
-					user.getRoles(), user.getCustomRoles(),
-					user.getCreated(), user.getLastLogin());
+			user = new MongoUser(user.getUserName(), user.getEmail(),
+					user.getFullName(), newIDs, user.getRoles(),
+					user.getCreated(), user.getLastLogin(), this);
 			updateIdentity(remoteID);
 		}
 		return user;
@@ -694,8 +729,7 @@ public class MongoStorage implements AuthStorage {
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {
 		final Document query = new Document(Fields.USER_IDENTITIES,
-				new Document("$elemMatch", new Document(
-						Fields.IDENTITIES_PROVIDER,
+				new Document("$elemMatch", new Document(Fields.IDENTITIES_PROVIDER,
 								remoteID.getRemoteID().getProvider())
 						.append(Fields.IDENTITIES_PROV_ID,
 								remoteID.getRemoteID().getId())));
@@ -741,8 +775,7 @@ public class MongoStorage implements AuthStorage {
 			 *  token
 			 */
 		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+			throw new AuthStorageException("Connection to database failed", me);
 		}
 		
 	}
