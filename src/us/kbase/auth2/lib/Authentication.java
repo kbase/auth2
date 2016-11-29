@@ -351,12 +351,12 @@ public class Authentication {
 		}
 	}
 	
+	//TODO ROLES PERFORMANCE only get custom roles on request. Always check custom roles exist and delete from user if they don't.
 	// gets user for token
 	private AuthUser getUser(
 			final IncomingToken token,
 			final Role ... required)
-			throws AuthStorageException, InvalidTokenException,
-			UnauthorizedException {
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		final HashedToken ht = getToken(token);
 		final AuthUser u = getUser(ht);
 		if (required.length > 0) {

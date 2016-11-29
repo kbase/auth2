@@ -67,6 +67,8 @@ public class Login {
 	//TODO TEST
 	//TODO JAVADOC
 	
+	//TODO UI Make all paths constants in a Paths class.
+	
 	@Inject
 	private Authentication auth;
 	
@@ -128,8 +130,8 @@ public class Login {
 			} catch (MalformedURLException e) {
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
-			if (ext.getAllowedRedirectPrefix() != null) {
-				if (!redirect.startsWith(ext.getAllowedRedirectPrefix().toString())) {
+			if (ext.getAllowedLoginRedirectPrefix() != null) {
+				if (!redirect.startsWith(ext.getAllowedLoginRedirectPrefix().toString())) {
 					throw new IllegalParameterException(
 							"Illegal redirect url: " + redirect);
 				}
@@ -180,14 +182,13 @@ public class Login {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lr.isLoggedIn()) {
-			r = Response.seeOther(getRedirectURI(redirect, "/me"))
+			r = Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
 			//TODO LOGIN get keep me logged in from cookie set at start of login
 					.cookie(getLoginCookie(cfg.getTokenCookieName(), lr.getToken(), true))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(null)).build();
 		} else {
-			//TODO LOGIN make target configurable
-			r = Response.seeOther(toURI("/login/choice"))
+			r = Response.seeOther(getCompleteLoginRedirectURI("/login/choice"))
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
@@ -195,7 +196,25 @@ public class Login {
 		return r;
 	}
 	
-	private URI getRedirectURI(final String redirect, final String deflt) {
+	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
+		final URL url;
+		try {
+			url = auth.getExternalConfig(new AuthExternalConfigMapper())
+					.getCompleteLoginRedirect();
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		if (url == null) {
+			return toURI(deflt);
+		}
+		try {
+			return url.toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("this should be impossible" , e);
+		}
+	}
+
+	private URI getPostLoginRedirectURI(final String redirect, final String deflt) {
 		//TODO REDIRECT check redirect url matches allowed config & is valid URL
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			return toURI(redirect);
@@ -289,7 +308,7 @@ public class Login {
 			throw new NoTokenProvidedException("Missing in-process-login-token");
 		}
 		final NewToken newtoken = auth.login(new IncomingToken(token), identityID);
-		return Response.seeOther(getRedirectURI(redirect, "/me"))
+		return Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))
@@ -322,7 +341,7 @@ public class Login {
 		// might want to enapsulate the user data in a NewUser class
 		final NewToken newtoken = auth.createUser(new IncomingToken(token),
 				identityID, new UserName(userName), fullName, email, sessionLogin, priv);
-		return Response.seeOther(getRedirectURI(redirect, "/me"))
+		return Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))

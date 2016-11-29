@@ -1056,38 +1056,29 @@ public class MongoStorage implements AuthStorage {
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
 		try {
-			final FindIterable<Document> extiter =
-					db.getCollection(COL_CONFIG_EXTERNAL).find();
+			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
 			final Map<String, String> ext = new HashMap<>();
 			for (final Document d: extiter) {
-				ext.put(d.getString(Fields.CONFIG_KEY),
-						d.getString(Fields.CONFIG_VALUE));
+				ext.put(d.getString(Fields.CONFIG_KEY), d.getString(Fields.CONFIG_VALUE));
 			}
-			final Map<String, Map<String, Document>> provcfg =
-					getProviderConfig();
+			final Map<String, Map<String, Document>> provcfg = getProviderConfig();
 			final Map<String, ProviderConfig> provs = new HashMap<>();
-			for (final Entry<String, Map<String, Document>> d:
-					provcfg.entrySet()) {
+			for (final Entry<String, Map<String, Document>> d: provcfg.entrySet()) {
 				final ProviderConfig pc = new ProviderConfig(
 						d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
 								.getBoolean(Fields.CONFIG_VALUE),
-						d.getValue().get(
-								Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
-										.getBoolean(Fields.CONFIG_VALUE));
+						d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
+								.getBoolean(Fields.CONFIG_VALUE));
 				provs.put(d.getKey(), pc);
 			}
 			final Map<String, Document> appcfg = getAppConfig();
-			final Boolean allowLogin = appcfg.get(
-					Fields.CONFIG_APP_ALLOW_LOGIN)
+			final Boolean allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
 					.getBoolean(Fields.CONFIG_VALUE);
 			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
-			for (final Entry<TokenLifetimeType, String> e:
-					TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
-				tokens.put(e.getKey(), appcfg.get(e.getValue())
-						.getLong(Fields.CONFIG_VALUE));
+			for (final Entry<TokenLifetimeType, String> e: TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
+				tokens.put(e.getKey(), appcfg.get(e.getValue()).getLong(Fields.CONFIG_VALUE));
 			}
-			return new AuthConfigSet<T>(
-					new AuthConfig(allowLogin, provs, tokens),
+			return new AuthConfigSet<T>(new AuthConfig(allowLogin, provs, tokens),
 					mapper.fromMap(ext));
 		} catch (MongoException me) {
 			throw new StorageInitException(
