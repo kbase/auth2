@@ -355,7 +355,6 @@ public class Authentication {
 		}
 	}
 	
-	//TODO ROLES PERFORMANCE only get custom roles on request. Always check custom roles exist and delete from user if they don't.
 	// gets user for token
 	private AuthUser getUser(
 			final IncomingToken token,
@@ -364,8 +363,7 @@ public class Authentication {
 		final HashedToken ht = getToken(token);
 		final AuthUser u = getUser(ht);
 		if (required.length > 0) {
-			final Set<Role> has = u.getRoles().stream()
-					.flatMap(r -> r.included().stream())
+			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {

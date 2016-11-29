@@ -334,19 +334,20 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException, NoSuchUserException {
 		final Document user = getUserDoc(userName, true);
 		@SuppressWarnings("unchecked")
-		final List<String> rolestr =
-				(List<String>) user.get(Fields.USER_ROLES);
-		final List<Role> roles = rolestr.stream()
-				.map(s -> Role.getRole(s)).collect(Collectors.toList());
+		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
+		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
+				.collect(Collectors.toList());
+		@SuppressWarnings("unchecked")
+		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		return new MongoLocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				user.getString(Fields.USER_EMAIL),
 				user.getString(Fields.USER_FULL_NAME),
 				new HashSet<>(roles),
+				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				Base64.getDecoder().decode(
-						user.getString(Fields.USER_PWD_HSH)),
+				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
 				this);
@@ -518,12 +519,13 @@ public class MongoStorage implements AuthStorage {
 		return toUser(user);
 	}
 
-	private AuthUser toUser(final Document user) throws AuthStorageException {
+	private MongoUser toUser(final Document user) throws AuthStorageException {
 		@SuppressWarnings("unchecked")
-		final List<String> rolestr =
-				(List<String>) user.get(Fields.USER_ROLES);
-		final List<Role> roles = rolestr.stream()
-				.map(s -> Role.getRole(s)).collect(Collectors.toList());
+		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
+		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
+				.collect(Collectors.toList());
+		@SuppressWarnings("unchecked")
+		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
 		return new MongoUser(
@@ -532,6 +534,7 @@ public class MongoStorage implements AuthStorage {
 				user.getString(Fields.USER_FULL_NAME),
 				toIdentities(ids),
 				new HashSet<>(roles),
+				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
 				this);
@@ -641,27 +644,15 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 
-	Set<String> getCustomRoles(final UserName user)
-			throws AuthStorageException, NoSuchUserException {
-		final Document query = new Document(Fields.USER_NAME, user.getName());
-		final Document proj = new Document(Fields.USER_CUSTOM_ROLES, 1);
-		final Document udoc = findOne(COL_USERS, query, proj);
-		if (udoc == null) {
-			throw new NoSuchUserException(user.toString());
-		}
-		@SuppressWarnings("unchecked")
-		final List<ObjectId> rolelist = udoc.get(Fields.USER_CUSTOM_ROLES, List.class);
-		final Set<ObjectId> roleIds = new HashSet<>(rolelist);
-		if (roleIds.isEmpty()) {
-			return Collections.emptySet();
-		}
+	Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
+			throws AuthStorageException {
 		final Set<Document> roledocs = getCustomRoles(new Document(
 				Fields.MONGO_ID, new Document("$in", roleIds)));
 		final Set<ObjectId> extantRoleIds = roledocs.stream()
 				.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet());
 		for (final ObjectId role: roleIds) {
 			if (!extantRoleIds.contains(role)) {
-				//TODO TEST need to come up with a fiendish test to exercise this, might need to split into methods
+				//TODO TEST need to exercise this race condition, generally shouldn't happen
 				removeCustomRole(user, role);
 			}
 		}
@@ -720,7 +711,7 @@ public class MongoStorage implements AuthStorage {
 		if (u == null) {
 			return null;
 		}
-		AuthUser user = toUser(u);
+		MongoUser user = toUser(u);
 		/* could do a findAndModify to set the fields on the first query, but
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
@@ -733,13 +724,10 @@ public class MongoStorage implements AuthStorage {
 			}
 		}
 		if (update != null) {
-			final Set<RemoteIdentityWithID> newIDs = new HashSet<>(
-					user.getIdentities());
+			final Set<RemoteIdentityWithID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new MongoUser(user.getUserName(), user.getEmail(),
-					user.getFullName(), newIDs, user.getRoles(),
-					user.getCreated(), user.getLastLogin(), this);
+			user = new MongoUser(user, newIDs);
 			updateIdentity(remoteID);
 		}
 		return user;
