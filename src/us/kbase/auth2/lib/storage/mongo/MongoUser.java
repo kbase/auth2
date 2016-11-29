@@ -32,7 +32,7 @@ public class MongoUser extends AuthUser {
 			final Date lastLogin,
 			final MongoStorage storage) {
 		super(userName, email, fullName, identities, roles, created, lastLogin);
-		this.customRoles = customRoles;
+		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {
 			memoizedCustomRoles = Collections.emptySet();
 		}
@@ -50,7 +50,8 @@ public class MongoUser extends AuthUser {
 	@Override
 	public Set<String> getCustomRoles() throws AuthStorageException {
 		if (memoizedCustomRoles == null) {
-			memoizedCustomRoles = storage.getCustomRoles(getUserName(), customRoles);
+			memoizedCustomRoles = Collections.unmodifiableSet(
+					storage.getCustomRoles(getUserName(), customRoles));
 		}
 		return memoizedCustomRoles;
 	}

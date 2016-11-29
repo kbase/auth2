@@ -34,7 +34,7 @@ public class MongoLocalUser extends LocalUser {
 			final MongoStorage storage) {
 		super(userName, email, fullName, roles, created, lastLogin, passwordHash, salt,
 				forceReset);
-		this.customRoles = customRoles;
+		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {
 			memoizedCustomRoles = Collections.emptySet();
 		}
@@ -44,7 +44,8 @@ public class MongoLocalUser extends LocalUser {
 	@Override
 	public Set<String> getCustomRoles() throws AuthStorageException {
 		if (memoizedCustomRoles == null) {
-			memoizedCustomRoles = storage.getCustomRoles(getUserName(), customRoles);
+			memoizedCustomRoles = Collections.unmodifiableSet(
+					storage.getCustomRoles(getUserName(), customRoles));
 		}
 		return memoizedCustomRoles;
 	}
