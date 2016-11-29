@@ -38,6 +38,11 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* API
+  * Introspect token (e.g. not the legacy apis, provide complete info)
+  * Email & full name privacy option
+  * /user/<name> - get user details
+  * /me
 * Admin functionality
   * Find users
     * By name (regex)
@@ -48,17 +53,12 @@ Auth service work
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd
   * Delete custom role
-* API
-  * Introspect token (e.g. not the legacy apis, provide complete info)
-  * Email & full name privacy option
-  * /user/<name> - get user details
-  * /me
+* Deploy
+  * Dockerization
 * Memory based data storage
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
-* Deploy
-  * Dockerization
 
 ### Potential work
 * Support user lookup by identity provider & id for bulk upload (permitted role)
