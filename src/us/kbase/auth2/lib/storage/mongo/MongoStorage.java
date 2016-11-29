@@ -8,7 +8,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +18,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
+import org.bson.types.ObjectId;
 
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
@@ -48,6 +48,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
@@ -524,8 +525,7 @@ public class MongoStorage implements AuthStorage {
 		final List<Role> roles = rolestr.stream()
 				.map(s -> Role.getRole(s)).collect(Collectors.toList());
 		@SuppressWarnings("unchecked")
-		final List<Document> ids = (List<Document>)
-				user.get(Fields.USER_IDENTITIES);
+		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
 		return new MongoUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				user.getString(Fields.USER_EMAIL),
@@ -571,14 +571,14 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setRoles(final UserName userName, final Set<Role> roles)
 			throws AuthStorageException, NoSuchUserException {
-		final Set<String> strrl = roles.stream().map(r -> r.getID())
+		final Set<Object> strrl = roles.stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		setRoles(userName, strrl, Fields.USER_ROLES);
 	}
 
 	private void setRoles(
 			final UserName userName,
-			final Set<String> roles,
+			final Set<Object> roles,
 			final String field)
 			throws NoSuchUserException, AuthStorageException {
 		try {
@@ -600,8 +600,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(COL_CUST_ROLES).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
-					new Document("$set", new Document(
-							Fields.ROLES_DESC, role.getDesc())),
+					new Document("$set", new Document(Fields.ROLES_DESC, role.getDesc())),
 					new UpdateOptions().upsert(true));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed", e);
@@ -610,36 +609,38 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public Set<CustomRole> getCustomRoles() throws AuthStorageException {
-		return getCustomRoles(new Document());
+		return toCustomRoles(getCustomRoles(new Document()));
 	}
 
-	private Set<CustomRole> getCustomRoles(final Document query)
+	private Set<Document> getCustomRoles(final Document query)
 			throws AuthStorageException {
 		try {
-			final FindIterable<Document> roles =
-					db.getCollection(COL_CUST_ROLES).find(query);
-			final Set<CustomRole> ret = new HashSet<>();
+			final FindIterable<Document> roles = db.getCollection(COL_CUST_ROLES).find(query);
+			final Set<Document> ret = new HashSet<>();
 			for (final Document d: roles) {
-				ret.add(new CustomRole(
-						d.getString(Fields.ROLES_ID),
-						d.getString(Fields.ROLES_DESC)));
+				ret.add(d);
 			}
 			return ret;
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed", e);
-		} catch (MissingParameterException e) { // should be impossible
-			throw new AuthStorageException(
-					"Error in roles colletion - role with missing field", e);
-		}
-	}
-
-	@Override
-	public Set<CustomRole> getCustomRoles(final Set<String> roleIds)
-			throws AuthStorageException {
-		return getCustomRoles(new Document(Fields.ROLES_ID,
-				new Document("$in", roleIds)));
+		} 
 	}
 	
+	private Set<CustomRole> toCustomRoles(final Set<Document> roledocs)
+			throws AuthStorageException {
+		final Set<CustomRole> ret = new HashSet<>();
+		for (final Document d: roledocs) {
+			try {
+				ret.add(new CustomRole(d.getString(Fields.ROLES_ID),
+						d.getString(Fields.ROLES_DESC)));
+			} catch (MissingParameterException e) { // should be impossible
+				throw new AuthStorageException(
+						"Error in roles colletion - role with missing field", e);
+			}
+		}
+		return ret;
+	}
+
 	Set<String> getCustomRoles(final UserName user)
 			throws AuthStorageException, NoSuchUserException {
 		final Document query = new Document(Fields.USER_NAME, user.getName());
@@ -649,27 +650,26 @@ public class MongoStorage implements AuthStorage {
 			throw new NoSuchUserException(user.toString());
 		}
 		@SuppressWarnings("unchecked")
-		final List<String> rl = udoc.get(Fields.USER_CUSTOM_ROLES, List.class);
-		final Set<String> roles = new HashSet<>(rl);
-		if (roles.isEmpty()) {
-			return roles;
+		final List<ObjectId> rolelist = udoc.get(Fields.USER_CUSTOM_ROLES, List.class);
+		final Set<ObjectId> roleIds = new HashSet<>(rolelist);
+		if (roleIds.isEmpty()) {
+			return Collections.emptySet();
 		}
-		final Set<CustomRole> allcustroles = getCustomRoles(roles);
-		final Set<String> allroles = allcustroles.stream().map(r -> r.getID())
-				.collect(Collectors.toSet());
-		final Iterator<String> riter = roles.iterator();
-		while (riter.hasNext()) {
-			final String role = riter.next();
-			if (!allroles.contains(role)) {
+		final Set<Document> roledocs = getCustomRoles(new Document(
+				Fields.MONGO_ID, new Document("$in", roleIds)));
+		final Set<ObjectId> extantRoleIds = roledocs.stream()
+				.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet());
+		for (final ObjectId role: roleIds) {
+			if (!extantRoleIds.contains(role)) {
 				//TODO TEST need to come up with a fiendish test to exercise this, might need to split into methods
 				removeCustomRole(user, role);
-				riter.remove();
 			}
 		}
-		return roles;
+		return roledocs.stream().map(d -> d.getString(Fields.ROLES_ID))
+				.collect(Collectors.toSet());
 	}
 
-	private void removeCustomRole(final UserName user, final String role)
+	private void removeCustomRole(final UserName user, final ObjectId role)
 			throws AuthStorageException {
 		final Document query = new Document(Fields.USER_NAME, user.getName());
 		final Document mod = new Document("$pull", new Document(Fields.USER_CUSTOM_ROLES, role));
@@ -685,9 +685,27 @@ public class MongoStorage implements AuthStorage {
 	public void setCustomRoles(
 			final UserName userName,
 			final Set<String> roles)
-			throws NoSuchUserException, AuthStorageException {
-		setRoles(userName, roles, Fields.USER_CUSTOM_ROLES);
-		
+			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
+		final Set<Document> docroles;
+		try {
+			docroles = getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", roles)));
+		} catch (MongoException me) {
+			throw new AuthStorageException("Connection to database failed", me);
+		}
+		if (roles.size() != docroles.size()) {
+			final Set<String> rolenames = docroles.stream().map(d -> d.getString(Fields.ROLES_ID))
+					.collect(Collectors.toSet());
+			for (final String role: roles) {
+				if (!rolenames.contains(role)) {
+					throw new NoSuchRoleException(role);
+				}
+			}
+			throw new RuntimeException("Hole in reality matrix detected, please try turning " +
+					"reality off and then on again");
+		}
+		final Set<Object> roleIDs = docroles.stream().map(d -> d.getObjectId(Fields.MONGO_ID))
+				.collect(Collectors.toSet());
+		setRoles(userName, roleIDs, Fields.USER_CUSTOM_ROLES);
 	}
 
 	@Override

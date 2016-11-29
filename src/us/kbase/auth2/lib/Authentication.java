@@ -532,15 +532,7 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException,
 			NoSuchRoleException, InvalidTokenException, UnauthorizedException {
 		getUser(adminToken, Role.ADMIN);
-		final Set<CustomRole> roles = storage.getCustomRoles(roleIds);
-		final Set<String> rstr = roles.stream().map(r -> r.getID())
-				.collect(Collectors.toSet());
-		for (final String r: roleIds) {
-			if (!rstr.contains(r)) {
-				throw new NoSuchRoleException(r);
-			}
-		}
-		storage.setCustomRoles(userName, rstr);
+		storage.setCustomRoles(userName, roleIds);
 	}
 
 
