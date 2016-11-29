@@ -43,6 +43,7 @@ import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -53,6 +54,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 @Path("/link")
 public class Link {
@@ -147,17 +149,52 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lt.isLinked()) {
-			//TODO LINK make target configurable
-			r = Response.seeOther(toURI("/me"))
+			r = Response.seeOther(getPostLinkRedirectURI("/me"))
 					.cookie(getStateCookie(null)).build();
 		} else {
-			//TODO LINK make target configurable
-			r = Response.seeOther(toURI("/link/choice")).cookie(
+			r = Response.seeOther(getCompleteLinkRedirectURI("/link/choice")).cookie(
 					getLinkInProcessCookie(lt.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
 		}
 		return r;
+	}
+	
+	// the two methods below are very similar and there's another similar method in Login
+	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
+		final URL url;
+		try {
+			url = auth.getExternalConfig(new AuthExternalConfigMapper())
+					.getCompleteLinkRedirect();
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		if (url == null) {
+			return toURI(deflt);
+		}
+		try {
+			return url.toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("this should be impossible" , e);
+		}
+	}
+	
+	private URI getPostLinkRedirectURI(final String deflt) throws AuthStorageException {
+		final URL url;
+		try {
+			url = auth.getExternalConfig(new AuthExternalConfigMapper())
+					.getPostLinkRedirect();
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		if (url == null) {
+			return toURI(deflt);
+		}
+		try {
+			return url.toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("this should be impossible" , e);
+		}
 	}
 	
 	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
@@ -240,7 +277,8 @@ public class Link {
 		
 		pickAccount(headers, linktoken, identityID);
 		//TODO LINK make target configurable
-		return Response.seeOther(toURI("/me")).cookie(getLinkInProcessCookie(null)).build();
+		return Response.seeOther(getPostLinkRedirectURI("/me"))
+				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
 	// for AJAX pages that can decide for themselves where to go next
