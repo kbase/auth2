@@ -76,22 +76,9 @@ public class Authentication {
 	//TODO PWD last pwd reset field for local users
 	
 	/* TODO ROLES feature: delete custom roles (see below)
-	 * Delete role from all users
-	 * Delete role from system:
-	 * 1) Remove role from all users
-	 * 2) delete role from system
-	 * 3) Remove role from all users again
-	 * 4) On getting a user, any roles that aren't in the system should be
-	 * removed
-	 * 
-	 * Still a possibility of a race condition allowing adding a deleted role to
-	 * a user after step 3, and then the role being re-added with different
-	 * semantics, which would mean that users that erroneously have the role
-	 * would be granted the new semantics, which is wrong
-	 * Might not be worth worrying about
-	 * 
-	 * Maybe just disable instead? Still possible for race conditions to add to a user after
-	 * disable.
+	 * 1) delete role from system
+	 * 2) delete role from all users
+	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role 
 	 */
 	
 	private final AuthStorage storage;
@@ -236,8 +223,8 @@ public class Authentication {
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(
 				pwd.getPassword(), salt);
-		final LocalUser lu = new LocalUser(userName, email, fullName, null,
-				null, new Date(), null, passwordHash, salt, true);
+		final LocalUser lu = new NewLocalUser(userName, email, fullName, new Date(), null,
+				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
 		clear(salt);
@@ -351,7 +338,6 @@ public class Authentication {
 		}
 	}
 	
-	//TODO ROLES PERFORMANCE only get custom roles on request. Always check custom roles exist and delete from user if they don't.
 	// gets user for token
 	private AuthUser getUser(
 			final IncomingToken token,
@@ -360,8 +346,7 @@ public class Authentication {
 		final HashedToken ht = getToken(token);
 		final AuthUser u = getUser(ht);
 		if (required.length > 0) {
-			final Set<Role> has = u.getRoles().stream()
-					.flatMap(r -> r.included().stream())
+			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
@@ -528,15 +513,7 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException,
 			NoSuchRoleException, InvalidTokenException, UnauthorizedException {
 		getUser(adminToken, Role.ADMIN);
-		final Set<CustomRole> roles = storage.getCustomRoles(roleIds);
-		final Set<String> rstr = roles.stream().map(r -> r.getID())
-				.collect(Collectors.toSet());
-		for (final String r: roleIds) {
-			if (!rstr.contains(r)) {
-				throw new NoSuchRoleException(r);
-			}
-		}
-		storage.setCustomRoles(userName, rstr);
+		storage.setCustomRoles(userName, roleIds);
 	}
 
 
@@ -677,14 +654,12 @@ public class Authentication {
 			throw new NullPointerException("userName");
 		}
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Cannot create ROOT user");
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
-		final RemoteIdentityWithID match =
-				getIdentity(token, identityID);
+		final RemoteIdentityWithID match = getIdentity(token, identityID);
 		final Date now = new Date();
-		storage.createUser(new AuthUser(userName, email, fullName,
-				new HashSet<>(Arrays.asList(match)), null, null, now, now));
+		storage.createUser(new NewUser(userName, email, fullName,
+				new HashSet<>(Arrays.asList(match)), now, now));
 		return login(userName);
 	}
 
@@ -902,11 +877,11 @@ public class Authentication {
 			throw new RuntimeException("Impossible", e);
 		}
 		final Date now = new Date();
-		storage.createUser(new AuthUser(un,
+		storage.createUser(new NewUser(un,
 				ri.getDetails().getEmail(),
 				ri.getDetails().getFullname(),
 				new HashSet<>(Arrays.asList(ri.withID())),
-				null, null, now, now));
+				now, now));
 	}
 
 }

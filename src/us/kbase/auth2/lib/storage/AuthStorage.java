@@ -15,6 +15,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
@@ -105,11 +106,16 @@ public interface AuthStorage {
 
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
-	Set<CustomRole> getCustomRoles(Set<String> roleIds)
-			throws AuthStorageException;
-
+	/** Sets custom roles for a user, overwriting the previous set of roles.
+	 * @param userName the user to modify.
+	 * @param roles the roles to give to the user, erasing any previous roles.
+	 * @throws NoSuchUserException if the user doesn't exist.
+	 * @throws NoSuchRoleException if one or more of the input roles do not exist in the database.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs. 
+	 */
 	void setCustomRoles(UserName userName, Set<String> roles)
-			throws NoSuchUserException, AuthStorageException;
+			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
 	// assumes token is unique
 	void storeIdentitiesTemporarily(

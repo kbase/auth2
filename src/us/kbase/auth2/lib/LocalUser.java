@@ -3,7 +3,7 @@ package us.kbase.auth2.lib;
 import java.util.Date;
 import java.util.Set;
 
-public class LocalUser extends AuthUser {
+public abstract class LocalUser extends AuthUser {
 	
 	//TODO TEST unit test
 	//TODO JAVADOC
@@ -17,14 +17,12 @@ public class LocalUser extends AuthUser {
 			final String email,
 			final String fullName,
 			final Set<Role> roles,
-			final Set<String> customRoles,
 			final Date created,
 			final Date lastLogin,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset) {
-		super(userName, email, fullName, null, roles, customRoles, created,
-				lastLogin);
+		super(userName, email, fullName, null, roles, created, lastLogin);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException(
