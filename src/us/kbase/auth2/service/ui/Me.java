@@ -33,7 +33,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
-@Path("/me")
+@Path(UIPaths.ME_ROOT)
 public class Me {
 
 	//TODO TEST
@@ -55,8 +55,8 @@ public class Me {
 		//TODO CONFIG_USER handle keep logged in, private
 		final AuthUser u = auth.getUser(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("userupdateurl", relativize(uriInfo, "/me"));
-		ret.put("unlinkprefixurl", relativize(uriInfo, "/me/"));
+		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));
+		ret.put("unlinkprefixurl", relativize(uriInfo, UIPaths.ME_ROOT));
 		ret.put("user", u.getUserName().getName());
 		ret.put("local", u.isLocal());
 		ret.put("fullname", u.getFullName());
@@ -94,7 +94,7 @@ public class Me {
 	}
 	
 	@POST
-	@Path("/{id}")
+	@Path(UIPaths.ME_PARAM_ID)
 	public void unlink(
 			@Context final HttpHeaders headers,
 			@PathParam("id") final UUID id)

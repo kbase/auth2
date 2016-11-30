@@ -42,7 +42,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
-@Path("/tokens")
+@Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
 	
 	//TODO TEST
@@ -65,9 +65,9 @@ public class Tokens {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		t.put("user", ((UIToken) t.get("current")).getUser());
-		t.put("targeturl", relativize(uriInfo, "/tokens/create"));
-		t.put("tokenurl", relativize(uriInfo, "/tokens/"));
-		t.put("revokeallurl", relativize(uriInfo, "/tokens/revokeall"));
+		t.put("targeturl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
+		t.put("tokenurl", relativize(uriInfo, UIPaths.TOKENS_ROOT));
+		t.put("revokeallurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
 		return t;
 	}
 	
@@ -84,7 +84,7 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path("/create")
+	@Path(UIPaths.TOKENS_CREATE)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
 	public UINewToken createTokenHTML(
@@ -99,7 +99,7 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path("/create")
+	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public UINewToken createTokenJSON(
@@ -116,7 +116,7 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path("/{tokenid}")
+	@Path(UIPaths.TOKENS_ID)
 	public void revokeTokenPOST(
 			@Context final HttpHeaders headers,
 			@PathParam("tokenid") final UUID tokenId)
@@ -127,7 +127,7 @@ public class Tokens {
 	}
 	
 	@DELETE
-	@Path("/{tokenid}")
+	@Path(UIPaths.TOKENS_ID)
 	public void revokeTokenDELETE(
 			@PathParam("tokenid") final UUID tokenId,
 			@Context final HttpHeaders headers,
@@ -141,7 +141,7 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path("/revokeall")
+	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public Response revokeAllAndLogout(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException {
@@ -150,7 +150,7 @@ public class Tokens {
 	}
 	
 	@DELETE
-	@Path("/revokeall")
+	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public void revokeAll(
 			@Context final HttpHeaders headers,
 			@HeaderParam("authentication") final String headerToken)

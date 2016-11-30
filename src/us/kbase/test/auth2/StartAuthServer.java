@@ -9,7 +9,7 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import us.kbase.auth2.service.AuthenticationService;
 import us.kbase.auth2.service.kbase.KBaseAuthConfig;
 
-public class TestAuthServer {
+public class StartAuthServer {
 
 	public static void main(String[] args) throws Exception {
 

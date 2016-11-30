@@ -34,7 +34,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
-@Path("/localaccount")
+@Path(UIPaths.LOCAL_ROOT)
 public class LocalAccounts {
 	
 	//TODO TEST
@@ -49,16 +49,15 @@ public class LocalAccounts {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	@Path("/login")
+	@Path(UIPaths.LOCAL_LOGIN)
 	@Template(name = "/locallogin")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, String> login(@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("targeturl",
-				relativize(uriInfo, "/localaccount/login/result"));
+		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN_RESULT));
 	}
 	
 	@POST
-	@Path("/login/result")
+	@Path(UIPaths.LOCAL_LOGIN_RESULT)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public Response loginResult(
 			@FormParam("user") final String userName,
@@ -79,7 +78,7 @@ public class LocalAccounts {
 		//TODO LOG log
 		pwd = null; // try to get pwd GC'd as quickly as possible
 		//TODO PWD if reset required, do reset
-		return Response.seeOther(toURI("/me"))
+		return Response.seeOther(toURI(UIPaths.ME_ROOT))
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), t, stayLoggedIn == null))
 				.build();
 	}

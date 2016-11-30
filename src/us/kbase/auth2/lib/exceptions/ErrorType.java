@@ -20,7 +20,7 @@ public enum ErrorType {
 	NO_SUCH_ROLE			(50003, "No such role"),
 	LINK_FAILED				(60000, "Account linkage failed"),
 	UNLINK_FAILED			(60001, "Account unlink failed"),
-	UNSUPPORTED_OP			(70000, "Unsupported opertation");
+	UNSUPPORTED_OP			(70000, "Unsupported operation");
 	
 	private final int errcode;
 	private final String error;

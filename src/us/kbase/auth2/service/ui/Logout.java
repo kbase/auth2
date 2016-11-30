@@ -27,7 +27,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
-@Path("/logout")
+@Path(UIPaths.LOGOUT_ROOT)
 public class Logout {
 
 	@Inject
@@ -46,11 +46,11 @@ public class Logout {
 		final HashedToken ht = auth.getToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return ImmutableMap.of("user", ht.getUserName().getName(),
-				"logouturl", relativize(uriInfo, "/logout/result"));
+				"logouturl", relativize(uriInfo, UIPaths.LOGOUT_ROOT_RESULT));
 	}
 	
 	@POST
-	@Path("/result")
+	@Path(UIPaths.LOGOUT_RESULT)
 	public Response logoutResult(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException {
 		final HashedToken ht = auth.revokeToken(

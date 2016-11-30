@@ -30,7 +30,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 
-@Path("/api/legacy/globus")
+@Path(APIPaths.LEGACY_GLOBUS)
 public class LegacyGlobus {
 
 	//TODO TEST
@@ -43,7 +43,7 @@ public class LegacyGlobus {
 	// also note that unlike the globus api, this does not refresh the token
 	// also note that the error structure is completely different. 
 	@GET
-	@Path("/goauth/token")
+	@Path(APIPaths.LEGACY_GLOBUS_TOKEN)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> introspectToken(
 			@HeaderParam("x-globus-goauthtoken") final String xtoken,
@@ -97,7 +97,7 @@ public class LegacyGlobus {
 	// note does not return identity_id
 	// note error structure is completely different
 	@GET
-	@Path("/users/{user}/")
+	@Path(APIPaths.LEGACY_GLOBUS_USERS)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getUser(
 			@HeaderParam("x-globus-goauthtoken") final String xtoken,
