@@ -38,6 +38,8 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* UI
+  * Local account password reset (forced or voluntary), needs configured redirect
 * API
   * Introspect token (e.g. not the legacy apis, provide complete info)
   * Email & full name privacy option

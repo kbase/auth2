@@ -61,14 +61,17 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
-@Path("/login")
+@Path(UIPaths.LOGIN_ROOT)
 public class Login {
 
 	//TODO TEST
 	//TODO JAVADOC
 	
 	//TODO UI Make all paths constants in a Paths class.
-	
+	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
+	private static final String REDIRECT_COOKIE = "loginredirect";
+	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";
+
 	@Inject
 	private Authentication auth;
 	
@@ -140,25 +143,23 @@ public class Login {
 	}
 
 	private NewCookie getRedirectCookie(final String redirect) {
-		return new NewCookie(new Cookie(
-				"redirect", redirect == null ? "no redirect" : redirect, "/login", null),
-				"redirect url",
-				redirect == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+		return new NewCookie(new Cookie(REDIRECT_COOKIE,
+				redirect == null ? "no redirect" : redirect, UIPaths.LOGIN_ROOT, null),
+				"redirect url", redirect == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 
 	private NewCookie getStateCookie(final String state) {
-		return new NewCookie(new Cookie(
-				"statevar", state == null ? "no state" : state, "/login/complete", null),
-				"loginstate",
-				state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+		return new NewCookie(new Cookie(LOGIN_STATE_COOKIE,
+				state == null ? "no state" : state, UIPaths.LOGIN_ROOT_COMPLETE, null),
+				"loginstate", state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
-	@Path("/complete/{provider}")
+	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
 			@PathParam("provider") String provider,
-			@CookieParam("statevar") final String state,
-			@CookieParam("redirect") final String redirect,
+			@CookieParam(LOGIN_STATE_COOKIE) final String state,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
@@ -182,13 +183,13 @@ public class Login {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lr.isLoggedIn()) {
-			r = Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
+			r = Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
 			//TODO LOGIN get keep me logged in from cookie set at start of login
 					.cookie(getLoginCookie(cfg.getTokenCookieName(), lr.getToken(), true))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(null)).build();
 		} else {
-			r = Response.seeOther(getCompleteLoginRedirectURI("/login/choice"))
+			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
@@ -223,19 +224,18 @@ public class Login {
 	}
 
 	private NewCookie getLoginInProcessCookie(final TemporaryToken token) {
-		return new NewCookie(new Cookie("in-process-login-token",
-				token == null ? "no token" : token.getToken(), "/login", null),
+		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_TOKEN,
+				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
 				"logintoken",
-				token == null ? 0 : getMaxCookieAge(token, false),
-				UIConstants.SECURE_COOKIES);
+				token == null ? 0 : getMaxCookieAge(token, false), UIConstants.SECURE_COOKIES);
 	}
 
 	@GET
-	@Path("/choice")
+	@Path(UIPaths.LOGIN_CHOICE)
 	@Template(name = "/loginchoice")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> loginChoiceHTML(
-			@CookieParam("in-process-login-token") final String token,
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException {
@@ -244,10 +244,10 @@ public class Login {
 
 	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
 	@GET
-	@Path("/choice")
+	@Path(UIPaths.LOGIN_CHOICE)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> loginChoiceJSON(
-			@CookieParam("in-process-login-token") final String token,
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException {
@@ -257,14 +257,14 @@ public class Login {
 	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
 		final Map<RemoteIdentityWithID, AuthUser> ids = auth.getLoginState(
 				new IncomingToken(token.trim()));
 		
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("createurl", relativize(uriInfo, "/login/create"));
-		ret.put("pickurl", relativize(uriInfo, "/login/pick"));
+		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
+		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put("provider", ids.keySet().iterator().next().getRemoteID().getProvider());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
@@ -296,19 +296,19 @@ public class Login {
 	
 	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
-	@Path("/pick")
+	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
-			@CookieParam("in-process-login-token") final String token,
-			@CookieParam("redirect") final String redirect,
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException {
 		
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
 		final NewToken newtoken = auth.login(new IncomingToken(token), identityID);
-		return Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
+		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))
@@ -317,10 +317,10 @@ public class Login {
 	
 	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
-	@Path("/create")
+	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
-			@CookieParam("in-process-login-token") final String token,
-			@CookieParam("redirect") final String redirect,
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@FormParam("id") final UUID identityID,
 			@FormParam("user") final String userName,
 			@FormParam("full") final String fullName,
@@ -332,7 +332,7 @@ public class Login {
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException {
 		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing in-process-login-token");
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
 		//TODO INPUT sanity check inputs
 		final boolean sessionLogin = stayLoggedIn == null || stayLoggedIn.isEmpty();
@@ -341,7 +341,7 @@ public class Login {
 		// might want to enapsulate the user data in a NewUser class
 		final NewToken newtoken = auth.createUser(new IncomingToken(token),
 				identityID, new UserName(userName), fullName, email, sessionLogin, priv);
-		return Response.seeOther(getPostLoginRedirectURI(redirect, "/me"))
+		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
 				.cookie(getLoginInProcessCookie(null))

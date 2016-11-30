@@ -569,6 +569,15 @@ public class Authentication {
 		for (final RemoteIdentity id: ids) {
 			final AuthUser user = storage.getUser(id);
 			if (user != null) {
+				/* TODO BUG if a user is linked to more than one identity in the returned set, the user will exist in the map twice. (see below)
+				 * Note that AuthUser's equals and hashcode methods are the same as Object 
+				 * because user custom roles are abstract to allow lazy fetching
+				 * If there's only one user choice the login should proceed directly.
+				 * However, if there's a choice of KBase user account, the choice page should
+				 * list all remote accounts that provide access to the KBase account rather than
+				 * just the first one encountered.
+				 *  
+				 */
 				hasUser.put(user.getIdentity(id), user);
 			} else {
 				noUser.add(id);

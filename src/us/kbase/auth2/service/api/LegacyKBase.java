@@ -22,7 +22,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 
-@Path("/api/legacy/KBase/Sessions/Login")
+@Path(APIPaths.LEGACY_KBASE)
 public class LegacyKBase {
 	
 	@Inject

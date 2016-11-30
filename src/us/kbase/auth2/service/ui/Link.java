@@ -56,13 +56,16 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
-@Path("/link")
+@Path(UIPaths.LINK_ROOT)
 public class Link {
 
 	//TODO JAVADOC
 	//TODO TEST
 	//TODO CODE can probably share some code with /login
 	
+	private static final String LINK_STATE_COOKIE = "linkstatevar";
+	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
+
 	@Inject
 	private Authentication auth;
 	
@@ -112,19 +115,17 @@ public class Link {
 	}
 	
 	private NewCookie getStateCookie(final String state) {
-		return new NewCookie(new Cookie(
-				"statevar", state == null ? "no state" : state,
-						"/link/complete", null),
-				"linkstate", state == null ? 0 : 30 * 60,
-						UIConstants.SECURE_COOKIES);
+		return new NewCookie(new Cookie(LINK_STATE_COOKIE,
+				state == null ? "no state" : state, UIPaths.LINK_ROOT_COMPLETE, null),
+				"linkstate", state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
-	@Path("/complete/{provider}")
+	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
 			@Context final HttpHeaders headers,
 			@PathParam("provider") String provider,
-			@CookieParam("statevar") final String state,
+			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
@@ -149,10 +150,10 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lt.isLinked()) {
-			r = Response.seeOther(getPostLinkRedirectURI("/me"))
+			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
 					.cookie(getStateCookie(null)).build();
 		} else {
-			r = Response.seeOther(getCompleteLinkRedirectURI("/link/choice")).cookie(
+			r = Response.seeOther(getCompleteLinkRedirectURI(UIPaths.LINK_ROOT_CHOICE)).cookie(
 					getLinkInProcessCookie(lt.getTemporaryToken()))
 					.cookie(getStateCookie(null))
 					.build();
@@ -198,19 +199,19 @@ public class Link {
 	}
 	
 	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
-		return new NewCookie(new Cookie("in-process-link-token",
-				token == null ? "no token" : token.getToken(), "/link", null),
+		return new NewCookie(new Cookie(IN_PROCESS_LINK_COOKIE,
+				token == null ? "no token" : token.getToken(), UIPaths.LINK_ROOT, null),
 				"linktoken", token == null ? 0 : getMaxCookieAge(token, false),
 				UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
-	@Path("/choice")
+	@Path(UIPaths.LINK_CHOICE)
 	@Template(name = "/linkchoice")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> linkChoiceHTML(
 			@Context final HttpHeaders headers,
-			@CookieParam("in-process-link-token") final String linktoken,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException, LinkFailedException {
@@ -219,11 +220,11 @@ public class Link {
 	
 	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
 	@GET
-	@Path("/choice")
+	@Path(UIPaths.LINK_CHOICE)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> linkChoiceJSON(
 			@Context final HttpHeaders headers,
-			@CookieParam("in-process-link-token") final String linktoken,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
 			InvalidTokenException, LinkFailedException {
@@ -237,8 +238,7 @@ public class Link {
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			LinkFailedException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing in-process-link-token");
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
 		final LinkIdentities ids = auth.getLinkState(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -261,32 +261,32 @@ public class Link {
 			s.put("prov_username", ri.getDetails().getUsername());
 			ris.add(s);
 		}
-		ret.put("pickurl", relativize(uriInfo, "/link/pick"));
+		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
 		return ret;
 	}
 	
 	// for dumb HTML pages that use forms
 	@POST
-	@Path("/pick")
+	@Path(UIPaths.LINK_PICK)
 	public Response pickAccountPOST(
 			@Context final HttpHeaders headers,
-			@CookieParam("in-process-link-token") final String linktoken,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException {
 		
 		pickAccount(headers, linktoken, identityID);
 		//TODO LINK make target configurable
-		return Response.seeOther(getPostLinkRedirectURI("/me"))
+		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
 	// for AJAX pages that can decide for themselves where to go next
 	@PUT
-	@Path("/pick")
+	@Path(UIPaths.LINK_PICK)
 	public Response pickAccountPUT(
 			@Context final HttpHeaders headers,
-			@CookieParam("in-process-link-token") final String linktoken,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@QueryParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException {
@@ -302,8 +302,7 @@ public class Link {
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
 			LinkFailedException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
-			throw new NoTokenProvidedException(
-					"Missing in-process-link-token");
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
 		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new IncomingToken(linktoken), identityID);

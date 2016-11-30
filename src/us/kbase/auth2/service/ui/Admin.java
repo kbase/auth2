@@ -59,7 +59,7 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
-@Path("/admin")
+@Path(UIPaths.ADMIN_ROOT)
 public class Admin {
 
 	//TODO TEST
@@ -69,6 +69,8 @@ public class Admin {
 	//TODO ADMIN find user
 	
 	//TODO ROLES html escape role wherever it's displayed (/me, admin custom roles, elsewhere?)
+	
+	private static final String SEP = UIPaths.SEP;
 	
 	private static final int MIN_IN_MS = 60 * 1000;
 
@@ -86,16 +88,16 @@ public class Admin {
 	}
 	
 	@GET
-	@Path("/localaccount")
+	@Path(UIPaths.ADMIN_LOCALACCOUNT)
 	@Template(name = "/adminlocalaccount")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, String> createLocalAccountStart(
 			@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("targeturl", relativize(uriInfo, "/admin/localaccount/create"));
+		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_LOCAL_CREATE));
 	}
 	
 	@POST
-	@Path("/localaccount/create")
+	@Path(UIPaths.ADMIN_LOCAL_CREATE)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/adminlocalaccountcreated")
@@ -126,7 +128,7 @@ public class Admin {
 	}
 	
 	@GET
-	@Path("/user/{user}")
+	@Path(UIPaths.ADMIN_USER_PARAM)
 	@Template(name = "/adminuser")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> userDisplay(
@@ -143,8 +145,10 @@ public class Admin {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("custom", setUpCustomRoles(roles, au.getCustomRoles()));
 		ret.put("hascustom", !roles.isEmpty());
-		ret.put("roleurl", relativize(uriInfo, "/admin/user/" + user + "/roles"));
-		ret.put("customroleurl", relativize(uriInfo, "/admin/user/" + user + "/customroles"));
+		ret.put("roleurl", relativize(uriInfo,
+				UIPaths.ADMIN_ROOT_USER + SEP + user + SEP + UIPaths.ADMIN_ROLES));
+		ret.put("customroleurl", relativize(uriInfo,
+				UIPaths.ADMIN_ROOT_USER + SEP + user + SEP + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("user", au.getUserName().getName());
 		ret.put("full", au.getFullName());
 		ret.put("email", au.getEmail());
@@ -176,7 +180,7 @@ public class Admin {
 	}
 
 	@POST
-	@Path("/user/{user}/roles")
+	@Path(UIPaths.ADMIN_USER_ROLES)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeRoles(
 			@Context final HttpHeaders headers,
@@ -196,7 +200,7 @@ public class Admin {
 	}
 	
 	@POST
-	@Path("/user/{user}/customroles")
+	@Path(UIPaths.ADMIN_USER_CUSTOM_ROLES)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeCustomRoles(
 			@Context final HttpHeaders headers,
@@ -232,7 +236,7 @@ public class Admin {
 	}
 	
 	@GET
-	@Path("/customroles")
+	@Path(UIPaths.ADMIN_CUSTOM_ROLES)
 	@Template(name = "/admincustomroles")
 	public Map<String, Object> customRoles(
 			@Context final HttpHeaders headers,
@@ -241,12 +245,12 @@ public class Admin {
 			UnauthorizedException, NoTokenProvidedException {
 		final Set<CustomRole> roles = auth.getCustomRoles(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return ImmutableMap.of("custroleurl", relativize(uriInfo, "/admin/customroles/set"),
-				"roles", roles);
+		return ImmutableMap.of("custroleurl", relativize(
+				uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET), "roles", roles);
 	}
 	
 	@POST // should take PUT as well
-	@Path("/customroles/set")
+	@Path(UIPaths.ADMIN_CUSTOM_ROLES_SET)
 	public void createCustomRole(
 			@Context final HttpHeaders headers,
 			@FormParam("id") final String roleId,
@@ -260,7 +264,7 @@ public class Admin {
 	
 	//TODO CONFIG reset to defaults
 	@GET
-	@Path("/config")
+	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> getConfig(
@@ -305,14 +309,14 @@ public class Admin {
 		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.SERV) / DAY_IN_MS);
 
-		ret.put("basicurl", relativize(uriInfo, "/admin/config/basic"));
-		ret.put("tokenurl", relativize(uriInfo, "/admin/config/token"));
-		ret.put("providerurl", relativize(uriInfo, "/admin/config/provider"));
+		ret.put("basicurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
+		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
+		ret.put("providerurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
 		return ret;
 	}
 	
 	@POST
-	@Path("/config/basic")
+	@Path(UIPaths.ADMIN_CONFIG_BASIC)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void updateBasic(
 			@Context final HttpHeaders headers,
@@ -358,7 +362,7 @@ public class Admin {
 	}
 	
 	@POST
-	@Path("/config/provider")
+	@Path(UIPaths.ADMIN_CONFIG_PROVIDER)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void configProvider(
 			@Context final HttpHeaders headers,
@@ -381,7 +385,7 @@ public class Admin {
 	}
 	
 	@POST
-	@Path("/config/token")
+	@Path(UIPaths.ADMIN_CONFIG_TOKEN)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void configTokens(
 			@Context final HttpHeaders headers,
