@@ -183,7 +183,6 @@ public class MongoStorage implements AuthStorage {
 		this.db = db;
 		
 		//TODO MISC check workspace startup for stuff to port over
-		//TODO ROOT check / set config with root user
 		checkConfig();
 		ensureIndexes();
 	}

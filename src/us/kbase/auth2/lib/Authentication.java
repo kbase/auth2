@@ -66,7 +66,6 @@ public class Authentication {
 	//TODO ADMIN revoke user token, revoke all tokens for a user, revoke all tokens
 	//TODO ADMIN deactivate account
 	//TODO ADMIN force user pwd reset
-	//TODO TOKEN tokens - redirect to standard login if not logged in (other pages as well)
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
 	//TODO CONFIG_USER set email & username
@@ -112,14 +111,14 @@ public class Authentication {
 		for (final String provname: idFactory.getProviders()) {
 			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		}
-		final AuthConfig ac =  new AuthConfig(false, provs, AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
+				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		storage.updateConfig(new AuthConfigSet<ExternalConfig>(ac, defaultExternalConfig), false);
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {
-			throw new StorageInitException(
-					"Failed to initialize config manager: " +
-							e.getMessage(), e);
+			throw new StorageInitException("Failed to initialize config manager: " +
+					e.getMessage(), e);
 		}
 	}
 	

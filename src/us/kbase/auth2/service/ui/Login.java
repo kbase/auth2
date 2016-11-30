@@ -67,7 +67,6 @@ public class Login {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	//TODO UI Make all paths constants in a Paths class.
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";

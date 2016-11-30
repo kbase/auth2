@@ -276,7 +276,6 @@ public class Link {
 			AuthStorageException, LinkFailedException {
 		
 		pickAccount(headers, linktoken, identityID);
-		//TODO LINK make target configurable
 		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
