@@ -38,8 +38,6 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* UI
-  * Local account password reset (forced or voluntary), needs configured redirect
 * API
   * Introspect token (e.g. not the legacy apis, provide complete info)
   * Email & full name privacy option
@@ -53,7 +51,7 @@ Auth service work
   * revoke single / user's / all tokens
   * Disable account (revoke all tokens & prevent logins), record admin and reason
   * Force pwd reset for local accounts (per user and all)
-  * Reset local account pwd
+  * Reset local account pwd to new random pwd
   * Delete custom role
 * Deploy
   * Dockerization

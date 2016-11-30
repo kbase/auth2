@@ -22,6 +22,7 @@ public class Fields {
 	public static final String USER_PWD_HSH = "pwdhsh";
 	public static final String USER_SALT = "salt";
 	public static final String USER_RESET_PWD = "rstpwd";
+	public static final String USER_RESET_PWD_LAST = "lastrst";
 	
 	//identities fields
 	public static final String IDENTITIES_ID = "id";

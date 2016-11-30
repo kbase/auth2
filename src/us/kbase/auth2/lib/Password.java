@@ -8,7 +8,7 @@ public class Password {
 	private final char[] password;
 	
 	public Password(final char[] password) {
-		//TODO INPUT appropriate checking that the password is strong
+		//TODO PWD appropriate checking that the password is strong
 		this.password = password;
 	}
 	

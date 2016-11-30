@@ -65,9 +65,9 @@ public class Utils {
 		return c;
 	}
 	
-	public static void clear(final byte[] passwordHash) {
-		for (int i = 0; i < passwordHash.length; i++) {
-			passwordHash[i] = 0;
+	public static void clear(final byte[] bytes) {
+		for (int i = 0; i < bytes.length; i++) {
+			bytes[i] = 0;
 		}
 	}
 }

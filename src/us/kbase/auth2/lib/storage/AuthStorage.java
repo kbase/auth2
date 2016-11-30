@@ -63,6 +63,9 @@ public interface AuthStorage {
 	void createLocalUser(LocalUser local)
 			throws AuthStorageException, UserExistsException;
 
+	void changePassword(UserName userName, byte[] passwordHash, byte[] salt)
+			throws NoSuchUserException, AuthStorageException;
+	
 	void createUser(AuthUser authUser)
 			throws UserExistsException, AuthStorageException;
 
