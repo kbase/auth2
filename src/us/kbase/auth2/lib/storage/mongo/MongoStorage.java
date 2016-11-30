@@ -283,7 +283,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_FULL_NAME, fullName)
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
-				.append(Fields.USER_LAST_LOGIN, null);
+				.append(Fields.USER_LAST_LOGIN, null)
+				.append(Fields.USER_RESET_PWD_LAST, null);
 		final Document u = new Document("$set", set)
 				.append("$setOnInsert", setIfMissing);
 		try {
@@ -310,7 +311,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
-				.append(Fields.USER_RESET_PWD, local.forceReset())
+				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
+				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, salt);
 		try {
@@ -349,7 +351,21 @@ public class MongoStorage implements AuthStorage {
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
+				user.getDate(Fields.USER_RESET_PWD_LAST),
 				this);
+	}
+	
+	@Override
+	public void changePassword(final UserName name, final byte[] pwd, final byte[] salt)
+			throws NoSuchUserException, AuthStorageException {
+		getUserDoc(name, true); //check the user actually is local
+		final String pwdhsh = Base64.getEncoder().encodeToString(pwd);
+		final String encsalt = Base64.getEncoder().encodeToString(salt);
+		final Document set = new Document(Fields.USER_RESET_PWD, false)
+				.append(Fields.USER_RESET_PWD_LAST, new Date())
+				.append(Fields.USER_PWD_HSH, pwdhsh)
+				.append(Fields.USER_SALT, encsalt);
+		updateUser(name, set);
 	}
 	
 	@Override

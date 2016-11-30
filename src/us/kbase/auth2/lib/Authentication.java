@@ -72,7 +72,6 @@ public class Authentication {
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	//TODO CONFIG send token cache time to client via api
 	//TODO UI set keep me logged in on login page
-	//TODO PWD last pwd reset field for local users
 	
 	/* TODO ROLES feature: delete custom roles (see below)
 	 * 1) delete role from system
@@ -220,8 +219,7 @@ public class Authentication {
 		checkString(email, "email");
 		final Password pwd = new Password(tokens.getTemporaryPassword(10));
 		final byte[] salt = pwdcrypt.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(
-				pwd.getPassword(), salt);
+		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		final LocalUser lu = new NewLocalUser(userName, email, fullName, new Date(), null,
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
@@ -230,9 +228,17 @@ public class Authentication {
 		return pwd;
 	}
 	
-	public NewToken localLogin(final UserName userName, final Password pwd)
-			throws AuthenticationException, AuthStorageException,
-			UnauthorizedException {
+	public LocalLoginResult localLogin(final UserName userName, final Password pwd)
+			throws AuthenticationException, AuthStorageException, UnauthorizedException {
+		final LocalUser u = getLocalUser(userName, pwd);
+		if (u.isPwdResetRequired()) {
+			return new LocalLoginResult(u.getUserName());
+		}
+		return new LocalLoginResult(login(u.getUserName()));
+	}
+
+	private LocalUser getLocalUser(final UserName userName, final Password pwd)
+			throws AuthStorageException, AuthenticationException, UnauthorizedException {
 		final LocalUser u;
 		try {
 			u = storage.getLocalUser(userName);
@@ -247,18 +253,35 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Non-admin login is disabled");
-			
 		}
 		pwd.clear();
-		//TODO PWD if reset required, make reset token
-		return login(userName);
+		return u;
+	}
+
+	public void localPasswordChange(
+			final UserName userName,
+			final Password pwdold,
+			final Password pwdnew)
+			throws AuthenticationException, UnauthorizedException, AuthStorageException {
+		//TODO PWD do any cross pwd checks like checking they're not the same
+		//TODO INPUT check nulls
+		getLocalUser(userName, pwdold); //checks pwd validity
+		final byte[] salt = pwdcrypt.generateSalt();
+		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
+		pwdnew.clear();
+		try {
+			storage.changePassword(userName, passwordHash, salt);
+		} catch (NoSuchUserException e) {
+			// we know user already exists and is local so this can't happen
+			throw new RuntimeException("Sorry, you ceased to exist in the last ~10ms.", e);
+		}
+		clear(passwordHash);
+		clear(salt);
 	}
 	
-	private NewToken login(final UserName userName)
-			throws AuthStorageException {
+	private NewToken login(final UserName userName) throws AuthStorageException {
 		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
-				userName, cfg.getAppConfig().getTokenLifetimeMS(
-						TokenLifetimeType.LOGIN));
+				userName, cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
 		return nt;
@@ -891,5 +914,4 @@ public class Authentication {
 				new HashSet<>(Arrays.asList(ri.withID())),
 				now, now));
 	}
-
 }

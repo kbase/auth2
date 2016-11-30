@@ -14,6 +14,7 @@ import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -24,6 +25,7 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -31,7 +33,6 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path(UIPaths.LOCAL_ROOT)
@@ -39,8 +40,6 @@ public class LocalAccounts {
 	
 	//TODO TEST
 	//TODO JAVADOC
-
-	//TODO PWD reset pwd
 
 	@Inject
 	private Authentication auth;
@@ -56,6 +55,7 @@ public class LocalAccounts {
 		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN_RESULT));
 	}
 	
+	//TODO UI will need ajax version or at least something in the body that says a reset is required
 	@POST
 	@Path(UIPaths.LOCAL_LOGIN_RESULT)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -67,19 +67,61 @@ public class LocalAccounts {
 			throws AuthStorageException, MissingParameterException,
 			AuthenticationException, IllegalParameterException,
 			UnauthorizedException {
-		if (userName == null || userName.isEmpty()) {
+		if (userName == null || userName.trim().isEmpty()) {
 			throw new MissingParameterException("user");
 		}
-		if (pwd == null || pwd.isEmpty()) {
+		if (pwd == null || pwd.trim().isEmpty()) {
 			throw new MissingParameterException("pwd");
 		}
-		final NewToken t = auth.localLogin(new UserName(userName),
-				new Password(pwd.toCharArray()));
-		//TODO LOG log
+		final Password cpwd = new Password(pwd.toCharArray());
 		pwd = null; // try to get pwd GC'd as quickly as possible
-		//TODO PWD if reset required, do reset
+		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd);
+		//TODO LOG log
+		if (llr.isPwdResetRequired()) {
+			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?user=" +
+					llr.getUserName().getName())).build();
+		}
 		return Response.seeOther(toURI(UIPaths.ME_ROOT))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), t, stayLoggedIn == null))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), llr.getToken(),
+						stayLoggedIn == null))
+				.build();
+	}
+	
+	@GET
+	@Path(UIPaths.LOCAL_RESET)
+	@Template(name = "/localreset")
+	public Map<String, Object> resetPasswordStart(
+			@QueryParam("user") final String user,
+			@Context final UriInfo uriInfo) {
+		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET_RESULT),
+				"user", user == null ? "" : user);
+	}
+	
+	//TODO UI will need an ajax version
+	@POST
+	@Path(UIPaths.LOCAL_RESET_RESULT)
+	public Response resetPassword(
+			@FormParam("user") final String userName,
+			@FormParam("pwdold") String pwdold,
+			@FormParam("pwdnew") String pwdnew)
+			throws MissingParameterException, IllegalParameterException,
+				AuthenticationException, UnauthorizedException, AuthStorageException {
+		if (userName == null || userName.trim().isEmpty()) {
+			throw new MissingParameterException("user");
+		}
+		if (pwdold == null || pwdold.trim().isEmpty()) {
+			throw new MissingParameterException("pwdold");
+		}
+		if (pwdnew == null || pwdnew.trim().isEmpty()) {
+			throw new MissingParameterException("pwdnew");
+		}
+		final Password cpwdold = new Password(pwdold.toCharArray());
+		final Password cpwdnew = new Password(pwdnew.toCharArray());
+		pwdold = null;
+		pwdnew = null;
+		auth.localPasswordChange(new UserName(userName), cpwdold, cpwdnew);
+		return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_LOGIN))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), null))
 				.build();
 	}
 	

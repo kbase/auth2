@@ -30,6 +30,9 @@ login to a provider based account. Stores a cookie with a token.
 /localaccount/login  
 login to a local account. Stores a cookie with a token.
 
+/localaccount/reset  
+reset the password for a local account.
+
 /logout  
 Self explanatory.
 

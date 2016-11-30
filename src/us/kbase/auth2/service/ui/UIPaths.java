@@ -52,8 +52,14 @@ public class UIPaths {
 	public static final String LOCAL_ROOT = SEP + LOCAL + SEP;
 	
 	public static final String LOCAL_LOGIN = LOGIN;
+	public static final String LOCAL_ROOT_LOGIN = LOCAL_ROOT + LOGIN;
 	public static final String LOCAL_LOGIN_RESULT = LOCAL_LOGIN + SEP + RESULT;
 	public static final String LOCAL_ROOT_LOGIN_RESULT = LOCAL_ROOT + LOCAL_LOGIN + SEP + RESULT;
+	
+	public static final String LOCAL_RESET = "reset";
+	public static final String LOCAL_ROOT_RESET = LOCAL_ROOT + LOCAL_RESET;
+	public static final String LOCAL_RESET_RESULT = LOCAL_RESET + SEP + RESULT;
+	public static final String LOCAL_ROOT_RESET_RESULT = LOCAL_ROOT + LOCAL_RESET_RESULT;
 	
 	/* login endpoint */
 	

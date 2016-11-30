@@ -11,6 +11,7 @@ public abstract class LocalUser extends AuthUser {
 	private final byte[] passwordHash;
 	private final byte[] salt;
 	private final boolean forceReset;
+	private final Long lastReset;
 	
 	public LocalUser(
 			final UserName userName,
@@ -21,7 +22,8 @@ public abstract class LocalUser extends AuthUser {
 			final Date lastLogin,
 			final byte[] passwordHash,
 			final byte[] salt,
-			final boolean forceReset) {
+			final boolean forceReset,
+			final Date lastReset) {
 		super(userName, email, fullName, null, roles, created, lastLogin);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
@@ -34,6 +36,7 @@ public abstract class LocalUser extends AuthUser {
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
+		this.lastReset = lastReset == null ? null : lastReset.getTime();
 	}
 
 	public byte[] getPasswordHash() {
@@ -44,7 +47,11 @@ public abstract class LocalUser extends AuthUser {
 		return salt;
 	}
 
-	public boolean forceReset() {
+	public boolean isPwdResetRequired() {
 		return forceReset;
+	}
+	
+	public Date getLastPwdReset() {
+		return lastReset == null ? null : new Date(lastReset);
 	}
 }
