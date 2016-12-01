@@ -40,6 +40,8 @@ import org.glassfish.jersey.server.mvc.Viewable;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -322,10 +324,8 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@FormParam("id") final UUID identityID,
 			@FormParam("user") final String userName,
-			@FormParam("full") final String fullName,
-			@FormParam("email") final String email,
-			@FormParam("stayLoggedIn") final String stayLoggedIn,
-			@FormParam("private") final String nameAndEmailPrivate)
+			@FormParam("display") final String displayName,
+			@FormParam("email") final String email)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
@@ -334,12 +334,10 @@ public class Login {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
 		//TODO INPUT sanity check inputs
-		final boolean sessionLogin = stayLoggedIn == null || stayLoggedIn.isEmpty();
-		final boolean priv = nameAndEmailPrivate != null && nameAndEmailPrivate.isEmpty();
 		
 		// might want to enapsulate the user data in a NewUser class
-		final NewToken newtoken = auth.createUser(new IncomingToken(token),
-				identityID, new UserName(userName), fullName, email, sessionLogin, priv);
+		final NewToken newtoken = auth.createUser(new IncomingToken(token), identityID,
+				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
 				//TODO LOGIN get keep me logged in from cookie set at start of login
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))

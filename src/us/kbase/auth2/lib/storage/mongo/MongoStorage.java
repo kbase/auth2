@@ -38,6 +38,8 @@ import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
@@ -258,8 +260,8 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void createRoot(
 			final UserName root,
-			final String fullName,
-			final String email,
+			final DisplayName displayName,
+			final EmailAddress email,
 			final Set<Role> roles,
 			final Date created,
 			final byte[] passwordHash,
@@ -279,8 +281,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_PWD_HSH, encpwd)
 				.append(Fields.USER_SALT, encsalt);
 		final Document setIfMissing = new Document(
-				Fields.USER_EMAIL, email)
-				.append(Fields.USER_FULL_NAME, fullName)
+				Fields.USER_EMAIL, email.getAddress())
+				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
@@ -305,8 +307,8 @@ public class MongoStorage implements AuthStorage {
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
-				.append(Fields.USER_EMAIL, local.getEmail())
-				.append(Fields.USER_FULL_NAME, local.getFullName())
+				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
+				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
@@ -342,8 +344,8 @@ public class MongoStorage implements AuthStorage {
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		return new MongoLocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
-				user.getString(Fields.USER_EMAIL),
-				user.getString(Fields.USER_FULL_NAME),
+				getEmail(user.getString(Fields.USER_EMAIL)),
+				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
@@ -355,11 +357,29 @@ public class MongoStorage implements AuthStorage {
 				this);
 	}
 	
+	private DisplayName getDisplayName(final String displayName) throws AuthStorageException {
+		try {
+			return new DisplayName(displayName);
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new AuthStorageException("Illegal data stored in the database" , e);
+		}
+	}
+	
+	private EmailAddress getEmail(final String email) throws AuthStorageException {
+		if (email == null) {
+			return EmailAddress.UNKNOWN;
+		}
+		try {
+			return new EmailAddress(email);
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new AuthStorageException("Illegal data stored in the database" , e);
+		}
+	}	
 	@Override
-	public void changePassword(final UserName name, final byte[] pwd, final byte[] salt)
+	public void changePassword(final UserName name, final byte[] pwdHash, final byte[] salt)
 			throws NoSuchUserException, AuthStorageException {
 		getUserDoc(name, true); //check the user actually is local
-		final String pwdhsh = Base64.getEncoder().encodeToString(pwd);
+		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
 		final Document set = new Document(Fields.USER_RESET_PWD, false)
 				.append(Fields.USER_RESET_PWD_LAST, new Date())
@@ -384,8 +404,8 @@ public class MongoStorage implements AuthStorage {
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
-				.append(Fields.USER_EMAIL, user.getEmail())
-				.append(Fields.USER_FULL_NAME, user.getFullName())
+				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
+				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
@@ -545,8 +565,8 @@ public class MongoStorage implements AuthStorage {
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
 		return new MongoUser(
 				getUserName(user.getString(Fields.USER_NAME)),
-				user.getString(Fields.USER_EMAIL),
-				user.getString(Fields.USER_FULL_NAME),
+				getEmail(user.getString(Fields.USER_EMAIL)),
+				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				toIdentities(ids),
 				new HashSet<>(roles),
 				new HashSet<>(custroles),
@@ -972,11 +992,11 @@ public class MongoStorage implements AuthStorage {
 			return; //noop
 		}
 		final Document d = new Document();
-		if (update.getFullname() != null) {
-			d.append(Fields.USER_FULL_NAME, update.getFullname());
+		if (update.getDisplayName() != null) {
+			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName());
 		}
 		if (update.getEmail() != null) {
-			d.append(Fields.USER_EMAIL, update.getEmail());
+			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());
 		}
 		updateUser(userName, d);
 	}

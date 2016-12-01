@@ -83,10 +83,10 @@ public class LegacyKBase {
 		if (name || email) {
 			final AuthUser u = auth.getUser(in);
 			if (name) {
-				ret.put("name", u.getFullName());
+				ret.put("name", u.getDisplayName().getName());
 			}
 			if (email) {
-				ret.put("email", u.getEmail());
+				ret.put("email", u.getEmail().getAddress());
 			}
 			ret.put("user_id", u.getUserName().getName());
 		} else {

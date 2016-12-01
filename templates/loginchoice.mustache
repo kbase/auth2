@@ -16,15 +16,18 @@ Username: {{username}}<br/>
 {{/login}}
 
 <h3>Create account</h3>
+<p>
+User name is public.</br>
+Display name is public to other system users.</br>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
 {{#create}}
 <p>Create an account linked to {{prov_username}}</p>
 </p>
 <form action="{{createurl}}" method="post">
 	User name: <input type="text" name="user" value="{{usernamesugg}}"/><br/>
-	Full name: <input type="text" name="full" value="{{prov_fullname}}"/><br/>
+	Display name: <input type="text" name="display" value="{{prov_fullname}}"/><br/>
 	Email: <input type="text" name="email" value="{{prov_email}}"/></br/>
-	Don't expire my sessions when I close my browser: <input type="checkbox" name="stayLoggedIn"/></br/>
-	Keep name and email private: <input type="checkbox" name="private"/></br/>
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Create"/>
 </form>

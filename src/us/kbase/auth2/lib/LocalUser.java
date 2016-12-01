@@ -15,8 +15,8 @@ public abstract class LocalUser extends AuthUser {
 	
 	public LocalUser(
 			final UserName userName,
-			final String email,
-			final String fullName,
+			final EmailAddress email,
+			final DisplayName displayName,
 			final Set<Role> roles,
 			final Date created,
 			final Date lastLogin,
@@ -24,7 +24,7 @@ public abstract class LocalUser extends AuthUser {
 			final byte[] salt,
 			final boolean forceReset,
 			final Date lastReset) {
-		super(userName, email, fullName, null, roles, created, lastLogin);
+		super(userName, email, displayName, null, roles, created, lastLogin);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException(

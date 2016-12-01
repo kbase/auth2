@@ -16,9 +16,9 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.AuthException;
@@ -115,7 +115,7 @@ public class LegacyGlobus {
 			token = bits[1];
 		}
 		token = getGlobusToken(xtoken, token);
-		final AuthUser u;
+		final ViewableUser u;
 		try {
 			u = auth.getUser(new IncomingToken(token), new UserName(user));
 		} catch (InvalidTokenException e) {
@@ -123,16 +123,17 @@ public class LegacyGlobus {
 			throw new UnauthorizedException(
 					e.getErr(), "Authentication failed.");
 		}
+		final String email = u.getEmail() == null ? null : u.getEmail().getAddress(); 
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("username", u.getUserName().getName());
 		ret.put("email_validated", false);
 		ret.put("ssh_pubkeys", new LinkedList<String>());
 		ret.put("resource_type", "users");
-		ret.put("full_name", u.getFullName());
+		ret.put("full_name", u.getDisplayName().getName());
 		ret.put("organization", null);
-		ret.put("fullname", u.getFullName());
+		ret.put("fullname", u.getDisplayName().getName());
 		ret.put("user_name", u.getUserName().getName());
-		ret.put("email", u.getEmail());
+		ret.put("email", email);
 		ret.put("custom_fields", new HashMap<String,String>());
 		return ret;
 	}

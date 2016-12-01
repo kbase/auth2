@@ -6,6 +6,8 @@ import java.util.Set;
 
 import org.bson.types.ObjectId;
 
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
@@ -22,8 +24,8 @@ public class MongoLocalUser extends LocalUser {
 	
 	MongoLocalUser(
 			final UserName userName,
-			final String email,
-			final String fullName,
+			final EmailAddress email,
+			final DisplayName displayName,
 			final Set<Role> roles,
 			final Set<ObjectId> customRoles,
 			final Date created,
@@ -33,7 +35,7 @@ public class MongoLocalUser extends LocalUser {
 			final boolean forceReset,
 			final Date lastReset,
 			final MongoStorage storage) {
-		super(userName, email, fullName, roles, created, lastLogin, passwordHash, salt,
+		super(userName, email, displayName, roles, created, lastLogin, passwordHash, salt,
 				forceReset, lastReset);
 		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {

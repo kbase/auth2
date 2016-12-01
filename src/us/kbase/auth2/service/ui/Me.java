@@ -25,8 +25,12 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
@@ -52,15 +56,14 @@ public class Me {
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException,
 			AuthStorageException {
-		//TODO CONFIG_USER handle keep logged in, private
 		final AuthUser u = auth.getUser(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));
 		ret.put("unlinkprefixurl", relativize(uriInfo, UIPaths.ME_ROOT));
 		ret.put("user", u.getUserName().getName());
 		ret.put("local", u.isLocal());
-		ret.put("fullname", u.getFullName());
-		ret.put("email", u.getEmail());
+		ret.put("display", u.getDisplayName().getName());
+		ret.put("email", u.getEmail().getAddress());
 		ret.put("created", u.getCreated().getTime());
 		final Date ll = u.getLastLogin();
 		ret.put("lastlogin", ll == null ? null : ll.getTime());
@@ -83,13 +86,25 @@ public class Me {
 	@POST
 	public void update(
 			@Context final HttpHeaders headers,
-			@FormParam("fullname") final String fullname,
+			@FormParam("display") final String displayName,
 			@FormParam("email") final String email)
-			throws NoTokenProvidedException, InvalidTokenException,
-			AuthStorageException {
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+			MissingParameterException, // can't actually be thrown. trap and ignore if needed
+			IllegalParameterException {
 		//TODO INPUT check inputs
-		//TODO CONFIG_USER handle keep logged in, private
-		final UserUpdate uu = new UserUpdate().withEmail(email).withFullName(fullname);
+		final DisplayName dn;
+		if (displayName == null || displayName.isEmpty()) {
+			dn = null;
+		} else {
+			dn = new DisplayName(displayName);
+		}
+		final EmailAddress e;
+		if (email == null || email.isEmpty()) {
+			e = null;
+		} else {
+			e = new EmailAddress(email);
+		}
+		final UserUpdate uu = new UserUpdate().withEmail(e).withDisplayName(dn);
 		auth.updateUser(getTokenFromCookie(headers, cfg.getTokenCookieName()), uu);
 	}
 	

@@ -16,25 +16,25 @@ public abstract class AuthUser {
 	
 	//a local auth user can never have identities, a regular auth user must
 	// have at least one
-	private final String fullName;
-	private final String email;
+	private final DisplayName displayName;
+	private final EmailAddress email;
 	private final UserName userName;
 	private final Set<Role> roles;
 	private final Set<RemoteIdentityWithID> identities;
-	private final Date created;
-	private final Date lastLogin;
+	private final long created;
+	private final Long lastLogin;
 	
 	public AuthUser(
 			final UserName userName,
-			final String email,
-			final String fullName,
+			final EmailAddress email,
+			final DisplayName displayName,
 			Set<RemoteIdentityWithID> identities,
 			Set<Role> roles,
 			final Date created,
 			final Date lastLogin) {
 		super();
-		//TODO INPUT check for nulls & empty strings - should email & fullName be allowed as null or empty strings?
-		this.fullName = fullName;
+		//TODO INPUT check for nulls
+		this.displayName = displayName;
 		this.email = email;
 		this.userName = userName;
 		if (identities == null) {
@@ -45,19 +45,22 @@ public abstract class AuthUser {
 			roles = new HashSet<>();
 		}
 		this.roles = Collections.unmodifiableSet(roles);
-		this.created = created;
-		this.lastLogin = lastLogin;
+		if (created == null) {
+			throw new NullPointerException("created");
+		}
+		this.created = created.getTime();
+		this.lastLogin = lastLogin == null ? null : lastLogin.getTime();
 	}
 
 	public boolean isRoot() {
 		return userName.isRoot();
 	}
 	
-	public String getFullName() {
-		return fullName;
+	public DisplayName getDisplayName() {
+		return displayName;
 	}
 
-	public String getEmail() {
+	public EmailAddress getEmail() {
 		return email;
 	}
 
@@ -80,11 +83,11 @@ public abstract class AuthUser {
 	}
 	
 	public Date getCreated() {
-		return created;
+		return new Date(created);
 	}
 
 	public Date getLastLogin() {
-		return lastLogin;
+		return lastLogin == null ? null : new Date(lastLogin);
 	}
 
 	public RemoteIdentityWithID getIdentity(final RemoteIdentity ri) {

@@ -11,14 +11,14 @@ public class NewLocalUser extends LocalUser {
 	
 	public NewLocalUser(
 			final UserName userName,
-			final String email,
-			final String fullName,
+			final EmailAddress email,
+			final DisplayName displayName,
 			final Date created,
 			final Date lastLogin,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset) {
-		super(userName, email, fullName, Collections.emptySet(), created, lastLogin,
+		super(userName, email, displayName, Collections.emptySet(), created, lastLogin,
 				passwordHash, salt, forceReset, null);
 	}
 
