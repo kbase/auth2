@@ -6,34 +6,30 @@ public class UserUpdate {
 	//TODO JAVADOC
 	//TODO INPUT needs input checking
 	
-	private String fullname;
-	private String email;
+	private DisplayName displayName;
+	private EmailAddress email;
 	
 	public UserUpdate() {}
 	
-	public UserUpdate withFullName(final String fullname) {
-		this.fullname = get(fullname);
+	public UserUpdate withDisplayName(final DisplayName displayName) {
+		this.displayName = displayName;
 		return this;
 	}
 	
-	public UserUpdate withEmail(final String email) {
-		this.email = get(email);
+	public UserUpdate withEmail(final EmailAddress email) {
+		this.email = email;
 		return this;
 	}
 	
-	private String get(final String p) {
-		return (p != null && p.isEmpty()) ? null : p;
+	public DisplayName getDisplayName() {
+		return displayName;
 	}
 
-	public String getFullname() {
-		return fullname;
-	}
-
-	public String getEmail() {
+	public EmailAddress getEmail() {
 		return email;
 	}
 	
 	public boolean hasUpdates() {
-		return fullname != null && email != null;
+		return displayName != null && email != null;
 	}
 }

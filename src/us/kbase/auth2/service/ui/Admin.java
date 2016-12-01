@@ -40,6 +40,8 @@ import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
@@ -104,23 +106,19 @@ public class Admin {
 	public Map<String, String> createLocalAccountComplete(
 			@Context final HttpHeaders headers,
 			@FormParam("user") final String userName,
-			@FormParam("full") final String fullName,
+			@FormParam("display") final String displayName,
 			@FormParam("email") final String email)
 			throws AuthStorageException, UserExistsException,
 			MissingParameterException, IllegalParameterException,
 			UnauthorizedException, InvalidTokenException,
 			NoTokenProvidedException {
 		//TODO LOG log
-		//TODO INPUT email class with proper checking (probably not validation)
-		if (userName == null) {
-			throw new MissingParameterException("userName");
-		}
 		final Password pwd = auth.createLocalUser(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new UserName(userName), fullName, email);
+				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		final Map<String, String> ret = ImmutableMap.of(
 				"user", userName,
-				"full", fullName,
+				"display", displayName,
 				"email", email,
 				"password", new String(pwd.getPassword())); // char[] won't work
 		pwd.clear(); // not that this helps much...
@@ -150,8 +148,8 @@ public class Admin {
 		ret.put("customroleurl", relativize(uriInfo,
 				UIPaths.ADMIN_ROOT_USER + SEP + user + SEP + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("user", au.getUserName().getName());
-		ret.put("full", au.getFullName());
-		ret.put("email", au.getEmail());
+		ret.put("display", au.getDisplayName().getName());
+		ret.put("email", au.getEmail().getAddress());
 		ret.put("local", au.isLocal());
 		ret.put("created", au.getCreated().getTime());
 		final Date lastLogin = au.getLastLogin();

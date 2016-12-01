@@ -67,17 +67,23 @@ public class Authentication {
 	//TODO ADMIN deactivate account
 	//TODO ADMIN force user pwd reset
 	//TODO USER_PROFILE_SERVICE email & username change propagation
-	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
-	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	//TODO UI set keep me logged in on login page
-	//TODO ROLES add UI for viewing all custom roles. Needs Viewroles role?
 	
 	/* TODO ROLES feature: delete custom roles (see below)
 	 * 1) delete role from system
 	 * 2) delete role from all users
 	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role 
 	 */
+	
+	private static final DisplayName UNKNOWN_DISPLAY_NAME;
+	static {
+		try {
+			UNKNOWN_DISPLAY_NAME = new DisplayName("unknown");
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("this is impossible", e);
+		}
+	}
 	
 	private final AuthStorage storage;
 	private final IdentityProviderFactory idFactory;
@@ -191,7 +197,15 @@ public class Authentication {
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(
 				pwd.getPassword(), salt);
 		pwd.clear();
-		storage.createRoot(UserName.ROOT, "root", "root@unknown.unknown",
+		final DisplayName root;
+		final EmailAddress email;
+		try {
+			root = new DisplayName("root");
+			email = new EmailAddress("root@unknown.unknown");
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("This is impossible", e);
+		}
+		storage.createRoot(UserName.ROOT, root, email,
 				new HashSet<>(Arrays.asList(Role.ROOT)),
 				new Date(), passwordHash, salt);
 		clear(passwordHash);
@@ -201,12 +215,11 @@ public class Authentication {
 	public Password createLocalUser(
 			final IncomingToken adminToken,
 			final UserName userName,
-			final String fullName,
-			final String email)
+			final DisplayName displayName,
+			final EmailAddress email)
 			throws AuthStorageException, UserExistsException,
 			MissingParameterException, UnauthorizedException,
 			InvalidTokenException {
-		//TODO INPUT check reasonable email - probably wrapper class
 		isAnyAdmin(adminToken);
 		if (userName == null) {
 			throw new NullPointerException("userName");
@@ -215,12 +228,16 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot create ROOT user");
 		}
-		checkString(fullName, "full name");
-		checkString(email, "email");
+		if (displayName == null) {
+			throw new NullPointerException("displayName");
+		}
+		if (email == null) {
+			throw new NullPointerException("email");
+		}
 		final Password pwd = new Password(tokens.getTemporaryPassword(10));
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final LocalUser lu = new NewLocalUser(userName, email, fullName, new Date(), null,
+		final LocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
@@ -390,7 +407,7 @@ public class Authentication {
 	}
 
 	// get a (possibly) different user 
-	public AuthUser getUser(
+	public ViewableUser getUser(
 			final IncomingToken token,
 			final UserName user)
 			throws AuthStorageException, InvalidTokenException,
@@ -398,11 +415,9 @@ public class Authentication {
 		final HashedToken ht = getToken(token);
 		final AuthUser u = storage.getUser(user);
 		if (ht.getUserName().equals(u.getUserName())) {
-			return u;
+			return new ViewableUser(u, true);
 		} else {
-			//TODO PRIVACY this shouldn't return roles
-			//TODO PRIVACY only return fullname & email if info is public - actually, never return email
-			return u;
+			return new ViewableUser(u, false);
 		}
 	}
 
@@ -672,18 +687,15 @@ public class Authentication {
 			final IncomingToken token,
 			final UUID identityID,
 			final UserName userName,
-			final String fullName,
-			final String email,
-			final boolean sessionLogin,
-			final boolean privateNameEmail)
+			final DisplayName displayName,
+			final EmailAddress email)
 			throws AuthStorageException, AuthenticationException,
 				UserExistsException, UnauthorizedException {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
 		}
-		//TODO CONFIG_USER handle sessionLogin, privateNameEmail
-		//TODO INPUT check all inputs, check fullname and email are reasonable - probably class for email that does basic validation
+		//TODO INPUT check all inputs
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
@@ -692,7 +704,7 @@ public class Authentication {
 		}
 		final RemoteIdentityWithID match = getIdentity(token, identityID);
 		final Date now = new Date();
-		storage.createUser(new NewUser(userName, email, fullName,
+		storage.createUser(new NewUser(userName, email, displayName,
 				new HashSet<>(Arrays.asList(match)), now, now));
 		return login(userName);
 	}
@@ -914,11 +926,20 @@ public class Authentication {
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("Impossible", e);
 		}
-		final Date now = new Date();
-		storage.createUser(new NewUser(un,
-				ri.getDetails().getEmail(),
-				ri.getDetails().getFullname(),
+		DisplayName dn;
+		try { // hacky, but eh. Python guys will like it though
+			dn = new DisplayName(ri.getDetails().getFullname());
+		} catch (IllegalParameterException | MissingParameterException e) {
+			dn = UNKNOWN_DISPLAY_NAME;
+		}
+		EmailAddress email;
+		try {
+			email = new EmailAddress(ri.getDetails().getEmail());
+		} catch (IllegalParameterException | MissingParameterException e) {
+			email = EmailAddress.UNKNOWN;
+		}
+		storage.createUser(new NewUser(un, email, dn,
 				new HashSet<>(Arrays.asList(ri.withID())),
-				now, now));
+				new Date(), null));
 	}
 }

@@ -13,12 +13,13 @@ public class NewUser extends AuthUser {
 
 	public NewUser(
 			final UserName userName,
-			final String email,
-			final String fullName,
+			final EmailAddress email,
+			final DisplayName displayName,
 			final Set<RemoteIdentityWithID> identities,
 			final Date created,
 			final Date lastLogin) {
-		super(userName, email, fullName, identities, Collections.emptySet(), created, lastLogin);
+		super(userName, email, displayName, identities, Collections.emptySet(), created,
+				lastLogin);
 	}
 
 	@Override

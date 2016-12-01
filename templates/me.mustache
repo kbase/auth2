@@ -16,8 +16,13 @@ Local account<br/>
 {{.}}<br/>
 {{/customroles}}
 <h3>User details</h3>
+<p>
+User name is public.</br>
+Display name is public to other system users.</br>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
 <form action="{{userupdateurl}}" method="post">
-	Full name: <input type="text" name="fullname" value="{{fullname}}"/><br/>
+	Display name: <input type="text" name="display" value="{{display}}"/><br/>
 	Email: <input type="text" name="email" value="{{email}}"/><br/>
 	<input type="submit" value="Update"/>
 </form>

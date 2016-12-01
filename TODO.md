@@ -39,9 +39,8 @@ Auth service work
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
 * API
-  * Email & full name privacy option
   * /user/<name> - get user details
-  * /me
+  * /me - view auth profile & update display name & email
 * Admin functionality
   * Find users
     * By name (regex)
