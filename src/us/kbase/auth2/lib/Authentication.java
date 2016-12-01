@@ -70,8 +70,8 @@ public class Authentication {
 	//TODO CONFIG_USER set email & username privacy & respect (in both legacy apis)
 	//TODO CONFIG_USER set email & username
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
-	//TODO CONFIG send token cache time to client via api
 	//TODO UI set keep me logged in on login page
+	//TODO ROLES add UI for viewing all custom roles. Needs Viewroles role?
 	
 	/* TODO ROLES feature: delete custom roles (see below)
 	 * 1) delete role from system
@@ -871,6 +871,10 @@ public class Authentication {
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().toMap()));
+	}
+	
+	public long getSuggestedTokenCacheTime() throws AuthStorageException {
+		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
 	
 	// don't expose in public api
