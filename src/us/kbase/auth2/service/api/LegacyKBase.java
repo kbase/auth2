@@ -25,6 +25,10 @@ import us.kbase.auth2.lib.token.IncomingToken;
 @Path(APIPaths.LEGACY_KBASE)
 public class LegacyKBase {
 	
+
+	//TODO TEST
+	//TODO JAVADOC
+	
 	@Inject
 	private Authentication auth;
 	
