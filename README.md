@@ -49,6 +49,9 @@ will not change, even with a refresh - to see changes reset the form.
 
 ### API
 
+/api/V2/token  
+Introspect tokens. Provide the token in an `Authorization` header.
+
 /api/legacy/KBase/Sessions/Login  
 the legacy KBase API.
 

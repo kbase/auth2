@@ -38,8 +38,9 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* UI
+  * Add view roles for custom roles.
 * API
-  * Introspect token (e.g. not the legacy apis, provide complete info)
   * Email & full name privacy option
   * /user/<name> - get user details
   * /me

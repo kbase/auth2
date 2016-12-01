@@ -20,8 +20,8 @@ public class HashedToken {
 	private final String tokenName;
 	private final String tokenHash;
 	private final UserName userName;
-	private final Date expirationDate;
-	private final Date creationDate;
+	private final long expirationDate;
+	private final long creationDate;
 	
 	public HashedToken(
 			final TokenType type,
@@ -51,8 +51,8 @@ public class HashedToken {
 		this.tokenName = tokenName; // null ok
 		this.tokenHash = tokenHash;
 		this.userName = userName;
-		this.expirationDate = expirationDate;
-		this.creationDate = creationDate;
+		this.expirationDate = expirationDate.getTime();
+		this.creationDate = creationDate.getTime();
 		this.id = id;
 	}
 
@@ -77,11 +77,11 @@ public class HashedToken {
 	}
 
 	public Date getCreationDate() {
-		return creationDate;
+		return new Date(creationDate);
 	}
 
 	public Date getExpirationDate() {
-		return expirationDate;
+		return new Date(expirationDate);
 	}
 
 	public static String hash(final String token) {
