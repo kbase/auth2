@@ -4,11 +4,11 @@
 <h2>Provider: {{provider}}</h2>
 
 <h3>Login</h3>
-<p>The login information from the provider allows you to access these KBase
+<p>The login information from the provider allows you to access these
 accounts:</p>
 {{#login}}
 Provider username: {{prov_username}}<br/>
-KBase username: {{username}}<br/>
+Username: {{username}}<br/>
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Login"/>
@@ -17,7 +17,7 @@ KBase username: {{username}}<br/>
 
 <h3>Create account</h3>
 {{#create}}
-<p>Create a KBase account linked to {{prov_username}}</p>
+<p>Create an account linked to {{prov_username}}</p>
 </p>
 <form action="{{createurl}}" method="post">
 	User name: <input type="text" name="user" value="{{usernamesugg}}"/><br/>
