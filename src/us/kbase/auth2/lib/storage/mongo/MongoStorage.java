@@ -366,6 +366,9 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	private EmailAddress getEmail(final String email) throws AuthStorageException {
+		if (email == null) {
+			return EmailAddress.UNKNOWN;
+		}
 		try {
 			return new EmailAddress(email);
 		} catch (IllegalParameterException | MissingParameterException e) {
