@@ -20,6 +20,9 @@ import us.kbase.auth2.lib.token.IncomingToken;
 @Path(APIPaths.API_V2_TOKEN)
 public class Token {
 
+	//TODO TEST
+	//TODO JAVADOC
+	
 	@Inject
 	private Authentication auth;
 	

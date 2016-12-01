@@ -141,7 +141,7 @@ public class Admin {
 			NoTokenProvidedException {
 		final IncomingToken adminToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final AuthUser au = auth.getUserAsAdmin(adminToken, new UserName(user));
-		final Set<CustomRole> roles = auth.getCustomRoles(adminToken);
+		final Set<CustomRole> roles = auth.getCustomRoles();
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("custom", setUpCustomRoles(roles, au.getCustomRoles()));
 		ret.put("hascustom", !roles.isEmpty());
@@ -243,8 +243,8 @@ public class Admin {
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException {
-		final Set<CustomRole> roles = auth.getCustomRoles(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()));
+		auth.isAnyAdmin(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+		final Set<CustomRole> roles = auth.getCustomRoles();
 		return ImmutableMap.of("custroleurl", relativize(
 				uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET), "roles", roles);
 	}

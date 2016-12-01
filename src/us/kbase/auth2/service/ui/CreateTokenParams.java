@@ -9,6 +9,9 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 public class CreateTokenParams {
 
+	//TODO TEST
+	//TODO JAVADOC
+	
 	private final String name;
 	private final String type;
 	

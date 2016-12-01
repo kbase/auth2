@@ -38,8 +38,6 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* UI
-  * Add view roles for custom roles.
 * API
   * Email & full name privacy option
   * /user/<name> - get user details

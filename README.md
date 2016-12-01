@@ -10,19 +10,22 @@ Current endpoints
 
 
 /admin/customroles  
-View and add custom roles.
+add and view custom roles.
 
 /admin/config  
-View and edit the server configuration.
+view and edit the server configuration.
 
 /admin/localaccount  
 create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user and modify user roles.
+view user and modify user roles.
+
+/customroles  
+view custom roles. This page is publically viewable to anyone.
 
 /link  
-Link accounts.
+link accounts.
 
 /login  
 login to a provider based account. Stores a cookie with a token.
@@ -34,10 +37,10 @@ login to a local account. Stores a cookie with a token.
 reset the password for a local account.
 
 /logout  
-Self explanatory.
+self explanatory.
 
 /me  
-User page.
+user page.
 
 /tokens  
 list and create tokens.

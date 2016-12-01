@@ -207,7 +207,7 @@ public class Authentication {
 			MissingParameterException, UnauthorizedException,
 			InvalidTokenException {
 		//TODO INPUT check reasonable email - probably wrapper class
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		isAnyAdmin(adminToken);
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
@@ -370,6 +370,7 @@ public class Authentication {
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
+			//TODO CODE why Arrays.asList here? write tests and then remove
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
@@ -436,6 +437,10 @@ public class Authentication {
 		storage.deleteTokens(ht.getUserName());
 	}
 
+	public void isAnyAdmin(final IncomingToken adminToken)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+	}
 
 	public AuthUser getUserAsAdmin(
 			final IncomingToken adminToken,
@@ -445,7 +450,7 @@ public class Authentication {
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		isAnyAdmin(adminToken);
 		return storage.getUser(userName);
 	}
 	
@@ -521,10 +526,8 @@ public class Authentication {
 		storage.setCustomRole(new CustomRole(id, description));
 	}
 
-	public Set<CustomRole> getCustomRoles(final IncomingToken incomingToken)
-			throws AuthStorageException, InvalidTokenException,
-			UnauthorizedException {
-		getUser(incomingToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+	/* may need to restrict to a subset of users in the future */
+	public Set<CustomRole> getCustomRoles() throws AuthStorageException {
 		return storage.getCustomRoles();
 	}
 

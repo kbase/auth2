@@ -22,13 +22,11 @@ public class StartAuthServer {
 		context.setResourceBase("./webapps/");
 		server.setHandler(context);
 
-		final ServletHolder jerseyServlet = context.addServlet(
-				ServletContainer.class, "/*");
+		final ServletHolder jerseyServlet = context.addServlet(ServletContainer.class, "/*");
 		jerseyServlet.setInitOrder(1);
 		jerseyServlet.setInitParameter("javax.ws.rs.Application",
 				"us.kbase.auth2.service.AuthenticationService");
-		context.addServlet(
-				DefaultServlet.class, "/assets/*");
+		context.addServlet(DefaultServlet.class, "/assets/*");
 		server.start();
 		server.join();
 	}
