@@ -39,9 +39,7 @@ Auth service work
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
 * API
-  * /me - view auth profile & update display name & email
-  * /user
-    * Add search on name, display name, or both, with prefix or substring search
+  * /user - add search on name, display name, or both, with prefix or substring search
 * Admin functionality
   * Find users
     * By name (regex)

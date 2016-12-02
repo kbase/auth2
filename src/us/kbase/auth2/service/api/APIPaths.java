@@ -21,4 +21,5 @@ public class APIPaths {
 	
 	public static final String API_V2_USERS = API_V2 + SEP + USERS;
 	
+	public static final String API_V2_ME = API_V2 + SEP + "me";
 }

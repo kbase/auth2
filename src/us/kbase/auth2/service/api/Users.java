@@ -39,7 +39,7 @@ public class Users {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, String> getUsers(
-			@HeaderParam("authorization") final String token,
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
 			@QueryParam("list") final String users)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {

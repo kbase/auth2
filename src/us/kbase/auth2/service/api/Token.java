@@ -28,8 +28,7 @@ public class Token {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> getToken(
-			@HeaderParam("authorization") final String token)
+	public Map<String, Object> getToken(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException();
