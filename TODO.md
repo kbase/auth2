@@ -38,13 +38,18 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* UI
+  * Make customroles require a token - should log anyone that accesses the service
 * API
   * /me - view auth profile & update display name & email
+  * /user
+    * change users query param to list
+    * Add search on name, display name, or both, with prefix or substring search
 * Admin functionality
   * Find users
     * By name (regex)
-    * By role
-    * By full name (regex) (combine with name?)
+    * By role (custom or std)
+    * By display name (regex) (combine with name?)
   * revoke single / user's / all tokens
   * Disable account (revoke all tokens & prevent logins), record admin and reason
   * Force pwd reset for local accounts (per user and all)
