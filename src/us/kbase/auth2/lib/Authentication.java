@@ -228,7 +228,7 @@ public class Authentication {
 			throws AuthStorageException, UserExistsException,
 			MissingParameterException, UnauthorizedException,
 			InvalidTokenException {
-		isAnyAdmin(adminToken);
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
@@ -476,11 +476,6 @@ public class Authentication {
 		storage.deleteTokens(ht.getUserName());
 	}
 
-	public void isAnyAdmin(final IncomingToken adminToken)
-			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-	}
-
 	public AuthUser getUserAsAdmin(
 			final IncomingToken adminToken,
 			final UserName userName)
@@ -489,7 +484,7 @@ public class Authentication {
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
-		isAnyAdmin(adminToken);
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		return storage.getUser(userName);
 	}
 	
@@ -566,7 +561,13 @@ public class Authentication {
 	}
 
 	/* may need to restrict to a subset of users in the future */
-	public Set<CustomRole> getCustomRoles() throws AuthStorageException {
+	public Set<CustomRole> getCustomRoles(final IncomingToken token, final boolean forceAdmin)
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		if (forceAdmin) {
+			getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT);
+		} else {
+			getToken(token); // check for valid token
+		}
 		return storage.getCustomRoles();
 	}
 

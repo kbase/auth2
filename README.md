@@ -22,7 +22,7 @@ Create a local account.
 View user and modify user roles.
 
 /customroles  
-View custom roles. This page is publicly viewable to anyone.
+View custom roles. This page is publicly viewable to any user with a valid token.
 
 /link  
 Link accounts.
@@ -55,7 +55,7 @@ will not change, even with a refresh - to see changes reset the form.
 All API calls require a valid token in the `Authorization` header except legacy API endpoints,
 which continue to use their original protocol.
 
-GET /api/V2/users/?users=&lt;comma separated user names&gt;  
+GET /api/V2/users/?list=&lt;comma separated user names&gt;  
 Validate a set of user names and get the users' display names. Returns a map of username ->
 display name. Any usernames that do not correspond to accounts will not be included in the map.
 

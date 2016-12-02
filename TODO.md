@@ -40,16 +40,19 @@ Auth service work
   * Login & signup very different
 * API
   * /me - view auth profile & update display name & email
+  * /user
+    * Add search on name, display name, or both, with prefix or substring search
 * Admin functionality
   * Find users
     * By name (regex)
-    * By role
-    * By full name (regex) (combine with name?)
+    * By role (custom or std)
+    * By display name (regex) (combine with name?)
   * revoke single / user's / all tokens
   * Disable account (revoke all tokens & prevent logins), record admin and reason
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd to new random pwd
   * Delete custom role
+* Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
 * Memory based data storage
