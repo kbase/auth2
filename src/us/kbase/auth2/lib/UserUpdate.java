@@ -30,6 +30,17 @@ public class UserUpdate {
 	}
 	
 	public boolean hasUpdates() {
-		return displayName != null && email != null;
+		return displayName != null || email != null;
+	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("UserUpdate [displayName=");
+		builder.append(displayName);
+		builder.append(", email=");
+		builder.append(email);
+		builder.append("]");
+		return builder.toString();
 	}
 }

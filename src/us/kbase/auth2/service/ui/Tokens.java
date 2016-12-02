@@ -1,7 +1,7 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
-import static us.kbase.auth2.service.ui.UIUtils.getToken;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 

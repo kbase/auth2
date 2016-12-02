@@ -132,12 +132,4 @@ public class UIUtils {
 		}
 		return new IncomingToken(val.trim());
 	}
-	
-	public static IncomingToken getToken(final String token)
-			throws NoTokenProvidedException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("No user token provided");
-		}
-		return new IncomingToken(token.trim());
-	}
 }
