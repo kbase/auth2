@@ -1,17 +1,26 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 
 import org.glassfish.jersey.server.mvc.Template;
 
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path(UIPaths.CUSTOM_ROLES_ROOT)
 public class CustomRoles {
@@ -26,10 +35,17 @@ public class CustomRoles {
 	@Inject
 	private Authentication auth;
 	
+	@Inject
+	private AuthAPIStaticConfig cfg;
+	
 	@GET
 	@Template(name = "/customroles")
-	public Map<String, Object> customRoles() throws AuthStorageException {
-		return ImmutableMap.of("roles", auth.getCustomRoles());
+	public Map<String, Object> customRoles(
+			@Context final HttpHeaders headers)
+			throws AuthStorageException, NoTokenProvidedException, InvalidTokenException,
+			UnauthorizedException { // can't actually be thrown
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		return ImmutableMap.of("roles", auth.getCustomRoles(token, false));
 	}
 
 }

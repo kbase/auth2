@@ -40,7 +40,7 @@ public class Users {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, String> getUsers(
 			@HeaderParam("authorization") final String token,
-			@QueryParam("users") final String users)
+			@QueryParam("list") final String users)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {
 		if (token == null || token.trim().isEmpty()) {

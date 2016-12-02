@@ -38,8 +38,6 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* UI
-  * Make customroles require a token - should log anyone that accesses the service
 * API
   * /me - view auth profile & update display name & email
   * /user
@@ -55,6 +53,7 @@ Auth service work
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd to new random pwd
   * Delete custom role
+* Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
 * Memory based data storage
