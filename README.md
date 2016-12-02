@@ -116,13 +116,13 @@ copy deploy.cfg.example to deploy.cfg and fill in appropriately
 
 Import Globus users
 ------------
-Use the `manageauth` script to import Globus users - run with the `--help`
+Use the `manage_auth` script to import Globus users - run with the `--help`
 option for instructions. 
 
 Administer the server
 ---------------------
 Set a root password:  
-`./manageauth -d <path to deploy.cfg> -r`  
+`./manage_auth -d <path to deploy.cfg> -r`  
 
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
