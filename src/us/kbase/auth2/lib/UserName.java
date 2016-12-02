@@ -39,8 +39,7 @@ public class UserName {
 			final Matcher m = INVALID_USER_NAME.matcher(name);
 			if (m.find()) {
 				throw new IllegalArgumentException(String.format(
-						"Illegal character in user name %s: %s",
-						name, m.group()));
+						"Illegal character in user name %s: %s", name, m.group()));
 			}
 			this.name = name.trim();
 		}

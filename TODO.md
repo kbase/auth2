@@ -29,7 +29,7 @@ Auth service work
 -----------------
 * UI (1-2 sprints w/ 1-2 FTEs per Bill & Erik)
   * Probably means altering server endpoints in concert with UI development
-* 150-200 TODOs in the codebase on average
+* 200 TODOs in the codebase on average
 * Read through all prototype code and convert to production worthy
 * A code review by Steve Chan wouldn't be a bad idea
 * Tests
@@ -39,7 +39,6 @@ Auth service work
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
 * API
-  * /user/<name> - get user details
   * /me - view auth profile & update display name & email
 * Admin functionality
   * Find users

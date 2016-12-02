@@ -4,6 +4,7 @@ public class APIPaths {
 
 	private static final String SEP = "/";
 	private static final String TOKEN = "token";
+	private static final String USERS = "users";
 	
 	private static final String API = "/api";
 	private static final String API_V2 = API + "/V2";
@@ -13,8 +14,11 @@ public class APIPaths {
 	
 	public static final String LEGACY_GLOBUS = API_LEGACY + "/globus";
 	
-	public static final String LEGACY_GLOBUS_USERS = "users/{user}";
+	public static final String LEGACY_GLOBUS_USERS = USERS + SEP + "{user}";
 	public static final String LEGACY_GLOBUS_TOKEN = "goauth" + SEP + TOKEN;
 	
 	public static final String API_V2_TOKEN = API_V2 + SEP + TOKEN;
+	
+	public static final String API_V2_USERS = API_V2 + SEP + USERS;
+	
 }
