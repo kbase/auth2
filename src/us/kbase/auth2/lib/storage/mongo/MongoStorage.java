@@ -293,7 +293,7 @@ public class MongoStorage implements AuthStorage {
 			db.getCollection(COL_USERS).updateOne(q, u,
 					new UpdateOptions().upsert(true));
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -325,9 +325,8 @@ public class MongoStorage implements AuthStorage {
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
 			}
-		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -357,11 +356,20 @@ public class MongoStorage implements AuthStorage {
 				this);
 	}
 	
+
+	private UserName getUserName(String namestr) throws AuthStorageException {
+		try {
+			return new UserName(namestr);
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
+		}
+	}
+	
 	private DisplayName getDisplayName(final String displayName) throws AuthStorageException {
 		try {
 			return new DisplayName(displayName);
 		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new AuthStorageException("Illegal data stored in the database" , e);
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
 	}
 	
@@ -372,7 +380,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			return new EmailAddress(email);
 		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new AuthStorageException("Illegal data stored in the database" , e);
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
 	}	
 	@Override
@@ -420,9 +428,8 @@ public class MongoStorage implements AuthStorage {
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
 			}
-		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -460,9 +467,8 @@ public class MongoStorage implements AuthStorage {
 			 * a programming error - should never try to insert a duplicate
 			 *  token
 			 */
-		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -487,9 +493,8 @@ public class MongoStorage implements AuthStorage {
 		try {
 			return db.getCollection(collection).find(query)
 					.projection(projection).first();
-		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -517,17 +522,6 @@ public class MongoStorage implements AuthStorage {
 				t.getDate(Fields.TOKEN_EXPIRY));
 	}
 
-	private UserName getUserName(String namestr) throws AuthStorageException {
-		final UserName name;
-		try {
-			name = new UserName(namestr);
-		} catch (MissingParameterException | IllegalParameterException e) {
-			throw new AuthStorageException("Illegal value stored in db: " +
-					e.getMessage(), e);
-		}
-		return name;
-	}
-
 	@Override
 	public Set<HashedToken> getTokens(final UserName userName)
 			throws AuthStorageException {
@@ -542,7 +536,7 @@ public class MongoStorage implements AuthStorage {
 				ret.add(getToken(d));
 			}
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 		return ret;
 	}
@@ -574,6 +568,31 @@ public class MongoStorage implements AuthStorage {
 				user.getDate(Fields.USER_LAST_LOGIN),
 				this);
 	}
+	
+	@Override
+	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
+			throws AuthStorageException {
+		final Map<UserName, DisplayName> ret = new HashMap<>();
+		if (users.isEmpty()) {
+			return ret;
+		}
+		final List<String> queryusers = users.stream().map(u -> u.getName())
+				.collect(Collectors.toList());
+		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
+		final Document projection = new Document(Fields.USER_NAME, 1)
+				.append(Fields.USER_DISPLAY_NAME, 1);
+		try {
+			final FindIterable<Document> docs = db.getCollection(COL_USERS)
+					.find(query).projection(projection);
+			for (final Document d: docs) {
+				ret.put(getUserName(d.getString(Fields.USER_NAME)),
+						getDisplayName(d.getString(Fields.USER_DISPLAY_NAME)));
+			}
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+		return ret;
+	}
 
 	@Override
 	public void deleteToken(
@@ -591,7 +610,7 @@ public class MongoStorage implements AuthStorage {
 						tokenId, userName.getName()));
 			}
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -628,7 +647,7 @@ public class MongoStorage implements AuthStorage {
 				throw new NoSuchUserException(userName.getName());
 			}
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -641,7 +660,7 @@ public class MongoStorage implements AuthStorage {
 					new Document("$set", new Document(Fields.ROLES_DESC, role.getDesc())),
 					new UpdateOptions().upsert(true));
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -660,8 +679,8 @@ public class MongoStorage implements AuthStorage {
 			}
 			return ret;
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
-		} 
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
 	}
 	
 	private Set<CustomRole> toCustomRoles(final Set<Document> roledocs)
@@ -702,8 +721,8 @@ public class MongoStorage implements AuthStorage {
 		try {
 			// don't care if no changes are made, just means the role is already gone
 			db.getCollection(COL_USERS).updateOne(query, mod);
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -793,7 +812,7 @@ public class MongoStorage implements AuthStorage {
 			// the update worked. If it was just unlinked we don't care.
 			db.getCollection(COL_USERS).updateOne(query, update);
 		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed", e);
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -815,10 +834,9 @@ public class MongoStorage implements AuthStorage {
 			 * a programming error - should never try to insert a duplicate
 			 *  token
 			 */
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
-		
 	}
 
 	private Document toDocument(final RemoteIdentityWithID id) {
@@ -948,8 +966,8 @@ public class MongoStorage implements AuthStorage {
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
 			}
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -976,8 +994,8 @@ public class MongoStorage implements AuthStorage {
 			if (r.getModifiedCount() != 1) {
 				throw new UnLinkFailedException("The user is not linked to the provided identity");
 			}
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
@@ -1013,9 +1031,8 @@ public class MongoStorage implements AuthStorage {
 				throw new NoSuchUserException(userName.getName());
 			}
 			// if it wasn't modified no problem.
-		} catch (MongoException me) {
-			throw new AuthStorageException(
-					"Connection to database failed", me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -1031,7 +1048,7 @@ public class MongoStorage implements AuthStorage {
 			final String key,
 			final Object value,
 			final boolean overwrite)
-			throws StorageInitException {
+			throws AuthStorageException {
 		final Document q = new Document(Fields.CONFIG_KEY, key);
 		updateConfig(collection, q, value, overwrite);
 	}
@@ -1041,7 +1058,7 @@ public class MongoStorage implements AuthStorage {
 			final Document query,
 			final Object value,
 			final boolean overwrite)
-			throws StorageInitException {
+			throws AuthStorageException {
 		if (value == null) {
 			return;
 		}
@@ -1051,10 +1068,8 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(collection).updateOne(query, u,
 					new UpdateOptions().upsert(true));
-		} catch (MongoException me) {
-			throw new StorageInitException(
-					"There was a problem communicating with the database: " +
-					me.getMessage(), me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 	
@@ -1063,7 +1078,7 @@ public class MongoStorage implements AuthStorage {
 			final String key,
 			final Object value,
 			final boolean overwrite)
-			throws StorageInitException {
+			throws AuthStorageException {
 		final Document q = new Document(Fields.CONFIG_KEY, key)
 				.append(Fields.CONFIG_PROVIDER, provider);
 		updateConfig(COL_CONFIG_PROVIDERS, q, value, overwrite);
@@ -1073,7 +1088,7 @@ public class MongoStorage implements AuthStorage {
 	public <T extends ExternalConfig> void updateConfig(
 			final AuthConfigSet<T> cfgSet,
 			final boolean overwrite)
-			throws StorageInitException {
+			throws AuthStorageException {
 		
 		updateConfig(COL_CONFIG_APPLICATION, Fields.CONFIG_APP_ALLOW_LOGIN,
 				cfgSet.getCfg().isLoginAllowed(), overwrite);
@@ -1154,10 +1169,8 @@ public class MongoStorage implements AuthStorage {
 			}
 			return new AuthConfigSet<T>(new AuthConfig(allowLogin, provs, tokens),
 					mapper.fromMap(ext));
-		} catch (MongoException me) {
-			throw new StorageInitException(
-					"There was a problem communicating with the database: " +
-					me.getMessage(), me);
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 }

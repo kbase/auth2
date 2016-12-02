@@ -76,6 +76,8 @@ public class Authentication {
 	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role 
 	 */
 	
+	private static final int MAX_RETURNED_USERS = 10000;
+	
 	private static final DisplayName UNKNOWN_DISPLAY_NAME;
 	static {
 		try {
@@ -118,7 +120,13 @@ public class Authentication {
 		}
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
-		storage.updateConfig(new AuthConfigSet<ExternalConfig>(ac, defaultExternalConfig), false);
+		try {
+			storage.updateConfig(new AuthConfigSet<ExternalConfig>(
+					ac, defaultExternalConfig), false);
+		} catch (AuthStorageException e) {
+			throw new StorageInitException("Failed to set config in storage: " +
+					e.getMessage(), e);
+		}
 		try {
 			cfg = new ConfigManager(storage);
 		} catch (AuthStorageException e) {
@@ -421,6 +429,22 @@ public class Authentication {
 		}
 	}
 
+	public Map<UserName, DisplayName> getUserDisplayNames(
+			final IncomingToken token,
+			final Set<UserName> usernames)
+			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
+		getToken(token); // just check the token is valid
+		if (usernames.size() > MAX_RETURNED_USERS) {
+			throw new IllegalParameterException(
+					"User count exceeds maximum of " + MAX_RETURNED_USERS);
+		}
+		if (usernames.isEmpty()) {
+			return new HashMap<>();
+		}
+		// TODO Auto-generated method stub
+		return storage.getUserDisplayNames(usernames);
+	}
+	
 	public void revokeToken(
 			final IncomingToken token,
 			final UUID tokenId)

@@ -1,6 +1,7 @@
 package us.kbase.auth2.lib.storage;
 
 import java.util.Date;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -25,7 +26,6 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
@@ -77,6 +77,10 @@ public interface AuthStorage {
 	// returns null if no user
 	// updates identity info if different from db (other than provider & id)
 	AuthUser getUser(RemoteIdentity remoteID) throws AuthStorageException;
+	
+	// any non-existent users are left out of the map without an error
+	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
+			throws AuthStorageException;
 
 	LocalUser getLocalUser(UserName userName)
 			throws AuthStorageException, NoSuchUserException;
@@ -142,7 +146,7 @@ public interface AuthStorage {
 	<T extends ExternalConfig> void updateConfig(
 			AuthConfigSet<T> authConfigSet,
 			boolean overwrite)
-			throws StorageInitException;
+			throws AuthStorageException;
 
 	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			ExternalConfigMapper<T> mapper)

@@ -10,40 +10,40 @@ Current endpoints
 
 
 /admin/customroles  
-add and view custom roles.
+Add and view custom roles.
 
 /admin/config  
-view and edit the server configuration.
+View and edit the server configuration.
 
 /admin/localaccount  
-create a local account.
+Create a local account.
 
 /admin/user/&lt;user name&gt;  
-view user and modify user roles.
+View user and modify user roles.
 
 /customroles  
-view custom roles. This page is publically viewable to anyone.
+View custom roles. This page is publicly viewable to anyone.
 
 /link  
-link accounts.
+Link accounts.
 
 /login  
-login to a provider based account. Stores a cookie with a token.
+Login to a provider based account. Stores a cookie with a token.
 
 /localaccount/login  
-login to a local account. Stores a cookie with a token.
+Login to a local account. Stores a cookie with a token.
 
 /localaccount/reset  
-reset the password for a local account.
+Reset the password for a local account.
 
 /logout  
-self explanatory.
+Self explanatory.
 
 /me  
-user page.
+User page.
 
 /tokens  
-list and create tokens.
+List and create tokens.
 
 Note that the current UI is a minimal implementation for the purposes of
 testing. In many cases a manual refresh of the page will be required to see
@@ -52,14 +52,26 @@ will not change, even with a refresh - to see changes reset the form.
 
 ### API
 
-/api/V2/token  
-Introspect tokens. Provide the token in an `Authorization` header.
+All API calls require a valid token in the `Authorization` header except legacy API endpoints,
+which continue to use their original protocol.
 
-/api/legacy/KBase/Sessions/Login  
-the legacy KBase API.
+GET /api/V2/users/?users=&lt;comma separated user names&gt;  
+Validate a set of user names and get the users' display names. Returns a map of username ->
+display name. Any usernames that do not correspond to accounts will not be included in the map.
 
-/api/legacy/globus  
-the legacy globus API. Endpoints are /goauth/token and /users.
+GET /api/V2/token  
+Introspect a token.
+
+#### Legacy
+
+Endpoints (mostly) identical to the original Globus and KBase auth endpoints are provided for
+backwards compatibility.
+
+POST /api/legacy/KBase/Sessions/Login  
+The legacy KBase API.
+
+GET /api/legacy/globus  
+The legacy globus API. Endpoints are /goauth/token and /users.
 
 Admin notes
 -----------

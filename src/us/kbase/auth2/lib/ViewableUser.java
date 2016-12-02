@@ -25,7 +25,7 @@ public class ViewableUser {
 	private final boolean local;
 	private final AuthUser user;
 	
-	public ViewableUser(final AuthUser user, boolean fullView) throws AuthStorageException {
+	public ViewableUser(final AuthUser user, final boolean fullView) throws AuthStorageException {
 		if (user == null) {
 			throw new NullPointerException("user");
 		}
