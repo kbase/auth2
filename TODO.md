@@ -41,7 +41,6 @@ Auth service work
 * API
   * /me - view auth profile & update display name & email
   * /user
-    * change users query param to list
     * Add search on name, display name, or both, with prefix or substring search
 * Admin functionality
   * Find users

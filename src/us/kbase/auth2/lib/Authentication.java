@@ -564,7 +564,7 @@ public class Authentication {
 	public Set<CustomRole> getCustomRoles(final IncomingToken token, final boolean forceAdmin)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		if (forceAdmin) {
-			getUser(token, Role.ADMIN);
+			getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT);
 		} else {
 			getToken(token); // check for valid token
 		}
