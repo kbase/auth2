@@ -25,7 +25,7 @@ public class UserName {
 		}
 	}
 	private final static Pattern INVALID_USER_NAME =
-			Pattern.compile("[^\\w-]");
+			Pattern.compile("[^a-z\\d_]");
 	private final static int MAX_NAME_LENGTH = 100;
 	
 	private final String name;
@@ -38,7 +38,7 @@ public class UserName {
 		} else {
 			final Matcher m = INVALID_USER_NAME.matcher(name);
 			if (m.find()) {
-				throw new IllegalArgumentException(String.format(
+				throw new IllegalParameterException(String.format(
 						"Illegal character in user name %s: %s", name, m.group()));
 			}
 			this.name = name.trim();

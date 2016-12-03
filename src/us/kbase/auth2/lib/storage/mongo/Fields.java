@@ -11,6 +11,7 @@ public class Fields {
 	//user fields
 	public static final String USER_NAME = "user";
 	public static final String USER_DISPLAY_NAME = "display";
+	public static final String USER_DISPLAY_NAME_LOWER = "displwr";
 	public static final String USER_EMAIL = "email";
 	public static final String USER_IDENTITIES = "idents";
 	public static final String USER_LOCAL = "lcl";
