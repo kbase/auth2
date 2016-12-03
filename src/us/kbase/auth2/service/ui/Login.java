@@ -86,7 +86,7 @@ public class Login {
 			@Context UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 			IllegalParameterException {
-		checkRedirectURL(redirect);
+		getRedirectURL(redirect);
 		if (provider != null && !provider.trim().isEmpty()) {
 			final String state = auth.getBareToken();
 			final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
@@ -120,7 +120,7 @@ public class Login {
 		}
 	}
 
-	private void checkRedirectURL(final String redirect)
+	private URL getRedirectURL(final String redirect)
 			throws AuthStorageException, IllegalParameterException {
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			final AuthExternalConfig ext;
@@ -129,8 +129,9 @@ public class Login {
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("Dude, like, what just happened?", e);
 			}
+			final URL url;
 			try {
-				new URL(redirect);
+				url = new URL(redirect);
 			} catch (MalformedURLException e) {
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
@@ -139,7 +140,12 @@ public class Login {
 					throw new IllegalParameterException(
 							"Illegal redirect url: " + redirect);
 				}
+			} else {
+				throw new IllegalParameterException("Post-login redirects are not enabled");
 			}
+			return url;
+		} else {
+			return null;
 		}
 	}
 
@@ -164,7 +170,7 @@ public class Login {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
-			UnauthorizedException {
+			UnauthorizedException, IllegalParameterException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -216,10 +222,11 @@ public class Login {
 		}
 	}
 
-	private URI getPostLoginRedirectURI(final String redirect, final String deflt) {
-		//TODO REDIRECT check redirect url matches allowed config & is valid URL
-		if (redirect != null && !redirect.trim().isEmpty()) {
-			return toURI(redirect);
+	private URI getPostLoginRedirectURI(final String redirect, final String deflt)
+			throws IllegalParameterException, AuthStorageException {
+		final URL redirURL = getRedirectURL(redirect);
+		if (redirURL != null) {
+			return toURI(redirURL);
 		}
 		return toURI(deflt);
 	}
@@ -303,7 +310,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, UnauthorizedException {
+			AuthStorageException, UnauthorizedException, IllegalParameterException {
 		
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
