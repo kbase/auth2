@@ -124,6 +124,8 @@ public class MongoStorage implements AuthStorage {
 		//find user by local identity id and ensure unique ids
 		users.put(Arrays.asList(Fields.USER_IDENTITIES + Fields.FIELD_SEP +
 				Fields.IDENTITIES_ID), IDX_UNIQ_SPARSE);
+		//find users by display name
+		users.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
 		INDEXES.put(COL_USERS, users);
 		
 		//roles indexes
@@ -255,8 +257,19 @@ public class MongoStorage implements AuthStorage {
 			}
 		}
 	}
-	
 
+	private List<String> getCanonicalDisplayName(final DisplayName display) {
+		final String[] parts = display.getName().toLowerCase().split("\\s");
+		final List<String> ret = new LinkedList<>();
+		for (String p: parts) {
+			p = p.trim();
+			if (!p.isEmpty()) {
+				ret.add(p);
+			}
+		}
+		return ret;
+	}
+	
 	@Override
 	public void createRoot(
 			final UserName root,
@@ -283,7 +296,7 @@ public class MongoStorage implements AuthStorage {
 		final Document setIfMissing = new Document(
 				Fields.USER_EMAIL, email.getAddress())
 				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
-				.append(Fields.USER_DISPLAY_NAME_LOWER, displayName.getName().toLowerCase())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(displayName))
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
@@ -310,8 +323,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LOCAL, true)
 				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_LOWER,
-						local.getDisplayName().getName().toLowerCase())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
+						local.getDisplayName()))
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
@@ -417,8 +430,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_LOWER,
-						user.getDisplayName().getName().toLowerCase())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
+						user.getDisplayName()))
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
@@ -1017,8 +1030,8 @@ public class MongoStorage implements AuthStorage {
 		final Document d = new Document();
 		if (update.getDisplayName() != null) {
 			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_LOWER,
-						update.getDisplayName().getName().toLowerCase());
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
+						update.getDisplayName()));
 		}
 		if (update.getEmail() != null) {
 			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());
