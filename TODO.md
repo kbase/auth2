@@ -49,6 +49,7 @@ Auth service work
       be allowed for regular user searches too.
   * revoke single / user's / all tokens
   * Disable account (revoke all tokens & prevent logins), record admin and reason
+    * Only root should be able to disable root, all admins can disable accounts
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd to new random pwd
   * Delete custom role
