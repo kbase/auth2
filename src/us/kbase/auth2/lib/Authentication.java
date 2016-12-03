@@ -441,7 +441,6 @@ public class Authentication {
 		if (usernames.isEmpty()) {
 			return new HashMap<>();
 		}
-		// TODO Auto-generated method stub
 		return storage.getUserDisplayNames(usernames);
 	}
 	
