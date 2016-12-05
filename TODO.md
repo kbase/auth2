@@ -38,8 +38,6 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* API
-  * /user - add search on name, display name, or both, with prefix search (on parts for disp. name)
 * Admin functionality
   * Find users
     * By name (regex?)

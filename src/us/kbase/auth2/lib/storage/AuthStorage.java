@@ -14,6 +14,7 @@ import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -80,6 +81,13 @@ public interface AuthStorage {
 	
 	// any non-existent users are left out of the map without an error
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
+			throws AuthStorageException;
+	
+	// if searchfields is empty searches all fields
+	Map<UserName, DisplayName> getUserDisplayNames(
+			String prefix,
+			Set<SearchField> searchFields,
+			int maxReturnedUsers)
 			throws AuthStorageException;
 
 	LocalUser getLocalUser(UserName userName)

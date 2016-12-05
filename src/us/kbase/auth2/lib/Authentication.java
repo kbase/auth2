@@ -444,6 +444,22 @@ public class Authentication {
 		return storage.getUserDisplayNames(usernames);
 	}
 	
+	// if searchfields is empty searches all fields
+	public Map<UserName, DisplayName> getUserDisplayNames(
+			final IncomingToken token,
+			final String prefix,
+			final Set<SearchField> searchFields)
+			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
+		getToken(token); // just check the token is valid
+		if (prefix == null || prefix.length() < 1) {
+			throw new IllegalParameterException("prefix must contain at least one character");
+		}
+		if (searchFields == null) {
+			throw new NullPointerException("searchFields");
+		}
+		return storage.getUserDisplayNames(prefix, searchFields, MAX_RETURNED_USERS);
+	}
+	
 	public void revokeToken(
 			final IncomingToken token,
 			final UUID tokenId)
