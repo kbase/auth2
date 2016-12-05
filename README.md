@@ -67,6 +67,13 @@ GET /api/V2/users/?list=&lt;comma separated user names&gt;
 Validate a set of user names and get the users' display names. Returns a map of username ->
 display name. Any usernames that do not correspond to accounts will not be included in the map.
 
+GET /api/V2/users/search/&lt;prefix&gt;/?fields=&lt;comma separated fields&gt;  
+Find users based on a prefix of the username or any parts of the display name, where parts are
+delimited by whitespace. By default the search occurs on all fields; setting the fields query
+parameter can restrict the search fields and thus possibly speed up the search. Current field names
+are `username` and `displayname`; any other field names are ignored. Returns a map of
+username -> display name. At most 10,000 names are returned.
+
 GET /api/V2/token  
 Introspect a token.
 

@@ -15,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
@@ -44,6 +45,7 @@ import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -590,26 +592,57 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
 			throws AuthStorageException {
-		final Map<UserName, DisplayName> ret = new HashMap<>();
 		if (users.isEmpty()) {
-			return ret;
+			return new HashMap<>();
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
+		return getDisplayNames(query, -1);
+	}
+
+	private Map<UserName, DisplayName> getDisplayNames(final Document query, final int limit)
+			throws AuthStorageException {
 		final Document projection = new Document(Fields.USER_NAME, 1)
 				.append(Fields.USER_DISPLAY_NAME, 1);
 		try {
 			final FindIterable<Document> docs = db.getCollection(COL_USERS)
 					.find(query).projection(projection);
+			if (limit > 0) {
+				docs.limit(limit);
+			}
+			final Map<UserName, DisplayName> ret = new HashMap<>();
 			for (final Document d: docs) {
 				ret.put(getUserName(d.getString(Fields.USER_NAME)),
 						getDisplayName(d.getString(Fields.USER_DISPLAY_NAME)));
 			}
+			return ret;
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
-		return ret;
+	}
+	
+	@Override
+	public Map<UserName, DisplayName> getUserDisplayNames(
+			final String prefix,
+			final Set<SearchField> searchFields,
+			final int limit)
+			throws AuthStorageException {
+		final List<Document> queries = new LinkedList<>();
+		final Document regex = new Document("$regex", "^" + Pattern.quote(prefix));
+		if (searchFields.contains(SearchField.USERNAME) || searchFields.isEmpty()) {
+			queries.add(new Document(Fields.USER_NAME, regex));
+		}
+		if (searchFields.contains(SearchField.DISPLAYNAME) || searchFields.isEmpty()) {
+			queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
+		}
+		final Document query;
+		if (queries.size() == 1) {
+			query = queries.get(0);
+		} else {
+			query = new Document("$or", queries);
+		}
+		return getDisplayNames(query, limit);
 	}
 
 	@Override
