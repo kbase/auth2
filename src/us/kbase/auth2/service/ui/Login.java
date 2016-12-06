@@ -15,7 +15,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Map.Entry;
 
 import javax.inject.Inject;
 import javax.ws.rs.CookieParam;
@@ -42,6 +41,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -267,39 +267,40 @@ public class Login {
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
-		final Map<RemoteIdentityWithID, AuthUser> ids = auth.getLoginState(
-				new IncomingToken(token.trim()));
+		final LoginState loginState = auth.getLoginState(new IncomingToken(token.trim()));
 		
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
-		ret.put("provider", ids.keySet().iterator().next().getRemoteID().getProvider());
+		ret.put("provider", loginState.getProvider());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, Object>> login = new LinkedList<>();
 		ret.put("create", create);
 		ret.put("login", login);
 		
-		for (final Entry<RemoteIdentityWithID, AuthUser> e: ids.entrySet()) {
-			final RemoteIdentityWithID id = e.getKey();
-			if (e.getValue() == null) {
-				final Map<String, String> c = new HashMap<>();
-				c.put("id", id.getID().toString());
-				//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
-				c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
-				c.put("prov_username", id.getDetails().getUsername());
-				c.put("prov_fullname", id.getDetails().getFullname());
-				c.put("prov_email", id.getDetails().getEmail());
-				create.add(c);
-			} else {
-				final Map<String, Object> l = new HashMap<>();
-				l.put("id", id.getID().toString());
-				l.put("prov_username", id.getDetails().getUsername());
-				l.put("username", e.getValue().getUserName().getName());
-				l.put("disabled", e.getValue().isDisabled());
-				//TODO NOW add disabled to UI
-				login.add(l);
+		for (final RemoteIdentityWithID id: loginState.getIdentities()) {
+			final Map<String, String> c = new HashMap<>();
+			c.put("id", id.getID().toString());
+			//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
+			c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
+			c.put("prov_username", id.getDetails().getUsername());
+			c.put("prov_fullname", id.getDetails().getFullname());
+			c.put("prov_email", id.getDetails().getEmail());
+			create.add(c);
+		}
+		for (final UserName userName: loginState.getUsers()) {
+			final AuthUser user = loginState.getUser(userName);
+			final Map<String, Object> l = new HashMap<>();
+			l.put("username", userName.getName());
+			l.put("disabled", user.isDisabled());
+			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
+			final List<String> remoteIDs = new LinkedList<>();
+			for (final RemoteIdentityWithID id: loginState.getIdentities(userName)) {
+				remoteIDs.add(id.getDetails().getUsername());
 			}
+			l.put("prov_usernames", remoteIDs);
+			login.add(l);
 		}
 		return ret;
 	}

@@ -7,12 +7,15 @@
 <p>The login information from the provider allows you to access these
 accounts:</p>
 {{#login}}
-Provider username: {{prov_username}}<br/>
-Username: {{username}}<br/>
+Username: {{username}} {{#disabled}}DISABLED{{/disabled}}<br/>
+Provider usernames: {{prov_usernames}}<br/>
+{{^disabled}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Login"/>
 </form>
+{{/disabled}}
+<br/>
 {{/login}}
 
 <h3>Create account</h3>

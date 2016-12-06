@@ -691,31 +691,22 @@ public class Authentication {
 	}
 
 
-	public Map<RemoteIdentityWithID, AuthUser> getLoginState(
+	public LoginState getLoginState(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
 		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
-		final Map<RemoteIdentityWithID, AuthUser> ret = new HashMap<>();
-		// TODO BUG ID2 if there's a choice of KBase user account, the choice page should list all remote accounts that provide access to the KBase account rather than 
-		String provider = null;
+		final LoginState.Builder builder = new LoginState.Builder();
 		for (final RemoteIdentityWithID ri: ids) {
-			if (provider == null) {
-				provider = ri.getRemoteID().getProvider();
-			} else if (!provider.equals(ri.getRemoteID().getProvider())) {
-				throw new AuthStorageException("More than one identity " +
-						"provider associated with this token");
-			}
 			final AuthUser u = storage.getUser(ri);
 			if (u == null) {
-				ret.put(ri, null);
-			} else if (!ret.containsValue(u)){ //TODO BUG ID1 removed equals and hashcode from authuser. Need to do something else here. Make class with unassociated RIDs and a map of UserName-> AuthUser and the list of IDs for that authuser.
-				//don't use the updated ri here since the ri associated with
-				//the temporary token has not been updated
-				// update 16/12/05: Not sure what I was talking about here
-				ret.put(ri, u);
+				builder.addIdentity(ri);
+			} else {
+				//don't use the updated RemoteIdentity from the AuthUser here since the ri
+				// associated with the temporary token has not been updated
+				builder.addUser(u, ri);
 			}
 		}
-		return ret;
+		return builder.build();
 	}
 
 	private Set<RemoteIdentityWithID> getTemporaryIdentities(
