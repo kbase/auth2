@@ -294,7 +294,12 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, rolestr)
 				.append(Fields.USER_RESET_PWD, false)
 				.append(Fields.USER_PWD_HSH, encpwd)
-				.append(Fields.USER_SALT, encsalt);
+				.append(Fields.USER_SALT, encsalt)
+				// ideally only set name to  root if 1) the root account already exists and 2)
+				// the field isn't set to root, but that's too much trouble for now
+				// could do it with an insert/update cycle
+				.append(Fields.USER_DISABLED_ADMIN, null)
+				.append(Fields.USER_DISABLED_REASON, null);// always enable
 		final Document setIfMissing = new Document(
 				Fields.USER_EMAIL, email.getAddress())
 				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
@@ -302,9 +307,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
-				.append(Fields.USER_RESET_PWD_LAST, null)
-				.append(Fields.USER_DISABLED_ADMIN, null)
-				.append(Fields.USER_DISABLED_REASON, null);
+				.append(Fields.USER_RESET_PWD_LAST, null);
 		final Document u = new Document("$set", set)
 				.append("$setOnInsert", setIfMissing);
 		try {

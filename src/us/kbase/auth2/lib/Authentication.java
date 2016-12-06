@@ -346,7 +346,6 @@ public class Authentication {
 		}
 	}
 
-	//TODO NOW always reenable ROOT when setting the password from the command line
 	public NewToken createToken(
 			final IncomingToken token,
 			final String tokenName,
