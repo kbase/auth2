@@ -16,10 +16,25 @@ public class LoginState {
 	private final Map<UserName, Set<RemoteIdentityWithID>> userIDs = new HashMap<>();
 	private final Map<UserName, AuthUser> users = new HashMap<>();
 	private final Set<RemoteIdentityWithID> noUser = new HashSet<>();
-	private String provider;
+	private final String provider;
+	private final boolean nonAdminLoginAllowed;
 
+	private LoginState(final String provider, final boolean nonAdminLoginAllowed) {
+		this.provider = provider;
+		this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+	}
+	
 	public String getProvider() {
 		return provider;
+	}
+	
+	public boolean isNonAdminLoginAllowed() {
+		return nonAdminLoginAllowed;
+	}
+	
+	public boolean isAdmin(final UserName name) {
+		checkUser(name);
+		return Role.isAdmin(users.get(name).getRoles());
 	}
 	
 	public Set<RemoteIdentityWithID> getIdentities() {
@@ -49,7 +64,14 @@ public class LoginState {
 
 	public static class Builder {
 		
-		private final LoginState ls = new LoginState();
+		private final LoginState ls;
+
+		public Builder(final String provider, final boolean nonAdminLoginAllowed) {
+			if (provider == null || provider.trim().isEmpty()) {
+				throw new IllegalArgumentException("provider cannot be null or empty");
+			}
+			ls = new LoginState(provider, nonAdminLoginAllowed);
+		}
 
 		public void addIdentity(final RemoteIdentityWithID remoteID) {
 			if (remoteID == null) {
@@ -60,9 +82,7 @@ public class LoginState {
 		}
 
 		private void checkProvider(final RemoteIdentityWithID remoteID) {
-			if (ls.provider == null) {
-				ls.provider = remoteID.getRemoteID().getProvider();
-			} else if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
+			if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}
@@ -88,7 +108,4 @@ public class LoginState {
 			return ls;
 		}
 	}
-
-	private LoginState() {}
-
 }

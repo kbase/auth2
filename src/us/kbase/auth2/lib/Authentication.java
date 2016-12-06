@@ -640,14 +640,15 @@ public class Authentication {
 		return tokens.getToken();
 	}
 
-	// split from getloginstate since the user may need to make a choice
-	// we assume that this is via a html page and therefore a redirect should
-	// occur before said choice to hide the authcode, hence the temporary
-	// token instead of returning the choices directly
+	/* split from getLoginState() since the user may need to make a choice
+	 * This function is almost certainly being called as a result of a redirect from a 3rd party
+	 * with the authcode in the url. Hence another redirect should
+	 * occur before said choice to hide the authcode, hence the temporary
+	 * token instead of returning the choices directly
+	 */
 	public LoginToken login(final String provider, final String authcode)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException,
-			UnauthorizedException {
+			AuthStorageException, NoSuchIdentityProviderException {
 		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
@@ -669,33 +670,51 @@ public class Authentication {
 		}
 		final LoginToken lr;
 		if (names.size() == 1 && noUser.isEmpty()) {
-			//TODO NOW how should the UI handle this? Just got redirected, and needs to get redirected to the UI.
+			/* Don't throw an error here since an auth UI is not controlling the call in most
+			 * cases - this call is almost certainly the result of a redirect from a 3rd party
+			 * provider. Any controllable error should be thrown when the process flow is back
+			 * under the control of the primary auth UI.
+			 * 
+			 * There's a tiny chance here that the user could be made an admin, be enabled, or
+			 * non-admin login be enabled between this step and the getLoginState() step. The
+			 * consequence is that they'll have to choose from one account in the next step,
+			 * so who cares.
+			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(lastUser.getRoles())) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Non-admin login is disabled");
+				lr = storeIdentitiesTemporarily(noUser, hasUser);
+			} else if (lastUser.isDisabled()) {
+				lr = storeIdentitiesTemporarily(noUser, hasUser);
+			} else {
+				lr = new LoginToken(login(lastUser.getUserName()));
 			}
-			if (lastUser.isDisabled()) { //TODO NOW store exception in the DB and redirect for both of these exceptions
-				throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
-			}
-			lr = new LoginToken(login(lastUser.getUserName()));
 		} else {
-			final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 10 * 60 * 1000);
-			final Set<RemoteIdentityWithID> store = noUser.stream()
-					.map(id -> id.withID()).collect(Collectors.toSet());
-			hasUser.stream().forEach(id -> store.add(id));
-
-			storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
-			lr = new LoginToken(tt);
+			// store the identities so the user can create an account or choose from more than one
+			// account
+			lr = storeIdentitiesTemporarily(noUser, hasUser);
 		}
 		return lr;
 	}
 
+	private LoginToken storeIdentitiesTemporarily(
+			final Set<RemoteIdentity> noUser,
+			final Set<RemoteIdentityWithID> hasUser)
+			throws AuthStorageException {
+		final Set<RemoteIdentityWithID> store = noUser.stream()
+				.map(id -> id.withID()).collect(Collectors.toSet());
+		hasUser.stream().forEach(id -> store.add(id));
 
-	public LoginState getLoginState(
-			final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException {
+		final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 10 * 60 * 1000);
+		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
+		return new LoginToken(tt);
+	}
+
+
+	public LoginState getLoginState(final IncomingToken token)
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
-		final LoginState.Builder builder = new LoginState.Builder();
+		final String provider = ids.iterator().next().getRemoteID().getProvider();
+		final LoginState.Builder builder = new LoginState.Builder(provider,
+				cfg.getAppConfig().isLoginAllowed());
 		for (final RemoteIdentityWithID ri: ids) {
 			final AuthUser u = storage.getUser(ri);
 			if (u == null) {
@@ -758,7 +777,7 @@ public class Authentication {
 			// someone's trying to login to an account they haven't created yet
 			// The UI shouldn't allow this, but they can always curl
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"There is no account linked to the provided identity");
+					"There is no account linked to the provided identity ID");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -799,6 +818,7 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException,
 			LinkFailedException, NoSuchIdentityProviderException {
+		//TODO UI probably need to catch link failed exception and allow a redirect anyway, need to check with B. Riehl
 		final AuthUser u = getUser(token);
 		if (u.isLocal()) {
 			throw new LinkFailedException(

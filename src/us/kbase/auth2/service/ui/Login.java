@@ -9,7 +9,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.NoSuchProviderException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -168,9 +167,8 @@ public class Login {
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
-			throws MissingParameterException, AuthenticationException,
-			NoSuchProviderException, AuthStorageException,
-			UnauthorizedException, IllegalParameterException {
+			throws MissingParameterException, AuthStorageException,
+			IllegalParameterException, AuthenticationException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -246,7 +244,7 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		return loginChoice(token, uriInfo);
 	}
 
@@ -258,12 +256,13 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		return loginChoice(token, uriInfo);
 	}
 	
 	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+			UnauthorizedException {
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
@@ -273,6 +272,7 @@ public class Login {
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put("provider", loginState.getProvider());
+		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, Object>> login = new LinkedList<>();
@@ -289,11 +289,15 @@ public class Login {
 			c.put("prov_email", id.getDetails().getEmail());
 			create.add(c);
 		}
+		final boolean adminOnly = !loginState.isNonAdminLoginAllowed();
 		for (final UserName userName: loginState.getUsers()) {
 			final AuthUser user = loginState.getUser(userName);
+			final boolean loginRestricted = adminOnly && !loginState.isAdmin(userName);
 			final Map<String, Object> l = new HashMap<>();
 			l.put("username", userName.getName());
+			l.put("loginallowed", !(user.isDisabled() || loginRestricted));
 			l.put("disabled", user.isDisabled());
+			l.put("adminonly", loginRestricted);
 			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
 			final List<String> remoteIDs = new LinkedList<>();
 			for (final RemoteIdentityWithID id: loginState.getIdentities(userName)) {

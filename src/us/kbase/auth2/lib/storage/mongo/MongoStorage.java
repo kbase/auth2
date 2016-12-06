@@ -489,8 +489,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	private boolean isDuplicateKeyException(final MongoWriteException mwe) {
-		return mwe.getError().getCategory().equals(
-				ErrorCategory.DUPLICATE_KEY);
+		return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
 	}
 	
 	@Override
@@ -994,7 +993,7 @@ public class MongoStorage implements AuthStorage {
 		while (!complete) {
 			count++;
 			if (count > 5) {
-				throw new LinkFailedException("Attempted link update 5 times without success. " +
+				throw new RuntimeException("Attempted link update 5 times without success. " +
 						"There's probably a programming error here.");
 			}
 			complete = addIdentity(user, remoteID);
@@ -1004,8 +1003,7 @@ public class MongoStorage implements AuthStorage {
 	private boolean addIdentity(
 			final UserName userName,
 			final RemoteIdentityWithID remoteID)
-			throws NoSuchUserException, AuthStorageException,
-			LinkFailedException {
+			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
 		 * documents, adding the same provider ID to a single document twice is possible without
