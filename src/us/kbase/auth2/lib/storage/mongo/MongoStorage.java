@@ -952,15 +952,13 @@ public class MongoStorage implements AuthStorage {
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
-		final List<Document> ids =
-				(List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
-		if (ids == null || ids.isEmpty()) {
+		final List<Document> ids = (List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
+		if (ids == null) {
 			final String tid = d.getString(Fields.TEMP_TOKEN_ID);
 			throw new AuthStorageException(String.format(
-					"Temporary token %s has no associated IDs", tid));
+					"Temporary token %s has no associated IDs field", tid));
 		}
-		final Set<RemoteIdentityWithID> ret = toIdentities(ids);
-		return ret;
+		return toIdentities(ids);
 	}
 
 	private Set<RemoteIdentityWithID> toIdentities(final List<Document> ids) {

@@ -26,6 +26,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -64,7 +65,6 @@ public class Authentication {
 	//TODO SCOPES configure scope on login via ui
 	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
 	//TODO ADMIN revoke user token, revoke all tokens for a user, revoke all tokens
-	//TODO ADMIN deactivate account
 	//TODO ADMIN force user pwd reset
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
@@ -379,12 +379,13 @@ public class Authentication {
 	
 	// gets user for token
 	public AuthUser getUser(final IncomingToken token)
-			throws InvalidTokenException, AuthStorageException {
+			throws InvalidTokenException, AuthStorageException, DisabledUserException {
 		try {
 			return getUser(token, new Role[0]);
+		} catch (DisabledUserException e) {
+			throw e;
 		} catch (UnauthorizedException e) {
-			throw new RuntimeException(
-					"Good job dude, you just broke reality", e); 
+			throw new RuntimeException("Good job dude, you just broke reality", e);
 		}
 	}
 	
@@ -409,7 +410,7 @@ public class Authentication {
 		if (u.isDisabled()) {
 			// apparently this disabled user still has some tokens, so kill 'em all
 			storage.deleteTokens(ht.getUserName());
-			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
+			throw new DisabledUserException("This account is disabled");
 		}
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
@@ -712,6 +713,10 @@ public class Authentication {
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
+		if (ids.isEmpty()) {
+			throw new RuntimeException(
+					"Programming error: temporary login token stored with no identities");
+		}
 		final String provider = ids.iterator().next().getRemoteID().getProvider();
 		final LoginState.Builder builder = new LoginState.Builder(provider,
 				cfg.getAppConfig().isLoginAllowed());
@@ -784,7 +789,7 @@ public class Authentication {
 					"Non-admin login is disabled");
 		}
 		if (u.isDisabled()) {
-			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
+			throw new DisabledUserException("This account is disabled");
 		}
 		return login(u.getUserName());
 	}
@@ -807,22 +812,23 @@ public class Authentication {
 		return match;
 	}
 
-	// split from getlinkstate since the user may need to make a choice
-	// we assume that this is via a html page and therefore a redirect should
-	// occur before said choice to hide the authcode, hence the temporary
-	// token instead of returning the choices directly
+	/* split from getLinkState() since the user may need to make a choice
+	 * This function is almost certainly being called as a result of a redirect from a 3rd party
+	 * with the authcode in the url. Hence another redirect should
+	 * occur before said choice to hide the authcode, hence the temporary
+	 * token instead of returning the choices directly
+	 */
 	public LinkToken link(
 			final IncomingToken token,
 			final String provider,
 			final String authcode)
 			throws InvalidTokenException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException,
-			LinkFailedException, NoSuchIdentityProviderException {
-		//TODO UI probably need to catch link failed exception and allow a redirect anyway, need to check with B. Riehl
-		final AuthUser u = getUser(token);
+			LinkFailedException, NoSuchIdentityProviderException, DisabledUserException {
+		final AuthUser u = getUser(token); // UI shouldn't allow disabled users to link
 		if (u.isLocal()) {
-			throw new LinkFailedException(
-					"Cannot link identities to local accounts");
+			// the ui shouldn't allow local users to link accounts, so ok to throw this
+			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
@@ -830,18 +836,26 @@ public class Authentication {
 		}
 		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true);
 		filterLinkCandidates(ids);
+		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
+		 * most cases - this call is almost certainly the result of a redirect from a 3rd party
+		 * provider. Any controllable error should be thrown when the process flow is back
+		 * under the control of the primary auth UI.
+		 */
 		final LinkToken lt;
-		final ProviderConfig pc = cfg.getAppConfig()
-				.getProviderConfig(provider);
+		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
+				/* throws link failed exception if u is a local user or the id is already linked
+				 * Since we already checked those, only a rare race condition can cause a link
+				 * failed exception, and the consequence is trivial so don't worry about it
+				 */
 				storage.link(u.getUserName(), ids.iterator().next().withID());
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException(
 						"User unexpectedly disappeared from the database", e);
 			}
 			lt = new LinkToken();
-		} else {
+		} else { // will store an ID set if said set is empty.
 			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
 					10 * 60 * 1000);
 			storage.storeIdentitiesTemporarily(tt.getHashedToken(),
@@ -853,16 +867,12 @@ public class Authentication {
 	}
 
 	private void filterLinkCandidates(final Set<? extends RemoteIdentity> rids)
-			throws AuthStorageException, LinkFailedException {
+			throws AuthStorageException {
 		final Iterator<? extends RemoteIdentity> iter = rids.iterator();
 		while (iter.hasNext()) {
 			if (storage.getUser(iter.next()) != null) {
 				iter.remove();
 			}
-		}
-		if (rids.isEmpty()) {
-			throw new LinkFailedException(
-					"All provided identities are already linked");
 		}
 	}
 	
@@ -870,31 +880,34 @@ public class Authentication {
 			final IncomingToken token,
 			final IncomingToken linktoken)
 			throws InvalidTokenException, AuthStorageException,
-			LinkFailedException {
+			LinkFailedException, DisabledUserException {
 		final AuthUser u = getUser(token);
-		final Set<RemoteIdentityWithID> ids =
-				getTemporaryIdentities(linktoken);
+		if (u.isLocal()) {
+			throw new LinkFailedException("Cannot link identities to local accounts");
+		}
+		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(linktoken);
 		filterLinkCandidates(ids);
+		if (ids.isEmpty()) {
+			throw new LinkFailedException("All provided identities are already linked");
+		}
 		return new LinkIdentities(u, ids);
 	}
-
 
 	public void link(
 			final IncomingToken token,
 			final IncomingToken linktoken,
 			final UUID identityID)
 			throws AuthStorageException, AuthenticationException,
-			LinkFailedException {
-		final HashedToken ht = getToken(token);
+			LinkFailedException, DisabledUserException {
+		final AuthUser ht = getUser(token);
 		final RemoteIdentityWithID ri = getIdentity(linktoken, identityID);
 		try {
 			storage.link(ht.getUserName(), ri);
 		} catch (NoSuchUserException e) {
-			throw new AuthStorageException("Token without a user: " +
-					ht.getId());
+			throw new AuthStorageException("User magically disappeared from database: " +
+					ht.getUserName().getName());
 		}
 	}
-
 
 	public void unlink(
 			final IncomingToken token,

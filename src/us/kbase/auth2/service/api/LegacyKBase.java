@@ -16,6 +16,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -56,7 +57,7 @@ public class LegacyKBase {
 			@FormParam("token") final String token,
 			@FormParam("fields") String fields)
 			throws AuthStorageException,
-			MissingParameterException, InvalidTokenException {
+			MissingParameterException, InvalidTokenException, DisabledUserException {
 		if (token == null || token.trim().isEmpty()) {
 			throw new MissingParameterException("token");
 		}

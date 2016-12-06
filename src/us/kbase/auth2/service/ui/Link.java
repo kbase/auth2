@@ -42,6 +42,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -78,7 +79,7 @@ public class Link {
 			@QueryParam("provider") final String provider,
 			@Context UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, NoTokenProvidedException,
-			InvalidTokenException, AuthStorageException {
+			InvalidTokenException, AuthStorageException, DisabledUserException {
 
 		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		
@@ -129,7 +130,7 @@ public class Link {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
-			NoTokenProvidedException, LinkFailedException {
+			NoTokenProvidedException, LinkFailedException, DisabledUserException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -214,7 +215,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException {
+			InvalidTokenException, LinkFailedException, DisabledUserException {
 		return linkChoice(headers, linktoken, uriInfo);
 	}
 	
@@ -227,7 +228,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException {
+			InvalidTokenException, LinkFailedException, DisabledUserException {
 		return linkChoice(headers, linktoken, uriInfo);
 	}
 
@@ -236,7 +237,7 @@ public class Link {
 			final String linktoken,
 			final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			LinkFailedException {
+			LinkFailedException, DisabledUserException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
@@ -273,7 +274,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException {
+			AuthStorageException, LinkFailedException, DisabledUserException {
 		
 		pickAccount(headers, linktoken, identityID);
 		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
@@ -288,7 +289,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@QueryParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException {
+			AuthStorageException, LinkFailedException, DisabledUserException {
 		
 		pickAccount(headers, linktoken, identityID);
 		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
@@ -299,7 +300,7 @@ public class Link {
 			final String linktoken,
 			final UUID identityID)
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
-			LinkFailedException {
+			LinkFailedException, DisabledUserException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
