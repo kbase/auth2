@@ -245,7 +245,7 @@ public class Authentication {
 		final Password pwd = new Password(tokens.getTemporaryPassword(10));
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final LocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
+		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
@@ -653,45 +653,36 @@ public class Authentication {
 			throw new MissingParameterException("authorization code");
 		}
 		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, false);
+		AuthUser lastUser = null;
+		final Set<UserName> names = new HashSet<>();
 		final Set<RemoteIdentity> noUser = new HashSet<>();
-		final Map<RemoteIdentityWithID, AuthUser> hasUser = new HashMap<>();
-//		final Set<UserName> seenUsers = new HashSet<>(); // since AuthUser equals and hashcode situation is too complex
+		final Set<RemoteIdentityWithID> hasUser = new HashSet<>();
 		for (final RemoteIdentity id: ids) {
-			final AuthUser user = storage.getUser(id);
-			if (user != null) {
-				/* TODO BUG ID1 if a user is linked to more than one identity in the returned set, the user will exist in the map twice. (see below)
-				 * Note that AuthUser's equals and hashcode methods are the same as Object 
-				 * because user custom roles are abstract to allow lazy fetching
-				 * If there's only one user choice the login should proceed directly.
-				 * However, if there's a choice of KBase user account, the choice page should
-				 * list all remote accounts that provide access to the KBase account rather than
-				 * just the first one encountered.
-				 * 
-				 * Change this so just stores the last seen user, the seen usernames, a boolean for whether there's at least one create possiblity, and the updated IDs. No need for a map here.
-				 *  
-				 */
-				hasUser.put(user.getIdentity(id), user);
+			lastUser = storage.getUser(id);
+			if (lastUser != null) {
+				hasUser.add(lastUser.getIdentity(id));
+				// since AuthUser equals and hashcode situation is too complex
+				names.add(lastUser.getUserName()); 
 			} else {
 				noUser.add(id);
 			}
 		}
 		final LoginToken lr;
-		if (hasUser.size() == 1 && noUser.isEmpty()) {
-			final AuthUser user = hasUser.values().iterator().next();
+		if (names.size() == 1 && noUser.isEmpty()) {
 			//TODO NOW how should the UI handle this? Just got redirected, and needs to get redirected to the UI.
-			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(lastUser.getRoles())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Non-admin login is disabled");
 			}
-			if (user.isDisabled()) { //TODO NOW store exception in the DB and redirect for both of these exceptions
+			if (lastUser.isDisabled()) { //TODO NOW store exception in the DB and redirect for both of these exceptions
 				throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
 			}
-			lr = new LoginToken(login(user.getUserName()));
+			lr = new LoginToken(login(lastUser.getUserName()));
 		} else {
 			final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithID> store = noUser.stream()
 					.map(id -> id.withID()).collect(Collectors.toSet());
-			hasUser.keySet().stream().forEach(id -> store.add(id));
+			hasUser.stream().forEach(id -> store.add(id));
 
 			storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 			lr = new LoginToken(tt);
@@ -705,7 +696,7 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException {
 		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
 		final Map<RemoteIdentityWithID, AuthUser> ret = new HashMap<>();
-		
+		// TODO BUG ID2 if there's a choice of KBase user account, the choice page should list all remote accounts that provide access to the KBase account rather than 
 		String provider = null;
 		for (final RemoteIdentityWithID ri: ids) {
 			if (provider == null) {

@@ -13,6 +13,8 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.NewLocalUser;
+import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
@@ -63,13 +65,13 @@ public interface AuthStorage {
 	 * system occurs.
 	 * @throws UserExistsException if the user already exists.
 	 */
-	void createLocalUser(LocalUser local)
+	void createLocalUser(NewLocalUser local)
 			throws AuthStorageException, UserExistsException;
 
 	void changePassword(UserName userName, byte[] passwordHash, byte[] salt)
 			throws NoSuchUserException, AuthStorageException;
 	
-	void createUser(AuthUser authUser)
+	void createUser(NewUser authUser)
 			throws UserExistsException, AuthStorageException;
 
 	void disableAccount(UserName user, UserName admin, String reason)

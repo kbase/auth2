@@ -44,6 +44,8 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.NewLocalUser;
+import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
@@ -319,7 +321,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createLocalUser(final LocalUser local)
+	public void createLocalUser(final NewLocalUser local)
 			throws UserExistsException, AuthStorageException {
 		final String pwdhsh = Base64.getEncoder().encodeToString(
 				local.getPasswordHash());
@@ -432,7 +434,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createUser(final AuthUser user)
+	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException {
 		if (user.isLocal()) {
 			throw new IllegalArgumentException("cannot create a local user");
