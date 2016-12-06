@@ -918,6 +918,10 @@ public class Authentication {
 			throw new NullPointerException("user");
 		}
 		if (disable) {
+			if (user.isRoot() && !admin.isRoot()) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only the root user can disable the root account");
+			}
 			if (reason == null || reason.isEmpty()) {
 				throw new IllegalParameterException(
 						"Must provide a reason why the account was disabled");
