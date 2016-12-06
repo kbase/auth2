@@ -21,6 +21,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -56,8 +57,8 @@ public class Users {
 			try {
 				uns.add(new UserName(u));
 			} catch (MissingParameterException | IllegalParameterException e) {
-				throw new IllegalParameterException(String.format("Illegal username [%s]: %s",
-						u, e.getMessage()));
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
+						"Illegal username [%s]: %s", u, e.getMessage()));
 			}
 		}
 		final Map<UserName, DisplayName> dns = auth.getUserDisplayNames(getToken(token), uns);
@@ -76,7 +77,6 @@ public class Users {
 			@QueryParam("fields") final String fields)
 			throws InvalidTokenException, NoTokenProvidedException, AuthStorageException,
 			IllegalParameterException {
-		//TODO NOW limit to 10K names
 		final Set<SearchField> searchFields = new HashSet<>();
 		if (fields != null) {
 			final String[] splitFields = fields.split(",");

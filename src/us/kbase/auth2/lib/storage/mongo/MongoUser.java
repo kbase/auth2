@@ -32,8 +32,11 @@ public class MongoUser extends AuthUser {
 			final Set<ObjectId> customRoles,
 			final Date created,
 			final Date lastLogin,
+			final UserName lastAdminDisable,
+			final String disableReason,
 			final MongoStorage storage) {
-		super(userName, email, displayName, identities, roles, created, lastLogin);
+		super(userName, email, displayName, identities, roles, created, lastLogin,
+				lastAdminDisable, disableReason);
 		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {
 			memoizedCustomRoles = Collections.emptySet();
@@ -43,7 +46,8 @@ public class MongoUser extends AuthUser {
 
 	MongoUser(final MongoUser user, final Set<RemoteIdentityWithID> newIDs) {
 		super(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
-				user.getCreated(), user.getLastLogin());
+				user.getCreated(), user.getLastLogin(), user.getAdminThatToggledEnabledState(),
+				user.getReasonForDisabled());
 		this.customRoles = user.customRoles;
 		this.memoizedCustomRoles = user.memoizedCustomRoles;
 		this.storage = user.storage;

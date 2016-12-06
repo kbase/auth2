@@ -72,6 +72,12 @@ public interface AuthStorage {
 	void createUser(AuthUser authUser)
 			throws UserExistsException, AuthStorageException;
 
+	void disableAccount(UserName user, UserName admin, String reason)
+			throws NoSuchUserException, AuthStorageException;
+
+	void enableAccount(UserName user, UserName admin)
+			throws NoSuchUserException, AuthStorageException;
+	
 	AuthUser getUser(UserName userName)
 			throws AuthStorageException, NoSuchUserException;
 	

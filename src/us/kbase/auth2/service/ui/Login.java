@@ -276,7 +276,7 @@ public class Login {
 		ret.put("provider", ids.keySet().iterator().next().getRemoteID().getProvider());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
-		final List<Map<String, String>> login = new LinkedList<>();
+		final List<Map<String, Object>> login = new LinkedList<>();
 		ret.put("create", create);
 		ret.put("login", login);
 		
@@ -292,10 +292,12 @@ public class Login {
 				c.put("prov_email", id.getDetails().getEmail());
 				create.add(c);
 			} else {
-				final Map<String, String> l = new HashMap<>();
+				final Map<String, Object> l = new HashMap<>();
 				l.put("id", id.getID().toString());
 				l.put("prov_username", id.getDetails().getUsername());
 				l.put("username", e.getValue().getUserName().getName());
+				l.put("disabled", e.getValue().isDisabled());
+				//TODO NOW add disabled to UI
 				login.add(l);
 			}
 		}

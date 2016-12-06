@@ -19,6 +19,11 @@ public class Fields {
 	public static final String USER_CUSTOM_ROLES = "custrls";
 	public static final String USER_CREATED = "create";
 	public static final String USER_LAST_LOGIN = "login";
+	/* these 2 are really used for disabled or enabled. reason will be null for enabled accounts,
+	 * admin will be the admin that enabled or disabled the account last
+	 */
+	public static final String USER_DISABLED_ADMIN = "dsbleadmin";
+	public static final String USER_DISABLED_REASON = "dsblereas";
 	// these 3 are for local accounts only
 	public static final String USER_PWD_HSH = "pwdhsh";
 	public static final String USER_SALT = "salt";

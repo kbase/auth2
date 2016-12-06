@@ -302,7 +302,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
-				.append(Fields.USER_RESET_PWD_LAST, null);
+				.append(Fields.USER_RESET_PWD_LAST, null)
+				.append(Fields.USER_DISABLED_ADMIN, null)
+				.append(Fields.USER_DISABLED_REASON, null);
 		final Document u = new Document("$set", set)
 				.append("$setOnInsert", setIfMissing);
 		try {
@@ -320,6 +322,7 @@ public class MongoStorage implements AuthStorage {
 				local.getPasswordHash());
 		final String salt = Base64.getEncoder().encodeToString(
 				local.getSalt());
+		final UserName admin = local.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
@@ -331,6 +334,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -367,6 +372,8 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
+				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+				user.getString(Fields.USER_DISABLED_REASON),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
@@ -374,6 +381,13 @@ public class MongoStorage implements AuthStorage {
 				this);
 	}
 	
+
+	private UserName getUserNameAllowNull(final String namestr) throws AuthStorageException {
+		if (namestr == null) {
+			return null;
+		}
+		return getUserName(namestr);
+	}
 
 	private UserName getUserName(String namestr) throws AuthStorageException {
 		try {
@@ -426,7 +440,8 @@ public class MongoStorage implements AuthStorage {
 		}
 		final RemoteIdentityWithID ri = user.getIdentities().iterator().next();
 		final Document id = toDocument(ri);
-				
+		
+		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -438,7 +453,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
 				.append(Fields.USER_CREATED, user.getCreated())
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin());
+				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -469,6 +486,25 @@ public class MongoStorage implements AuthStorage {
 	private boolean isDuplicateKeyException(final MongoWriteException mwe) {
 		return mwe.getError().getCategory().equals(
 				ErrorCategory.DUPLICATE_KEY);
+	}
+	
+	@Override
+	public void disableAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		toggleAccount(user, admin, reason);
+	}
+
+	private void toggleAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
+				.append(Fields.USER_DISABLED_ADMIN, admin.getName());
+		updateUser(user, update);
+	}
+	
+	@Override
+	public void enableAccount(final UserName user, final UserName admin)
+			throws NoSuchUserException, AuthStorageException {
+		toggleAccount(user, admin, null);
 	}
 
 	@Override
@@ -586,6 +622,8 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
+				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+				user.getString(Fields.USER_DISABLED_REASON),
 				this);
 	}
 	

@@ -30,13 +30,15 @@ public class MongoLocalUser extends LocalUser {
 			final Set<ObjectId> customRoles,
 			final Date created,
 			final Date lastLogin,
+			final UserName lastAdminDisable,
+			final String disableReason,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
 			final Date lastReset,
 			final MongoStorage storage) {
-		super(userName, email, displayName, roles, created, lastLogin, passwordHash, salt,
-				forceReset, lastReset);
+		super(userName, email, displayName, roles, created, lastLogin, lastAdminDisable,
+				disableReason, passwordHash, salt, forceReset, lastReset);
 		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {
 			memoizedCustomRoles = Collections.emptySet();

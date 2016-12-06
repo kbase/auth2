@@ -279,6 +279,9 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Non-admin login is disabled");
 		}
+		if (u.isDisabled()) {
+			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
+		}
 		pwd.clear();
 		return u;
 	}
@@ -343,6 +346,7 @@ public class Authentication {
 		}
 	}
 
+	//TODO NOW always reenable ROOT when setting the password from the command line
 	public NewToken createToken(
 			final IncomingToken token,
 			final String tokenName,
@@ -390,8 +394,24 @@ public class Authentication {
 			final IncomingToken token,
 			final Role ... required)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final HashedToken ht = getToken(token);
-		final AuthUser u = getUser(ht);
+		return getUser(getToken(token), required);
+	}
+
+	// assumes hashed token is good
+	private AuthUser getUser(final HashedToken ht, final Role ... required)
+			throws AuthStorageException, UnauthorizedException {
+		final AuthUser u;
+		try {
+			u = storage.getUser(ht.getUserName());
+		} catch (NoSuchUserException e) {
+			throw new RuntimeException("There seems to be an error in the " +
+					"storage system. Token was valid, but no user", e);
+		}
+		if (u.isDisabled()) {
+			// apparently this disabled user still has some tokens, so kill 'em all
+			storage.deleteTokens(ht.getUserName());
+			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
+		}
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
@@ -402,16 +422,6 @@ public class Authentication {
 			}
 		}
 		return u;
-	}
-
-	// assumes hashed token is good
-	private AuthUser getUser(final HashedToken ht) throws AuthStorageException {
-		try {
-			return storage.getUser(ht.getUserName());
-		} catch (NoSuchUserException e) {
-			throw new RuntimeException("There seems to be an error in the " +
-					"storage system. Token was valid, but no user", e);
-		}
 	}
 
 	// get a (possibly) different user 
@@ -646,16 +656,19 @@ public class Authentication {
 		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, false);
 		final Set<RemoteIdentity> noUser = new HashSet<>();
 		final Map<RemoteIdentityWithID, AuthUser> hasUser = new HashMap<>();
+//		final Set<UserName> seenUsers = new HashSet<>(); // since AuthUser equals and hashcode situation is too complex
 		for (final RemoteIdentity id: ids) {
 			final AuthUser user = storage.getUser(id);
 			if (user != null) {
-				/* TODO BUG if a user is linked to more than one identity in the returned set, the user will exist in the map twice. (see below)
+				/* TODO BUG ID1 if a user is linked to more than one identity in the returned set, the user will exist in the map twice. (see below)
 				 * Note that AuthUser's equals and hashcode methods are the same as Object 
 				 * because user custom roles are abstract to allow lazy fetching
 				 * If there's only one user choice the login should proceed directly.
 				 * However, if there's a choice of KBase user account, the choice page should
 				 * list all remote accounts that provide access to the KBase account rather than
 				 * just the first one encountered.
+				 * 
+				 * Change this so just stores the last seen user, the seen usernames, a boolean for whether there's at least one create possiblity, and the updated IDs. No need for a map here.
 				 *  
 				 */
 				hasUser.put(user.getIdentity(id), user);
@@ -666,9 +679,13 @@ public class Authentication {
 		final LoginToken lr;
 		if (hasUser.size() == 1 && noUser.isEmpty()) {
 			final AuthUser user = hasUser.values().iterator().next();
+			//TODO NOW how should the UI handle this? Just got redirected, and needs to get redirected to the UI.
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Non-admin login is disabled");
+			}
+			if (user.isDisabled()) { //TODO NOW store exception in the DB and redirect for both of these exceptions
+				throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
 			}
 			lr = new LoginToken(login(user.getUserName()));
 		} else {
@@ -701,9 +718,10 @@ public class Authentication {
 			final AuthUser u = storage.getUser(ri);
 			if (u == null) {
 				ret.put(ri, null);
-			} else if (!ret.containsValue(u)){
+			} else if (!ret.containsValue(u)){ //TODO BUG ID1 removed equals and hashcode from authuser. Need to do something else here. Make class with unassociated RIDs and a map of UserName-> AuthUser and the list of IDs for that authuser.
 				//don't use the updated ri here since the ri associated with
 				//the temporary token has not been updated
+				// update 16/12/05: Not sure what I was talking about here
 				ret.put(ri, u);
 			}
 		}
@@ -764,6 +782,9 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Non-admin login is disabled");
+		}
+		if (u.isDisabled()) {
+			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
 		}
 		return login(u.getUserName());
 	}
@@ -901,6 +922,38 @@ public class Authentication {
 			throw new AuthStorageException("Token without a user: " +
 					ht.getId());
 		}
+	}
+	
+
+	public void disableAccount(
+			final IncomingToken token,
+			final UserName user,
+			final boolean disable,
+			final String reason)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			IllegalParameterException, NoSuchUserException {
+		final AuthUser admin = getUser(token, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		if (user == null) {
+			throw new NullPointerException("user");
+		}
+		if (disable) {
+			if (reason == null || reason.isEmpty()) {
+				throw new IllegalParameterException(
+						"Must provide a reason why the account was disabled");
+			}
+			storage.deleteTokens(user); //not really necessary but doesn't hurt
+			storage.disableAccount(user, admin.getUserName(), reason);
+			/* there's a tiny chance a login could be in process right now and have have passed the
+			 * disabled check, and then have the token created after the next line, but that's
+			 * so improbable I'm not going to worry about it
+			 * The getUser method checks to see if a user is disabled if if so deletes their tokens
+			 * as well as a backup
+			 */
+			storage.deleteTokens(user);
+		} else {
+			storage.enableAccount(user, admin.getUserName());
+		}
+		
 	}
 	
 	public <T extends ExternalConfig> void updateConfig(
