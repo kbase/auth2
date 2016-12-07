@@ -297,11 +297,12 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_RESET_PWD, false)
 				.append(Fields.USER_PWD_HSH, encpwd)
 				.append(Fields.USER_SALT, encsalt)
-				// ideally only set name to  root if 1) the root account already exists and 2)
-				// the field isn't set to root, but that's too much trouble for now
-				// could do it with an insert/update cycle
+				/* ideally only set admin name to  root if 1) the root account already exists and
+				 * 2) the field isn't set to root, but that's too much trouble for now
+				 * could do it with an insert/update cycle
+				 */
 				.append(Fields.USER_DISABLED_ADMIN, null)
-				.append(Fields.USER_DISABLED_REASON, null);// always enable
+				.append(Fields.USER_DISABLED_REASON, null); // always enable
 		final Document setIfMissing = new Document(
 				Fields.USER_EMAIL, email.getAddress())
 				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
@@ -309,6 +310,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
+				.append(Fields.USER_DISABLED_DATE, null)
 				.append(Fields.USER_RESET_PWD_LAST, null);
 		final Document u = new Document("$set", set)
 				.append("$setOnInsert", setIfMissing);
@@ -341,6 +343,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
+				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -379,6 +382,7 @@ public class MongoStorage implements AuthStorage {
 				user.getDate(Fields.USER_LAST_LOGIN),
 				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
 				user.getString(Fields.USER_DISABLED_REASON),
+				user.getDate(Fields.USER_DISABLED_DATE),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
@@ -460,6 +464,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CREATED, user.getCreated())
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
 				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
@@ -501,7 +506,8 @@ public class MongoStorage implements AuthStorage {
 	private void toggleAccount(final UserName user, final UserName admin, final String reason)
 			throws NoSuchUserException, AuthStorageException {
 		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
-				.append(Fields.USER_DISABLED_ADMIN, admin.getName());
+				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
+				.append(Fields.USER_DISABLED_DATE, new Date());
 		updateUser(user, update);
 	}
 	
@@ -628,6 +634,7 @@ public class MongoStorage implements AuthStorage {
 				user.getDate(Fields.USER_LAST_LOGIN),
 				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
 				user.getString(Fields.USER_DISABLED_REASON),
+				user.getDate(Fields.USER_DISABLED_DATE),
 				this);
 	}
 	

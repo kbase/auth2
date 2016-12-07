@@ -1,7 +1,5 @@
 package us.kbase.auth2.service.api;
 
-import static us.kbase.auth2.lib.Utils.dateToSec;
-
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -92,6 +90,11 @@ public class LegacyGlobus {
 			}
 		}
 		return token.trim();
+	}
+	
+	
+	private long dateToSec(final Date date) {
+		return (long) Math.floor(date.getTime() / 1000.0);
 	}
 	
 	// note does not return identity_id

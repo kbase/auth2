@@ -1,7 +1,5 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.lib.Utils.dateToSec;
-
 import java.util.Date;
 import java.util.UUID;
 
@@ -38,8 +36,8 @@ public class UIToken {
 		this.id = id.toString();
 		this.name = tokenName;
 		this.user = userName.getName();
-		this.expires = dateToSec(expirationDate);
-		this.created = dateToSec(creationDate);
+		this.expires = expirationDate.getTime();
+		this.created = creationDate.getTime();
 	}
 	
 	public String getType() {

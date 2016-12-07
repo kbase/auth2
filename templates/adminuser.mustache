@@ -4,12 +4,12 @@
 User name: {{user}}</br>
 {{#disabled}}
 <p>
-DISABLED by {{enabledtoggledby}}. Reason given:<br/>
+DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
 {{disabledreason}}
 {{/disabled}}</p>
-{{^disabled}}{{#enabledtoggledby}}
-Account re-enabled by: {{enabledtoggledby}}<br/>
-{{/enabledtoggledby}}{{/disabled}}
+{{^disabled}}
+Account re-enabled on {{enabletoggledate}} {{#enabledtoggledby}} by {{enabledtoggledby}}{{/enabledtoggledby}}<br/>
+{{/disabled}}
 Display name: {{display}}<br/>
 Email: {{email}}<br/>
 Created: {{created}}<br/>

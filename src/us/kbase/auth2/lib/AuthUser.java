@@ -25,6 +25,7 @@ public abstract class AuthUser {
 	private final Long lastLogin;
 	private final String disableReason;
 	private final UserName lastAdminDisable; // really enable or disable
+	private final Long disabled; //really enable or disable
 	
 	public AuthUser(
 			final UserName userName,
@@ -35,7 +36,8 @@ public abstract class AuthUser {
 			final Date created,
 			final Date lastLogin,
 			final UserName lastAdminDisable,
-			final String disableReason) {
+			final String disableReason,
+			final Date disabled) {
 		super();
 		//TODO INPUT check for nulls
 		this.displayName = displayName;
@@ -60,6 +62,7 @@ public abstract class AuthUser {
 		}
 		this.disableReason = disableReason;
 		this.lastAdminDisable = lastAdminDisable;
+		this.disabled = disabled == null ? null : disabled.getTime();
 	}
 
 	public boolean isRoot() {
@@ -110,6 +113,10 @@ public abstract class AuthUser {
 	
 	public UserName getAdminThatToggledEnabledState() {
 		return lastAdminDisable;
+	}
+	
+	public Date getEnableToggleDate() {
+		return disabled == null ? null : new Date(disabled);
 	}
 
 	public RemoteIdentityWithID getIdentity(final RemoteIdentity ri) {

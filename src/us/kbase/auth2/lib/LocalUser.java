@@ -22,12 +22,13 @@ public abstract class LocalUser extends AuthUser {
 			final Date lastLogin,
 			final UserName lastAdminDisable,
 			final String disableReason,
+			final Date disabled,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
 			final Date lastReset) {
 		super(userName, email, displayName, null, roles, created, lastLogin, lastAdminDisable,
-				disableReason);
+				disableReason, disabled);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException(

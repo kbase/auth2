@@ -1,7 +1,5 @@
 package us.kbase.auth2.lib;
 
-import java.util.Date;
-
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -45,13 +43,6 @@ public class Utils {
 		if (s == null || s.trim().isEmpty()) {
 			throw new IllegalArgumentException("Missing argument: " + name);
 		}
-	}
-	
-	public static long dateToSec(final Date date) {
-		if (date == null) {
-			throw new NullPointerException("date");
-		}
-		return (long) Math.floor(date.getTime() / 1000.0);
 	}
 
 	// prevents overflows by returning max long if a + b > maxlong

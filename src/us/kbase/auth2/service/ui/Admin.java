@@ -156,8 +156,9 @@ public class Admin {
 		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
 		ret.put("disabled", au.isDisabled());
 		ret.put("disabledreason", au.getReasonForDisabled());
+		final Date disabled = au.getEnableToggleDate();
+		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
 		final UserName admin = au.getAdminThatToggledEnabledState();
-		//TODO NOW add date of enable / disable
 		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
 		final Set<Role> r = au.getRoles();
 		ret.put("admin", Role.ADMIN.isSatisfiedBy(r));
@@ -433,10 +434,10 @@ public class Admin {
 					"Server token expiration time must be at least 1");
 		}
 		final Map<TokenLifetimeType, Long> t = new HashMap<>();
-		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, 60 * 1000L));
-		t.put(TokenLifetimeType.LOGIN, safeMult(login, 24 * 60 * 60 * 1000L));
-		t.put(TokenLifetimeType.DEV, safeMult(dev, 24 * 60 * 60 * 1000L));
-		t.put(TokenLifetimeType.SERV, safeMult(serv, 24 * 60 * 60 * 1000L));
+		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS));
+		t.put(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS));
+		t.put(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS));
+		t.put(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS));
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthConfigSet<>(new AuthConfig(null, null, t),

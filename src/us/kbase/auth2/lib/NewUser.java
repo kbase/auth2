@@ -19,7 +19,7 @@ public class NewUser extends AuthUser {
 			final Date created,
 			final Date lastLogin) {
 		super(userName, email, displayName, identities, Collections.emptySet(), created,
-				lastLogin, null, null);
+				lastLogin, null, null, null);
 	}
 
 	@Override
