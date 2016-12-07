@@ -67,9 +67,13 @@ public class Login {
 	//TODO JAVADOC
 	
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
+	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";
 
+	private static final String TRUE = "true";
+	private static final String FALSE = "false";
+	
 	@Inject
 	private Authentication auth;
 	
@@ -113,8 +117,8 @@ public class Login {
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 
-		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state));
-		//TODO NOW add cookie for stay logged in
+		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
+				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect));
 		}
@@ -162,12 +166,20 @@ public class Login {
 				"loginstate", state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
 	}
 	
+	private NewCookie getSessionChoiceCookie(final Boolean session) {
+		final String sessionValue = session == null ? "no session" : session ? TRUE : FALSE;
+		return new NewCookie(new Cookie(SESSION_CHOICE_COOKIE,
+				sessionValue, UIPaths.LOGIN_ROOT, null),
+				"session choice", session == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+	}
+	
 	@GET
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
 			@PathParam("provider") String provider,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
 			IllegalParameterException, AuthenticationException {
@@ -190,11 +202,7 @@ public class Login {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lr.isLoggedIn()) {
-			r = Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
-			//TODO LOGIN get keep me logged in from cookie set at start of login
-					.cookie(getLoginCookie(cfg.getTokenCookieName(), lr.getToken(), true))
-					.cookie(getStateCookie(null))
-					.cookie(getRedirectCookie(null)).build();
+			r = createLoginResponse(redirect, lr.getToken(), !FALSE.equals(session));
 		} else {
 			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
@@ -202,6 +210,20 @@ public class Login {
 					.build();
 		}
 		return r;
+	}
+
+	private Response createLoginResponse(
+			final String redirect,
+			final NewToken newtoken,
+			final boolean session)
+			throws IllegalParameterException, AuthStorageException {
+		
+		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
+				.cookie(getSessionChoiceCookie(null))
+				.cookie(getLoginInProcessCookie(null))
+				.cookie(getStateCookie(null))
+				.cookie(getRedirectCookie(null)).build();
 	}
 	
 	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
@@ -314,6 +336,7 @@ public class Login {
 	public Response pickAccount(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException {
@@ -322,19 +345,16 @@ public class Login {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
 		final NewToken newtoken = auth.login(new IncomingToken(token), identityID);
-		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
-				//TODO LOGIN get keep me logged in from cookie set at start of login
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
-				.cookie(getLoginInProcessCookie(null))
-				.cookie(getRedirectCookie(null)).build();
+		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
-	
+
 	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final UUID identityID,
 			@FormParam("user") final String userName,
 			@FormParam("display") final String displayName,
@@ -351,11 +371,7 @@ public class Login {
 		// might want to enapsulate the user data in a NewUser class
 		final NewToken newtoken = auth.createUser(new IncomingToken(token), identityID,
 				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
-		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
-				//TODO LOGIN get keep me logged in from cookie set at start of login
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, true))
-				.cookie(getLoginInProcessCookie(null))
-				.cookie(getRedirectCookie(null)).build();
+		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
 	//Assumes valid URI in URL form
