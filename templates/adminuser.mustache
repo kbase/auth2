@@ -1,15 +1,15 @@
 <html>
 <body>
 <h3>User info</h3>
-User name: {{user}}</br>
+User name: {{user}}<br/>
 {{#disabled}}
 <p>
 DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
 {{disabledreason}}
 {{/disabled}}</p>
-{{^disabled}}
+{{^disabled}}{{#enabletoggledate}}
 Account re-enabled on {{enabletoggledate}} {{#enabledtoggledby}} by {{enabledtoggledby}}{{/enabledtoggledby}}<br/>
-{{/disabled}}
+{{/enabletoggledate}}{{/disabled}}
 Display name: {{display}}<br/>
 Email: {{email}}<br/>
 Created: {{created}}<br/>
