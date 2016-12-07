@@ -23,7 +23,6 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.MediaType;
@@ -34,7 +33,6 @@ import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
-import org.glassfish.jersey.server.mvc.Viewable;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
@@ -79,44 +77,48 @@ public class Login {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	public Response loginStart(
-			@QueryParam("provider") final String provider,
-			@QueryParam("redirect") final String redirect,
-			@Context UriInfo uriInfo)
+	@Template(name = "/loginstart")
+	public Map<String, Object> loginStartDisplay(@Context final UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 			IllegalParameterException {
-		getRedirectURL(redirect);
-		if (provider != null && !provider.trim().isEmpty()) {
-			final String state = auth.getBareToken();
-			final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
-			
-			final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state));
-			if (redirect != null && !redirect.trim().isEmpty()) {
-					r.cookie(getRedirectCookie(redirect));
+		final Map<String, Object> ret = new HashMap<>();
+		final List<Map<String, String>> provs = new LinkedList<>();
+		ret.put("providers", provs);
+		for (final String prov: auth.getIdentityProviders()) {
+			final Map<String, String> rep = new HashMap<>();
+			rep.put("name", prov);
+			final URI i = auth.getIdentityProviderImageURI(prov);
+			if (i.isAbsolute()) {
+				rep.put("img", i.toString());
+			} else {
+				rep.put("img", relativize(uriInfo, i));
 			}
-			return r.build();
-		} else {
-			final Map<String, Object> ret = new HashMap<>();
-			final List<Map<String, String>> provs = new LinkedList<>();
-			ret.put("providers", provs);
-			for (final String prov: auth.getIdentityProviders()) {
-				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", prov);
-				final URI i = auth.getIdentityProviderImageURI(prov);
-				if (i.isAbsolute()) {
-					rep.put("img", i.toString());
-				} else {
-					rep.put("img", relativize(uriInfo, i));
-				}
-				provs.add(rep);
-			}
-			ret.put("hasprov", !provs.isEmpty());
-			ret.put("urlpre", "?provider=");
-			if (redirect != null && !redirect.trim().isEmpty()) {
-				ret.put("redirect", redirect);
-			}
-			return Response.ok().entity(new Viewable("/loginstart", ret)).build();
+			provs.add(rep);
 		}
+		ret.put("hasprov", !provs.isEmpty());
+		ret.put("starturl", relativize(uriInfo, UIPaths.LOGIN_ROOT_START));
+		return ret;
+	}
+	
+	@POST
+	@Path(UIPaths.LOGIN_START)
+	public Response loginStart(
+			@FormParam("provider") final String provider,
+			@FormParam("redirect") final String redirect,
+			@FormParam("stayLoggedIn") final String stayLoggedIn)
+			throws IllegalParameterException, AuthStorageException,
+			NoSuchIdentityProviderException {
+		
+		getRedirectURL(redirect);
+		final String state = auth.getBareToken();
+		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
+
+		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state));
+		//TODO NOW add cookie for stay logged in
+		if (redirect != null && !redirect.trim().isEmpty()) {
+			r.cookie(getRedirectCookie(redirect));
+		}
+		return r.build();
 	}
 
 	private URL getRedirectURL(final String redirect)

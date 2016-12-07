@@ -16,6 +16,7 @@ public class UIPaths {
 	private static final String LOGIN = "login";
 	private static final String LOCAL = "localaccount";
 	private static final String USER = "user";
+	private static final String START = "start";
 	private static final String CUSTOM_ROLES = "customroles";
 	
 	/* Admin endpoint */
@@ -69,6 +70,8 @@ public class UIPaths {
 	
 	public static final String LOGIN_ROOT = SEP + LOGIN + SEP;
 	
+	public static final String LOGIN_START = START;
+	public static final String LOGIN_ROOT_START = LOGIN_ROOT + START;
 	public static final String LOGIN_ROOT_COMPLETE = LOGIN_ROOT + COMPLETE;
 	public static final String LOGIN_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
 	public static final String LOGIN_CHOICE = CHOICE;

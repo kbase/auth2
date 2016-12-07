@@ -64,6 +64,8 @@ public class Link {
 	//TODO TEST
 	//TODO CODE can probably share some code with /login
 	
+	//TODO NOW CODE UI copy flow from login
+	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
 	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
 
@@ -74,7 +76,7 @@ public class Link {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	public Response linkStart(
+	public Response linkStartDisplay(
 			@Context final HttpHeaders headers,
 			@QueryParam("provider") final String provider,
 			@Context UriInfo uriInfo)
