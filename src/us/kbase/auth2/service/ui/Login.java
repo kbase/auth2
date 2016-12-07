@@ -243,8 +243,7 @@ public class Login {
 	public Map<String, Object> loginChoiceHTML(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		return loginChoice(token, uriInfo);
 	}
 
@@ -255,14 +254,12 @@ public class Login {
 	public Map<String, Object> loginChoiceJSON(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		return loginChoice(token, uriInfo);
 	}
 	
 	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			UnauthorizedException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}

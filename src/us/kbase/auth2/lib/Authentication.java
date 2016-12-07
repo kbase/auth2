@@ -711,7 +711,7 @@ public class Authentication {
 
 
 	public LoginState getLoginState(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+			throws AuthStorageException, InvalidTokenException {
 		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
 		if (ids.isEmpty()) {
 			throw new RuntimeException(
