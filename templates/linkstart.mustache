@@ -17,13 +17,14 @@ provider account is not the account you wish to link, you must visit the
 provider and logout <strong>before</strong> starting the linking process.
 
 <p>Identity providers:<p>
-{{/hasprov}}
 
+<form action="{{starturl}}" method="post">
 {{#providers}}
-<p><a href="{{urlpre}}{{name}}"><img src="{{img}}" alt="{{name}}"/></a></p> 
+	<input type="radio" name="provider" value="{{name}}"/><img src="{{img}}" alt="{{name}}"/><br/>
 {{/providers}}
+	<input type="submit" value="Submit"/>
+</form>
 
-{{#hasprov}}
 You will be redirected to the identity provider website where you will be asked
 to allow us to view your account information - your account ID, email
 address, and name.<br/>

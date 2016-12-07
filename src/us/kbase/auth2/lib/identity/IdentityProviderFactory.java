@@ -59,6 +59,9 @@ public class IdentityProviderFactory {
 	
 	public IdentityProvider getProvider(final String name)
 			throws NoSuchIdentityProviderException {
+		if (name == null) {
+			throw new NoSuchIdentityProviderException("Provider name cannot be null");
+		}
 		if (!providers.containsKey(name)) {
 			throw new NoSuchIdentityProviderException(name);
 		}

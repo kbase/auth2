@@ -23,9 +23,7 @@ public abstract class AuthUser {
 	private final Set<RemoteIdentityWithID> identities;
 	private final long created;
 	private final Long lastLogin;
-	private final String disableReason;
-	private final UserName lastAdminDisable; // really enable or disable
-	private final Long disabled; //really enable or disable
+	private final UserDisabledState disabledState;
 	
 	public AuthUser(
 			final UserName userName,
@@ -35,14 +33,20 @@ public abstract class AuthUser {
 			Set<Role> roles,
 			final Date created,
 			final Date lastLogin,
-			final UserName lastAdminDisable,
-			final String disableReason,
-			final Date disabled) {
+			final UserDisabledState disabledState) {
 		super();
-		//TODO INPUT check for nulls
-		this.displayName = displayName;
-		this.email = email;
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
 		this.userName = userName;
+		if (email == null) {
+			throw new NullPointerException("email");
+		}
+		this.email = email;
+		if (displayName == null) {
+			throw new NullPointerException("displayName");
+		}
+		this.displayName = displayName;
 		if (identities == null) {
 			identities = new HashSet<>();
 		}
@@ -54,15 +58,12 @@ public abstract class AuthUser {
 		if (created == null) {
 			throw new NullPointerException("created");
 		}
-		this.created = created.getTime();
+		this.created = created.getTime(); // will throw npe
 		this.lastLogin = lastLogin == null ? null : lastLogin.getTime();
-		if (disableReason != null && disableReason.isEmpty()) {
-			throw new IllegalArgumentException("disableReason must be either null, signifying " +
-					"an enabled account, or have at least one character");
+		if (disabledState == null) {
+			throw new NullPointerException("disabledState");
 		}
-		this.disableReason = disableReason;
-		this.lastAdminDisable = lastAdminDisable;
-		this.disabled = disabled == null ? null : disabled.getTime();
+		this.disabledState = disabledState;
 	}
 
 	public boolean isRoot() {
@@ -104,19 +105,23 @@ public abstract class AuthUser {
 	}
 	
 	public boolean isDisabled() {
-		return disableReason != null;
+		return disabledState.isDisabled();
 	}
 	
 	public String getReasonForDisabled() {
-		return disableReason;
+		return disabledState.getDisabledReason();
 	}
 	
 	public UserName getAdminThatToggledEnabledState() {
-		return lastAdminDisable;
+		return disabledState.getByAdmin();
 	}
 	
 	public Date getEnableToggleDate() {
-		return disabled == null ? null : new Date(disabled);
+		return disabledState.getTime();
+	}
+	
+	public UserDisabledState getDisabledState() {
+		return disabledState;
 	}
 
 	public RemoteIdentityWithID getIdentity(final RemoteIdentity ri) {

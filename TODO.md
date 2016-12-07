@@ -40,14 +40,9 @@ Auth service work
   * Login & signup very different
 * Admin functionality
   * Find users
-    * By name (regex?)
+    * By name and display name (use existing code from api)
     * By role (custom or std)
-    * By display name (regex?) (combine with name?)
-    * Alternative - split display name into parts and search on prefix of parts. This could
-      be allowed for regular user searches too.
   * revoke single / user's / all tokens
-  * Disable account (revoke all tokens & prevent logins), record admin and reason
-    * Only root should be able to disable root, all admins can disable accounts
   * Force pwd reset for local accounts (per user and all)
   * Reset local account pwd to new random pwd
   * Delete custom role

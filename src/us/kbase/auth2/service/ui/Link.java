@@ -35,7 +35,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
-import org.glassfish.jersey.server.mvc.Viewable;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
@@ -74,45 +73,50 @@ public class Link {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	public Response linkStart(
+	@Template(name = "/linkstart")
+	public Map<String, Object> linkStartDisplay(
 			@Context final HttpHeaders headers,
-			@QueryParam("provider") final String provider,
-			@Context UriInfo uriInfo)
+			@Context final UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException, DisabledUserException {
 
 		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		
-		if (provider != null && !provider.trim().isEmpty()) {
-			final String state = auth.getBareToken();
-			final URI target = toURI(
-					auth.getIdentityProviderURL(provider, state, true));
-			return Response.seeOther(target)
-					.cookie(getStateCookie(state))
-					.build();
-		} else {
-			final AuthUser u = auth.getUser(incToken);
-			final Map<String, Object> ret = new HashMap<>();
-			ret.put("user", u.getUserName().getName());
-			ret.put("local", u.isLocal());
-			final List<Map<String, String>> provs = new LinkedList<>();
-			ret.put("providers", provs);
-			for (final String prov: auth.getIdentityProviders()) {
-				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", prov);
-				final URI i = auth.getIdentityProviderImageURI(prov);
-				if (i.isAbsolute()) {
-					rep.put("img", i.toString());
-				} else {
-					rep.put("img", relativize(uriInfo, i));
-				}
-				provs.add(rep);
+		final AuthUser u = auth.getUser(incToken);
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("user", u.getUserName().getName());
+		ret.put("local", u.isLocal());
+		final List<Map<String, String>> provs = new LinkedList<>();
+		ret.put("providers", provs);
+		for (final String prov: auth.getIdentityProviders()) {
+			final Map<String, String> rep = new HashMap<>();
+			rep.put("name", prov);
+			final URI i = auth.getIdentityProviderImageURI(prov);
+			if (i.isAbsolute()) {
+				rep.put("img", i.toString());
+			} else {
+				rep.put("img", relativize(uriInfo, i));
 			}
-			ret.put("hasprov", !provs.isEmpty());
-			ret.put("urlpre", "?provider=");
-			return Response.ok().entity(new Viewable("/linkstart", ret))
-					.build();
+			provs.add(rep);
 		}
+		ret.put("starturl", relativize(uriInfo, UIPaths.LINK_ROOT_START));
+		ret.put("hasprov", !provs.isEmpty());
+		return ret;
+	}
+	
+	@POST
+	@Path(UIPaths.LINK_START)
+	public Response linkStart(
+			@Context final HttpHeaders headers,
+			@FormParam("provider") final String provider)
+			throws NoTokenProvidedException, NoSuchIdentityProviderException,
+			AuthStorageException, InvalidTokenException, DisabledUserException {
+		
+		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		auth.getUser(incToken); // ensures the token is valid
+		
+		final String state = auth.getBareToken();
+		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
+		return Response.seeOther(target).cookie(getStateCookie(state)).build();
 	}
 	
 	private NewCookie getStateCookie(final String state) {
