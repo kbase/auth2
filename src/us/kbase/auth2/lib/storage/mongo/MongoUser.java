@@ -10,6 +10,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -32,12 +33,9 @@ public class MongoUser extends AuthUser {
 			final Set<ObjectId> customRoles,
 			final Date created,
 			final Date lastLogin,
-			final UserName lastAdminDisable,
-			final String disableReason,
-			final Date disabled,
+			final UserDisabledState disabledState,
 			final MongoStorage storage) {
-		super(userName, email, displayName, identities, roles, created, lastLogin,
-				lastAdminDisable, disableReason, disabled);
+		super(userName, email, displayName, identities, roles, created, lastLogin, disabledState);
 		this.customRoles = Collections.unmodifiableSet(customRoles);
 		if (customRoles.isEmpty()) {
 			memoizedCustomRoles = Collections.emptySet();
@@ -47,8 +45,7 @@ public class MongoUser extends AuthUser {
 
 	MongoUser(final MongoUser user, final Set<RemoteIdentityWithID> newIDs) {
 		super(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
-				user.getCreated(), user.getLastLogin(), user.getAdminThatToggledEnabledState(),
-				user.getReasonForDisabled(), user.getEnableToggleDate());
+				user.getCreated(), user.getLastLogin(), user.getDisabledState());
 		this.customRoles = user.customRoles;
 		this.memoizedCustomRoles = user.memoizedCustomRoles;
 		this.storage = user.storage;

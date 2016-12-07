@@ -48,6 +48,7 @@ import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
+import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -372,6 +373,7 @@ public class MongoStorage implements AuthStorage {
 				.collect(Collectors.toList());
 		@SuppressWarnings("unchecked")
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
+		
 		return new MongoLocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getEmail(user.getString(Fields.USER_EMAIL)),
@@ -380,9 +382,10 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-				user.getString(Fields.USER_DISABLED_REASON),
-				user.getDate(Fields.USER_DISABLED_DATE),
+				UserDisabledState.create(
+						user.getString(Fields.USER_DISABLED_REASON),
+						getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+						user.getDate(Fields.USER_DISABLED_DATE)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
@@ -623,6 +626,7 @@ public class MongoStorage implements AuthStorage {
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
+		
 		return new MongoUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getEmail(user.getString(Fields.USER_EMAIL)),
@@ -632,9 +636,10 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-				user.getString(Fields.USER_DISABLED_REASON),
-				user.getDate(Fields.USER_DISABLED_DATE),
+				UserDisabledState.create(
+						user.getString(Fields.USER_DISABLED_REASON),
+						getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+						user.getDate(Fields.USER_DISABLED_DATE)),
 				this);
 	}
 	
