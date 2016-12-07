@@ -85,6 +85,8 @@ public class UIPaths {
 	
 	public static final String LINK_ROOT = "/link/";
 	
+	public static final String LINK_START = START;
+	public static final String LINK_ROOT_START = LINK_ROOT + START;
 	public static final String LINK_ROOT_COMPLETE = LINK_ROOT + COMPLETE;
 	public static final String LINK_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
 	public static final String LINK_CHOICE = CHOICE;

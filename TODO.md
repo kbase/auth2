@@ -38,8 +38,6 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* UI
-  * Set keep me logged in on 1st login page
 * Admin functionality
   * Find users
     * By name and display name (use existing code from api)
