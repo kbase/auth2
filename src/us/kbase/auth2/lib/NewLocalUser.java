@@ -19,7 +19,7 @@ public class NewLocalUser extends LocalUser {
 			final byte[] salt,
 			final boolean forceReset) {
 		super(userName, email, displayName, Collections.emptySet(), created, lastLogin,
-				passwordHash, salt, forceReset, null);
+				null, null, null, passwordHash, salt, forceReset, null);
 	}
 
 	@Override

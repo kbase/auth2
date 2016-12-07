@@ -44,6 +44,8 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.NewLocalUser;
+import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
@@ -294,7 +296,13 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, rolestr)
 				.append(Fields.USER_RESET_PWD, false)
 				.append(Fields.USER_PWD_HSH, encpwd)
-				.append(Fields.USER_SALT, encsalt);
+				.append(Fields.USER_SALT, encsalt)
+				/* ideally only set admin name to  root if 1) the root account already exists and
+				 * 2) the field isn't set to root, but that's too much trouble for now
+				 * could do it with an insert/update cycle
+				 */
+				.append(Fields.USER_DISABLED_ADMIN, null)
+				.append(Fields.USER_DISABLED_REASON, null); // always enable
 		final Document setIfMissing = new Document(
 				Fields.USER_EMAIL, email.getAddress())
 				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
@@ -302,6 +310,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
 				.append(Fields.USER_CREATED, created)
 				.append(Fields.USER_LAST_LOGIN, null)
+				.append(Fields.USER_DISABLED_DATE, null)
 				.append(Fields.USER_RESET_PWD_LAST, null);
 		final Document u = new Document("$set", set)
 				.append("$setOnInsert", setIfMissing);
@@ -314,12 +323,13 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createLocalUser(final LocalUser local)
+	public void createLocalUser(final NewLocalUser local)
 			throws UserExistsException, AuthStorageException {
 		final String pwdhsh = Base64.getEncoder().encodeToString(
 				local.getPasswordHash());
 		final String salt = Base64.getEncoder().encodeToString(
 				local.getSalt());
+		final UserName admin = local.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
@@ -331,6 +341,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
+				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -367,6 +380,9 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
+				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+				user.getString(Fields.USER_DISABLED_REASON),
+				user.getDate(Fields.USER_DISABLED_DATE),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
@@ -374,6 +390,13 @@ public class MongoStorage implements AuthStorage {
 				this);
 	}
 	
+
+	private UserName getUserNameAllowNull(final String namestr) throws AuthStorageException {
+		if (namestr == null) {
+			return null;
+		}
+		return getUserName(namestr);
+	}
 
 	private UserName getUserName(String namestr) throws AuthStorageException {
 		try {
@@ -415,7 +438,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createUser(final AuthUser user)
+	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException {
 		if (user.isLocal()) {
 			throw new IllegalArgumentException("cannot create a local user");
@@ -426,7 +449,8 @@ public class MongoStorage implements AuthStorage {
 		}
 		final RemoteIdentityWithID ri = user.getIdentities().iterator().next();
 		final Document id = toDocument(ri);
-				
+		
+		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -438,7 +462,10 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
 				.append(Fields.USER_CREATED, user.getCreated())
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin());
+				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
+				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -467,8 +494,27 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	private boolean isDuplicateKeyException(final MongoWriteException mwe) {
-		return mwe.getError().getCategory().equals(
-				ErrorCategory.DUPLICATE_KEY);
+		return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
+	}
+	
+	@Override
+	public void disableAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		toggleAccount(user, admin, reason);
+	}
+
+	private void toggleAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
+				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
+				.append(Fields.USER_DISABLED_DATE, new Date());
+		updateUser(user, update);
+	}
+	
+	@Override
+	public void enableAccount(final UserName user, final UserName admin)
+			throws NoSuchUserException, AuthStorageException {
+		toggleAccount(user, admin, null);
 	}
 
 	@Override
@@ -586,6 +632,9 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
+				getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+				user.getString(Fields.USER_DISABLED_REASON),
+				user.getDate(Fields.USER_DISABLED_DATE),
 				this);
 	}
 	
@@ -910,15 +959,13 @@ public class MongoStorage implements AuthStorage {
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
-		final List<Document> ids =
-				(List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
-		if (ids == null || ids.isEmpty()) {
+		final List<Document> ids = (List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
+		if (ids == null) {
 			final String tid = d.getString(Fields.TEMP_TOKEN_ID);
 			throw new AuthStorageException(String.format(
-					"Temporary token %s has no associated IDs", tid));
+					"Temporary token %s has no associated IDs field", tid));
 		}
-		final Set<RemoteIdentityWithID> ret = toIdentities(ids);
-		return ret;
+		return toIdentities(ids);
 	}
 
 	private Set<RemoteIdentityWithID> toIdentities(final List<Document> ids) {
@@ -951,7 +998,7 @@ public class MongoStorage implements AuthStorage {
 		while (!complete) {
 			count++;
 			if (count > 5) {
-				throw new LinkFailedException("Attempted link update 5 times without success. " +
+				throw new RuntimeException("Attempted link update 5 times without success. " +
 						"There's probably a programming error here.");
 			}
 			complete = addIdentity(user, remoteID);
@@ -961,8 +1008,7 @@ public class MongoStorage implements AuthStorage {
 	private boolean addIdentity(
 			final UserName userName,
 			final RemoteIdentityWithID remoteID)
-			throws NoSuchUserException, AuthStorageException,
-			LinkFailedException {
+			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
 		 * documents, adding the same provider ID to a single document twice is possible without

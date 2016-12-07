@@ -2,6 +2,14 @@
 <body>
 <h3>User info</h3>
 User name: {{user}}<br/>
+{{#disabled}}
+<p>
+DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
+{{disabledreason}}
+{{/disabled}}</p>
+{{^disabled}}{{#enabletoggledate}}
+Account re-enabled on {{enabletoggledate}} {{#enabledtoggledby}} by {{enabledtoggledby}}{{/enabledtoggledby}}<br/>
+{{/enabletoggledate}}{{/disabled}}
 Display name: {{display}}<br/>
 Email: {{email}}<br/>
 Created: {{created}}<br/>
@@ -9,10 +17,10 @@ Last login: {{lastlogin}}<br/>
 Local: {{local}}<br/>
 <h3>Roles:</h3>
 <form action="{{roleurl}}" method="post">
-	Create developer token: <input type="checkbox" name="dev" {{#dev}}checked{{/dev}}/><br/>
-	Create server token: <input type="checkbox" name="serv" {{#serv}}checked{{/serv}}/><br/>
-	Admin: <input type="checkbox" name="admin" {{#admin}}checked{{/admin}}/><br/>
-	Create admin: <input type="checkbox" name="createadmin" {{#createadmin}}checked{{/createadmin}}/><br/>
+	Create developer token: <input type="checkbox" name="dev" {{#dev}}checked{{/dev}} /><br/>
+	Create server token: <input type="checkbox" name="serv" {{#serv}}checked{{/serv}} /><br/>
+	Admin: <input type="checkbox" name="admin" {{#admin}}checked{{/admin}} /><br/>
+	Create admin: <input type="checkbox" name="createadmin" {{#createadmin}}checked{{/createadmin}} /><br/>
 <input type="reset" value="Reset"/>
 <input type="submit" value="Update"/>
 </form>
@@ -34,5 +42,12 @@ Description:<br/>
 </form>
 {{/hascustom}}
 
+Note that if all admins are disabled you can reenable the root account from the manage_auth script.
+<form action="{{disableurl}}" method="post" id="disableform">
+	Disabled: <input type="checkbox" name="disable" {{#disabled}}checked{{/disabled}} /><br/>
+	Reason: <textarea name="reason" form="disableform" cols="40" rows="5"></textarea><br/>
+	<input type="reset" value="Reset"/>
+	<input type="submit" value="Update"/>
+</form>
 </body>
 </html>

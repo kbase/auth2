@@ -7,12 +7,15 @@
 <p>The login information from the provider allows you to access these
 accounts:</p>
 {{#login}}
-Provider username: {{prov_username}}<br/>
-Username: {{username}}<br/>
+Username: {{username}} {{#disabled}}DISABLED{{/disabled}} {{#adminonly}}***Currently only admin accounts can log in***{{/adminonly}}<br/>
+Provider usernames: {{prov_usernames}}<br/>
+{{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Login"/>
 </form>
+{{/loginallowed}}
+<br/>
 {{/login}}
 
 <h3>Create account</h3>
@@ -22,6 +25,7 @@ Display name is public to other system users.</br>
 Email is only visible to you, software acting on your behalf, and system administrators.
 </p>
 {{#create}}
+{{#creationallowed}}
 <p>Create an account linked to {{prov_username}}</p>
 </p>
 <form action="{{createurl}}" method="post">
@@ -31,6 +35,11 @@ Email is only visible to you, software acting on your behalf, and system adminis
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Create"/>
 </form>
+{{/creationallowed}}
+{{^creationallowed}}
+Provider username: {{prov_username}}<br/>
+Sorry, account creation is currently disabled.<br/>
+{{/creationallowed}}
 {{/create}}
 
 </html>

@@ -403,7 +403,8 @@ public class AuthCLI {
 		
 		@Parameter(names = {"-r", "--set-root-password"}, description =
 				"Set the root user password. If this option is selected no " +
-				"other specified operations will be executed.")
+				"other specified operations will be executed. If the root account is disabled " +
+				"it will be enabled with the enabling user set to null.")
 		private boolean setroot;
 		
 		@Parameter(names = {"-n", "--nexus-token"}, description =

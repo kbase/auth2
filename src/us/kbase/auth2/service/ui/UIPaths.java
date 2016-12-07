@@ -28,6 +28,9 @@ public class UIPaths {
 
 	public static final String ADMIN_ROOT_USER = ADMIN_ROOT + USER;
 	public static final String ADMIN_USER_PARAM = USER + SEP + "{user}";
+	
+	public static final String ADMIN_DISABLE = "disable";
+	public static final String ADMIN_USER_DISABLE = ADMIN_USER_PARAM + SEP + ADMIN_DISABLE;
 
 	public static final String ADMIN_ROLES = "roles";
 	public static final String ADMIN_USER_ROLES = ADMIN_USER_PARAM + SEP + ADMIN_ROLES;

@@ -140,13 +140,13 @@ public class Admin {
 		final IncomingToken adminToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final AuthUser au = auth.getUserAsAdmin(adminToken, new UserName(user));
 		final Set<CustomRole> roles = auth.getCustomRoles(adminToken, true);
+		final String userPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP;
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("custom", setUpCustomRoles(roles, au.getCustomRoles()));
 		ret.put("hascustom", !roles.isEmpty());
-		ret.put("roleurl", relativize(uriInfo,
-				UIPaths.ADMIN_ROOT_USER + SEP + user + SEP + UIPaths.ADMIN_ROLES));
-		ret.put("customroleurl", relativize(uriInfo,
-				UIPaths.ADMIN_ROOT_USER + SEP + user + SEP + UIPaths.ADMIN_CUSTOM_ROLES));
+		ret.put("roleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
+		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
+		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
 		ret.put("user", au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
@@ -154,8 +154,13 @@ public class Admin {
 		ret.put("created", au.getCreated().getTime());
 		final Date lastLogin = au.getLastLogin();
 		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
+		ret.put("disabled", au.isDisabled());
+		ret.put("disabledreason", au.getReasonForDisabled());
+		final Date disabled = au.getEnableToggleDate();
+		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
+		final UserName admin = au.getAdminThatToggledEnabledState();
+		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
 		final Set<Role> r = au.getRoles();
-		//TODO ADMIN only show create-admin & admin buttons when appropriate
 		ret.put("admin", Role.ADMIN.isSatisfiedBy(r));
 		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(r));
 		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(r));
@@ -177,6 +182,24 @@ public class Admin {
 		return ret;
 	}
 
+	@POST
+	@Path(UIPaths.ADMIN_USER_DISABLE)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void disableUser(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user,
+			@FormParam("disable") final String disableStr,
+			@FormParam("reason") final String reason)
+			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
+			InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		final boolean disable = disableStr != null;
+		final UserName un = new UserName(user);
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		auth.disableAccount(token, un, disable, reason);
+	}
+			
+	
 	@POST
 	@Path(UIPaths.ADMIN_USER_ROLES)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
@@ -411,10 +434,10 @@ public class Admin {
 					"Server token expiration time must be at least 1");
 		}
 		final Map<TokenLifetimeType, Long> t = new HashMap<>();
-		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, 60 * 1000L));
-		t.put(TokenLifetimeType.LOGIN, safeMult(login, 24 * 60 * 60 * 1000L));
-		t.put(TokenLifetimeType.DEV, safeMult(dev, 24 * 60 * 60 * 1000L));
-		t.put(TokenLifetimeType.SERV, safeMult(serv, 24 * 60 * 60 * 1000L));
+		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS));
+		t.put(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS));
+		t.put(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS));
+		t.put(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS));
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthConfigSet<>(new AuthConfig(null, null, t),

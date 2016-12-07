@@ -9,13 +9,11 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.security.NoSuchProviderException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.Map.Entry;
 
 import javax.inject.Inject;
 import javax.ws.rs.CookieParam;
@@ -42,6 +40,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -168,9 +167,8 @@ public class Login {
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
-			throws MissingParameterException, AuthenticationException,
-			NoSuchProviderException, AuthStorageException,
-			UnauthorizedException, IllegalParameterException {
+			throws MissingParameterException, AuthStorageException,
+			IllegalParameterException, AuthenticationException {
 		//TODO INPUT handle error in params (provider, state)
 		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -245,8 +243,7 @@ public class Login {
 	public Map<String, Object> loginChoiceHTML(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		return loginChoice(token, uriInfo);
 	}
 
@@ -257,8 +254,7 @@ public class Login {
 	public Map<String, Object> loginChoiceJSON(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		return loginChoice(token, uriInfo);
 	}
 	
@@ -267,37 +263,45 @@ public class Login {
 		if (token == null || token.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
 		}
-		final Map<RemoteIdentityWithID, AuthUser> ids = auth.getLoginState(
-				new IncomingToken(token.trim()));
+		final LoginState loginState = auth.getLoginState(new IncomingToken(token.trim()));
 		
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
-		ret.put("provider", ids.keySet().iterator().next().getRemoteID().getProvider());
+		ret.put("provider", loginState.getProvider());
+		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
-		final List<Map<String, String>> login = new LinkedList<>();
+		final List<Map<String, Object>> login = new LinkedList<>();
 		ret.put("create", create);
 		ret.put("login", login);
 		
-		for (final Entry<RemoteIdentityWithID, AuthUser> e: ids.entrySet()) {
-			final RemoteIdentityWithID id = e.getKey();
-			if (e.getValue() == null) {
-				final Map<String, String> c = new HashMap<>();
-				c.put("id", id.getID().toString());
-				//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
-				c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
-				c.put("prov_username", id.getDetails().getUsername());
-				c.put("prov_fullname", id.getDetails().getFullname());
-				c.put("prov_email", id.getDetails().getEmail());
-				create.add(c);
-			} else {
-				final Map<String, String> l = new HashMap<>();
-				l.put("id", id.getID().toString());
-				l.put("prov_username", id.getDetails().getUsername());
-				l.put("username", e.getValue().getUserName().getName());
-				login.add(l);
+		for (final RemoteIdentityWithID id: loginState.getIdentities()) {
+			final Map<String, String> c = new HashMap<>();
+			c.put("id", id.getID().toString());
+			//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
+			c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
+			c.put("prov_username", id.getDetails().getUsername());
+			c.put("prov_fullname", id.getDetails().getFullname());
+			c.put("prov_email", id.getDetails().getEmail());
+			create.add(c);
+		}
+		final boolean adminOnly = !loginState.isNonAdminLoginAllowed();
+		for (final UserName userName: loginState.getUsers()) {
+			final AuthUser user = loginState.getUser(userName);
+			final boolean loginRestricted = adminOnly && !loginState.isAdmin(userName);
+			final Map<String, Object> l = new HashMap<>();
+			l.put("username", userName.getName());
+			l.put("loginallowed", !(user.isDisabled() || loginRestricted));
+			l.put("disabled", user.isDisabled());
+			l.put("adminonly", loginRestricted);
+			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
+			final List<String> remoteIDs = new LinkedList<>();
+			for (final RemoteIdentityWithID id: loginState.getIdentities(userName)) {
+				remoteIDs.add(id.getDetails().getUsername());
 			}
+			l.put("prov_usernames", remoteIDs);
+			login.add(l);
 		}
 		return ret;
 	}

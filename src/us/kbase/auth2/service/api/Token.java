@@ -38,8 +38,8 @@ public class Token {
 		ret.put("cachefor", auth.getSuggestedTokenCacheTime());
 		ret.put("user", ht.getUserName().getName());
 		ret.put("type", ht.getTokenType().getID());
-		ret.put("created", ht.getCreationDate().getTime() / 1000);
-		ret.put("expires", ht.getExpirationDate().getTime() / 1000);
+		ret.put("created", ht.getCreationDate().getTime());
+		ret.put("expires", ht.getExpirationDate().getTime());
 		ret.put("name", ht.getTokenName());
 		ret.put("id", ht.getId().toString());
 		return ret;

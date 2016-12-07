@@ -26,6 +26,7 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -52,7 +53,7 @@ public class Me {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException,
-			AuthStorageException {
+			AuthStorageException, DisabledUserException {
 		final AuthUser u = auth.getUser(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));

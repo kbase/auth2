@@ -32,6 +32,7 @@ import org.glassfish.jersey.server.mvc.Template;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -61,7 +62,7 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException {
+			NoTokenProvidedException, DisabledUserException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		t.put("user", ((UIToken) t.get("current")).getUser());
@@ -77,7 +78,7 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@HeaderParam("authentication") final String headerToken)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException {
+			NoTokenProvidedException, DisabledUserException {
 		final IncomingToken cookieToken = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);
 		return getTokens(cookieToken == null ? getToken(headerToken) : cookieToken);
@@ -174,7 +175,7 @@ public class Tokens {
 
 	private Map<String, Object> getTokens(final IncomingToken token)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+			InvalidTokenException, DisabledUserException {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();

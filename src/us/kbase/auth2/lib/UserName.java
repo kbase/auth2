@@ -5,6 +5,7 @@ import static us.kbase.auth2.lib.Utils.checkString;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -38,7 +39,7 @@ public class UserName {
 		} else {
 			final Matcher m = INVALID_USER_NAME.matcher(name);
 			if (m.find()) {
-				throw new IllegalParameterException(String.format(
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
 						"Illegal character in user name %s: %s", name, m.group()));
 			}
 			this.name = name.trim();

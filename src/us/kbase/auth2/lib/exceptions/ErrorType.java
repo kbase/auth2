@@ -10,6 +10,7 @@ public enum ErrorType {
 	INVALID_TOKEN			(10002, "Invalid token"),
 	ID_RETRIEVAL_FAILED		(10003, "Identity retrieval failed"),
 	UNAUTHORIZED			(20000, "Unauthorized"),
+	DISABLED				(20001, "Account disabled"),
 	MISSING_PARAMETER		(30000, "Missing input parameter"),
 	ILLEGAL_PARAMETER		(30001, "Illegal input parameter"),
 	ILLEGAL_USER_NAME		(30002, "Illegal user name"),

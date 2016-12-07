@@ -23,6 +23,9 @@ public abstract class AuthUser {
 	private final Set<RemoteIdentityWithID> identities;
 	private final long created;
 	private final Long lastLogin;
+	private final String disableReason;
+	private final UserName lastAdminDisable; // really enable or disable
+	private final Long disabled; //really enable or disable
 	
 	public AuthUser(
 			final UserName userName,
@@ -31,7 +34,10 @@ public abstract class AuthUser {
 			Set<RemoteIdentityWithID> identities,
 			Set<Role> roles,
 			final Date created,
-			final Date lastLogin) {
+			final Date lastLogin,
+			final UserName lastAdminDisable,
+			final String disableReason,
+			final Date disabled) {
 		super();
 		//TODO INPUT check for nulls
 		this.displayName = displayName;
@@ -50,6 +56,13 @@ public abstract class AuthUser {
 		}
 		this.created = created.getTime();
 		this.lastLogin = lastLogin == null ? null : lastLogin.getTime();
+		if (disableReason != null && disableReason.isEmpty()) {
+			throw new IllegalArgumentException("disableReason must be either null, signifying " +
+					"an enabled account, or have at least one character");
+		}
+		this.disableReason = disableReason;
+		this.lastAdminDisable = lastAdminDisable;
+		this.disabled = disabled == null ? null : disabled.getTime();
 	}
 
 	public boolean isRoot() {
@@ -88,6 +101,22 @@ public abstract class AuthUser {
 
 	public Date getLastLogin() {
 		return lastLogin == null ? null : new Date(lastLogin);
+	}
+	
+	public boolean isDisabled() {
+		return disableReason != null;
+	}
+	
+	public String getReasonForDisabled() {
+		return disableReason;
+	}
+	
+	public UserName getAdminThatToggledEnabledState() {
+		return lastAdminDisable;
+	}
+	
+	public Date getEnableToggleDate() {
+		return disabled == null ? null : new Date(disabled);
 	}
 
 	public RemoteIdentityWithID getIdentity(final RemoteIdentity ri) {
