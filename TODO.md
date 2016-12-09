@@ -38,14 +38,14 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* UI
+  * Remove own regular and custom roles (except root)
+  * On account create check suggested username against db and modify to unused name
 * Admin functionality
   * Find users
     * By name and display name (use existing code from api)
     * By role (custom or std)
   * revoke single / user's / all tokens
-  * Force pwd reset for local accounts (per user and all)
-  * Reset local account pwd to new random pwd
-  * Delete custom role
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization

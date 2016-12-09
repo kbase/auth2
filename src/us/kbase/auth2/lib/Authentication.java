@@ -65,7 +65,6 @@ public class Authentication {
 	//TODO SCOPES configure scope on login via ui
 	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
 	//TODO ADMIN revoke user token, revoke all tokens for a user, revoke all tokens
-	//TODO ADMIN force user pwd reset
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	
@@ -298,6 +297,24 @@ public class Authentication {
 		}
 		clear(passwordHash);
 		clear(salt);
+	}
+	
+
+	public void forceResetPassword(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		getUser(token, Role.ADMIN); // force admin
+		storage.forcePasswordReset(userName);
+	}
+	
+
+	public void forceResetAllPasswords(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, Role.ADMIN); // force admin
+		storage.forcePasswordReset();
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
@@ -538,7 +555,7 @@ public class Authentication {
 		 * retry until it works with a retry fail count to prevent infinite
 		 * loops.
 		 */
-		//TODO ROLES allow removing your own roles (except for root)
+		//TODO ROLES allow removing your own regular and custom roles (except for root)
 		final AuthUser u = storage.getUser(userName);
 		final Set<Role> canGrant = admin.getRoles().stream()
 				.flatMap(r -> r.grants().stream()).collect(Collectors.toSet());

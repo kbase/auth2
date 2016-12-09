@@ -71,6 +71,10 @@ public interface AuthStorage {
 	void changePassword(UserName userName, byte[] passwordHash, byte[] salt)
 			throws NoSuchUserException, AuthStorageException;
 	
+	void forcePasswordReset(UserName userName) throws NoSuchUserException, AuthStorageException;
+	
+	void forcePasswordReset() throws AuthStorageException;
+	
 	void createUser(NewUser authUser)
 			throws UserExistsException, AuthStorageException;
 

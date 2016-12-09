@@ -55,6 +55,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -441,6 +442,23 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
+	public void forcePasswordReset(final UserName name)
+			throws NoSuchUserException, AuthStorageException {
+		getUserDoc(name, true); //check user is local. Could do this in one step but meh
+		updateUser(name, new Document(Fields.USER_RESET_PWD, true));
+	}
+	
+	@Override
+	public void forcePasswordReset() throws AuthStorageException {
+		try {
+			db.getCollection(COL_USERS).updateMany(new Document(Fields.USER_LOCAL, true),
+					new Document("$set", new Document(Fields.USER_RESET_PWD, true)));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
 	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException {
 		if (user.isLocal()) {
@@ -490,8 +508,11 @@ public class MongoStorage implements AuthStorage {
 		final Document user = findOne(COL_USERS,
 				new Document(Fields.USER_NAME, userName.getName()),
 				projection);
-		if (user == null || (local && !user.getBoolean(Fields.USER_LOCAL))) {
+		if (user == null) {
 			throw new NoSuchUserException(userName.getName());
+		}
+		if (local && !user.getBoolean(Fields.USER_LOCAL)) {
+			throw new NoSuchLocalUserException(userName.getName());
 		}
 		return user;
 	}
@@ -575,8 +596,15 @@ public class MongoStorage implements AuthStorage {
 		if (t == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		//TODO TOKEN if token expired, throw error
-		return getToken(t);
+		final HashedToken htoken = getToken(t);
+		/* although expired tokens are automatically deleted from the DB by mongo, the thread
+		 * only runs ~1/min, so check here
+		 */
+		if (new Date().after(htoken.getExpirationDate())) {
+			// not really possible to write a test for this... maybe turn off the auto deletion?
+			throw new NoSuchTokenException("Token not found");
+		}
+		return htoken;
 	}
 	
 	private HashedToken getToken(final Document t)

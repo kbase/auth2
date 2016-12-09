@@ -8,9 +8,11 @@ Current endpoints
 
 ### UI
 
+/admin  
+Global admin tasks - force reset all passwords.
 
 /admin/customroles  
-Add and view custom roles.
+View, add, and delete custom roles.
 
 /admin/config  
 View and edit the server configuration.
@@ -19,7 +21,7 @@ View and edit the server configuration.
 Create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user and modify user roles.
+View user, disable user, force password reset, and modify user roles.
 
 /customroles  
 View custom roles. This page is publicly viewable to any user with a valid token.
@@ -40,10 +42,10 @@ Reset the password for a local account.
 Self explanatory.
 
 /me  
-User page.
+User page. Update name and email address.
 
 /tokens  
-List and create tokens.
+List, create, and revoke tokens.
 
 Note that the current UI is a minimal implementation for the purposes of
 testing. In many cases a manual refresh of the page will be required to see
@@ -108,6 +110,13 @@ Admin notes
     * email
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
+
+UI developer notes
+------------------
+* Some fields are arbitrary text entered by a user. These fields should be HTML-escaped prior to
+  display. The fields are noted where they occur in the test UI. Currently the fields include:
+  * Custom role descriptions
+  * The reason for why a user account was enabled and disabled.
 
 Requirements
 ------------

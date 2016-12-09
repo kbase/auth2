@@ -67,10 +67,7 @@ public class Admin {
 	//TODO TEST
 	//TODO JAVADOC
 
-	//TODO ADMIN reset user pwd
 	//TODO ADMIN find user
-	
-	//TODO ROLES html escape role wherever it's displayed (/me, admin custom roles, elsewhere?)
 	
 	private static final String SEP = UIPaths.SEP;
 	
@@ -85,16 +82,24 @@ public class Admin {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	public String admin() {
-		return "foo"; //TODO API pretty sure this is wrong
+	@Template(name = "/admingeneral")
+	public Map<String, String> admin(@Context final UriInfo uriInfo) {
+		return ImmutableMap.of("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD));
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_RESET_PWD)
+	public void forceResetAllPasswords(@Context final HttpHeaders headers)
+			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		auth.forceResetAllPasswords(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 	}
 	
 	@GET
 	@Path(UIPaths.ADMIN_LOCALACCOUNT)
 	@Template(name = "/adminlocalaccount")
 	@Produces(MediaType.TEXT_HTML)
-	public Map<String, String> createLocalAccountStart(
-			@Context final UriInfo uriInfo) {
+	public Map<String, String> createLocalAccountStart(@Context final UriInfo uriInfo) {
 		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_LOCAL_CREATE));
 	}
 	
@@ -147,6 +152,7 @@ public class Admin {
 		ret.put("roleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
 		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
+		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
 		ret.put("user", au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
@@ -194,11 +200,22 @@ public class Admin {
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		final boolean disable = disableStr != null;
-		final UserName un = new UserName(user);
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		auth.disableAccount(token, un, disable, reason);
+		auth.disableAccount(token, new UserName(user), disable, reason);
 	}
-			
+	
+	@POST
+	@Path(UIPaths.ADMIN_USER_RESET_PWD)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void forcePasswordReset(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user)
+			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
+			InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		auth.forceResetPassword(token, new UserName(user));
+	}
 	
 	@POST
 	@Path(UIPaths.ADMIN_USER_ROLES)
