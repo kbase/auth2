@@ -6,9 +6,14 @@
 <h3>Custom roles:</h3>
 {{#roles}}
 <p>
-<h4>ID: {{ID}}</h4>
+<h4>ID: {{ID}}</h4> <!-- why is this ID instead of id, shouldn't work -->
 Description:<br/>
 {{desc}}
+<br/>
+<form action="{{delroleurl}}" method="post">
+	<input type="hidden" name="id" value="{{ID}}"/>
+	<input type="submit" value="Delete"/>
+</form>
 </p>
 {{/roles}}
 

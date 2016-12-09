@@ -128,6 +128,8 @@ public interface AuthStorage {
 			throws AuthStorageException, NoSuchUserException;
 
 	void setCustomRole(CustomRole role) throws AuthStorageException;
+	
+	void deleteCustomRole(String roleId) throws NoSuchRoleException, AuthStorageException;
 
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
