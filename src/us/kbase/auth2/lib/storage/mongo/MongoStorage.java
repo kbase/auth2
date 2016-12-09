@@ -770,6 +770,26 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
+	public void deleteCustomRole(final String roleId)
+			throws NoSuchRoleException, AuthStorageException {
+		try {
+			final Document role = db.getCollection(COL_CUST_ROLES).findOneAndDelete(
+					new Document(Fields.ROLES_ID, roleId));
+			if (role == null) {
+				throw new NoSuchRoleException(roleId);
+			}
+			/* note that in the getCustomRoles() method the user's roles are checked against the
+			 * db and removed if they don't exist, which protects against race conditions and
+			 * mongo / server downs.
+			 */
+			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull", 
+					new Document(Fields.USER_CUSTOM_ROLES, role.getObjectId(Fields.MONGO_ID))));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
 	public Set<CustomRole> getCustomRoles() throws AuthStorageException {
 		return toCustomRoles(getCustomRoles(new Document()));
 	}

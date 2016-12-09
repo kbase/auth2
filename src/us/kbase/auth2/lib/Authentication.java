@@ -68,13 +68,6 @@ public class Authentication {
 	//TODO ADMIN force user pwd reset
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
-	//TODO UI set keep me logged in on login page
-	
-	/* TODO ROLES feature: delete custom roles (see below)
-	 * 1) delete role from system
-	 * 2) delete role from all users
-	 * Current code in the Mongo user classes will ensure that any race conditions result in the eventual removal of the role 
-	 */
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	
@@ -583,6 +576,18 @@ public class Authentication {
 			InvalidTokenException, UnauthorizedException {
 		getUser(incomingToken, Role.ADMIN);
 		storage.setCustomRole(new CustomRole(id, description));
+	}
+	
+	public void deleteCustomRole(
+			final IncomingToken token,
+			final String roleId)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchRoleException, MissingParameterException {
+		if (roleId == null || roleId.isEmpty()) {
+			throw new MissingParameterException("roleId cannot be null or empty");
+		}
+		getUser(token, Role.ADMIN); // ensure admin
+		storage.deleteCustomRole(roleId);
 	}
 
 	/* may need to restrict to a subset of users in the future */

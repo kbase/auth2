@@ -43,6 +43,9 @@ public class UIPaths {
 	public static final String ADMIN_CUSTOM_ROLES_SET = ADMIN_CUSTOM_ROLES + SEP +  "set";
 	public static final String ADMIN_ROOT_CUSTOM_ROLES_SET = ADMIN_ROOT + ADMIN_CUSTOM_ROLES_SET;
 	
+	public static final String ADMIN_CUSTOM_ROLES_DELETE = ADMIN_CUSTOM_ROLES + SEP +  "delete";
+	public static final String ADMIN_ROOT_CUSTOM_ROLES_DELETE = ADMIN_ROOT +
+			ADMIN_CUSTOM_ROLES_DELETE;
 	
 	public static final String ADMIN_CONFIG = "config";
 	public static final String ADMIN_CONFIG_BASIC = ADMIN_CONFIG + SEP + "basic";

@@ -266,8 +266,10 @@ public class Admin {
 			UnauthorizedException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final Set<CustomRole> roles = auth.getCustomRoles(token, true);
-		return ImmutableMap.of("custroleurl", relativize(
-				uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET), "roles", roles);
+		return ImmutableMap.of(
+				"custroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET),
+				"delroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_DELETE),
+				"roles", roles);
 	}
 	
 	@POST // should take PUT as well
@@ -281,6 +283,17 @@ public class Admin {
 			NoTokenProvidedException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				roleId, description);
+	}
+	
+	@POST // should take DELETE as well
+	@Path(UIPaths.ADMIN_CUSTOM_ROLES_DELETE)
+	public void deleteCustomRole(
+			@Context final HttpHeaders headers,
+			@FormParam("id") final String roleId)
+			throws MissingParameterException, AuthStorageException,
+			InvalidTokenException, UnauthorizedException,
+			NoTokenProvidedException, NoSuchRoleException {
+		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
 	//TODO CONFIG reset to defaults
