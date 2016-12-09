@@ -46,8 +46,7 @@ Auth service work
     * By name and display name (use existing code from api)
     * By role (custom or std)
   * revoke single / user's / all tokens
-  * Force pwd reset for local accounts (per user and all)
-  * Reset local account pwd to new random pwd
+  * Force pwd reset for all local accounts
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization

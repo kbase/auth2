@@ -36,6 +36,9 @@ public class UIPaths {
 	public static final String ADMIN_ROLES = "roles";
 	public static final String ADMIN_USER_ROLES = ADMIN_USER_PARAM + SEP + ADMIN_ROLES;
 	
+	public static final String ADMIN_RESET_PWD = "reset";
+	public static final String ADMIN_USER_RESET_PWD = ADMIN_USER_PARAM + SEP + ADMIN_RESET_PWD;
+	
 	public static final String ADMIN_CUSTOM_ROLES = CUSTOM_ROLES;
 	public static final String ADMIN_USER_CUSTOM_ROLES = ADMIN_USER_PARAM + SEP +
 			ADMIN_CUSTOM_ROLES;

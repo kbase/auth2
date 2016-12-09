@@ -300,6 +300,17 @@ public class Authentication {
 		clear(salt);
 	}
 	
+
+	public void forcePasswordReset(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		getUser(token, Role.ADMIN); // force admin
+		storage.forcePasswordReset(userName);
+	}
+	
 	private NewToken login(final UserName userName) throws AuthStorageException {
 		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
 				userName, cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));

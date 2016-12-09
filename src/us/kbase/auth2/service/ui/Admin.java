@@ -140,6 +140,7 @@ public class Admin {
 		ret.put("roleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
 		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
+		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
 		ret.put("user", au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
@@ -191,7 +192,19 @@ public class Admin {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		auth.disableAccount(token, un, disable, reason);
 	}
-			
+	
+	@POST
+	@Path(UIPaths.ADMIN_USER_RESET_PWD)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void forcePasswordReset(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user)
+			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
+			InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		auth.forcePasswordReset(token, new UserName(user));
+	}
 	
 	@POST
 	@Path(UIPaths.ADMIN_USER_ROLES)

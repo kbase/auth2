@@ -15,7 +15,15 @@ Display name: {{display}}<br/>
 Email: {{email}}<br/>
 Created: {{created}}<br/>
 Last login: {{lastlogin}}<br/>
-Local: {{local}}<br/>
+Local: {{local}}
+{{#local}}
+<br/>
+<form action="{{reseturl}}" method="post">
+	<input type="hidden" name="user" value="{{user}}"/>
+	<input type="submit" value="Force password reset"/>
+</form>
+{{/local}}
+<p/>
 <h3>Roles:</h3>
 <form action="{{roleurl}}" method="post">
 	Create developer token: <input type="checkbox" name="dev" {{#dev}}checked{{/dev}} /><br/>
