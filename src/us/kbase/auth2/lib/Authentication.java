@@ -538,7 +538,7 @@ public class Authentication {
 		 * retry until it works with a retry fail count to prevent infinite
 		 * loops.
 		 */
-		//TODO ROLES allow removing your own roles (except for root)
+		//TODO ROLES allow removing your own regular and custom roles (except for root)
 		final AuthUser u = storage.getUser(userName);
 		final Set<Role> canGrant = admin.getRoles().stream()
 				.flatMap(r -> r.grants().stream()).collect(Collectors.toSet());

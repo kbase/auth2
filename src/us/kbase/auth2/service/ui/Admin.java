@@ -70,8 +70,6 @@ public class Admin {
 	//TODO ADMIN reset user pwd
 	//TODO ADMIN find user
 	
-	//TODO ROLES html escape role wherever it's displayed (/me, admin custom roles, elsewhere?)
-	
 	private static final String SEP = UIPaths.SEP;
 	
 	private static final int MIN_IN_MS = 60 * 1000;
@@ -83,11 +81,6 @@ public class Admin {
 	
 	@Inject
 	private AuthAPIStaticConfig cfg;
-	
-	@GET
-	public String admin() {
-		return "foo"; //TODO API pretty sure this is wrong
-	}
 	
 	@GET
 	@Path(UIPaths.ADMIN_LOCALACCOUNT)

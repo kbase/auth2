@@ -575,8 +575,15 @@ public class MongoStorage implements AuthStorage {
 		if (t == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		//TODO TOKEN if token expired, throw error
-		return getToken(t);
+		final HashedToken htoken = getToken(t);
+		/* although expired tokens are automatically deleted from the DB by mongo, the thread
+		 * only runs ~1/min, so check here
+		 */
+		if (new Date().after(htoken.getExpirationDate())) {
+			// not really possible to write a test for this... maybe turn off the auto deletion?
+			throw new NoSuchTokenException("Token not found");
+		}
+		return htoken;
 	}
 	
 	private HashedToken getToken(final Document t)

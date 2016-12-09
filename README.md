@@ -109,6 +109,13 @@ Admin notes
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
 
+UI developer notes
+------------------
+* Some fields are arbitrary text entered by a user. These fields should be HTML-escaped prior to
+  display. The fields are noted where they occur in the test UI. Currently the fields include:
+  * Custom role descriptions
+  * The reason for why a user account was enabled and disabled.
+
 Requirements
 ------------
 Java 8 (OpenJDK OK)  

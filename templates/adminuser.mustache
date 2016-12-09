@@ -4,6 +4,7 @@
 User name: {{user}}<br/>
 {{#disabled}}
 <p>
+<p>Note that in a proper UI, the disable reason should be HTML-escaped.</p>
 DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
 {{disabledreason}}
 {{/disabled}}</p>
@@ -26,6 +27,7 @@ Local: {{local}}<br/>
 </form>
 
 <h3>Custom roles:</h3>
+<p>Note that in a proper UI, the role descriptions should be HTML-escaped.</p>
 {{#hascustom}}
 <form action="{{customroleurl}}" method="post">
 {{/hascustom}}
