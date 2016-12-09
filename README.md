@@ -10,7 +10,7 @@ Current endpoints
 
 
 /admin/customroles  
-Add and view custom roles.
+View, add, and delete custom roles.
 
 /admin/config  
 View and edit the server configuration.
@@ -19,7 +19,7 @@ View and edit the server configuration.
 Create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user and modify user roles.
+View user, disable user, and modify user roles.
 
 /customroles  
 View custom roles. This page is publicly viewable to any user with a valid token.
@@ -40,10 +40,10 @@ Reset the password for a local account.
 Self explanatory.
 
 /me  
-User page.
+User page. Update name and email address.
 
 /tokens  
-List and create tokens.
+List, create, and revoke tokens.
 
 Note that the current UI is a minimal implementation for the purposes of
 testing. In many cases a manual refresh of the page will be required to see
