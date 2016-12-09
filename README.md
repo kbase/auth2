@@ -8,6 +8,8 @@ Current endpoints
 
 ### UI
 
+/admin  
+Global admin tasks - force reset all passwords.
 
 /admin/customroles  
 View, add, and delete custom roles.
@@ -19,7 +21,7 @@ View and edit the server configuration.
 Create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user, disable user, and modify user roles.
+View user, disable user, force password reset, and modify user roles.
 
 /customroles  
 View custom roles. This page is publicly viewable to any user with a valid token.

@@ -65,7 +65,6 @@ public class Authentication {
 	//TODO SCOPES configure scope on login via ui
 	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
 	//TODO ADMIN revoke user token, revoke all tokens for a user, revoke all tokens
-	//TODO ADMIN force user pwd reset
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	
@@ -301,7 +300,7 @@ public class Authentication {
 	}
 	
 
-	public void forcePasswordReset(final IncomingToken token, final UserName userName)
+	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		if (userName == null) {
@@ -309,6 +308,13 @@ public class Authentication {
 		}
 		getUser(token, Role.ADMIN); // force admin
 		storage.forcePasswordReset(userName);
+	}
+	
+
+	public void forceResetAllPasswords(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, Role.ADMIN); // force admin
+		storage.forcePasswordReset();
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {

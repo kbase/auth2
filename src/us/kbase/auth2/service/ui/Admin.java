@@ -67,7 +67,6 @@ public class Admin {
 	//TODO TEST
 	//TODO JAVADOC
 
-	//TODO ADMIN reset user pwd
 	//TODO ADMIN find user
 	
 	private static final String SEP = UIPaths.SEP;
@@ -83,11 +82,24 @@ public class Admin {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
+	@Template(name = "/admingeneral")
+	public Map<String, String> admin(@Context final UriInfo uriInfo) {
+		return ImmutableMap.of("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD));
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_RESET_PWD)
+	public void forceResetAllPasswords(@Context final HttpHeaders headers)
+			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		auth.forceResetAllPasswords(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+	}
+	
+	@GET
 	@Path(UIPaths.ADMIN_LOCALACCOUNT)
 	@Template(name = "/adminlocalaccount")
 	@Produces(MediaType.TEXT_HTML)
-	public Map<String, String> createLocalAccountStart(
-			@Context final UriInfo uriInfo) {
+	public Map<String, String> createLocalAccountStart(@Context final UriInfo uriInfo) {
 		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_LOCAL_CREATE));
 	}
 	
@@ -188,9 +200,8 @@ public class Admin {
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		final boolean disable = disableStr != null;
-		final UserName un = new UserName(user);
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		auth.disableAccount(token, un, disable, reason);
+		auth.disableAccount(token, new UserName(user), disable, reason);
 	}
 	
 	@POST
@@ -203,7 +214,7 @@ public class Admin {
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		auth.forcePasswordReset(token, new UserName(user));
+		auth.forceResetPassword(token, new UserName(user));
 	}
 	
 	@POST

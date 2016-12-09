@@ -449,6 +449,16 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
+	public void forcePasswordReset() throws AuthStorageException {
+		try {
+			db.getCollection(COL_USERS).updateMany(new Document(Fields.USER_LOCAL, true),
+					new Document("$set", new Document(Fields.USER_RESET_PWD, true)));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
 	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException {
 		if (user.isLocal()) {

@@ -7,7 +7,7 @@ public class CustomRole {
 	private final String id;
 	private final String desc;
 	
-	//TODO ROLES The id should be sanity checked for length and url safety. Note that the id is permanent.
+	//TODO INPUT ROLES The id should be sanity checked for length and url safety. Note that the id is permanent.
 	//TODO ZLATER ROLES remove role from all users function
 	
 	public CustomRole(final String id, final String desc)
