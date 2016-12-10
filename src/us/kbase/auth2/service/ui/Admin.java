@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
@@ -27,6 +28,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
@@ -84,7 +86,9 @@ public class Admin {
 	@GET
 	@Template(name = "/admingeneral")
 	public Map<String, String> admin(@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD));
+		return ImmutableMap.of(
+				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD),
+				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
 	}
 	
 	@POST
@@ -93,6 +97,15 @@ public class Admin {
 			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
 		auth.forceResetAllPasswords(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_REVOKE_ALL)
+	public Response revokeAllTokens(@Context final HttpHeaders headers)
+			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
 	}
 	
 	@GET

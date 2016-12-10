@@ -510,6 +510,12 @@ public class Authentication {
 		final HashedToken ht = getToken(token);
 		storage.deleteTokens(ht.getUserName());
 	}
+	
+	public void revokeAllTokens(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, Role.ADMIN); // ensure admin
+		storage.deleteTokens();
+	}
 
 	public AuthUser getUserAsAdmin(
 			final IncomingToken adminToken,
