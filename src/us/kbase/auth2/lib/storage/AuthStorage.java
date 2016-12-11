@@ -127,6 +127,8 @@ public interface AuthStorage {
 			throws AuthStorageException, NoSuchTokenException;
 
 	void deleteTokens(UserName userName) throws AuthStorageException;
+	
+	void deleteTokens() throws AuthStorageException;
 
 	void setRoles(UserName userName, Set<Role> roles)
 			throws AuthStorageException, NoSuchUserException;

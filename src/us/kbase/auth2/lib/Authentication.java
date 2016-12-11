@@ -343,6 +343,15 @@ public class Authentication {
 		return new TokenSet(ht, storage.getTokens(ht.getUserName()));
 	}
 
+	public Set<HashedToken> getTokens(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		getUser(token, Role.ADMIN); // force admin
+		return storage.getTokens(userName);
+	}
+
 	// converts a no such token exception into an invalid token exception.
 	public HashedToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
@@ -482,11 +491,31 @@ public class Authentication {
 	
 	public void revokeToken(
 			final IncomingToken token,
-			final UUID tokenId)
+			final UUID tokenID)
 			throws AuthStorageException,
 			NoSuchTokenException, InvalidTokenException {
+		if (tokenID == null){
+			throw new NullPointerException("tokenID");
+		}
 		final HashedToken ht = getToken(token);
-		storage.deleteToken(ht.getUserName(), tokenId);
+		storage.deleteToken(ht.getUserName(), tokenID);
+	}
+
+	public void revokeToken(
+			final IncomingToken token,
+			final UserName userName,
+			final UUID tokenID)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchTokenException {
+		getUser(token, Role.ADMIN); // ensure admin
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		if (tokenID == null) {
+			throw new NullPointerException("tokenID");
+		}
+		storage.deleteToken(userName, tokenID);
+		
 	}
 	
 	//note returns null if the token could not be found 
@@ -509,6 +538,22 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException {
 		final HashedToken ht = getToken(token);
 		storage.deleteTokens(ht.getUserName());
+	}
+	
+	public void revokeAllTokens(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, Role.ADMIN); // ensure admin
+		storage.deleteTokens();
+	}
+	
+
+	public void revokeAllTokens(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		getUser(token, Role.ADMIN); // ensure admin
+		storage.deleteTokens(userName);
 	}
 
 	public AuthUser getUserAsAdmin(

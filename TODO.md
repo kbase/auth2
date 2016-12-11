@@ -45,7 +45,7 @@ Auth service work
   * Find users
     * By name and display name (use existing code from api)
     * By role (custom or std)
-  * revoke single / user's / all tokens
+  * Revoke token given the token itself
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization

@@ -66,8 +66,9 @@ public class Tokens {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		t.put("user", ((UIToken) t.get("current")).getUser());
-		t.put("targeturl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
-		t.put("tokenurl", relativize(uriInfo, UIPaths.TOKENS_ROOT));
+		t.put("createurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
+		t.put("revokeurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
+				UIPaths.SEP));
 		t.put("revokeallurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
 		return t;
 	}
@@ -117,7 +118,7 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path(UIPaths.TOKENS_ID)
+	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenPOST(
 			@Context final HttpHeaders headers,
 			@PathParam("tokenid") final UUID tokenId)
@@ -128,7 +129,7 @@ public class Tokens {
 	}
 	
 	@DELETE
-	@Path(UIPaths.TOKENS_ID)
+	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenDELETE(
 			@PathParam("tokenid") final UUID tokenId,
 			@Context final HttpHeaders headers,

@@ -1,0 +1,24 @@
+<html>
+<body>
+<h2>User: {{user}}</h2>
+Expiration and creation dates are in seconds from the epoch.
+</p>
+<form action="{{revokeallurl}}" method="post">
+	<input type="submit" value="Revoke all tokens for user"/>
+</form>
+<h3>Tokens:</h3>
+{{#tokens}}
+{{#name}}
+Name: {{name}}<br/>
+{{/name}}
+ID: {{id}}<br/>
+Type: {{type}}<br/>
+Created: {{created}}<br/>
+Expires: {{expires}}<br/>
+<form action="{{revokeurl}}{{id}}" method="post">
+	<input type="submit" value="Revoke"/>
+</form>
+<br/>
+{{/tokens}}
+</body>
+</html>
