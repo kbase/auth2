@@ -1,0 +1,17 @@
+<html>
+<body>
+{{#token}}
+User: {{user}}<br/>
+{{#name}}
+Name: {{name}}<br/>
+{{/name}}
+ID: {{id}}<br/>
+Type: {{type}}<br/>
+Created: {{created}}<br/>
+Expires: {{expires}}<br/>
+<form action="{{revokeurl}}" method="post">
+	<input type="submit" value="Revoke"/>
+</form>
+{{/token}}
+</body>
+</html>

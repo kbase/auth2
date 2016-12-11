@@ -21,6 +21,7 @@ public class UIPaths {
 	private static final String RESET = "reset";
 	private static final String USER = "user";
 	private static final String START = "start";
+	private static final String TOKEN = "token";
 	private static final String TOKENS = "tokens";
 	private static final String CUSTOM_ROLES = "customroles";
 	
@@ -48,6 +49,8 @@ public class UIPaths {
 	public static final String ADMIN_REVOKE_ALL = REVOKE_ALL;
 	public static final String ADMIN_ROOT_REVOKE_ALL = ADMIN_ROOT + ADMIN_REVOKE_ALL;
 	
+	public static final String ADMIN_TOKEN = TOKEN;
+	public static final String ADMIN_ROOT_TOKEN = ADMIN_ROOT + TOKEN;
 	public static final String ADMIN_TOKENS = TOKENS;
 	public static final String ADMIN_USER_TOKENS = ADMIN_USER_PARAM + SEP + ADMIN_TOKENS;
 	public static final String ADMIN_USER_TOKENS_REVOKE_ALL = ADMIN_USER_TOKENS + SEP + REVOKE_ALL;
@@ -69,7 +72,7 @@ public class UIPaths {
 	public static final String ADMIN_CONFIG = "config";
 	public static final String ADMIN_CONFIG_BASIC = ADMIN_CONFIG + SEP + "basic";
 	public static final String ADMIN_CONFIG_PROVIDER = ADMIN_CONFIG + SEP + "provider";
-	public static final String ADMIN_CONFIG_TOKEN = ADMIN_CONFIG + SEP + "token";
+	public static final String ADMIN_CONFIG_TOKEN = ADMIN_CONFIG + SEP + TOKEN;
 	public static final String ADMIN_ROOT_CONFIG_BASIC = ADMIN_ROOT + ADMIN_CONFIG_BASIC;
 	public static final String ADMIN_ROOT_CONFIG_PROVIDER = ADMIN_ROOT + ADMIN_CONFIG_PROVIDER;
 	public static final String ADMIN_ROOT_CONFIG_TOKEN = ADMIN_ROOT + ADMIN_CONFIG_TOKEN;
