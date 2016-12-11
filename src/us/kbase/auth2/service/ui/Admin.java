@@ -14,7 +14,9 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -53,11 +55,13 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
@@ -76,7 +80,7 @@ public class Admin {
 	private static final int MIN_IN_MS = 60 * 1000;
 
 	private static final int DAY_IN_MS = 24 * 60 * MIN_IN_MS;
-
+	
 	@Inject
 	private Authentication auth;
 	
@@ -166,6 +170,7 @@ public class Admin {
 		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
 		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
+		ret.put("tokenurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
 		ret.put("user", au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
@@ -201,6 +206,55 @@ public class Admin {
 		return ret;
 	}
 
+	@GET
+	@Path(UIPaths.ADMIN_USER_TOKENS)
+	@Template(name = "/adminusertokens")
+	public Map<String, Object> getUserTokens(
+			@Context final HttpHeaders headers,
+			@Context final UriInfo uriInfo,
+			@PathParam("user") final String user)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			MissingParameterException, IllegalParameterException, AuthStorageException {
+		
+		final Set<HashedToken> tokens = auth.getTokens(
+				getTokenFromCookie(headers, cfg.getTokenCookieName()), new UserName(user));
+		final List<UIToken> uitokens = tokens.stream()
+				.map(t -> new UIToken(t)).collect(Collectors.toList());
+		final String urlPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP +
+				UIPaths.ADMIN_TOKENS + SEP;
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("tokens", uitokens);
+		ret.put("revokeurl", relativize(uriInfo, urlPrefix +
+				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP));
+		ret.put("revokeallurl", relativize(uriInfo, urlPrefix + UIPaths.ADMIN_REVOKE_ALL));
+		return ret;
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ID)
+	public void revokeUserToken(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user,
+			@PathParam("tokenid") final UUID tokenID)
+			throws InvalidTokenException, NoSuchTokenException, UnauthorizedException,
+			NoTokenProvidedException, MissingParameterException, IllegalParameterException,
+			AuthStorageException {
+		auth.revokeToken(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				new UserName(user), tokenID);
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ALL)
+	public void revokeUserToken(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			MissingParameterException, IllegalParameterException, AuthStorageException {
+		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				new UserName(user));
+	}
+			
+	
 	@POST
 	@Path(UIPaths.ADMIN_USER_DISABLE)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
