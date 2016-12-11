@@ -132,7 +132,9 @@ public class Admin {
 		final HashedToken ht = auth.getToken(t);
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("token", new UIToken(ht));
-		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP));
+		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP +
+				ht.getUserName().getName() + SEP + UIPaths.ADMIN_TOKENS + SEP +
+				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP + ht.getId().toString()));
 		return ret;
 	}
 	
