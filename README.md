@@ -9,7 +9,7 @@ Current endpoints
 ### UI
 
 /admin  
-Global admin tasks - force reset all passwords, revoke all tokens.
+Global admin tasks - force reset all passwords, revoke all tokens, view a token.
 
 /admin/customroles  
 View, add, and delete custom roles.
@@ -23,7 +23,7 @@ Create a local account.
 /admin/user/&lt;user name&gt;  
 View user, disable user, force password reset and modify user roles.
 
-/admin/user/&lt;user name&gt/tokens;  
+/admin/user/&lt;user name&gt;/tokens;  
 View and revoke tokens for a specific user.
 
 /customroles  

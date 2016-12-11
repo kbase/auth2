@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
@@ -92,7 +94,8 @@ public class Admin {
 	public Map<String, String> admin(@Context final UriInfo uriInfo) {
 		return ImmutableMap.of(
 				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD),
-				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL),
+				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
 	}
 	
 	@POST
@@ -110,6 +113,27 @@ public class Admin {
 			AuthStorageException {
 		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_TOKEN)
+	@Template(name = "/admintoken")
+	public Map<String, Object> getUserToken(
+			@Context final UriInfo uriInfo,
+			@FormParam("token") final String token)
+			throws NoTokenProvidedException, MissingParameterException, InvalidTokenException,
+			NoSuchTokenException, UnauthorizedException, AuthStorageException {
+		final IncomingToken t;
+		try {
+			t = getToken(token);
+		} catch (NoTokenProvidedException e) {
+			throw new MissingParameterException("token");
+		}
+		final HashedToken ht = auth.getToken(t);
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("token", new UIToken(ht));
+		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP));
+		return ret;
 	}
 	
 	@GET
@@ -223,6 +247,7 @@ public class Admin {
 		final String urlPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP +
 				UIPaths.ADMIN_TOKENS + SEP;
 		final Map<String, Object> ret = new HashMap<>();
+		ret.put("user", user);
 		ret.put("tokens", uitokens);
 		ret.put("revokeurl", relativize(uriInfo, urlPrefix +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP));
