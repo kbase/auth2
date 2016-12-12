@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 public class IncomingHashedToken {
 	
@@ -11,7 +11,7 @@ public class IncomingHashedToken {
 
 	IncomingHashedToken(final String tokenHash) {
 		super();
-		checkString(tokenHash, "token", true);
+		checkStringNoCheckedException(tokenHash, "token");
 		this.tokenHash = tokenHash;
 	}
 

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.addLong;
 
 import java.util.Date;
@@ -17,7 +17,7 @@ public class TemporaryToken {
 	private final UUID id = UUID.randomUUID();
 
 	public TemporaryToken(final String token, final long lifetimeInms) {
-		checkString(token, "token", true);
+		checkStringNoCheckedException(token, "token");
 		if (lifetimeInms < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}

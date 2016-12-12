@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -31,7 +31,7 @@ public class HashedToken {
 			final UserName userName,
 			final Date creationDate,
 			final Date expirationDate) {
-		checkString(tokenHash, "tokenHash", true);
+		checkStringNoCheckedException(tokenHash, "tokenHash");
 		if (type == null) {
 			throw new NullPointerException("type");
 		}

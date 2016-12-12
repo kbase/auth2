@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.addLong;
 
 import java.util.Date;
@@ -26,7 +26,7 @@ public class NewToken {
 			final String token,
 			final UserName userName,
 			final long lifetimeInms) {
-		checkString(token, "token", true);
+		checkStringNoCheckedException(token, "token");
 		if (type == null) {
 			throw new NullPointerException("type");
 		}
@@ -50,8 +50,8 @@ public class NewToken {
 			final String token,
 			final UserName userName,
 			final long lifetimeInms) {
-		checkString(token, "token", true);
-		checkString(tokenName, "tokenName", true);
+		checkStringNoCheckedException(token, "token");
+		checkStringNoCheckedException(tokenName, "tokenName");
 		if (type == null) {
 			throw new NullPointerException("type");
 		}

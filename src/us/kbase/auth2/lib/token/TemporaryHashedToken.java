@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.util.Date;
 import java.util.UUID;
@@ -15,13 +15,13 @@ public class TemporaryHashedToken {
 	private final Date expiry;
 	private final UUID id;
 
-	public TemporaryHashedToken(
+	TemporaryHashedToken(
 			final String tokenHash,
 			final UUID id,
 			final Date created,
 			final Date expiry) {
 		super();
-		checkString(tokenHash, "tokenHash", true);
+		checkStringNoCheckedException(tokenHash, "tokenHash");
 		if (created == null) {
 			throw new NullPointerException("created");
 		}
