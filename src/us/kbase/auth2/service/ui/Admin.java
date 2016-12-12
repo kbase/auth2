@@ -93,13 +93,13 @@ public class Admin {
 	@Template(name = "/admingeneral")
 	public Map<String, String> admin(@Context final UriInfo uriInfo) {
 		return ImmutableMap.of(
-				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_RESET_PWD),
+				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD),
 				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL),
 				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
 	}
 	
 	@POST
-	@Path(UIPaths.ADMIN_RESET_PWD)
+	@Path(UIPaths.ADMIN_FORCE_RESET_PWD)
 	public void forceResetAllPasswords(@Context final HttpHeaders headers)
 			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
@@ -196,6 +196,7 @@ public class Admin {
 		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
 		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
 		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
+		ret.put("forcereseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_FORCE_RESET_PWD));
 		ret.put("tokenurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
 		ret.put("user", au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
@@ -299,7 +300,7 @@ public class Admin {
 	}
 	
 	@POST
-	@Path(UIPaths.ADMIN_USER_RESET_PWD)
+	@Path(UIPaths.ADMIN_USER_FORCE_RESET_PWD)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void forcePasswordReset(
 			@Context final HttpHeaders headers,
@@ -309,6 +310,24 @@ public class Admin {
 			NoSuchUserException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		auth.forceResetPassword(token, new UserName(user));
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_USER_RESET_PWD)
+	@Template(name = "/adminpwdreset")
+	public Map<String, Object> resetUserPassword(
+			@Context final HttpHeaders headers,
+			@PathParam("user") final String user)
+			throws NoTokenProvidedException, InvalidTokenException, NoSuchUserException,
+			UnauthorizedException, MissingParameterException, IllegalParameterException,
+			AuthStorageException{
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		final Password pwd = auth.resetPassword(token, new UserName(user));
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("user", user);
+		ret.put("pwd", new String(pwd.getPassword()));
+		pwd.clear();
+		return ret;
 	}
 	
 	@POST

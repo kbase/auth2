@@ -21,7 +21,7 @@ View and edit the server configuration.
 Create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user, disable user, force password reset and modify user roles.
+View user, disable user, reset password, force password reset, and modify user roles.
 
 /admin/user/&lt;user name&gt;/tokens;  
 View and revoke tokens for a specific user.
