@@ -42,8 +42,12 @@ public class UIPaths {
 	public static final String ADMIN_ROLES = "roles";
 	public static final String ADMIN_USER_ROLES = ADMIN_USER_PARAM + SEP + ADMIN_ROLES;
 	
+	public static final String ADMIN_FORCE_RESET_PWD = "force" + RESET;
+	public static final String ADMIN_ROOT_FORCE_RESET_PWD = ADMIN_ROOT + ADMIN_FORCE_RESET_PWD;
+	public static final String ADMIN_USER_FORCE_RESET_PWD = ADMIN_USER_PARAM + SEP +
+			ADMIN_FORCE_RESET_PWD;
+	
 	public static final String ADMIN_RESET_PWD = RESET;
-	public static final String ADMIN_ROOT_RESET_PWD = ADMIN_ROOT + RESET;
 	public static final String ADMIN_USER_RESET_PWD = ADMIN_USER_PARAM + SEP + ADMIN_RESET_PWD;
 	
 	public static final String ADMIN_REVOKE_ALL = REVOKE_ALL;

@@ -18,9 +18,14 @@ Last login: {{lastlogin}}<br/>
 Local: {{local}}
 {{#local}}
 <br/>
-<form action="{{reseturl}}" method="post">
+<form action="{{forcereseturl}}" method="post">
 	<input type="hidden" name="user" value="{{user}}"/>
 	<input type="submit" value="Force password reset"/>
+</form>
+<br/>
+<form action="{{reseturl}}" method="post">
+	<input type="hidden" name="user" value="{{user}}"/>
+	<input type="submit" value="Reset and display password"/>
 </form>
 {{/local}}
 <p/>

@@ -429,12 +429,16 @@ public class MongoStorage implements AuthStorage {
 		}
 	}	
 	@Override
-	public void changePassword(final UserName name, final byte[] pwdHash, final byte[] salt)
+	public void changePassword(
+			final UserName name,
+			final byte[] pwdHash,
+			final byte[] salt,
+			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
 		getUserDoc(name, true); //check the user actually is local
 		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
-		final Document set = new Document(Fields.USER_RESET_PWD, false)
+		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
 				.append(Fields.USER_RESET_PWD_LAST, new Date())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, encsalt);

@@ -64,11 +64,11 @@ public class Authentication {
 	//TODO SCOPES configure scopes via ui
 	//TODO SCOPES configure scope on login via ui
 	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
-	//TODO ADMIN revoke user token, revoke all tokens for a user, revoke all tokens
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	
 	private static final int MAX_RETURNED_USERS = 10000;
+	private static final int TEMP_PWD_LENGTH = 10;
 	
 	private static final DisplayName UNKNOWN_DISPLAY_NAME;
 	static {
@@ -234,7 +234,7 @@ public class Authentication {
 		if (email == null) {
 			throw new NullPointerException("email");
 		}
-		final Password pwd = new Password(tokens.getTemporaryPassword(10));
+		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
@@ -290,7 +290,7 @@ public class Authentication {
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
 		pwdnew.clear();
 		try {
-			storage.changePassword(userName, passwordHash, salt);
+			storage.changePassword(userName, passwordHash, salt, false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new RuntimeException("Sorry, you ceased to exist in the last ~10ms.", e);
@@ -298,8 +298,25 @@ public class Authentication {
 		clear(passwordHash);
 		clear(salt);
 	}
-	
 
+
+	public Password resetPassword(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		getUser(token, Role.ADMIN); // force admin
+		
+		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
+		final byte[] salt = pwdcrypt.generateSalt();
+		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+		storage.changePassword(userName, passwordHash, salt, true);
+		clear(passwordHash);
+		clear(salt);
+		return pwd;
+	}
+	
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
@@ -309,7 +326,6 @@ public class Authentication {
 		getUser(token, Role.ADMIN); // force admin
 		storage.forcePasswordReset(userName);
 	}
-	
 
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {

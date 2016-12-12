@@ -38,6 +38,9 @@ Auth service work
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
+* General
+  * Password strength checker, check passwords != on reset
+  * Email format validator (hard since almost anything is a valid email address)
 * UI
   * Remove own regular and custom roles (except root)
   * On account create check suggested username against db and modify to unused name
