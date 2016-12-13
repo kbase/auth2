@@ -10,6 +10,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -130,6 +131,10 @@ public class UIUtils {
 			}
 			return null;
 		}
-		return new IncomingToken(val.trim());
+		try {
+			return new IncomingToken(val.trim());
+		} catch (MissingParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 }

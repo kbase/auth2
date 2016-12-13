@@ -25,8 +25,9 @@ public class UserName {
 					e.getMessage(), e);
 		}
 	}
-	private final static Pattern INVALID_USER_NAME =
-			Pattern.compile("[^a-z\\d_]");
+	
+	private static final String INVALID_CHARS_REGEX = "[^a-z\\d_]+";
+	private final static Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
 	private final static int MAX_NAME_LENGTH = 100;
 	
 	private final String name;
@@ -37,12 +38,16 @@ public class UserName {
 		if (name.trim().equals(ROOT_NAME)) {
 			this.name = ROOT_NAME;
 		} else {
-			final Matcher m = INVALID_USER_NAME.matcher(name);
+			final Matcher m = INVALID_CHARS.matcher(name);
 			if (m.find()) {
 				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
 						"Illegal character in user name %s: %s", name, m.group()));
 			}
-			this.name = name.trim();
+			if (!Character.isLetter(name.codePointAt(0))) {
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Username must start with a letter");
+			}
+			this.name = name;
 		}
 	}
 	
@@ -52,6 +57,17 @@ public class UserName {
 
 	public String getName() {
 		return name;
+	}
+	
+	// returns the null if the name contains no lowercase letters.
+	public static UserName sanitizeName(final String suggestedUserName) {
+		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
+				.replaceAll("^[^a-z]+", "");
+		try {
+			return s.isEmpty() ? null : new UserName(s);
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 
 	@Override
@@ -83,5 +99,4 @@ public class UserName {
 		}
 		return true;
 	}
-	
 }

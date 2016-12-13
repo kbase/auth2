@@ -284,10 +284,7 @@ public class Login {
 	
 	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
-		}
-		final LoginState loginState = auth.getLoginState(new IncomingToken(token.trim()));
+		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
@@ -303,8 +300,8 @@ public class Login {
 		for (final RemoteIdentityWithID id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
 			c.put("id", id.getID().toString());
-			//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
-			c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
+			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
+			c.put("usernamesugg", auth.getAvailableUserName(suggestedUserName).getName());
 			c.put("prov_username", id.getDetails().getUsername());
 			c.put("prov_fullname", id.getDetails().getFullname());
 			c.put("prov_email", id.getDetails().getEmail());
@@ -329,6 +326,16 @@ public class Login {
 		}
 		return ret;
 	}
+
+	private IncomingToken getLoginInProcessToken(final String token) throws NoTokenProvidedException {
+		final IncomingToken incToken;
+		try {
+			incToken = new IncomingToken(token);
+		} catch (MissingParameterException e) {
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN); 
+		}
+		return incToken;
+	}
 	
 	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
@@ -341,10 +348,7 @@ public class Login {
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException {
 		
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
-		}
-		final NewToken newtoken = auth.login(new IncomingToken(token), identityID);
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token), identityID);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 
@@ -363,13 +367,10 @@ public class Login {
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN);
-		}
 		//TODO INPUT sanity check inputs
 		
 		// might want to enapsulate the user data in a NewUser class
-		final NewToken newtoken = auth.createUser(new IncomingToken(token), identityID,
+		final NewToken newtoken = auth.createUser(getLoginInProcessToken(token), identityID,
 				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}

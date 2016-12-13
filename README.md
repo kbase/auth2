@@ -8,6 +8,9 @@ Current endpoints
 
 ### UI
 
+UI endpoints are not versioned and not necessarily stable - behavior may change as needed to
+support the auth UI.
+
 /admin  
 Global admin tasks - force reset all passwords, revoke all tokens, view a token.
 
@@ -56,6 +59,9 @@ changes. Further, once a checkbox is manually checked or unchecked, that state
 will not change, even with a refresh - to see changes reset the form.
 
 ### API
+
+API endpoints are versioned and behavior should not change in a backwards incompatible manner
+without a change in version.
 
 All API calls require a valid token in the `Authorization` header except legacy API endpoints,
 which continue to use their original protocol. All endpoints produce JSON data unless otherwise

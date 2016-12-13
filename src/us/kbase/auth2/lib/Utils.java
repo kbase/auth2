@@ -36,10 +36,9 @@ public class Utils {
 	private static int codePoints(final String s) {
 		return s.codePointCount(0, s.length());
 	}
-	public static void checkString(
+	public static void checkStringNoCheckedException(
 			final String s,
-			final String name,
-			final boolean argexcept) {
+			final String name) {
 		if (s == null || s.trim().isEmpty()) {
 			throw new IllegalArgumentException("Missing argument: " + name);
 		}

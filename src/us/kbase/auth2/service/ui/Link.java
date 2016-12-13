@@ -242,12 +242,9 @@ public class Link {
 			final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			LinkFailedException, DisabledUserException {
-		if (linktoken == null || linktoken.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
-		}
 		final LinkIdentities ids = auth.getLinkState(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new IncomingToken(linktoken.trim()));
+				getLinkInProcessToken(linktoken));
 		/* there's a possibility here that between the redirects the number
 		 * of identities that aren't already linked was reduced 1. The
 		 * probability is so low that it's not worth special casing it,
@@ -268,6 +265,16 @@ public class Link {
 		}
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
 		return ret;
+	}
+
+	private IncomingToken getLinkInProcessToken(final String linktoken) throws NoTokenProvidedException {
+		final IncomingToken incToken;
+		try {
+			incToken = new IncomingToken(linktoken);
+		} catch (MissingParameterException e) {
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE); 
+		}
+		return incToken;
 	}
 	
 	// for dumb HTML pages that use forms
@@ -309,7 +316,7 @@ public class Link {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
 		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new IncomingToken(linktoken), identityID);
+				getLinkInProcessToken(linktoken), identityID);
 	}
 	
 	//Assumes valid URI in URL form

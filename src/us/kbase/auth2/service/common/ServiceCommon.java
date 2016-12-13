@@ -19,10 +19,11 @@ public class ServiceCommon {
 	
 	public static IncomingToken getToken(final String token)
 			throws NoTokenProvidedException {
-		if (token == null || token.trim().isEmpty()) {
+		try {
+			return new IncomingToken(token);
+		} catch (MissingParameterException e) {
 			throw new NoTokenProvidedException("No user token provided");
 		}
-		return new IncomingToken(token.trim());
 	}
 
 	public static void updateUser(
