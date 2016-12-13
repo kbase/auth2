@@ -70,17 +70,17 @@ public class Authentication {
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
 	
-	private static final String DEFAULT_SUGGESTED_USER_NAME = "user";
-
+	private static final UserName DEFAULT_SUGGESTED_USER_NAME;
 	private static final DisplayName UNKNOWN_DISPLAY_NAME;
 	static {
 		try {
+			DEFAULT_SUGGESTED_USER_NAME = new UserName("user");
 			UNKNOWN_DISPLAY_NAME = new DisplayName("unknown");
 		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("this is impossible", e);
+			throw new RuntimeException("this should be impossible", e);
 		}
 	}
-	
+
 	private final AuthStorage storage;
 	private final IdentityProviderFactory idFactory;
 	private final TokenGenerator tokens;
@@ -898,16 +898,16 @@ public class Authentication {
 	}
 
 
-	public UserName getAvailableUserName(String suggestedUserName)
+	public UserName getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		if (suggestedUserName == null) {
 			throw new NullPointerException("suggestedUserName");
 		}
-		suggestedUserName = UserName.sanitizeName(suggestedUserName);
-		if (suggestedUserName.isEmpty()) {
+		final UserName un = UserName.sanitizeName(suggestedUserName);
+		if (un == null) {
 			return storage.getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
 		} else {
-			return storage.getAvailableUserName(suggestedUserName, false);
+			return storage.getAvailableUserName(un, false);
 		}
 	}
 	

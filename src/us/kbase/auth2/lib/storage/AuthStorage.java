@@ -78,7 +78,7 @@ public interface AuthStorage {
 	void createUser(NewUser authUser)
 			throws UserExistsException, AuthStorageException;
 	
-	UserName getAvailableUserName(String suggestedUserName, boolean forceNumericSuffix)
+	UserName getAvailableUserName(UserName suggestedUserName, boolean forceNumericSuffix)
 			throws AuthStorageException;
 
 	void disableAccount(UserName user, UserName admin, String reason)

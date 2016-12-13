@@ -58,6 +58,17 @@ public class UserName {
 	public String getName() {
 		return name;
 	}
+	
+	// returns the null if the name contains no lowercase letters.
+	public static UserName sanitizeName(final String suggestedUserName) {
+		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
+				.replaceAll("^[^a-z]+", "");
+		try {
+			return s.isEmpty() ? null : new UserName(s);
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
 
 	@Override
 	public int hashCode() {
@@ -88,11 +99,4 @@ public class UserName {
 		}
 		return true;
 	}
-
-	// returns the empty string if the name contains no lowercase letters.
-	public static String sanitizeName(final String suggestedUserName) {
-		return suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
-				.replaceAll("^[^a-z]+", "");
-	}
-	
 }

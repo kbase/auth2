@@ -527,10 +527,11 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public UserName getAvailableUserName(
-			final String suggestedUserName,
+			final UserName suggestedUserName,
 			final boolean forceNumericSuffix) throws AuthStorageException {
 		
-		final String sugStrip = suggestedUserName.replaceAll("\\d*$", "");
+		final String sugName = suggestedUserName.getName();
+		final String sugStrip = sugName.replaceAll("\\d*$", "");
 		final Document projection = new Document(Fields.USER_NAME, 1);
 		// checked that this does indeed use an index
 		final Document query = new Document(Fields.USER_NAME,
@@ -543,17 +544,17 @@ public class MongoStorage implements AuthStorage {
 			long largest = 0;
 			for (final Document d: res) {
 				final String lastName = d.getString(Fields.USER_NAME);
-				match = match || suggestedUserName.equals(lastName);
+				match = match || sugName.equals(lastName);
 				final String num = lastName.replace(sugStrip, "");
 				final long n = num.isEmpty() ? 1 : Long.parseLong(num);
 				largest = n > largest ? n : largest;
 			}
 			if (largest == 0 || !match) {
-				final boolean hasNumSuffix = sugStrip.length() != suggestedUserName.length();
-				return getUserName(suggestedUserName +
-						(!hasNumSuffix && forceNumericSuffix ? "1" : ""));
+				final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+				return getUserName(suggestedUserName.getName() +
+						(!hasNumSuffix && forceNumericSuffix ? (largest + 1) : ""));
 			} else {
-				return getUserName(suggestedUserName + (largest + 1));
+				return getUserName(sugName + (largest + 1));
 			}
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
