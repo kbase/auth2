@@ -300,8 +300,8 @@ public class Login {
 		for (final RemoteIdentityWithID id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
 			c.put("id", id.getID().toString());
-			//TODO UI get safe username from db. Splitting on @ is not necessarily safe, only do it if it's there
-			c.put("usernamesugg", id.getDetails().getUsername().split("@")[0]);
+			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
+			c.put("usernamesugg", auth.getAvailableUserName(suggestedUserName).getName());
 			c.put("prov_username", id.getDetails().getUsername());
 			c.put("prov_fullname", id.getDetails().getFullname());
 			c.put("prov_email", id.getDetails().getEmail());
