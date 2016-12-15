@@ -211,11 +211,10 @@ public class Admin {
 		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
 		final UserName admin = au.getAdminThatToggledEnabledState();
 		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
-		final Set<Role> r = au.getRoles();
-		ret.put("admin", Role.ADMIN.isSatisfiedBy(r));
-		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(r));
-		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(r));
-		ret.put("createadmin", Role.CREATE_ADMIN.isSatisfiedBy(r));
+		ret.put("admin", au.hasRole(Role.ADMIN));
+		ret.put("serv", au.hasRole(Role.SERV_TOKEN));
+		ret.put("dev", au.hasRole(Role.DEV_TOKEN));
+		ret.put("createadmin", au.hasRole(Role.CREATE_ADMIN));
 		return ret;
 	}
 	
@@ -341,13 +340,34 @@ public class Admin {
 			NoSuchRoleException, MissingParameterException,
 			IllegalParameterException, UnauthorizedException,
 			InvalidTokenException, NoTokenProvidedException {
-		final Set<Role> roles = new HashSet<>();
-		addRoleFromForm(form, roles, "createadmin", Role.CREATE_ADMIN);
-		addRoleFromForm(form, roles, "admin", Role.ADMIN);
-		addRoleFromForm(form, roles, "dev", Role.DEV_TOKEN);
-		addRoleFromForm(form, roles, "serv", Role.SERV_TOKEN);
-		auth.updateRoles(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new UserName(user), roles);
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		final UserName userName = new UserName(user);
+		final AuthUser au = auth.getUserAsAdmin(token, userName);
+		final Set<Role> addRoles = new HashSet<>();
+		final Set<Role> removeRoles = new HashSet<>();
+		addRoleFromForm(au, form, addRoles, removeRoles, "createadmin", Role.CREATE_ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, "admin", Role.ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, "dev", Role.DEV_TOKEN);
+		addRoleFromForm(au, form, addRoles, removeRoles, "serv", Role.SERV_TOKEN);
+		auth.updateRoles(token, userName, addRoles, removeRoles);
+	}
+
+	private void addRoleFromForm(
+			final AuthUser user,
+			final MultivaluedMap<String, String> form,
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles,
+			final String rstr,
+			final Role role) {
+		if (form.get(rstr) != null) {
+			if (!user.hasRole(role)) {
+				addRoles.add(role);
+			}
+		} else {
+			if (user.hasRole(role)) {
+				removeRoles.add(role);
+			}
+		}
 	}
 	
 	@POST
@@ -362,30 +382,30 @@ public class Admin {
 			IllegalParameterException, UnauthorizedException,
 			InvalidTokenException, NoTokenProvidedException {
 		final UserName userName = new UserName(user);
-		auth.updateCustomRoles(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				userName, getRoleIds(form));
+		final Set<String> addRoles = new HashSet<>();
+		final Set<String> removeRoles = new HashSet<>();
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		processRolesFromForm(token, form, addRoles, removeRoles);
+		auth.updateCustomRoles(token, userName, addRoles, removeRoles);
 	}
 
-	private Set<String> getRoleIds(final MultivaluedMap<String, String> form) {
-		final Set<String> ret = new HashSet<>();
-		for (final String s: form.keySet()) {
+	private void processRolesFromForm(
+			final IncomingToken token,
+			final MultivaluedMap<String, String> form,
+			final Set<String> addRoles,
+			final Set<String> removeRoles)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		final Set<String> croles = auth.getCustomRoles(token, true).stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		for (final String s: croles) {
 			if (form.get(s) != null) {
-					ret.add(s);
+				addRoles.add(s);
+			} else {
+				removeRoles.add(s);
 			}
 		}
-		return ret;
 	}
 
-	private void addRoleFromForm(
-			final MultivaluedMap<String, String> form,
-			final Set<Role> roles,
-			final String rstr,
-			final Role role) {
-		if (form.get(rstr) != null) {
-			roles.add(role);
-		}
-	}
-	
 	@GET
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES)
 	@Template(name = "/admincustomroles")

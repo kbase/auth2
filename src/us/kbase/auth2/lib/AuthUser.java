@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
@@ -20,6 +21,7 @@ public abstract class AuthUser {
 	private final EmailAddress email;
 	private final UserName userName;
 	private final Set<Role> roles;
+	private Set<Role> canGrantRoles = null;
 	private final Set<RemoteIdentityWithID> identities;
 	private final long created;
 	private final Long lastLogin;
@@ -88,6 +90,19 @@ public abstract class AuthUser {
 
 	public Set<Role> getRoles() {
 		return roles;
+	}
+	
+	public Set<Role> getGrantableRoles() {
+		if (canGrantRoles == null) {
+			canGrantRoles = getRoles().stream().flatMap(r -> r.grants().stream())
+					.collect(Collectors.toSet());
+		}
+		return canGrantRoles;
+	}
+	
+
+	public boolean hasRole(final Role role) {
+		return roles.contains(role);
 	}
 
 	public abstract Set<String> getCustomRoles() throws AuthStorageException;

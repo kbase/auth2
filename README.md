@@ -11,6 +11,11 @@ Current endpoints
 UI endpoints are not versioned and not necessarily stable - behavior may change as needed to
 support the auth UI.
 
+Note that the current UI is a minimal implementation for the purposes of
+testing. In many cases a manual refresh of the page will be required to see
+changes. Further, once a checkbox is manually checked or unchecked, that state
+will not change, even with a refresh - to see changes reset the form.
+
 /admin  
 Global admin tasks - force reset all passwords, revoke all tokens, view a token.
 
@@ -52,11 +57,6 @@ User page. Update name and email address.
 
 /tokens  
 List, create, and revoke tokens.
-
-Note that the current UI is a minimal implementation for the purposes of
-testing. In many cases a manual refresh of the page will be required to see
-changes. Further, once a checkbox is manually checked or unchecked, that state
-will not change, even with a refresh - to see changes reset the form.
 
 ### API
 

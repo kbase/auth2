@@ -42,8 +42,7 @@ Auth service work
   * Password strength checker, check passwords != on reset
   * Email format validator (hard since almost anything is a valid email address)
 * UI
-  * Remove own regular and custom roles (except root)
-  * On account create check suggested username against db and modify to unused name
+  * Remove own regular roles (except root)
 * Admin functionality
   * Find users
     * By name and display name (use existing code from api)
