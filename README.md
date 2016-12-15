@@ -53,7 +53,7 @@ Reset the password for a local account.
 Self explanatory.
 
 /me  
-User page. Update name and email address.
+User page. Update name and email address, remove roles.
 
 /tokens  
 List, create, and revoke tokens.
