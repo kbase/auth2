@@ -20,6 +20,7 @@ public class UIPaths {
 	private static final String LOCAL = "localaccount";
 	private static final String RESET = "reset";
 	private static final String USER = "user";
+	private static final String ROLES = "roles";
 	private static final String START = "start";
 	private static final String TOKEN = "token";
 	private static final String TOKENS = "tokens";
@@ -39,7 +40,7 @@ public class UIPaths {
 	public static final String ADMIN_DISABLE = "disable";
 	public static final String ADMIN_USER_DISABLE = ADMIN_USER_PARAM + SEP + ADMIN_DISABLE;
 
-	public static final String ADMIN_ROLES = "roles";
+	public static final String ADMIN_ROLES = ROLES;
 	public static final String ADMIN_USER_ROLES = ADMIN_USER_PARAM + SEP + ADMIN_ROLES;
 	
 	public static final String ADMIN_FORCE_RESET_PWD = "force" + RESET;
@@ -134,6 +135,8 @@ public class UIPaths {
 	public static final String ME_ROOT = "/me/";
 	
 	public static final String ME_PARAM_ID = "{id}";
+	public static final String ME_ROLES = ROLES;
+	public static final String ME_ROOT_ROLES = ME_ROOT + ME_ROLES;
 	
 	/* tokens endpoint */
 	

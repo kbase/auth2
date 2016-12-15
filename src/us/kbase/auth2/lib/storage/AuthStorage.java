@@ -133,7 +133,7 @@ public interface AuthStorage {
 	
 	void deleteTokens() throws AuthStorageException;
 
-	void setRoles(UserName userName, Set<Role> roles)
+	void updateRoles(UserName userName, Set<Role> addRoles, Set<Role> removeRoles)
 			throws AuthStorageException, NoSuchUserException;
 
 	void setCustomRole(CustomRole role) throws AuthStorageException;
@@ -142,15 +142,16 @@ public interface AuthStorage {
 
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
-	/** Sets custom roles for a user, overwriting the previous set of roles.
+	/** Updates custom roles for a user.
 	 * @param userName the user to modify.
-	 * @param roles the roles to give to the user, erasing any previous roles.
+	 * @param addRoles the roles to add to the user.
+	 * @param removeRoles the roles to remove from the user. 
 	 * @throws NoSuchUserException if the user doesn't exist.
 	 * @throws NoSuchRoleException if one or more of the input roles do not exist in the database.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs. 
 	 */
-	void setCustomRoles(UserName userName, Set<String> roles)
+	void updateCustomRoles(UserName userName, Set<String> addRolesoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
 	// assumes token is unique

@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -586,66 +587,78 @@ public class Authentication {
 		return storage.getUser(userName);
 	}
 	
+	public void removeRoles(final IncomingToken token, final Set<Role> removeRoles)
+			throws NoSuchUserException, InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		final HashedToken ht = getToken(token);
+		updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
+	}
+	
 	public void updateRoles(
-			final IncomingToken adminToken,
+			final IncomingToken userToken,
 			final UserName userName,
-			final Set<Role> roles)
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles)
 			throws NoSuchUserException, AuthStorageException,
 			UnauthorizedException, InvalidTokenException {
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
-		if (roles == null) {
-			throw new NullPointerException("roles");
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
 		}
-		if (adminToken == null) {
-			throw new NullPointerException("adminToken");
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
 		}
-		for (final Role r: roles) {
-			if (r == null) {
-				throw new NullPointerException("no null roles");
-			}
-		}
+		checkContainsNoNulls(addRoles, "Null role in addRoles");
+		checkContainsNoNulls(removeRoles, "Null role in removeRoles");
 		
+		final Set<Role> intersect = new HashSet<>(addRoles);
+		intersect.retainAll(removeRoles);
+		if (!intersect.isEmpty()) {
+			throw new IllegalArgumentException(
+					"One or more roles is to be both removed and added: " +
+					String.join(", ", rolesToDescriptions(intersect)));
+		}
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot change ROOT roles");
 		}
-		final AuthUser admin = getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		/* TODO CODE RACE fix race condition when updating roles
-		 * Send the prior roles in with the new roles. Have the storage system
-		 * throw a special exception when the roles aren't the same, then
-		 * retry until it works with a retry fail count to prevent infinite
-		 * loops.
-		 */
-		//TODO ROLES allow removing your own regular and custom roles (except for root)
-		final AuthUser u = storage.getUser(userName);
-		final Set<Role> canGrant = admin.getRoles().stream()
-				.flatMap(r -> r.grants().stream()).collect(Collectors.toSet());
+		final AuthUser actinguser = getUser(userToken);
 		
-		final Set<Role> add = new HashSet<>(roles);
-		add.removeAll(u.getRoles());
-		final Set<Role> sub = new HashSet<>(u.getRoles());
-		sub.removeAll(roles);
+		final Set<Role> add = new HashSet<>(addRoles);
+		add.removeAll(actinguser.getGrantableRoles());
+		final Set<Role> sub = new HashSet<>(removeRoles);
+		sub.removeAll(actinguser.getGrantableRoles());
 		
-		add.removeAll(canGrant);
-		sub.removeAll(canGrant);
 		if (!add.isEmpty()) {
-			throwUnauth("grant", add);
+			throwUnauthorizedToManageRoles("grant", add);
 		}
-		if (!sub.isEmpty()) {
-			throwUnauth("remove", sub);
+		if (!sub.isEmpty() && !userName.equals(actinguser.getUserName())) {
+			throwUnauthorizedToManageRoles("remove", sub);
 		}
-		storage.setRoles(userName, roles);
+		storage.updateRoles(userName, addRoles, removeRoles);
+	}
+
+	private void checkContainsNoNulls(
+			final Set<? extends Object> addRoles,
+			final String excepMsg) {
+		for (final Object r: addRoles) {
+			if (r == null) {
+				throw new NullPointerException(excepMsg);
+			}
+		}
 	}
 	
-	private void throwUnauth(final String action, final Set<Role> roles)
+	private void throwUnauthorizedToManageRoles(final String action, final Set<Role> roles)
 			throws UnauthorizedException {
 		throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				String.format("Not authorized to %s role(s): %s", action,
-						String.join(", ",
-								roles.stream().map(r -> r.getDescription())
-								.collect(Collectors.toSet()))));
+						String.join(", ", rolesToDescriptions(roles))));
+	}
+
+	private Set<String> rolesToDescriptions(final Set<Role> roles) {
+		return roles.stream().map(r -> r.getDescription()).collect(Collectors.toSet());
 	}
 
 	public void setCustomRole(
@@ -682,15 +695,48 @@ public class Authentication {
 	}
 
 	public void updateCustomRoles(
-			final IncomingToken adminToken,
+			final IncomingToken userToken,
 			final UserName userName,
-			final Set<String> roleIds)
+			final Set<String> addRoles,
+			final Set<String> removeRoles)
 			throws AuthStorageException, NoSuchUserException,
 			NoSuchRoleException, InvalidTokenException, UnauthorizedException {
-		getUser(adminToken, Role.ADMIN);
-		storage.setCustomRoles(userName, roleIds);
+		// some of this code is similar to the updateRoles function, refactor?
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
+		}
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
+		}
+		checkContainsNoNulls(addRoles, "Null role in addRoles");
+		checkContainsNoNulls(removeRoles, "Null role in removeRoles");
+		
+		final Set<String> intersect = new HashSet<>(addRoles);
+		intersect.retainAll(removeRoles);
+		if (!intersect.isEmpty()) {
+			throw new IllegalArgumentException(
+					"One or more roles is to be both removed and added: " +
+					String.join(", ", intersect));
+		}
+		final AuthUser actingUser = getUser(userToken);
+		if (!addRoles.isEmpty() && !actingUser.hasRole(Role.ADMIN)) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Not authorized to add custom roles to a user");
+		}
+		/* for now don't allow users to remove their own custom roles, since admins may want
+		 * to set roles for users that users can't change. However, there's no reason not to allow
+		 * users to remove standard roles, which are privileges, not tags 
+		 */
+		if (!removeRoles.isEmpty() && !(actingUser.hasRole(Role.ADMIN))) { // ||
+//				actingUser.getUserName().equals(userName))) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Not authorized to remove custom roles from user");
+		}
+		storage.updateCustomRoles(userName, addRoles, removeRoles);
 	}
-
 
 	public List<String> getIdentityProviders() throws AuthStorageException {
 		final AuthConfig ac = cfg.getAppConfig();

@@ -24,11 +24,13 @@ import org.bson.types.ObjectId;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
+import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -807,30 +809,46 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void setRoles(final UserName userName, final Set<Role> roles)
+	public void updateRoles(
+			final UserName userName,
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles)
 			throws AuthStorageException, NoSuchUserException {
-		final Set<Object> strrl = roles.stream().map(r -> r.getID())
+		final Set<Object> stradd = addRoles.stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		setRoles(userName, strrl, Fields.USER_ROLES);
+		final Set<Object> strremove = removeRoles.stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		setRoles(userName, stradd, strremove, Fields.USER_ROLES);
 	}
 
 	private void setRoles(
 			final UserName userName,
-			final Set<Object> roles,
+			final Set<Object> addRoles,
+			final Set<Object> removeRoles,
 			final String field)
 			throws NoSuchUserException, AuthStorageException {
+		if (addRoles.isEmpty() && removeRoles.isEmpty()) {
+			return;
+		}
+		final Document query = new Document(Fields.USER_NAME, userName.getName());
 		try {
-			final UpdateResult ret = db.getCollection(COL_USERS).updateOne(
-					new Document(Fields.USER_NAME, userName.getName()),
-					new Document("$set", new Document(field, roles)));
-			// might not modify the roles if they're the same as input
-			if (ret.getMatchedCount() != 1) {
+			// ordered is true by default
+			// http://api.mongodb.com/java/3.3/com/mongodb/client/model/BulkWriteOptions.html
+			final BulkWriteResult res = db.getCollection(COL_USERS).bulkWrite(Arrays.asList(
+					new UpdateOneModel<>(query, new Document("$addToSet",
+							new Document(field, new Document("$each", addRoles)))),
+					new UpdateOneModel<>(query, new Document("$pull",
+							new Document(field, new Document("$in", removeRoles))))));
+			// might not modify the roles if they're the same as input so don't check modified
+			if (res.getMatchedCount() != 2) {
 				throw new NoSuchUserException(userName.getName());
 			}
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
+	
+	//TODO NOW Add removing standard roles to the Me page
 
 	@Override
 	public void setCustomRole(final CustomRole role)
@@ -928,30 +946,36 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void setCustomRoles(
+	public void updateCustomRoles(
 			final UserName userName,
-			final Set<String> roles)
+			final Set<String> addRoles,
+			final Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
-		final Set<Document> docroles;
+		final Set<String> allRoles = new HashSet<>(addRoles);
+		allRoles.addAll(removeRoles);
+		final Map<String, ObjectId> roleIDs;
 		try {
-			docroles = getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", roles)));
+			final Set<Document> docroles = getCustomRoles(new Document(Fields.ROLES_ID,
+					new Document("$in", allRoles)));
+			roleIDs = docroles.stream().collect(Collectors.toMap(
+					d -> d.getString(Fields.ROLES_ID), d -> d.getObjectId(Fields.MONGO_ID)));
 		} catch (MongoException me) {
 			throw new AuthStorageException("Connection to database failed", me);
 		}
-		if (roles.size() != docroles.size()) {
-			final Set<String> rolenames = docroles.stream().map(d -> d.getString(Fields.ROLES_ID))
-					.collect(Collectors.toSet());
-			for (final String role: roles) {
-				if (!rolenames.contains(role)) {
+		if (allRoles.size() != roleIDs.size()) {
+			for (final String role: allRoles) {
+				if (!roleIDs.containsKey(role)) {
 					throw new NoSuchRoleException(role);
 				}
 			}
 			throw new RuntimeException("Hole in reality matrix detected, please try turning " +
 					"reality off and then on again");
 		}
-		final Set<Object> roleIDs = docroles.stream().map(d -> d.getObjectId(Fields.MONGO_ID))
+		final Set<Object> addRoleIDs = addRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
-		setRoles(userName, roleIDs, Fields.USER_CUSTOM_ROLES);
+		final Set<Object> removeRoleIDs = removeRoles.stream().map(r -> roleIDs.get(r))
+				.collect(Collectors.toSet());
+		setRoles(userName, addRoleIDs, removeRoleIDs, Fields.USER_CUSTOM_ROLES);
 	}
 
 	@Override

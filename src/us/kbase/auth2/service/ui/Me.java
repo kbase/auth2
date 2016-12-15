@@ -6,11 +6,12 @@ import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.FormParam;
@@ -20,19 +21,24 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path(UIPaths.ME_ROOT)
@@ -58,6 +64,7 @@ public class Me {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));
 		ret.put("unlinkprefixurl", relativize(uriInfo, UIPaths.ME_ROOT));
+		ret.put("rolesurl", relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
 		ret.put("user", u.getUserName().getName());
 		ret.put("local", u.isLocal());
 		ret.put("display", u.getDisplayName().getName());
@@ -67,8 +74,15 @@ public class Me {
 		ret.put("lastlogin", ll == null ? null : ll.getTime());
 		ret.put("customroles", u.getCustomRoles());
 		ret.put("unlink", u.getIdentities().size() > 1);
-		ret.put("roles", u.getRoles().stream().map(r -> r.getDescription())
-				.collect(Collectors.toList()));
+		final List<Map<String, String>> roles = new LinkedList<>();
+		for (final Role r: u.getRoles()) {
+			final Map<String, String> role = new HashMap<>();
+			role.put("id", r.getID());
+			role.put("desc", r.getDescription());
+			roles.add(role);
+		}
+		ret.put("roles", roles);
+		ret.put("hasRoles", !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put("idents", idents);
 		for (final RemoteIdentityWithID ri: u.getIdentities()) {
@@ -101,5 +115,30 @@ public class Me {
 			AuthStorageException, UnLinkFailedException {
 		// id can't be null
 		auth.unlink(getTokenFromCookie(headers, cfg.getTokenCookieName()), id);
+	}
+	
+	@POST
+	@Path(UIPaths.ME_ROLES)
+	public void removeRoles(
+			@Context final HttpHeaders headers,
+			final MultivaluedMap<String, String> form)
+			throws NoSuchUserException, AuthStorageException, UnauthorizedException,
+			InvalidTokenException, NoTokenProvidedException {
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		final Set<Role> removeRoles = new HashSet<>();
+		addRoleFromForm(form, removeRoles, Role.CREATE_ADMIN);
+		addRoleFromForm(form, removeRoles, Role.ADMIN);
+		addRoleFromForm(form, removeRoles, Role.DEV_TOKEN);
+		addRoleFromForm(form, removeRoles, Role.SERV_TOKEN);
+		auth.removeRoles(token, removeRoles);
+	}
+	
+	private void addRoleFromForm(
+			final MultivaluedMap<String, String> form,
+			final Set<Role> removeRoles,
+			final Role role) {
+		if (form.get(role.getID()) != null) {
+			removeRoles.add(role);
+		}
 	}
 }
