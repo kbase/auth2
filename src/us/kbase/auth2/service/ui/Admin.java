@@ -211,10 +211,10 @@ public class Admin {
 		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
 		final UserName admin = au.getAdminThatToggledEnabledState();
 		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
-		ret.put("admin", au.hasRole(Role.ADMIN));
-		ret.put("serv", au.hasRole(Role.SERV_TOKEN));
-		ret.put("dev", au.hasRole(Role.DEV_TOKEN));
-		ret.put("createadmin", au.hasRole(Role.CREATE_ADMIN));
+		ret.put(Role.ADMIN.getID(), au.hasRole(Role.ADMIN));
+		ret.put(Role.SERV_TOKEN.getID(), au.hasRole(Role.SERV_TOKEN));
+		ret.put(Role.DEV_TOKEN.getID(), au.hasRole(Role.DEV_TOKEN));
+		ret.put(Role.CREATE_ADMIN.getID(), au.hasRole(Role.CREATE_ADMIN));
 		return ret;
 	}
 	
@@ -345,10 +345,10 @@ public class Admin {
 		final AuthUser au = auth.getUserAsAdmin(token, userName);
 		final Set<Role> addRoles = new HashSet<>();
 		final Set<Role> removeRoles = new HashSet<>();
-		addRoleFromForm(au, form, addRoles, removeRoles, "createadmin", Role.CREATE_ADMIN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "admin", Role.ADMIN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "dev", Role.DEV_TOKEN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "serv", Role.SERV_TOKEN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.CREATE_ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.DEV_TOKEN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.SERV_TOKEN);
 		auth.updateRoles(token, userName, addRoles, removeRoles);
 	}
 
@@ -357,9 +357,8 @@ public class Admin {
 			final MultivaluedMap<String, String> form,
 			final Set<Role> addRoles,
 			final Set<Role> removeRoles,
-			final String rstr,
 			final Role role) {
-		if (form.get(rstr) != null) {
+		if (form.get(role.getID()) != null) {
 			if (!user.hasRole(role)) {
 				addRoles.add(role);
 			}
