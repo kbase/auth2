@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -584,6 +585,13 @@ public class Authentication {
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		return storage.getUser(userName);
+	}
+	
+	public void removeRoles(final IncomingToken token, final Set<Role> removeRoles)
+			throws NoSuchUserException, InvalidTokenException, UnauthorizedException,
+			AuthStorageException {
+		final HashedToken ht = getToken(token);
+		updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
 	}
 	
 	public void updateRoles(

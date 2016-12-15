@@ -8,9 +8,15 @@ Last login: {{lastlogin}}<br/>
 Local account<br/>
 {{/local}}
 <h3>Roles:</h3>
+{{#hasRoles}}
+<form action="{{rolesurl}}" method="post">
 {{#roles}}
-{{.}}<br/>
+	<input type="checkbox" name="{{id}}"/> {{desc}}<br/>
 {{/roles}}
+	<input type="reset" value="Reset" />
+	<input type="submit" value="Remove roles"/>
+</form>
+{{/hasRoles}}
 <h3>Custom roles:</h3>
 {{#customroles}}
 {{.}}<br/>
