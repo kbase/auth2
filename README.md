@@ -31,7 +31,7 @@ Create a local account.
 /admin/user/&lt;user name&gt;  
 View user, disable user, reset password, force password reset, and modify user roles.
 
-/admin/user/&lt;user name&gt;/tokens;  
+/admin/user/&lt;user name&gt;/tokens  
 View and revoke tokens for a specific user.
 
 /customroles  

@@ -9,15 +9,12 @@
   <property name="src" location="src"/>
   <property name="lib" location="lib"/>
   <property name="dist" location="dist"/>
-  <property name="test" location="test"/>
   <property name="jardir" location="../jars/lib/jars/"/>
-  <property name="doc_server_doc_loc" location="/server_docs"/>
   <property name="classes" location="classes"/>
   <property name="doc" location="docs/javadoc"/>
-  <property name="tempunpack" location="unpackedjars"/>
+  <property name="testjar.file" value="KBaseAuth2Test.jar"/>
   <property name="jar.file" value="KBaseAuth2.jar"/>
   <property name="war.file" value="KBaseAuth2.war"/>
-  <property name="clientjar.file" value="UserAndJobStateClient.jar"/>
   <property name="war.dir" value="war"/>
 
   <fileset dir="${jardir}" id="lib">
@@ -83,7 +80,11 @@
     <include name="hk2/osgi-resource-locator-1.0.1.jar"/>
   </fileset>
 	
-  <union id="serverside">
+  <fileset dir="${jardir}" id="testlibs">
+    <include name="junit/junit-4.9.jar"/>
+  </fileset>
+	
+  <union id="serverjars">
     <fileset refid="jerseydeps"/>
     <fileset refid="jerseydep_hk2"/>
     <fileset refid="jackson"/>
@@ -93,15 +94,17 @@
   </union>
 
   <path id="compile.classpath">
-    <union refid="serverside"/>
+    <union refid="serverjars"/>
+    <fileset refid="testlibs"/>
   </path>
 
   <path id="test.classpath">
     <path refid="compile.classpath"/>
     <fileset file="${dist}/${jar.file}"/>
+    <fileset file="${dist}/${testjar.file}"/>
   </path>
 	
-  <target name="build" depends="compile,buildwar,script"
+  <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
 
   <target name="init" description="make directories">
@@ -114,35 +117,33 @@
     <!-- Compile class files-->
     <javac srcdir="${src}"
            destdir="${classes}"
-           excludes="helloserver/**, us/kbase/test/auth2/**"
+           excludes="**/StartAuthServer.java"
            includeantruntime="false"
            debug="true"
            classpathref="compile.classpath"
            target="1.8"
            source="1.8">
     </javac>
-    <!-- Copy resource files-->
-      <copy todir="${classes}">
-        <fileset dir="${src}">
-          <patternset>
-            <include name="**/*.cfg"/>
-            <include name="**/*.py"/>
-            <include name="**/*.html"/>
-          </patternset>
-        </fileset>
-      </copy>
     <!-- Make main jar file-->
-    <jar destfile="${dist}/${jar.file}" basedir="${classes}"/>
+    <jar destfile="${dist}/${jar.file}"
+         basedir="${classes}"
+         includes="us/kbase/auth2/**"
+    />
+    <!-- Make test jar file-->
+    <jar destfile="${dist}/${testjar.file}"
+         basedir="${classes}"
+         includes="us/kbase/test/**"
+    />
   </target>
 
-  <target name="buildwar" description="build the WAR file. Assumes compile has been run">
+  <target name="buildwar" depends="compile" description="build the WAR file">
     <!-- make the war file for the server-->
     <mkdir dir="${war.dir}/lib"/>
     <copy todir="${war.dir}/lib/" flatten="true">
-      <union refid="serverside"/>
+      <union refid="serverjars"/>
     </copy>
     <war destfile="${dist}/${war.file}" webxml="${war.dir}/web.xml">
-      <classes dir="${classes}"/>
+      <classes dir="${classes}" includes="us/kbase/auth2/**"/>
       <lib dir="${war.dir}/lib/"/>
     </war>
     <!-- Remove uncompressed class files and libs-->
@@ -163,41 +164,32 @@
   </target>
 
   <target name="javadoc" description="build javadocs">
-    <javadoc access="protected" author="false" classpathref="compile.classpath"
-      destdir="${doc}" nodeprecated="false" nodeprecatedlist="false"
-      noindex="false" nonavbar="false" notree="false"
-      source="1.8" splitindex="true" use="true" version="true">
-      <link href="http://download.oracle.com/javase/7/docs/api/"/>
-      <link href="http://fasterxml.github.io/jackson-core/javadoc/2.2.0/"/>
-      <link href="http://fasterxml.github.io/jackson-databind/javadoc/2.2.0/"/>
-      <fileset refid="client-jdoc-files"/>
-      <fileset refid="sources-jdoc-files"/>
+    <javadoc access="protected"
+             author="false"
+             classpathref="compile.classpath"
+             destdir="${doc}"
+             sourcepath="${src}"
+             excludepackagenames="us.kbase.test.*"
+             nodeprecated="false"
+             nodeprecatedlist="false"
+             noindex="false"
+             nonavbar="false"
+             notree="false"
+             source="1.8"
+             splitindex="true"
+             use="true"
+             version="true">
+      <link href="http://download.oracle.com/javase/8/docs/api/"/>
     </javadoc>
-    <delete dir="${tempunpack}"/>
   </target>
-
+	
   <target name="test" depends="compile" description="run tests">
-    <fail unless="test.globus.url" message="property test.globus.url not set."/>
-    <fail unless="test.mongo.exe" message="property test.mongo.exe not set."/>
-    <fail unless="test.temp.dir" message="property test.temp.dir not set."/>
     <echo message="starting ${package} tests"/>
     <junit failureproperty="test.failed" fork="yes">
       <classpath refid="test.classpath"/>
       <formatter type="plain" usefile="false" />
-      <sysproperty key="test.globus.url" value="${test.globus.url}" />
-      <sysproperty key="test.mongo.exe" value="${test.mongo.exe}"/>
-      <sysproperty key="test.temp.dir" value="${test.temp.dir}"/>
-      <sysproperty key="test.temp.dir.keep" value="${test.temp.dir.keep}"/>
-      <test name="us.kbase.userandjobstate.test.jobstate.JobStateTests"/>
-      <test name="us.kbase.userandjobstate.test.jobstate.JobResultsTest"/>
-      <test name="us.kbase.userandjobstate.test.userstate.UserStateTests"/>
-      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCLayerTest"/>
-      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCWithWSAuth"/>
-      <test name="us.kbase.userandjobstate.test.kbase.WorkspaceAuthTest"/>
-      <test name="us.kbase.userandjobstate.test.kbase.PullWSJobWithoutWSTest"/>
-      <test name="us.kbase.userandjobstate.test.authorization.AuthorizationTest"/>
-      <test name="us.kbase.userandjobstate.test.docserver.DocServerTest"/>
-      <test name="us.kbase.common.test.schemamanager.SchemaManagerTest"/>
+      <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
+      <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
@@ -214,7 +206,6 @@ java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     <!-- Clean up internal temporary files and folders-->
     <delete dir="${classes}"/>
     <delete dir="${dist}"/>
-    <!--<delete dir="${test}"/>-->
   </target>
 </project>
 
