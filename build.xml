@@ -83,6 +83,10 @@
     <include name="hk2/osgi-resource-locator-1.0.1.jar"/>
   </fileset>
 	
+  <fileset dir="${jardir}" id="testlibs">
+    <include name="junit/junit-4.9.jar"/>
+  </fileset>
+	
   <union id="serverside">
     <fileset refid="jerseydeps"/>
     <fileset refid="jerseydep_hk2"/>
@@ -90,6 +94,7 @@
     <fileset refid="jersey"/>
     <fileset refid="lib"/>
     <fileset refid="logging"/>
+    <fileset refid="testlibs"/>
   </union>
 
   <path id="compile.classpath">
