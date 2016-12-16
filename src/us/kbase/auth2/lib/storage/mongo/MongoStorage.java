@@ -109,8 +109,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
-	private static final IndexOptions IDX_UNIQ =
-			new IndexOptions().unique(true);
+	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
 	private static final IndexOptions IDX_UNIQ_SPARSE =
 			new IndexOptions().unique(true).sparse(true);
 	static {
@@ -124,19 +123,21 @@ public class MongoStorage implements AuthStorage {
 		//find user by identity provider and identity id and ensure identities
 		//are 1:1 with users
 		users.put(Arrays.asList(
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP +
-					Fields.IDENTITIES_PROVIDER,
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP +
-					Fields.IDENTITIES_PROV_ID),
+				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROVIDER,
+				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROV_ID),
 				IDX_UNIQ_SPARSE);
 		//find user by local identity id and ensure unique ids
 		users.put(Arrays.asList(Fields.USER_IDENTITIES + Fields.FIELD_SEP +
 				Fields.IDENTITIES_ID), IDX_UNIQ_SPARSE);
 		//find users by display name
 		users.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
+		//find users by roles
+		users.put(Arrays.asList(Fields.USER_ROLES), null);
+		//find users by custom roles
+		users.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), null);
 		INDEXES.put(COL_USERS, users);
 		
-		//roles indexes
+		//custom roles indexes
 		final Map<List<String>, IndexOptions> roles = new HashMap<>();
 		roles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
 		INDEXES.put(COL_CUST_ROLES, roles);
@@ -750,21 +751,36 @@ public class MongoStorage implements AuthStorage {
 	public Map<UserName, DisplayName> getUserDisplayNames(
 			final String prefix,
 			final Set<SearchField> searchFields,
+			final Set<Role> searchRoles,
+			final Set<String> searchCustomRoles,
 			final int limit)
 			throws AuthStorageException {
-		final List<Document> queries = new LinkedList<>();
-		final Document regex = new Document("$regex", "^" + Pattern.quote(prefix));
-		if (searchFields.contains(SearchField.USERNAME) || searchFields.isEmpty()) {
-			queries.add(new Document(Fields.USER_NAME, regex));
+		final Document query = new Document();
+		if (prefix != null) {
+			final List<Document> queries = new LinkedList<>();
+			final Document regex = new Document("$regex", "^" + Pattern.quote(prefix));
+			if (searchFields.contains(SearchField.USERNAME) || searchFields.isEmpty()) {
+				queries.add(new Document(Fields.USER_NAME, regex));
+			}
+			if (searchFields.contains(SearchField.DISPLAYNAME) || searchFields.isEmpty()) {
+				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
+			}
+			if (queries.size() == 1) {
+				query.putAll(queries.get(0));
+			} else {
+				query.put("$or", queries);
+			}
+			
 		}
-		if (searchFields.contains(SearchField.DISPLAYNAME) || searchFields.isEmpty()) {
-			queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
+		if (!searchRoles.isEmpty()) {
+			query.put(Fields.USER_ROLES, new Document("$all",
+					searchRoles.stream().map(r -> r.getID()).collect(Collectors.toSet())));
 		}
-		final Document query;
-		if (queries.size() == 1) {
-			query = queries.get(0);
-		} else {
-			query = new Document("$or", queries);
+		if (!searchCustomRoles.isEmpty()) {
+			final Set<Document> crs = getCustomRoles(new Document(Fields.ROLES_ID,
+					new Document("$in", searchCustomRoles)));
+			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
+					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
 		}
 		return getDisplayNames(query, limit);
 	}

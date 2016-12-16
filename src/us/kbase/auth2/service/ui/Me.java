@@ -1,16 +1,15 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.updateUser;
+import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -125,20 +124,6 @@ public class Me {
 			throws NoSuchUserException, AuthStorageException, UnauthorizedException,
 			InvalidTokenException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		final Set<Role> removeRoles = new HashSet<>();
-		addRoleFromForm(form, removeRoles, Role.CREATE_ADMIN);
-		addRoleFromForm(form, removeRoles, Role.ADMIN);
-		addRoleFromForm(form, removeRoles, Role.DEV_TOKEN);
-		addRoleFromForm(form, removeRoles, Role.SERV_TOKEN);
-		auth.removeRoles(token, removeRoles);
-	}
-	
-	private void addRoleFromForm(
-			final MultivaluedMap<String, String> form,
-			final Set<Role> removeRoles,
-			final Role role) {
-		if (form.get(role.getID()) != null) {
-			removeRoles.add(role);
-		}
+		auth.removeRoles(token, getRolesFromForm(form));
 	}
 }

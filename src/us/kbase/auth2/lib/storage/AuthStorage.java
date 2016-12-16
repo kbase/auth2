@@ -102,6 +102,8 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(
 			String prefix,
 			Set<SearchField> searchFields,
+			Set<Role> searchRoles,
+			Set<String> searchCustomRoles,
 			int maxReturnedUsers)
 			throws AuthStorageException;
 

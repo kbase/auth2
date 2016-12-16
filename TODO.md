@@ -41,10 +41,6 @@ Auth service work
 * General
   * Password strength checker, check passwords != on reset
   * Email format validator (hard since almost anything is a valid email address)
-* Admin functionality
-  * Find users
-    * By name and display name (use existing code from api)
-    * By role (custom or std)
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
