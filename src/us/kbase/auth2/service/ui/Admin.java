@@ -76,8 +76,6 @@ public class Admin {
 	//TODO TEST
 	//TODO JAVADOC
 
-	//TODO ADMIN find user
-	
 	private static final String SEP = UIPaths.SEP;
 	
 	private static final int MIN_IN_MS = 60 * 1000;

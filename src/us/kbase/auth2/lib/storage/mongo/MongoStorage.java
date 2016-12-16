@@ -864,8 +864,6 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	//TODO NOW Add removing standard roles to the Me page
-
 	@Override
 	public void setCustomRole(final CustomRole role)
 			throws AuthStorageException {
