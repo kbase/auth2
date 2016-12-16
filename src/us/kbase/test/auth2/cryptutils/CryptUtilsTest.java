@@ -13,8 +13,6 @@ import us.kbase.auth2.cryptutils.PasswordCrypt;
 
 public class CryptUtilsTest {
 
-	//TODO TEST add test runner to ant
-	
 	@Test
 	public void nulls() throws Exception {
 		final PasswordCrypt pc = new PasswordCrypt();
@@ -67,12 +65,14 @@ public class CryptUtilsTest {
 	public void shortSalt() throws Exception {
 		try {
 			new PasswordCrypt().getEncryptedPassword("f".toCharArray(), new byte[0]);
+			fail("encrypted bad pwd");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					is("salt must be at least 1 byte"));
 		}
 		try {
 			new PasswordCrypt().authenticate("f".toCharArray(), bytesFromHex("00"), new byte[0]);
+			fail("authenticated bad pwd");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					is("salt must be at least 1 byte"));
@@ -84,12 +84,14 @@ public class CryptUtilsTest {
 		final byte[] b = bytesFromHex("00");
 		try {
 			new PasswordCrypt().getEncryptedPassword("".toCharArray(), b);
+			fail("encrypted bad pwd");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					is("password must be at least 1 character"));
 		}
 		try {
 			new PasswordCrypt().authenticate("".toCharArray(), b, b);
+			fail("authenticated bad pwd");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					is("password must be at least 1 character"));
