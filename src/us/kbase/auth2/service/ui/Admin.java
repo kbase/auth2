@@ -1,8 +1,8 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
-
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -91,11 +92,18 @@ public class Admin {
 	
 	@GET
 	@Template(name = "/admingeneral")
-	public Map<String, String> admin(@Context final UriInfo uriInfo) {
+	public Map<String, Object> admin(
+			@Context final UriInfo uriInfo,
+			@Context final HttpHeaders headers)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
 		return ImmutableMap.of(
 				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD),
 				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL),
-				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
+				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN),
+				"searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH),
+				"croles", auth.getCustomRoles(getTokenFromCookie(
+						headers, cfg.getTokenCookieName()), true));
 	}
 	
 	@POST
@@ -136,6 +144,46 @@ public class Admin {
 				ht.getUserName().getName() + SEP + UIPaths.ADMIN_TOKENS + SEP +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP + ht.getId().toString()));
 		return ret;
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_SEARCH) 
+	@Template(name = "/adminsearch")
+	public Map<String, Object> searchForUsers(
+			@Context final HttpHeaders headers,
+			@Context final UriInfo uriInfo,
+			final MultivaluedMap<String, String> form)
+			throws InvalidTokenException, IllegalParameterException, NoTokenProvidedException,
+			AuthStorageException, UnauthorizedException {
+		final String prefix = form.getFirst("prefix");
+		final Set<SearchField> searchFields = new HashSet<>();
+		if (!nullOrEmpty(form.getFirst("username"))) {
+			searchFields.add(SearchField.USERNAME);
+		}
+		if (!nullOrEmpty(form.getFirst("displayname"))) {
+			searchFields.add(SearchField.DISPLAYNAME);
+		}
+		final Set<Role> searchRoles = getRolesFromForm(form);
+		final Set<String> searchCustomRoles = new HashSet<>();
+		for (final String key: form.keySet()) {
+			if (key.startsWith("crole_")) {
+				if (!nullOrEmpty(form.getFirst(key))) {
+					searchCustomRoles.add(key.replace("crole_", ""));
+				}
+			}
+		}
+		final Map<UserName, DisplayName> users = auth.getUserDisplayNames(
+				getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				prefix, searchFields, searchRoles, searchCustomRoles);
+		final List<Map<String, String>> uiusers = new LinkedList<>();
+		for (final UserName user: users.keySet()) {
+			final Map<String, String> u = new HashMap<>();
+			u.put("user", user.getName());
+			u.put("display", users.get(user).getName());
+			u.put("url", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP + user.getName()));
+			uiusers.add(u);
+		}
+		return ImmutableMap.of("users", uiusers, "hasusers", !uiusers.isEmpty());
 	}
 	
 	@GET
@@ -211,10 +259,10 @@ public class Admin {
 		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
 		final UserName admin = au.getAdminThatToggledEnabledState();
 		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
-		ret.put("admin", au.hasRole(Role.ADMIN));
-		ret.put("serv", au.hasRole(Role.SERV_TOKEN));
-		ret.put("dev", au.hasRole(Role.DEV_TOKEN));
-		ret.put("createadmin", au.hasRole(Role.CREATE_ADMIN));
+		ret.put(Role.ADMIN.getID(), au.hasRole(Role.ADMIN));
+		ret.put(Role.SERV_TOKEN.getID(), au.hasRole(Role.SERV_TOKEN));
+		ret.put(Role.DEV_TOKEN.getID(), au.hasRole(Role.DEV_TOKEN));
+		ret.put(Role.CREATE_ADMIN.getID(), au.hasRole(Role.CREATE_ADMIN));
 		return ret;
 	}
 	
@@ -345,10 +393,10 @@ public class Admin {
 		final AuthUser au = auth.getUserAsAdmin(token, userName);
 		final Set<Role> addRoles = new HashSet<>();
 		final Set<Role> removeRoles = new HashSet<>();
-		addRoleFromForm(au, form, addRoles, removeRoles, "createadmin", Role.CREATE_ADMIN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "admin", Role.ADMIN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "dev", Role.DEV_TOKEN);
-		addRoleFromForm(au, form, addRoles, removeRoles, "serv", Role.SERV_TOKEN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.CREATE_ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.ADMIN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.DEV_TOKEN);
+		addRoleFromForm(au, form, addRoles, removeRoles, Role.SERV_TOKEN);
 		auth.updateRoles(token, userName, addRoles, removeRoles);
 	}
 
@@ -357,9 +405,8 @@ public class Admin {
 			final MultivaluedMap<String, String> form,
 			final Set<Role> addRoles,
 			final Set<Role> removeRoles,
-			final String rstr,
 			final Role role) {
-		if (form.get(rstr) != null) {
+		if (form.get(role.getID()) != null) {
 			if (!user.hasRole(role)) {
 				addRoles.add(role);
 			}

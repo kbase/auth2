@@ -1,0 +1,10 @@
+<html>
+<body>
+{{^hasusers}}
+No users found.
+{{/hasusers}}
+{{#users}}
+<a href="{{url}}">{{user}} ({{display}})</a><br/>
+{{/users}}
+</body>
+</html>

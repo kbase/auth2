@@ -505,7 +505,33 @@ public class Authentication {
 		if (searchFields == null) {
 			throw new NullPointerException("searchFields");
 		}
-		return storage.getUserDisplayNames(prefix, searchFields, MAX_RETURNED_USERS);
+		return storage.getUserDisplayNames(prefix, searchFields, Collections.emptySet(),
+				Collections.emptySet(), MAX_RETURNED_USERS);
+	}
+	
+	// if searchfields is empty searches all fields
+	public Map<UserName, DisplayName> getUserDisplayNames(
+			final IncomingToken token,
+			String prefix,
+			final Set<SearchField> searchFields,
+			final Set<Role> searchRoles,
+			final Set<String> searchCustomRoles)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, Role.ADMIN); // force admin
+		if (prefix != null && prefix.isEmpty()) {
+			prefix = null;
+		}
+		if (searchFields == null) {
+			throw new NullPointerException("searchFields");
+		}
+		if (searchRoles == null) {
+			throw new NullPointerException("searchRoles");
+		}
+		if (searchCustomRoles == null) {
+			throw new NullPointerException("searchCustomRoles");
+		}
+		return storage.getUserDisplayNames(prefix, searchFields, searchRoles, searchCustomRoles,
+				MAX_RETURNED_USERS);
 	}
 	
 	public void revokeToken(

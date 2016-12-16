@@ -54,6 +54,9 @@ public class UIPaths {
 	public static final String ADMIN_REVOKE_ALL = REVOKE_ALL;
 	public static final String ADMIN_ROOT_REVOKE_ALL = ADMIN_ROOT + ADMIN_REVOKE_ALL;
 	
+	public static final String ADMIN_SEARCH = "search";
+	public static final String ADMIN_ROOT_SEARCH = ADMIN_ROOT + ADMIN_SEARCH;
+	
 	public static final String ADMIN_TOKEN = TOKEN;
 	public static final String ADMIN_ROOT_TOKEN = ADMIN_ROOT + TOKEN;
 	public static final String ADMIN_TOKENS = TOKENS;

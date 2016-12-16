@@ -17,7 +17,7 @@ changes. Further, once a checkbox is manually checked or unchecked, that state
 will not change, even with a refresh - to see changes reset the form.
 
 /admin  
-Global admin tasks - force reset all passwords, revoke all tokens, view a token.
+Global admin tasks - force reset all passwords, revoke all tokens, view a token, search for users.
 
 /admin/customroles  
 View, add, and delete custom roles.

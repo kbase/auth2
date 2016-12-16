@@ -4,12 +4,16 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -136,5 +140,15 @@ public class UIUtils {
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
+	}
+	
+	public static Set<Role> getRolesFromForm(final MultivaluedMap<String, String> form) {
+		final Set<Role> roles = new HashSet<>();
+		for (final Role r: Role.values()) {
+			if (form.get(r.getID()) != null) {
+				roles.add(r);
+			}
+		}
+		return roles;
 	}
 }
