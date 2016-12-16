@@ -153,7 +153,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs. 
 	 */
-	void updateCustomRoles(UserName userName, Set<String> addRolesoles, Set<String> removeRoles)
+	void updateCustomRoles(UserName userName, Set<String> addRoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
 	// assumes token is unique
