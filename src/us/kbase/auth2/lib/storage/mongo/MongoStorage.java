@@ -110,6 +110,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
 	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
+	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
 	private static final IndexOptions IDX_UNIQ_SPARSE =
 			new IndexOptions().unique(true).sparse(true);
 	static {
@@ -132,9 +133,9 @@ public class MongoStorage implements AuthStorage {
 		//find users by display name
 		users.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
 		//find users by roles
-		users.put(Arrays.asList(Fields.USER_ROLES), null);
+		users.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
 		//find users by custom roles
-		users.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), null);
+		users.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
 		INDEXES.put(COL_USERS, users);
 		
 		//custom roles indexes
@@ -183,8 +184,6 @@ public class MongoStorage implements AuthStorage {
 		final Map<List<String>, IndexOptions> extcfg = new HashMap<>();
 		extcfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
-
-
 	}
 	
 	private MongoDatabase db;
