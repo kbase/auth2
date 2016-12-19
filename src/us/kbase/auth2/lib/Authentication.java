@@ -68,6 +68,10 @@ public class Authentication {
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	
+	//TODO ROLES only root can enable root account
+	//TODO RESET to reset and get admin password must be that admin
+	//TODO DISABLED don't return disabled users in user search (do return in search from admin)
+	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
 	

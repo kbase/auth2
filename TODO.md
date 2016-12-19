@@ -50,9 +50,6 @@ Auth service work
   * test apis for user creation & admin
   * auto configure server for ease of use
 
-### Potential work
-* Support user lookup by identity provider & id for bulk upload (permitted role)
-
 External dependencies
 ---------------------
 * JGI stops using uid/pwd to login for jgidm account

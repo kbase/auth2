@@ -82,6 +82,7 @@
 	
   <fileset dir="${jardir}" id="testlibs">
     <include name="junit/junit-4.9.jar"/>
+    <include name="apache_commons/commons-lang3-3.1.jar"/>
   </fileset>
 	
   <union id="serverjars">
@@ -190,6 +191,7 @@
       <formatter type="plain" usefile="false" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
+      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

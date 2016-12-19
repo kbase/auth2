@@ -9,7 +9,6 @@ public interface ExternalConfigMapper<T extends ExternalConfig> {
 
 	//TODO JAVADOC
 	
-	T fromMap(Map<String, String> config)
-			throws ExternalConfigMappingException;
+	T fromMap(Map<String, String> config) throws ExternalConfigMappingException;
 	
 }
