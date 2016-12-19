@@ -24,7 +24,7 @@ public class Utils {
 			final int max)
 			throws MissingParameterException, IllegalParameterException {
 		if (s == null || s.trim().isEmpty()) {
-			throw new MissingParameterException("Missing parameter: " + name);
+			throw new MissingParameterException(name);
 		}
 		
 		if (max > 0 && codePoints(s) > max) {

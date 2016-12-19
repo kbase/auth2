@@ -91,10 +91,8 @@ public class HashedToken {
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
-		final byte[] hash = digest.digest(
-				token.getBytes(StandardCharsets.UTF_8));
-		final String b64hash = Base64.getEncoder().encodeToString(hash);
-		return b64hash;
+		final byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+		return Base64.getEncoder().encodeToString(hash);
 	}
 
 }
