@@ -14,6 +14,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -193,6 +194,112 @@ public class TokenTest {
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					is("Missing argument: token"));
+		}
+	}
+	
+	@Test
+	public void newToken() throws Exception {
+		final NewToken nt = new NewToken(TokenType.LOGIN, "baz", new UserName("foo"), 10);
+		Thread.sleep(1);
+		final Date now = new Date();
+		final Date nowMinus1 = new Date(now.getTime() - 1000);
+		assertThat("incorrect token type", nt.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect token name", nt.getTokenName(), is((String) null));
+		assertThat("incorrect token string", nt.getToken(), is("baz"));
+		assertThat("incorrect ID class", nt.getId(), is(UUID.class));
+		assertThat("incorrect user", nt.getUserName(), is(new UserName("foo")));
+		assertThat("creation date after now", nt.getCreationDate().before(now), is(true));
+		assertThat("creation date > 1 sec before now", nt.getCreationDate().after(nowMinus1), 
+				is(true));
+		assertThat("incorrect expiration date", nt.getExpirationDate(),
+				is(new Date(nt.getCreationDate().getTime() + 10)));
+		
+		final HashedToken ht = nt.getHashedToken();
+		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect token name", ht.getTokenName(), is((String) null));
+		assertThat("incorrect token id", ht.getId(), is(nt.getId()));
+		assertThat("incorrect token hash", ht.getTokenHash(),
+				is("uqWglk0zIPvAxqkiFARTyFE+okq4/QV3A0gEqWckgJY="));
+		assertThat("incorrect user", ht.getUserName(), is(new UserName("foo")));
+		assertThat("incorrect creation date", ht.getCreationDate(), is(nt.getCreationDate()));
+		assertThat("incorrect expiration date", ht.getExpirationDate(),
+				is(nt.getExpirationDate()));
+		
+		// test with named token
+		final NewToken nt2 = new NewToken(TokenType.EXTENDED_LIFETIME, "myname", "bar",
+				new UserName("foo2"), 15);
+		Thread.sleep(1);
+		final Date now2 = new Date();
+		final Date nowMinus1_2 = new Date(now.getTime() - 1000);
+		assertThat("incorrect token type", nt2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
+		assertThat("incorrect token name", nt2.getTokenName(), is("myname"));
+		assertThat("incorrect token string", nt2.getToken(), is("bar"));
+		assertThat("incorrect ID class", nt2.getId(), is(UUID.class));
+		assertThat("incorrect user", nt2.getUserName(), is(new UserName("foo2")));
+		assertThat("creation date after now", nt2.getCreationDate().before(now2), is(true));
+		assertThat("creation date > 1 sec before now", nt2.getCreationDate().after(nowMinus1_2), 
+				is(true));
+		assertThat("incorrect expiration date", nt2.getExpirationDate(),
+				is(new Date(nt2.getCreationDate().getTime() + 15)));
+		
+		final UserName u = new UserName("foo");
+		failCreateNewToken(null, "foo", u, 0, new NullPointerException("type"));
+		failCreateNewToken(TokenType.LOGIN, null, u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, "", u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, " \t", u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, "foo", null, 0, new NullPointerException("userName"));
+		failCreateNewToken(TokenType.LOGIN, "foo", u, -1,
+				new IllegalArgumentException("lifetime must be >= 0"));
+		
+		//test named token errors
+		failCreateNewToken(null, "myname", "foo", u, 0, new NullPointerException("type"));
+		failCreateNewToken(TokenType.LOGIN, null, "foo", u, 0,
+				new IllegalArgumentException("Missing argument: tokenName"));
+		failCreateNewToken(TokenType.LOGIN, "", "foo", u, 0,
+				new IllegalArgumentException("Missing argument: tokenName"));
+		failCreateNewToken(TokenType.LOGIN, " \n", "foo", u, 0,
+				new IllegalArgumentException("Missing argument: tokenName"));
+		failCreateNewToken(TokenType.LOGIN, "myname", null, u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, "myname", "", u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, "myname", " \t", u, 0,
+				new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(TokenType.LOGIN, "myname", "foo", null, 0,
+				new NullPointerException("userName"));
+		failCreateNewToken(TokenType.LOGIN, "myname", "foo", u, -1,
+				new IllegalArgumentException("lifetime must be >= 0"));
+	}
+	
+	private void failCreateNewToken(
+			final TokenType type,
+			final String token,
+			final UserName userName,
+			final long lifetimeInMS,
+			final Exception exception) {
+		try {
+			new NewToken(type, token, userName, lifetimeInMS);
+			fail("created bad token");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+	
+	private void failCreateNewToken(
+			final TokenType type,
+			final String tokenName,
+			final String token,
+			final UserName userName,
+			final long lifetimeInMS,
+			final Exception exception) {
+		try {
+			new NewToken(type, tokenName, token, userName, lifetimeInMS);
+			fail("created bad token");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
 		}
 	}
 	
