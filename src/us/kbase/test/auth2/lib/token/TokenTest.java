@@ -4,7 +4,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -17,6 +21,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 
@@ -303,4 +308,54 @@ public class TokenTest {
 		}
 	}
 	
+	@Test
+	public void tokenSet() throws Exception {
+		final UUID id1 = UUID.randomUUID();
+		final HashedToken ht1 = new HashedToken(TokenType.LOGIN, null, id1, "h1",
+				new UserName("u"), new Date(1), new Date(2));
+		final UUID id2 = UUID.randomUUID();
+		final HashedToken ht2 = new HashedToken(TokenType.EXTENDED_LIFETIME, "n2", id2, "h2",
+				new UserName("u"), new Date(3), new Date(4));
+		final UUID id3 = UUID.randomUUID();
+		final HashedToken ht3 = new HashedToken(TokenType.EXTENDED_LIFETIME, "n3", id3, "h3",
+				new UserName("u"), new Date(5), new Date(6));
+		
+		final Set<HashedToken> tokens = new HashSet<>(Arrays.asList(ht1, ht2, ht3));
+		//test removing current token from incoming set
+		final TokenSet ts = new TokenSet(ht1, tokens);
+		tokens.clear(); // test makes copy of set rather than using same set
+		assertThat("incorrect current token", ts.getCurrentToken(), is(ht1));
+		assertThat("incorrect token set", ts.getTokens(),
+				is(new HashSet<>(Arrays.asList(ht2, ht3))));
+		try { // test immutable
+			ts.getTokens().add(ht1);
+			fail("not immutable");
+		} catch (UnsupportedOperationException e) {}
+		
+		final TokenSet ts2 = new TokenSet(ht2, Collections.emptySet());
+		assertThat("incorrect current token", ts2.getCurrentToken(), is(ht2));
+		assertThat("incorrect token set", ts2.getTokens(), is(Collections.emptySet()));
+		
+		failCreateTokenSet(null, Collections.emptySet(), new NullPointerException("current"));
+		failCreateTokenSet(ht1, null, new NullPointerException("tokens"));
+		final HashedToken htnewuser = new HashedToken(TokenType.LOGIN, "foo", id1, "foo",
+				new UserName("u2"), new Date(1), new Date(2));
+		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, htnewuser, ht3)),
+				new IllegalArgumentException("Mixing tokens from different users is not allowed"));
+		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, null, ht3)),
+				new NullPointerException("One of the tokens in the incoming set is null"));
+		
+	}
+	
+	private void failCreateTokenSet(
+			final HashedToken current,
+			final Set<HashedToken> tokens,
+			final Exception exception) {
+		try {
+			new TokenSet(current, tokens);
+			fail("created bad token set");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
 }
