@@ -9,12 +9,15 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.test.auth2.TestCommon;
 
 public class TokenTest {
 
@@ -68,6 +71,7 @@ public class TokenTest {
 	@Test
 	public void temporaryToken() throws Exception {
 		final TemporaryToken tt = new TemporaryToken("foobar", 5);
+		Thread.sleep(1);
 		final Date now = new Date();
 		final Date nowMinus1 = new Date(now.getTime() - 1000);
 		assertThat("incorrect token string", tt.getToken(), is("foobar"));
@@ -105,6 +109,90 @@ public class TokenTest {
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getMessage(),
 					is(exception));
+		}
+	}
+	
+	@Test
+	public void hashedToken() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, id, "foobar",
+				new UserName("whee"), new Date(1), new Date(5));
+		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect token name", ht.getTokenName(), is((String) null));
+		assertThat("incorrect token id", ht.getId(), is(id));
+		assertThat("incorrect token hash", ht.getTokenHash(), is("foobar"));
+		assertThat("incorrect user", ht.getUserName(), is(new UserName("whee")));
+		assertThat("incorrect creation date", ht.getCreationDate(), is(new Date(1)));
+		assertThat("incorrect expiration date", ht.getExpirationDate(), is(new Date(5)));
+		
+		// test with named token
+		final UUID id2 = UUID.randomUUID();
+		final HashedToken ht2 = new HashedToken(TokenType.EXTENDED_LIFETIME, "ugh", id2, "foobar2",
+				new UserName("whee2"), new Date(27), new Date(42));
+		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
+		assertThat("incorrect token name", ht2.getTokenName(), is("ugh"));
+		assertThat("incorrect token id", ht2.getId(), is(id2));
+		assertThat("incorrect token hash", ht2.getTokenHash(), is("foobar2"));
+		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
+		assertThat("incorrect creation date", ht2.getCreationDate(), is(new Date(27)));
+		assertThat("incorrect expiration date", ht2.getExpirationDate(), is(new Date(42)));
+		
+		final UserName u = new UserName("u");
+		final Date c = new Date(1);
+		final Date e = new Date(2);
+		failCreateHashedToken(null, "foo", id, "foo", u, c, e, new NullPointerException("type"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", null, "foo", u, c, e,
+				new NullPointerException("id"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, null, u, c, e,
+				new IllegalArgumentException("Missing argument: tokenHash"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, "", u, c, e,
+				new IllegalArgumentException("Missing argument: tokenHash"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, " ", u, c, e,
+				new IllegalArgumentException("Missing argument: tokenHash"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, "foo", null, c, e,
+				new NullPointerException("userName"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, "foo", u, null, e,
+				new NullPointerException("creationDate"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, "foo", u, c, null,
+				new NullPointerException("expirationDate"));
+		failCreateHashedToken(TokenType.LOGIN, "foo", id, "foo", u, e, c,
+				new IllegalArgumentException("expirationDate must be > creationDate"));
+	}
+	
+	private void failCreateHashedToken(
+			final TokenType type,
+			final String tokenName,
+			final UUID id,
+			final String tokenHash,
+			final UserName userName,
+			final Date creationDate,
+			final Date expirationDate,
+			final Exception exception) {
+		try {
+			new HashedToken(type, tokenName, id, tokenHash, userName, creationDate,
+					expirationDate);
+			fail("made bad hashed token");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+	
+	@Test
+	public void hashingTokens() throws Exception {
+		assertThat("incorrect hash", HashedToken.hash("whee"),
+				is("bG4rDP2oAAfmk9UrWVYIPqaHcOExDQ7QLRlcsUETsoQ="));
+		failHashToken(null);
+		failHashToken("");
+		failHashToken("   \n");
+	}
+
+	private void failHashToken(final String token) {
+		try {
+			HashedToken.hash(token);
+			fail("hashed bad input");
+		} catch (IllegalArgumentException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					is("Missing argument: token"));
 		}
 	}
 	
