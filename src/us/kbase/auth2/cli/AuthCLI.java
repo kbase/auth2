@@ -39,7 +39,7 @@ import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -72,9 +72,9 @@ public class AuthCLI {
 	public static void main(String[] args) {
 		quietLogger();
 		
-		final IdentityProviderFactory fac = IdentityProviderFactory.getInstance();
-		fac.register(new GlobusIdentityProviderConfigurator());
-		fac.register(new GoogleIdentityProviderConfigurator());
+		final IdentityProviderSet ids = new IdentityProviderSet();
+		ids.register(new GlobusIdentityProviderConfigurator());
+		ids.register(new GoogleIdentityProviderConfigurator());
 		
 		final Args a = new Args();
 		JCommander jc = new JCommander(a);
@@ -93,7 +93,7 @@ public class AuthCLI {
 		final AuthStartupConfig cfg;
 		try {
 			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
-			auth = new AuthBuilder(cfg, AuthExternalConfig.DEFAULT).getAuth();
+			auth = new AuthBuilder(ids, cfg, AuthExternalConfig.DEFAULT).getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			error(e, a);
 			throw new RuntimeException(); // error() stops execution

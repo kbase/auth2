@@ -9,7 +9,7 @@ import com.mongodb.client.MongoDatabase;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
@@ -24,6 +24,7 @@ public class AuthBuilder {
 	private Authentication auth;
 	
 	public AuthBuilder(
+			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
@@ -34,10 +35,11 @@ public class AuthBuilder {
 			throw new NullPointerException("defaultExternalConfig");
 		}
 		mc = buildMongo(cfg);
-		auth = buildAuth(cfg, mc, defaultExternalConfig);
+		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
 	}
 	
 	public AuthBuilder(
+			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig,
 			final MongoClient mc)
@@ -52,7 +54,7 @@ public class AuthBuilder {
 			throw new NullPointerException("defaultExternalConfig");
 		}
 		this.mc = mc;
-		auth = buildAuth(cfg, mc, defaultExternalConfig);
+		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) {
@@ -67,6 +69,7 @@ public class AuthBuilder {
 	}
 	
 	private Authentication buildAuth(
+			final IdentityProviderSet identities,
 			final AuthStartupConfig c,
 			final MongoClient mc,
 			final ExternalConfig defaultExternalConfig)
@@ -81,24 +84,23 @@ public class AuthBuilder {
 		}
 		//TODO MONGO & TEST authenticate to db with user/pwd
 		final AuthStorage s = new MongoStorage(db);
-		return new Authentication(s, getIdentityProviders(c), defaultExternalConfig);
+		configureIdentityProviders(identities, c);
+		return new Authentication(s, identities, defaultExternalConfig);
 	}
 	
-	private IdentityProviderFactory getIdentityProviders(
+	private void configureIdentityProviders(
+			final IdentityProviderSet identities,
 			final AuthStartupConfig c)
 			throws AuthConfigurationException {
-		final IdentityProviderFactory fac = IdentityProviderFactory.getInstance();
-		for (final IdentityProviderConfig idc:
-				c.getIdentityProviderConfigs()) {
+		for (final IdentityProviderConfig idc: c.getIdentityProviderConfigs()) {
 			try {
-				fac.configure(idc);
+				identities.configure(idc);
 			} catch (IllegalArgumentException e) {
 				throw new AuthConfigurationException(String.format(
 						"Error registering identity provider %s: %s",
 						idc.getIdentityProviderName(),  e.getMessage()), e);
 			}
 		}
-		return fac;
 	}
 
 	public MongoClient getMongoClient() {

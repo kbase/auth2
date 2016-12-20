@@ -89,10 +89,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				mongop = null; //gc
 				throw new AuthConfigurationException(String.format(
 						"Must provide both %s and %s params in config file " +
-						"%s section %s if MongoDB authentication is to be " +
-						"used",
-						KEY_MONGO_USER, KEY_MONGO_PWD,
-						cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
+						"%s section %s if MongoDB authentication is to be used",
+						KEY_MONGO_USER, KEY_MONGO_PWD, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 			}
 			mongoPwd = mongop == null ? null : mongop.toCharArray();
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
@@ -121,21 +119,17 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				continue;
 			}
 			final String pre = KEY_PREFIX_ID_PROVS + p;
-			final URI imgURL = getURI( // relative url
-					pre + KEY_SUFFIX_ID_PROVS_IMG, cfg);
-			final String cliid = getString(
-					pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
-			final String clisec = getString(
-					pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
+			 // relative url
+			final URI imgURL = getURI(pre + KEY_SUFFIX_ID_PROVS_IMG, cfg);
+			final String cliid = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
+			final String clisec = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
 			final URL login = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_URL, cfg);
 			final URL api = getURL(pre + KEY_SUFFIX_ID_PROVS_API_URL, cfg);
-			final URL loginRedirect = getURL(
-					pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
-			final URL linkRedirect = getURL(
-					pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
+			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
+			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
 			try {
-				ips.add(new IdentityProviderConfig(p, login, api,
-						cliid, clisec, imgURL, loginRedirect, linkRedirect));
+				ips.add(new IdentityProviderConfig(
+						p, login, api, cliid, clisec, imgURL, loginRedirect, linkRedirect));
 			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(

@@ -10,7 +10,7 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
  * @author gaprice@lbl.gov
  * 
  * @see IdentityProviderConfigurator
- * @see IdentityProviderFactory
+ * @see IdentityProviderSet
  *
  */
 public interface IdentityProvider {

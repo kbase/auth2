@@ -1,7 +1,6 @@
 package us.kbase.auth2.lib.identity;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -9,30 +8,24 @@ import java.util.TreeMap;
 
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 
-public class IdentityProviderFactory {
+public class IdentityProviderSet {
 	
 	//TODO TESTS
 	//TODO JAVADOC
-	
-	private static final IdentityProviderFactory instance = new IdentityProviderFactory();
 	
 	private final TreeMap<String, IdentityProvider> providers = new TreeMap<>();
 	private final Map<String, IdentityProviderConfigurator> configs = new HashMap<>();
 	private boolean locked = false;
 	
 	
-	public static IdentityProviderFactory getInstance() {
-		return instance;
-	}
-	
-	private IdentityProviderFactory() {}
+	public IdentityProviderSet() {}
 	
 	// note overwrites configs with the same name
 	public void register(final IdentityProviderConfigurator conf) {
 		if (conf == null) {
 			throw new NullPointerException("conf");
 		}
-		if (conf.getProviderName() == null || conf.getProviderName().isEmpty()) {
+		if (conf.getProviderName() == null || conf.getProviderName().trim().isEmpty()) {
 			throw new IllegalArgumentException("The configurator name cannot be null or empty");
 		}
 		configs.put(conf.getProviderName(), conf);
@@ -64,7 +57,7 @@ public class IdentityProviderFactory {
 	}
 	
 	public List<String> getProviders() {
-		return Collections.unmodifiableList(new ArrayList<>(providers.navigableKeySet()));
+		return new ArrayList<>(providers.navigableKeySet());
 	}
 
 	public void lock() {

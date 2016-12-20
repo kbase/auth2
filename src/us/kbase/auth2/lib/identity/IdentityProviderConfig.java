@@ -9,7 +9,7 @@ import java.net.URL;
  *
  * @see IdentityProvider
  * @see IdentityProviderConfigurator
- * @see IdentityProviderFactory
+ * @see IdentityProviderSet
  */
 public class IdentityProviderConfig {
 	
