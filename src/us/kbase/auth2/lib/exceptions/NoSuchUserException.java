@@ -7,18 +7,10 @@ package us.kbase.auth2.lib.exceptions;
 public class NoSuchUserException extends NoDataException {
 	
 	public NoSuchUserException(final String message) {
-		super(ErrorType.NO_SUCH_USER, message);
-	}
-	
-	public NoSuchUserException(final String message, final Throwable cause) {
-		super(ErrorType.NO_SUCH_USER, message, cause);
+		this(ErrorType.NO_SUCH_USER, message);
 	}
 	
 	NoSuchUserException(final ErrorType err, final String message) {
 		super(err, message);
-	}
-	
-	NoSuchUserException(final ErrorType err, final String message, final Throwable cause) {
-		super(err, message, cause);
 	}
 }

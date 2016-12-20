@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.exceptions;
 
-/** Base class of all authorization service exceptions.
+/** Base class of all authorization / authentication exceptions.
  * @author gaprice@lbl.gov 
  */
 @SuppressWarnings("serial")
@@ -18,7 +18,7 @@ public class AuthException extends Exception {
 			throw new NullPointerException("err");
 		}
 		return err.getErrorCode() + " " + err.getError() + 
-				(message == null || message.isEmpty() ? "" : ": " + message);
+				(message == null || message.trim().isEmpty() ? "" : ": " + message);
 	}
 	
 	public AuthException(
@@ -29,6 +29,9 @@ public class AuthException extends Exception {
 		this.err = err;
 	}
 
+	/** Get the error type for this exception.
+	 * @return the error type.
+	 */
 	public ErrorType getErr() {
 		return err;
 	}

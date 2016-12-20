@@ -9,8 +9,4 @@ public class DisabledUserException extends UnauthorizedException {
 	public DisabledUserException(final String message) {
 		super(ErrorType.DISABLED, message);
 	}
-	
-	public DisabledUserException(final String message, final Throwable cause) {
-		super(ErrorType.DISABLED, message, cause);
-	}
 }

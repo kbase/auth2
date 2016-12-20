@@ -7,18 +7,11 @@ package us.kbase.auth2.lib.exceptions;
 public class UnauthorizedException extends AuthException {
 	
 	
-	public UnauthorizedException(ErrorType err) {
+	public UnauthorizedException(final ErrorType err) {
 		super(err, null);
 	}
 	
 	public UnauthorizedException(final ErrorType err, final String message) {
 		super(err, message);
-	}
-	
-	public UnauthorizedException(
-			final ErrorType err,
-			final String message,
-			final Throwable cause) {
-		super(err, message, cause);
 	}
 }
