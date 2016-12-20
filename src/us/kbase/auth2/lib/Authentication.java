@@ -1201,8 +1201,7 @@ public class Authentication {
 		if (username.contains("@")) {
 			username = username.split("@")[0];
 			if (username.isEmpty()) {
-				throw new IllegalParameterException(
-						ErrorType.ILLEGAL_USER_NAME,
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 						ri.getDetails().getUsername());
 			}
 		}
