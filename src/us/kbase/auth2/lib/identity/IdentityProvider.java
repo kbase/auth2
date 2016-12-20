@@ -8,6 +8,9 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
 /** A provider of OAuth2 identities, for example Google, Globus, Facebook etc.
  * @author gaprice@lbl.gov
+ * 
+ * @see IdentityProviderConfigurator
+ * @see IdentityProviderFactory
  *
  */
 public interface IdentityProvider {

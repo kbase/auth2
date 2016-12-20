@@ -14,13 +14,10 @@ public class IdentityProviderFactory {
 	//TODO TESTS
 	//TODO JAVADOC
 	
-	private static final IdentityProviderFactory instance =
-			new IdentityProviderFactory();
+	private static final IdentityProviderFactory instance = new IdentityProviderFactory();
 	
-	private final TreeMap<String, IdentityProvider> providers =
-			new TreeMap<>();
-	private final Map<String, IdentityProviderConfigurator> configs =
-			new HashMap<>();
+	private final TreeMap<String, IdentityProvider> providers = new TreeMap<>();
+	private final Map<String, IdentityProviderConfigurator> configs = new HashMap<>();
 	private boolean locked = false;
 	
 	
@@ -35,10 +32,8 @@ public class IdentityProviderFactory {
 		if (conf == null) {
 			throw new NullPointerException("conf");
 		}
-		if (conf.getProviderName() == null ||
-				conf.getProviderName().isEmpty()) {
-			throw new IllegalArgumentException(
-					"The configurator name cannot be null or empty");
+		if (conf.getProviderName() == null || conf.getProviderName().isEmpty()) {
+			throw new IllegalArgumentException("The configurator name cannot be null or empty");
 		}
 		configs.put(conf.getProviderName(), conf);
 	}
@@ -49,8 +44,7 @@ public class IdentityProviderFactory {
 			throw new IllegalStateException("Factory is locked");
 		}
 		if (!configs.containsKey(cfg.getIdentityProviderName())) {
-			throw new IllegalArgumentException(
-					"Register a configurator before attempting to " +
+			throw new IllegalArgumentException("Register a configurator before attempting to " +
 					"configure it");
 		}
 		providers.put(cfg.getIdentityProviderName(),
@@ -70,8 +64,7 @@ public class IdentityProviderFactory {
 	}
 	
 	public List<String> getProviders() {
-		return Collections.unmodifiableList(new ArrayList<>(
-				providers.navigableKeySet()));
+		return Collections.unmodifiableList(new ArrayList<>(providers.navigableKeySet()));
 	}
 
 	public void lock() {

@@ -17,6 +17,7 @@ import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -27,6 +28,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	
 	//TODO JAVADOC
 	//TODO TEST unittests
+	
+	//TODO DOCs document deploy.cfg.example
 	
 	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
@@ -133,11 +136,11 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			try {
 				ips.add(new IdentityProviderConfig(p, login, api,
 						cliid, clisec, imgURL, loginRedirect, linkRedirect));
-			} catch (IllegalArgumentException e) {
+			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
 						"Error building configuration for provider %s in " +
-						"section %s or config file %s: %s",
+						"section %s of config file %s: %s",
 						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
 			}
 		}
