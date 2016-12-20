@@ -192,6 +192,7 @@
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
+      <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

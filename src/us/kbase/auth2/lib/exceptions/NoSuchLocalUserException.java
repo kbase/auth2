@@ -9,8 +9,4 @@ public class NoSuchLocalUserException extends NoSuchUserException {
 	public NoSuchLocalUserException(final String message) {
 		super(ErrorType.NO_SUCH_LOCAL_USER, message);
 	}
-	
-	public NoSuchLocalUserException(final String message, final Throwable cause) {
-		super(ErrorType.NO_SUCH_LOCAL_USER, message, cause);
-	}
 }

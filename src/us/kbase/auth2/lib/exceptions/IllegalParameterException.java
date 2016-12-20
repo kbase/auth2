@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.exceptions;
 
-/** A parameter has an illegal value.
+/** Thrown when a parameter has an illegal value.
  * @author gaprice@lbl.gov
  *
  */
@@ -21,13 +21,5 @@ public class IllegalParameterException extends AuthException {
 			final String message,
 			final Throwable cause) {
 		super(ErrorType.ILLEGAL_PARAMETER, message, cause);
-	}
-	
-
-	public IllegalParameterException(
-			final ErrorType type,
-			final String message,
-			final Throwable cause) {
-		super(type, message, cause);
 	}
 }

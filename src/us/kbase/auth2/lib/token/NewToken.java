@@ -62,7 +62,7 @@ public class NewToken {
 			final String tokenName,
 			final String token,
 			final UserName userName,
-			final long lifetimeInms) {
+			final long lifetimeInMS) {
 		checkStringNoCheckedException(token, "token");
 		checkStringNoCheckedException(tokenName, "tokenName");
 		if (type == null) {
@@ -71,14 +71,14 @@ public class NewToken {
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
-		if (lifetimeInms < 0) {
+		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
 		this.type = type;
 		this.tokenName = tokenName;
 		this.token = token;
 		this.userName = userName;
-		this.expirationDate = new Date(addLong(creationDate, lifetimeInms)).getTime();
+		this.expirationDate = new Date(addLong(creationDate, lifetimeInMS)).getTime();
 	}
 
 	/** Get the token's type.
