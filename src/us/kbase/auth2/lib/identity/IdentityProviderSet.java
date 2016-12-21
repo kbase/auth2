@@ -27,7 +27,7 @@ public class IdentityProviderSet {
 	 * previously registered configurator overwrites the old configurator.
 	 * @param conf the configurator.
 	 */
-	public void register(final IdentityProviderConfigurator conf) {
+	public IdentityProviderSet register(final IdentityProviderConfigurator conf) {
 		if (conf == null) {
 			throw new NullPointerException("conf");
 		}
@@ -35,6 +35,7 @@ public class IdentityProviderSet {
 			throw new IllegalArgumentException("The configurator name cannot be null or empty");
 		}
 		configs.put(conf.getProviderName(), conf);
+		return this;
 	}
 	
 	/** Configure an identity provider. The configuration and configurator are matched by the 
@@ -42,7 +43,7 @@ public class IdentityProviderSet {
 	 * provider. 
 	 * @param cfg the identity provider configuration.
 	 */
-	public void configure(final IdentityProviderConfig cfg) {
+	public IdentityProviderSet configure(final IdentityProviderConfig cfg) {
 		if (locked) {
 			throw new IllegalStateException("Factory is locked");
 		}
@@ -55,6 +56,7 @@ public class IdentityProviderSet {
 		}
 		providers.put(cfg.getIdentityProviderName(),
 				configs.get(cfg.getIdentityProviderName()).configure(cfg));
+		return this;
 	}
 	
 	/** Get a provider from the provider name.
@@ -87,8 +89,9 @@ public class IdentityProviderSet {
 	 * Configurators may still be registered, but this has no effect since configuration events
 	 * are prevented.
 	 */
-	public void lock() {
+	public IdentityProviderSet lock() {
 		locked = true;
+		return this;
 	}
 	
 	/** Check if this provider set is locked.

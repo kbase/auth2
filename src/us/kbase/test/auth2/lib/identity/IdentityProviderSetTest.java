@@ -148,8 +148,10 @@ public class IdentityProviderSetTest {
 	@Test
 	public void registerAndLock() throws Exception {
 		final IdentityProviderSet ids = new IdentityProviderSet();
-		ids.register(new TestProviderConfigurator("Test", true));
-		ids.configure(CFG1);
+		IdentityProviderSet ret = ids.register(new TestProviderConfigurator("Test", true));
+		assertThat("fluent interface failed", ret, is(ids));
+		ret = ids.configure(CFG1);
+		assertThat("fluent interface failed", ret, is(ids));
 		assertThat("incorrect provider list", ids.getProviders(), is(Arrays.asList("Test")));
 		assertThat("incorrect locked state", ids.isLocked(), is(false));
 		final IdentityProvider idp = ids.getProvider("Test");
@@ -167,7 +169,8 @@ public class IdentityProviderSetTest {
 		assertThat("incorrect fullname", ri.getDetails().getFullname(), is("http://loginre.com"));
 		assertThat("incorrect email", ri.getDetails().getEmail(), is("http://linkre.com"));
 		
-		ids.lock();
+		ret = ids.lock();
+		assertThat("fluent interface failed", ret, is(ids));
 		assertThat("incorrect locked state", ids.isLocked(), is(true));
 		ids.register(new TestProviderConfigurator("Test2", false));
 		try {

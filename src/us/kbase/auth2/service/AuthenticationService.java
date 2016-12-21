@@ -14,10 +14,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider
-		.GlobusIdentityProviderConfigurator;
-import us.kbase.auth2.lib.identity.GoogleIdentityProvider
-		.GoogleIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
@@ -46,7 +42,6 @@ public class AuthenticationService extends ResourceConfig {
 		cfg = config;
 	}
 	
-	// for testing purposes, so test identity providers can be added.
 	public static IdentityProviderSet getIdentitySet() {
 		return identities;
 	}
@@ -82,8 +77,6 @@ public class AuthenticationService extends ResourceConfig {
 			final AuthStartupConfig c,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
-		identities.register(new GlobusIdentityProviderConfigurator());
-		identities.register(new GoogleIdentityProviderConfigurator());
 		final AuthBuilder ab;
 		synchronized(this) {
 			if (mc == null) {
