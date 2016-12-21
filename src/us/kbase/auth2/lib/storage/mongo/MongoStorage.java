@@ -267,6 +267,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	private List<String> getCanonicalDisplayName(final DisplayName display) {
+		//TODO SEARCH remove punctuation
 		final String[] parts = display.getName().toLowerCase().split("\\s");
 		final List<String> ret = new LinkedList<>();
 		for (String p: parts) {

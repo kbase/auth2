@@ -11,12 +11,12 @@ public class RemoteIdentityDetails {
 	
 	public RemoteIdentityDetails(
 			final String username,
-			String fullname,
-			String email) {
+			final String fullname,
+			final String email) {
 		super();
 		if (username == null || username.trim().isEmpty()) {
 			throw new IllegalArgumentException(
-					"fullname cannot be null or empty");
+					"username cannot be null or empty");
 		}
 		this.username = username.trim();
 		if (fullname == null || fullname.trim().isEmpty()) {
@@ -49,7 +49,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
-		result = prime * result + ((username == null) ? 0 : username.hashCode());
+		result = prime * result + username.hashCode();
 		return result;
 	}
 
@@ -79,11 +79,7 @@ public class RemoteIdentityDetails {
 		} else if (!fullname.equals(other.fullname)) {
 			return false;
 		}
-		if (username == null) {
-			if (other.username != null) {
-				return false;
-			}
-		} else if (!username.equals(other.username)) {
+		if (!username.equals(other.username)) {
 			return false;
 		}
 		return true;
