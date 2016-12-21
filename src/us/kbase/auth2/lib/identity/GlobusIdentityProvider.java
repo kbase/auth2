@@ -22,14 +22,15 @@ import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
+/** An identity provider for the Globus (http://globus.org) service.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GlobusIdentityProvider implements IdentityProvider {
 
-	
 	//TODO TEST
-	//TODO JAVADOC
 	
-	/* Docs: https://docs.globus.org/api/auth/ 
-	 */
+	/* Docs: https://docs.globus.org/api/auth/ */
 	
 	private static final String NAME = "Globus";
 	private static final String SCOPE =
@@ -45,6 +46,9 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	
 	private final IdentityProviderConfig cfg;
 	
+	/** Create a new identity provider for the Globus service.
+	 * @param idc the configuration for the provider.
+	 */
 	public GlobusIdentityProvider(final IdentityProviderConfig idc) {
 		if (idc == null) {
 			throw new NullPointerException("idc");
@@ -273,6 +277,10 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 	
+	/** A configurator for a Globus identity provider.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class GlobusIdentityProviderConfigurator implements
 			IdentityProviderConfigurator {
 

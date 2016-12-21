@@ -22,10 +22,13 @@ import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
+/** An identity provider for Google accounts.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GoogleIdentityProvider implements IdentityProvider {
 
 	//TODO TEST
-	//TODO JAVADOC
 	
 	/* Get creds: https://console.developers.google.com/apis
 	 * Google+ API must be enabled
@@ -49,6 +52,9 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	
 	private final IdentityProviderConfig cfg;
 	
+	/** Create an identity provider for Google.
+	 * @param idc the configuration for this provider.
+	 */
 	public GoogleIdentityProvider(final IdentityProviderConfig idc) {
 		if (idc == null) {
 			throw new NullPointerException("idc");
@@ -196,6 +202,10 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		}
 	}
 	
+	/** A configuratator for a Google identity provider.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class GoogleIdentityProviderConfigurator implements
 			IdentityProviderConfigurator {
 
