@@ -25,12 +25,12 @@ public class RemoteIdentity {
 		this.details = details;
 	}
 	
-	public RemoteIdentityWithID withID() {
+	public RemoteIdentityWithLocalID withID() {
 		return withID(UUID.randomUUID());
 	}
 	
-	public RemoteIdentityWithID withID(final UUID id) {
-		return new RemoteIdentityWithID(id, this.remoteID, this.details);
+	public RemoteIdentityWithLocalID withID(final UUID id) {
+		return new RemoteIdentityWithLocalID(id, this.remoteID, this.details);
 	}
 
 	public RemoteIdentityID getRemoteID() {

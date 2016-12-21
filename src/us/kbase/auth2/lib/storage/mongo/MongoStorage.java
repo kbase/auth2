@@ -66,7 +66,7 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -475,7 +475,7 @@ public class MongoStorage implements AuthStorage {
 			throw new IllegalArgumentException(
 					"user can only have one identity");
 		}
-		final RemoteIdentityWithID ri = user.getIdentities().iterator().next();
+		final RemoteIdentityWithLocalID ri = user.getIdentities().iterator().next();
 		final Document id = toDocument(ri);
 		
 		final UserName admin = user.getAdminThatToggledEnabledState();
@@ -1004,15 +1004,15 @@ public class MongoStorage implements AuthStorage {
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
 		 */
-		RemoteIdentityWithID update = null;
-		for (final RemoteIdentityWithID ri: user.getIdentities()) {
+		RemoteIdentityWithLocalID update = null;
+		for (final RemoteIdentityWithLocalID ri: user.getIdentities()) {
 			if (ri.getRemoteID().equals(remoteID.getRemoteID()) &&
 					!ri.getDetails().equals(remoteID.getDetails())) {
 				update = ri;
 			}
 		}
 		if (update != null) {
-			final Set<RemoteIdentityWithID> newIDs = new HashSet<>(user.getIdentities());
+			final Set<RemoteIdentityWithLocalID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
 			user = new MongoUser(user, newIDs);
@@ -1050,7 +1050,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void storeIdentitiesTemporarily(
 			final TemporaryHashedToken t,
-			final Set<RemoteIdentityWithID> identitySet)
+			final Set<RemoteIdentityWithLocalID> identitySet)
 			throws AuthStorageException {
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
@@ -1067,7 +1067,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private Document toDocument(final RemoteIdentityWithID id) {
+	private Document toDocument(final RemoteIdentityWithLocalID id) {
 		final RemoteIdentityDetails rid = id.getDetails();
 		return new Document(Fields.IDENTITIES_ID, id.getID().toString())
 				.append(Fields.IDENTITIES_PROVIDER, id.getRemoteID().getProvider())
@@ -1078,7 +1078,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public Set<RemoteIdentityWithID> getTemporaryIdentities(
+	public Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
 		final Document d = findOne(COL_TEMP_TOKEN,
@@ -1096,8 +1096,8 @@ public class MongoStorage implements AuthStorage {
 		return toIdentities(ids);
 	}
 
-	private Set<RemoteIdentityWithID> toIdentities(final List<Document> ids) {
-		final Set<RemoteIdentityWithID> ret = new HashSet<>();
+	private Set<RemoteIdentityWithLocalID> toIdentities(final List<Document> ids) {
+		final Set<RemoteIdentityWithLocalID> ret = new HashSet<>();
 		if (ids == null) {
 			return ret;
 		}
@@ -1109,7 +1109,7 @@ public class MongoStorage implements AuthStorage {
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL));
-			ret.add(new RemoteIdentityWithID(
+			ret.add(new RemoteIdentityWithLocalID(
 					UUID.fromString(i.getString(Fields.IDENTITIES_ID)),
 					rid, det));
 		}
@@ -1117,7 +1117,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void link(final UserName user, final RemoteIdentityWithID remoteID)
+	public void link(final UserName user, final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
 		int count = 0;
@@ -1135,7 +1135,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private boolean addIdentity(
 			final UserName userName,
-			final RemoteIdentityWithID remoteID)
+			final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
@@ -1154,7 +1154,7 @@ public class MongoStorage implements AuthStorage {
 		}
 		// firstly check to see if the ID is already linked. If so, just update the associated
 		// user info.
-		for (final RemoteIdentityWithID ri: user.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: user.getIdentities()) {
 			if (ri.getRemoteID().equals(remoteID.getRemoteID())) {
 				// if the details are the same, there's nothing to do, user is already linked and
 				// user info is the same
@@ -1224,7 +1224,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private Set<Document> toDocument(final Set<RemoteIdentityWithID> rids) {
+	private Set<Document> toDocument(final Set<RemoteIdentityWithLocalID> rids) {
 		return rids.stream().map(ri -> toDocument(ri)).collect(Collectors.toSet());
 	}
 

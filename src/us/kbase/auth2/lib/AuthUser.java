@@ -7,7 +7,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 public abstract class AuthUser {
@@ -22,7 +22,7 @@ public abstract class AuthUser {
 	private final UserName userName;
 	private final Set<Role> roles;
 	private Set<Role> canGrantRoles = null;
-	private final Set<RemoteIdentityWithID> identities;
+	private final Set<RemoteIdentityWithLocalID> identities;
 	private final long created;
 	private final Long lastLogin;
 	private final UserDisabledState disabledState;
@@ -31,7 +31,7 @@ public abstract class AuthUser {
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
-			Set<RemoteIdentityWithID> identities,
+			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
 			final Date created,
 			final Date lastLogin,
@@ -107,7 +107,7 @@ public abstract class AuthUser {
 
 	public abstract Set<String> getCustomRoles() throws AuthStorageException;
 	
-	public Set<RemoteIdentityWithID> getIdentities() {
+	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return identities;
 	}
 	
@@ -139,8 +139,8 @@ public abstract class AuthUser {
 		return disabledState;
 	}
 
-	public RemoteIdentityWithID getIdentity(final RemoteIdentity ri) {
-		for (final RemoteIdentityWithID rid: identities) {
+	public RemoteIdentityWithLocalID getIdentity(final RemoteIdentity ri) {
+		for (final RemoteIdentityWithLocalID rid: identities) {
 			if (rid.getRemoteID().equals(ri.getRemoteID())) {
 				return rid;
 			}

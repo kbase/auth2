@@ -41,7 +41,7 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -819,7 +819,7 @@ public class Authentication {
 		AuthUser lastUser = null;
 		final Set<UserName> names = new HashSet<>();
 		final Set<RemoteIdentity> noUser = new HashSet<>();
-		final Set<RemoteIdentityWithID> hasUser = new HashSet<>();
+		final Set<RemoteIdentityWithLocalID> hasUser = new HashSet<>();
 		for (final RemoteIdentity id: ids) {
 			lastUser = storage.getUser(id);
 			if (lastUser != null) {
@@ -859,9 +859,9 @@ public class Authentication {
 
 	private LoginToken storeIdentitiesTemporarily(
 			final Set<RemoteIdentity> noUser,
-			final Set<RemoteIdentityWithID> hasUser)
+			final Set<RemoteIdentityWithLocalID> hasUser)
 			throws AuthStorageException {
-		final Set<RemoteIdentityWithID> store = noUser.stream()
+		final Set<RemoteIdentityWithLocalID> store = noUser.stream()
 				.map(id -> id.withID()).collect(Collectors.toSet());
 		hasUser.stream().forEach(id -> store.add(id));
 
@@ -873,7 +873,7 @@ public class Authentication {
 
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
 		if (ids.isEmpty()) {
 			throw new RuntimeException(
 					"Programming error: temporary login token stored with no identities");
@@ -881,7 +881,7 @@ public class Authentication {
 		final String provider = ids.iterator().next().getRemoteID().getProvider();
 		final LoginState.Builder builder = new LoginState.Builder(provider,
 				cfg.getAppConfig().isLoginAllowed());
-		for (final RemoteIdentityWithID ri: ids) {
+		for (final RemoteIdentityWithLocalID ri: ids) {
 			final AuthUser u = storage.getUser(ri);
 			if (u == null) {
 				builder.addIdentity(ri);
@@ -894,7 +894,7 @@ public class Authentication {
 		return builder.build();
 	}
 
-	private Set<RemoteIdentityWithID> getTemporaryIdentities(
+	private Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
 		if (token == null) {
@@ -926,7 +926,7 @@ public class Authentication {
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
-		final RemoteIdentityWithID match = getIdentity(token, identityID);
+		final RemoteIdentityWithLocalID match = getIdentity(token, identityID);
 		final Date now = new Date();
 		storage.createUser(new NewUser(userName, email, displayName,
 				new HashSet<>(Arrays.asList(match)), now, now));
@@ -955,13 +955,13 @@ public class Authentication {
 		return login(u.getUserName());
 	}
 	
-	private RemoteIdentityWithID getIdentity(
+	private RemoteIdentityWithLocalID getIdentity(
 			final IncomingToken token,
 			final UUID identityID)
 			throws AuthStorageException, AuthenticationException {
-		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(token);
-		RemoteIdentityWithID match = null;
-		for (final RemoteIdentityWithID ri: ids) {
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		RemoteIdentityWithLocalID match = null;
+		for (final RemoteIdentityWithLocalID ri: ids) {
 			if (ri.getID().equals(identityID)) {
 				match = ri;
 			}
@@ -1060,7 +1060,7 @@ public class Authentication {
 		if (u.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentityWithID> ids = getTemporaryIdentities(linktoken);
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(linktoken);
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
 			throw new LinkFailedException("All provided identities are already linked");
@@ -1075,7 +1075,7 @@ public class Authentication {
 			throws AuthStorageException, AuthenticationException,
 			LinkFailedException, DisabledUserException {
 		final AuthUser ht = getUser(token);
-		final RemoteIdentityWithID ri = getIdentity(linktoken, identityID);
+		final RemoteIdentityWithLocalID ri = getIdentity(linktoken, identityID);
 		try {
 			storage.link(ht.getUserName(), ri);
 		} catch (NoSuchUserException e) {

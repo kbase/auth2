@@ -26,7 +26,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 @Path(APIPaths.API_V2_ME)
@@ -58,7 +58,7 @@ public class Me {
 				.collect(Collectors.toList()));
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put("idents", idents);
-		for (final RemoteIdentityWithID ri: u.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
 			i.put("provider", ri.getRemoteID().getProvider());
 			i.put("username", ri.getDetails().getUsername());

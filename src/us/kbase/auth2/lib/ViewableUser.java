@@ -3,7 +3,7 @@ package us.kbase.auth2.lib;
 import java.util.Date;
 import java.util.Set;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 /* this is a user profile that the requesting user has permission to view. Fields which the
@@ -67,7 +67,7 @@ public class ViewableUser {
 		return user == null ? null : user.getCustomRoles();
 	}
 	
-	public Set<RemoteIdentityWithID> getIdentities() {
+	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return user == null ? null : user.getIdentities();
 	}
 	

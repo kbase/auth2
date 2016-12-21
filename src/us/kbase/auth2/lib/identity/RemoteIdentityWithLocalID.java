@@ -2,14 +2,14 @@ package us.kbase.auth2.lib.identity;
 
 import java.util.UUID;
 
-public class RemoteIdentityWithID extends RemoteIdentity {
+public class RemoteIdentityWithLocalID extends RemoteIdentity {
 	
 	//TODO JAVADOC
 	//TODO TEST
 	
 	private final UUID id;
 	
-	public RemoteIdentityWithID(
+	public RemoteIdentityWithLocalID(
 			final UUID id,
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
@@ -43,7 +43,7 @@ public class RemoteIdentityWithID extends RemoteIdentity {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		RemoteIdentityWithID other = (RemoteIdentityWithID) obj;
+		RemoteIdentityWithLocalID other = (RemoteIdentityWithLocalID) obj;
 		if (id == null) {
 			if (other.id != null) {
 				return false;

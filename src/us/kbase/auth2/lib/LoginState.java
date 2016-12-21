@@ -6,16 +6,16 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 public class LoginState {
 
 	//TODO JAVADOC
 	//TODO TEST
 	
-	private final Map<UserName, Set<RemoteIdentityWithID>> userIDs = new HashMap<>();
+	private final Map<UserName, Set<RemoteIdentityWithLocalID>> userIDs = new HashMap<>();
 	private final Map<UserName, AuthUser> users = new HashMap<>();
-	private final Set<RemoteIdentityWithID> noUser = new HashSet<>();
+	private final Set<RemoteIdentityWithLocalID> noUser = new HashSet<>();
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
 
@@ -37,7 +37,7 @@ public class LoginState {
 		return Role.isAdmin(users.get(name).getRoles());
 	}
 	
-	public Set<RemoteIdentityWithID> getIdentities() {
+	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return Collections.unmodifiableSet(noUser);
 	}
 	
@@ -56,7 +56,7 @@ public class LoginState {
 		}
 	}
 	
-	public Set<RemoteIdentityWithID> getIdentities(final UserName name) {
+	public Set<RemoteIdentityWithLocalID> getIdentities(final UserName name) {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
@@ -73,7 +73,7 @@ public class LoginState {
 			ls = new LoginState(provider, nonAdminLoginAllowed);
 		}
 
-		public void addIdentity(final RemoteIdentityWithID remoteID) {
+		public void addIdentity(final RemoteIdentityWithLocalID remoteID) {
 			if (remoteID == null) {
 				throw new NullPointerException("remoteID");
 			}
@@ -81,14 +81,14 @@ public class LoginState {
 			ls.noUser.add(remoteID);
 		}
 
-		private void checkProvider(final RemoteIdentityWithID remoteID) {
+		private void checkProvider(final RemoteIdentityWithLocalID remoteID) {
 			if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}
 		}
 
-		public void addUser(final AuthUser user, final RemoteIdentityWithID remoteID) {
+		public void addUser(final AuthUser user, final RemoteIdentityWithLocalID remoteID) {
 			if (user == null) {
 				throw new NullPointerException("user");
 			}
