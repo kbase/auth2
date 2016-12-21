@@ -12,7 +12,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 public class MongoUser extends AuthUser {
@@ -28,7 +28,7 @@ public class MongoUser extends AuthUser {
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
-			final Set<RemoteIdentityWithID> identities,
+			final Set<RemoteIdentityWithLocalID> identities,
 			final Set<Role> roles,
 			final Set<ObjectId> customRoles,
 			final Date created,
@@ -43,7 +43,7 @@ public class MongoUser extends AuthUser {
 		this.storage = storage;
 	}
 
-	MongoUser(final MongoUser user, final Set<RemoteIdentityWithID> newIDs) {
+	MongoUser(final MongoUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
 		super(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
 				user.getCreated(), user.getLastLogin(), user.getDisabledState());
 		this.customRoles = user.customRoles;

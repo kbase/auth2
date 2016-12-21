@@ -35,7 +35,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
@@ -84,7 +84,7 @@ public class Me {
 		ret.put("hasRoles", !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put("idents", idents);
-		for (final RemoteIdentityWithID ri: u.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
 			i.put("provider", ri.getRemoteID().getProvider());
 			i.put("username", ri.getDetails().getUsername());

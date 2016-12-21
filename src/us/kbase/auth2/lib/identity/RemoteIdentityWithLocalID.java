@@ -2,14 +2,21 @@ package us.kbase.auth2.lib.identity;
 
 import java.util.UUID;
 
-public class RemoteIdentityWithID extends RemoteIdentity {
-	
-	//TODO JAVADOC
-	//TODO TEST
+/** An identity provided by a 3rd party identity provider such as Google, Globus, etc., with an
+ * associated local ID.
+ * @author gaprice@lbl.gov
+ *
+ */
+public class RemoteIdentityWithLocalID extends RemoteIdentity {
 	
 	private final UUID id;
 	
-	public RemoteIdentityWithID(
+	/** Create a remote identity with a local ID.
+	 * @param id the local ID.
+	 * @param remoteID the remote identity ID.
+	 * @param details the identity details.
+	 */
+	public RemoteIdentityWithLocalID(
 			final UUID id,
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
@@ -20,6 +27,9 @@ public class RemoteIdentityWithID extends RemoteIdentity {
 		this.id = id;
 	}
 	
+	/** Get the local ID.
+	 * @return the local ID.
+	 */
 	public UUID getID() {
 		return id;
 	}
@@ -28,7 +38,7 @@ public class RemoteIdentityWithID extends RemoteIdentity {
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + id.hashCode();
 		return result;
 	}
 
@@ -37,18 +47,11 @@ public class RemoteIdentityWithID extends RemoteIdentity {
 		if (this == obj) {
 			return true;
 		}
-		if (!super.equals(obj)) {
+		if (!super.equals(obj)) { // this'll handle different class
 			return false;
 		}
-		if (getClass() != obj.getClass()) {
-			return false;
-		}
-		RemoteIdentityWithID other = (RemoteIdentityWithID) obj;
-		if (id == null) {
-			if (other.id != null) {
-				return false;
-			}
-		} else if (!id.equals(other.id)) {
+		RemoteIdentityWithLocalID other = (RemoteIdentityWithLocalID) obj;
+		if (!id.equals(other.id)) {
 			return false;
 		}
 		return true;
@@ -57,7 +60,7 @@ public class RemoteIdentityWithID extends RemoteIdentity {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("RemoteIdentityWithID [id=");
+		builder.append("RemoteIdentityWithLocalID [id=");
 		builder.append(id);
 		builder.append(", getRemoteID()=");
 		builder.append(getRemoteID());

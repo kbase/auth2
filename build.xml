@@ -180,7 +180,7 @@
              splitindex="true"
              use="true"
              version="true">
-      <link href="http://download.oracle.com/javase/8/docs/api/"/>
+      <link href="http://docs.oracle.com/javase/8/docs/api/"/>
     </javadoc>
   </target>
 	
@@ -195,6 +195,7 @@
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

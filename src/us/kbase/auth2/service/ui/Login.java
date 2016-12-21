@@ -51,7 +51,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -297,7 +297,7 @@ public class Login {
 		ret.put("create", create);
 		ret.put("login", login);
 		
-		for (final RemoteIdentityWithID id: loginState.getIdentities()) {
+		for (final RemoteIdentityWithLocalID id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
 			c.put("id", id.getID().toString());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
@@ -318,7 +318,7 @@ public class Login {
 			l.put("adminonly", loginRestricted);
 			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
 			final List<String> remoteIDs = new LinkedList<>();
-			for (final RemoteIdentityWithID id: loginState.getIdentities(userName)) {
+			for (final RemoteIdentityWithLocalID id: loginState.getIdentities(userName)) {
 				remoteIDs.add(id.getDetails().getUsername());
 			}
 			l.put("prov_usernames", remoteIDs);

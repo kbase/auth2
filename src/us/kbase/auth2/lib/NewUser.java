@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 public class NewUser extends AuthUser {
 	
@@ -15,7 +15,7 @@ public class NewUser extends AuthUser {
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
-			final Set<RemoteIdentityWithID> identities,
+			final Set<RemoteIdentityWithLocalID> identities,
 			final Date created,
 			final Date lastLogin) {
 		super(userName, email, displayName, identities, Collections.emptySet(), created,

@@ -49,7 +49,7 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
@@ -257,7 +257,7 @@ public class Link {
 				.iterator().next().getRemoteID().getProvider());
 		final List<Map<String, String>> ris = new LinkedList<>();
 		ret.put("ids", ris);
-		for (final RemoteIdentityWithID ri: ids.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: ids.getIdentities()) {
 			final Map<String, String> s = new HashMap<>();
 			s.put("id", ri.getID().toString());
 			s.put("prov_username", ri.getDetails().getUsername());

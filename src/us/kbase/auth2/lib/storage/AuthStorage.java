@@ -27,7 +27,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
@@ -320,7 +320,7 @@ public interface AuthStorage {
 	 */
 	void storeIdentitiesTemporarily(
 			TemporaryHashedToken token,
-			Set<RemoteIdentityWithID> ids)
+			Set<RemoteIdentityWithLocalID> ids)
 			throws AuthStorageException;
 
 	/** Get a set of identities associated with a token.
@@ -330,7 +330,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	Set<RemoteIdentityWithID> getTemporaryIdentities(
+	Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
@@ -343,7 +343,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void link(UserName userName, RemoteIdentityWithID remoteID)
+	void link(UserName userName, RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException;
 

@@ -4,7 +4,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 public class LinkIdentities {
 	
@@ -12,11 +12,11 @@ public class LinkIdentities {
 	//TODO JAVADOC
 	
 	private final AuthUser user;
-	private final Set<RemoteIdentityWithID> idents;
+	private final Set<RemoteIdentityWithLocalID> idents;
 
 	public LinkIdentities(
 			final AuthUser user,
-			Set<RemoteIdentityWithID> ids) {
+			Set<RemoteIdentityWithLocalID> ids) {
 		if (user == null) {
 			throw new NullPointerException("user");
 		}
@@ -31,7 +31,7 @@ public class LinkIdentities {
 		return user;
 	}
 
-	public Set<RemoteIdentityWithID> getIdentities() {
+	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return idents;
 	}
 

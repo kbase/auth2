@@ -1,22 +1,29 @@
 package us.kbase.auth2.lib.identity;
 
+/** A set of potentially mutable details about a remote identity. The identity provider may
+ * change these details at any time.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class RemoteIdentityDetails {
 
-	//TODO TEST
-	//TODO JAVADOC
-	
 	private final String username;
 	private final String fullname;
 	private final String email;
 	
+	/** Create a new set of details.
+	 * @param username the user name of the identity.
+	 * @param fullname the full name of the identity. Null is acceptable.
+	 * @param email the email address of the identity. Null is acceptable.
+	 */
 	public RemoteIdentityDetails(
 			final String username,
-			String fullname,
-			String email) {
+			final String fullname,
+			final String email) {
 		super();
 		if (username == null || username.trim().isEmpty()) {
 			throw new IllegalArgumentException(
-					"fullname cannot be null or empty");
+					"username cannot be null or empty");
 		}
 		this.username = username.trim();
 		if (fullname == null || fullname.trim().isEmpty()) {
@@ -31,14 +38,22 @@ public class RemoteIdentityDetails {
 		}
 	}
 
+	/** Get the user name for the identity.
+	 * @return the user name.
+	 */
 	public String getUsername() {
 		return username;
 	}
 
+	/** Get the full name for the identity, or null if none was provided.
+	 * @return the full name.
+	 */
 	public String getFullname() {
 		return fullname;
 	}
-
+	/** Get the email address for the identity, or null if none was provided.
+	 * @return the email address.
+	 */
 	public String getEmail() {
 		return email;
 	}
@@ -49,7 +64,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
-		result = prime * result + ((username == null) ? 0 : username.hashCode());
+		result = prime * result + username.hashCode();
 		return result;
 	}
 
@@ -79,11 +94,7 @@ public class RemoteIdentityDetails {
 		} else if (!fullname.equals(other.fullname)) {
 			return false;
 		}
-		if (username == null) {
-			if (other.username != null) {
-				return false;
-			}
-		} else if (!username.equals(other.username)) {
+		if (!username.equals(other.username)) {
 			return false;
 		}
 		return true;
