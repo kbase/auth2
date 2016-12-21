@@ -11,7 +11,7 @@ public class TestCommon {
 			final Exception got,
 			final Exception expected) {
 		assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
-				got.getLocalizedMessage(), is(expected.getLocalizedMessage()));
+				got.getMessage(), is(expected.getMessage()));
 		assertThat("incorrect exception type", got, is(expected.getClass()));
 	}
 	
