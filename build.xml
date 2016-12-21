@@ -180,7 +180,7 @@
              splitindex="true"
              use="true"
              version="true">
-      <link href="http://download.oracle.com/javase/8/docs/api/"/>
+      <link href="http://docs.oracle.com/javase/8/docs/api/"/>
     </javadoc>
   </target>
 	

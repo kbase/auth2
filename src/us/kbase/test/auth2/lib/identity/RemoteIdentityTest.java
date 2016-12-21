@@ -213,7 +213,7 @@ public class RemoteIdentityTest {
 	
 	@Test
 	public void identityFail() throws Exception {
-		failCreateIdentity(null, new RemoteIdentityDetails("u", "f", "e"), "id");
+		failCreateIdentity(null, new RemoteIdentityDetails("u", "f", "e"), "remoteID");
 		failCreateIdentity(new RemoteIdentityID("p", "i"), null, "details");
 	}
 	
@@ -227,6 +227,73 @@ public class RemoteIdentityTest {
 		} catch (NullPointerException e) {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
+	}
+	
+	@Test
+	public void identityLocalID() throws Exception {
+		final UUID id = UUID.fromString("8c3a3495-50fe-46aa-8e6b-d447e9ecfa46");
+		final RemoteIdentityID rid = new RemoteIdentityID("p", "i");
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(id, rid, dets);
+		assertThat("incorrect id", ri.getID(), is(id));
+		assertThat("incorrect remote id", ri.getRemoteID(), is(rid));
+		assertThat("incorrect details", ri.getDetails(), is(dets));
+		assertThat("incorrect hashcode", ri.hashCode(), is(-1027993528));
+		assertThat("incorrect toString()", ri.toString(),
+				is("RemoteIdentityWithLocalID [id=8c3a3495-50fe-46aa-8e6b-d447e9ecfa46, " +
+						"getRemoteID()=RemoteIdentityID [provider=p, id=i], " +
+						"getDetails()=RemoteIdentityDetails [username=u, fullname=f, email=e]]"));
+	}
+	
+	@Test
+	public void identityLocalIDfail() throws Exception {
+		final UUID id = UUID.fromString("8c3a3495-50fe-46aa-8e6b-d447e9ecfa46");
+		final RemoteIdentityID rid = new RemoteIdentityID("p", "i");
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		failCreateIdentWithLocalID(null, rid, dets, "id");
+		failCreateIdentWithLocalID(id, null, dets, "remoteID");
+		failCreateIdentWithLocalID(id, rid, null, "details");
+	}
+	
+	private void failCreateIdentWithLocalID(
+			final UUID id,
+			final RemoteIdentityID rid,
+			final RemoteIdentityDetails dets,
+			final String exception) {
+		try {
+			new RemoteIdentityWithLocalID(id, rid, dets);
+			fail("created bad remote id");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is(exception));
+		}
+	}
+	
+	@Test
+	public void identityLocalIDequals() throws Exception {
+		final UUID id = UUID.fromString("8c3a3495-50fe-46aa-8e6b-d447e9ecfa46");
+		final RemoteIdentityID rid = new RemoteIdentityID("p", "i");
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(id, rid, dets);
+		
+		//identity
+		assertThat("incorrect equals", ri.equals(ri), is(true));
+		//equal
+		assertThat("incorrect equals", ri.equals(new RemoteIdentityWithLocalID(
+				id, new RemoteIdentityID("p", "i"), new RemoteIdentityDetails("u", "f", "e"))),
+				is(true));
+		//null obj
+		assertThat("incorrect equals", ri.equals(null), is(false));
+		//class
+		assertThat("incorrect equals", ri.equals(new Object()), is(false));
+		//id
+		assertThat("incorrect equals", ri.equals(new RemoteIdentityWithLocalID(
+				UUID.fromString("8c3a3495-50fe-46aa-8e6b-d447e9ecfa47"), rid, dets)), is(false));
+		//remote id
+		assertThat("incorrect equals", ri.equals(new RemoteIdentityWithLocalID(
+				id, new RemoteIdentityID("q", "i"), dets)), is(false));
+		//details
+		assertThat("incorrect equals", ri.equals(new RemoteIdentityWithLocalID(
+				id, rid, new RemoteIdentityDetails("t", "f", "e"))), is(false));
 	}
 	
 }

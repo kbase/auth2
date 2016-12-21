@@ -21,7 +21,7 @@ public class RemoteIdentity {
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
 		if (remoteID == null) {
-			throw new NullPointerException("id");
+			throw new NullPointerException("remoteID");
 		}
 		if (details == null) {
 			throw new NullPointerException("details");
