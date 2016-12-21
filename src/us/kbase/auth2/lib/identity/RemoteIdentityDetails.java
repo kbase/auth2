@@ -1,14 +1,21 @@
 package us.kbase.auth2.lib.identity;
 
+/** A set of potentially mutable details about a remote identity. The identity provider may
+ * change these details at any time.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class RemoteIdentityDetails {
 
-	//TODO TEST
-	//TODO JAVADOC
-	
 	private final String username;
 	private final String fullname;
 	private final String email;
 	
+	/** Create a new set of details.
+	 * @param username the user name of the identity.
+	 * @param fullname the full name of the identity. Null is acceptable.
+	 * @param email the email address of the identity. Null is acceptable.
+	 */
 	public RemoteIdentityDetails(
 			final String username,
 			final String fullname,
@@ -31,14 +38,22 @@ public class RemoteIdentityDetails {
 		}
 	}
 
+	/** Get the user name for the identity.
+	 * @return the user name.
+	 */
 	public String getUsername() {
 		return username;
 	}
 
+	/** Get the full name for the identity, or null if none was provided.
+	 * @return the full name.
+	 */
 	public String getFullname() {
 		return fullname;
 	}
-
+	/** Get the email address for the identity, or null if none was provided.
+	 * @return the email address.
+	 */
 	public String getEmail() {
 		return email;
 	}
