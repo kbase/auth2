@@ -4,10 +4,14 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.UUID;
+
 import org.junit.Test;
 
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 
 public class RemoteIdentityTest {
@@ -146,6 +150,82 @@ public class RemoteIdentityTest {
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception msg", e.getMessage(),
 					is(exception));
+		}
+	}
+	
+	@Test
+	public void identity() throws Exception {
+		final RemoteIdentityID id = new RemoteIdentityID("p", "i");
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		final RemoteIdentity ri = new RemoteIdentity(id, dets);
+		assertThat("incorrect id", ri.getRemoteID(), is(id));
+		assertThat("incorrect details", ri.getDetails(), is(dets));
+		assertThat("incorrect hashcode", ri.hashCode(), is(4039350));
+		assertThat("incorrect toString()", ri.toString(),
+				is("RemoteIdentity [remoteID=RemoteIdentityID [provider=p, id=i], " +
+						"details=RemoteIdentityDetails [username=u, fullname=f, email=e]]"));
+		
+		final RemoteIdentityWithLocalID ril = ri.withID();
+		assertThat("incorrect local id class", ril.getID(), is(UUID.class));
+		assertThat("incorrect id", ril.getRemoteID(), is(id));
+		assertThat("incorrect details", ril.getDetails(), is(dets));
+		
+		final RemoteIdentityID id2 = new RemoteIdentityID("p2", "i");
+		final RemoteIdentityDetails dets2 = new RemoteIdentityDetails("u2", "f", "e");
+		final RemoteIdentity ri2 = new RemoteIdentity(id2, dets2);
+		
+		final UUID uuid = UUID.randomUUID();
+		final RemoteIdentityWithLocalID ril2 = ri2.withID(uuid);
+		assertThat("incorrect local id class", ril2.getID(), is(uuid));
+		assertThat("incorrect id", ril2.getRemoteID(), is(id2));
+		assertThat("incorrect details", ril2.getDetails(), is(dets2));
+		
+		try {
+			ri2.withID(null);
+			fail("created bad remote id");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is("id"));
+		}
+	}
+	
+	@Test
+	public void identityEquals() throws Exception {
+		final RemoteIdentityID id = new RemoteIdentityID("p", "i");
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		final RemoteIdentity ri = new RemoteIdentity(id, dets);
+		
+		//identity
+		assertThat("incorrect equals", ri.equals(ri), is(true));
+		//equal
+		assertThat("incorrect equals", ri.equals(new RemoteIdentity(new RemoteIdentityID("p", "i"),
+				new RemoteIdentityDetails("u", "f", "e"))), is(true));
+		//null obj
+		assertThat("incorrect equals", ri.equals(null), is(false));
+		//class
+		assertThat("incorrect equals", ri.equals(new Object()), is(false));
+		//id
+		assertThat("incorrect equals", ri.equals(new RemoteIdentity(
+				new RemoteIdentityID("q", "i"), dets)), is(false));
+		//details
+		assertThat("incorrect equals", ri.equals(new RemoteIdentity(
+				id, new RemoteIdentityDetails("t", "f", "e"))), is(false));
+	}
+	
+	@Test
+	public void identityFail() throws Exception {
+		failCreateIdentity(null, new RemoteIdentityDetails("u", "f", "e"), "id");
+		failCreateIdentity(new RemoteIdentityID("p", "i"), null, "details");
+	}
+	
+	private void failCreateIdentity(
+			final RemoteIdentityID remoteID,
+			final RemoteIdentityDetails details,
+			final String exception) {
+		try {
+			new RemoteIdentity(remoteID, details);
+			fail("created bad identity");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
 	}
 	

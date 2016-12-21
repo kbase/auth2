@@ -2,19 +2,24 @@ package us.kbase.auth2.lib.identity;
 
 import java.util.UUID;
 
+/** An identity provided by a 3rd party identity provider such as Google, Globus, etc.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class RemoteIdentity {
-	
-	//TODO JAVADOC
-	//TODO TEST
 	
 	private final RemoteIdentityID remoteID;
 	private final RemoteIdentityDetails details;
 	
+	/** Create a remote identity.
+	 * @param remoteID the immutable ID of this identity. The identity provider should not change
+	 * any part of this ID.
+	 * @param details other details about the identity. These details may be changed by the
+	 * identity provider.
+	 */
 	public RemoteIdentity(
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
-		super();
-		//TODO INPUT check for null & .trim().isEmpty()
 		if (remoteID == null) {
 			throw new NullPointerException("id");
 		}
@@ -25,18 +30,31 @@ public class RemoteIdentity {
 		this.details = details;
 	}
 	
+	/** Add a new, random local ID to this remote identity. 
+	 * @return this remote identity with a new local ID.
+	 */
 	public RemoteIdentityWithLocalID withID() {
 		return withID(UUID.randomUUID());
 	}
 	
+	/** Associate a pre-existing local ID to this remote identity.
+	 * @param id the ID to associate with this identity.
+	 * @return this remote idenity with the provided local ID.
+	 */
 	public RemoteIdentityWithLocalID withID(final UUID id) {
 		return new RemoteIdentityWithLocalID(id, this.remoteID, this.details);
 	}
 
+	/** Get the immutable ID for this identity.
+	 * @return the ID.
+	 */
 	public RemoteIdentityID getRemoteID() {
 		return remoteID;
 	}
 	
+	/** Get the details for this identity.
+	 * @return the identity details.
+	 */
 	public RemoteIdentityDetails getDetails() {
 		return details;
 	}
@@ -45,8 +63,8 @@ public class RemoteIdentity {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((details == null) ? 0 : details.hashCode());
-		result = prime * result + ((remoteID == null) ? 0 : remoteID.hashCode());
+		result = prime * result + details.hashCode();
+		result = prime * result + remoteID.hashCode();
 		return result;
 	}
 
@@ -62,18 +80,10 @@ public class RemoteIdentity {
 			return false;
 		}
 		RemoteIdentity other = (RemoteIdentity) obj;
-		if (details == null) {
-			if (other.details != null) {
-				return false;
-			}
-		} else if (!details.equals(other.details)) {
+		if (!details.equals(other.details)) {
 			return false;
 		}
-		if (remoteID == null) {
-			if (other.remoteID != null) {
-				return false;
-			}
-		} else if (!remoteID.equals(other.remoteID)) {
+		if (!remoteID.equals(other.remoteID)) {
 			return false;
 		}
 		return true;

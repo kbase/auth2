@@ -57,7 +57,7 @@ public class RemoteIdentityWithLocalID extends RemoteIdentity {
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
-		builder.append("RemoteIdentityWithID [id=");
+		builder.append("RemoteIdentityWithLocalID [id=");
 		builder.append(id);
 		builder.append(", getRemoteID()=");
 		builder.append(getRemoteID());
