@@ -166,7 +166,7 @@ public class GoogleIdentityProvider implements IdentityProvider {
 				cfg.getLoginRedirectURL().toString());
 		formParameters.add("grant_type", "authorization_code");
 		formParameters.add("client_id", cfg.getClientID());
-		formParameters.add("client_secret", cfg.getClientSecrect());
+		formParameters.add("client_secret", cfg.getClientSecret());
 		
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(TOKEN_PATH).build();

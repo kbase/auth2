@@ -254,7 +254,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 			final MultivaluedMap<String, String> formParameters,
 			final URI target) {
 		final String bauth = "Basic " + Base64.getEncoder().encodeToString(
-				(cfg.getClientID() + ":" + cfg.getClientSecrect()).getBytes());
+				(cfg.getClientID() + ":" + cfg.getClientSecret()).getBytes());
 		final WebTarget wt = CLI.target(target);
 		Response r = null;
 		try {

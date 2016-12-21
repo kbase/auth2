@@ -18,7 +18,7 @@ import us.kbase.auth2.lib.identity.GlobusIdentityProvider
 		.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.GoogleIdentityProvider
 		.GoogleIdentityProviderConfigurator;
-import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -35,6 +35,7 @@ public class AuthenticationService extends ResourceConfig {
 	
 	private static AuthStartupConfig cfg = null;
 	private static MongoClient mc;
+	private static IdentityProviderSet identities = new IdentityProviderSet();
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
@@ -45,6 +46,11 @@ public class AuthenticationService extends ResourceConfig {
 		cfg = config;
 	}
 	
+	// for testing purposes, so test identity providers can be added.
+	public static IdentityProviderSet getIdentitySet() {
+		return identities;
+	}
+	
 	public AuthenticationService()
 			throws StorageInitException, AuthConfigurationException {
 		if (cfg == null) {
@@ -52,10 +58,6 @@ public class AuthenticationService extends ResourceConfig {
 					"starting the server ya daft numpty");
 		}
 		quietLogger();
-		final IdentityProviderFactory fac =
-				IdentityProviderFactory.getInstance();
-		fac.register(new GlobusIdentityProviderConfigurator());
-		fac.register(new GoogleIdentityProviderConfigurator());
 		logger = cfg.getLogger();
 		try {
 			buildApp(cfg, AuthExternalConfig.DEFAULT);
@@ -80,13 +82,15 @@ public class AuthenticationService extends ResourceConfig {
 			final AuthStartupConfig c,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
+		identities.register(new GlobusIdentityProviderConfigurator());
+		identities.register(new GoogleIdentityProviderConfigurator());
 		final AuthBuilder ab;
 		synchronized(this) {
 			if (mc == null) {
-				ab = new AuthBuilder(c, defaultExternalConfig);
+				ab = new AuthBuilder(identities, c, defaultExternalConfig);
 				mc = ab.getMongoClient();
 			} else {
-				ab = new AuthBuilder(c, defaultExternalConfig, mc);
+				ab = new AuthBuilder(identities, c, defaultExternalConfig, mc);
 			}
 		}
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");

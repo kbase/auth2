@@ -39,7 +39,7 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
-import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -87,14 +87,14 @@ public class Authentication {
 	}
 
 	private final AuthStorage storage;
-	private final IdentityProviderFactory idFactory;
+	private final IdentityProviderSet idProviderSet;
 	private final TokenGenerator tokens;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	
 	public Authentication(
 			final AuthStorage storage,
-			final IdentityProviderFactory identityProviderFactory,
+			final IdentityProviderSet identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
 		
@@ -107,14 +107,14 @@ public class Authentication {
 		if (storage == null) {
 			throw new NullPointerException("storage");
 		}
-		if (identityProviderFactory == null) {
+		if (identityProviderSet == null) {
 			throw new NullPointerException("identityProviderFactory");
 		}
 		this.storage = storage;
-		this.idFactory = identityProviderFactory;
-		idFactory.lock();
+		this.idProviderSet = identityProviderSet;
+		idProviderSet.lock();
 		final Map<String, ProviderConfig> provs = new HashMap<>();
-		for (final String provname: idFactory.getProviders()) {
+		for (final String provname: idProviderSet.getProviders()) {
 			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		}
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
@@ -770,14 +770,14 @@ public class Authentication {
 
 	public List<String> getIdentityProviders() throws AuthStorageException {
 		final AuthConfig ac = cfg.getAppConfig();
-		return idFactory.getProviders().stream()
+		return idProviderSet.getProviders().stream()
 				.filter(p -> ac.getProviderConfig(p).isEnabled())
 				.collect(Collectors.toList());
 	}
 	
 	private IdentityProvider getIdentityProvider(final String provider)
 			throws NoSuchIdentityProviderException, AuthStorageException {
-		final IdentityProvider ip = idFactory.getProvider(provider);
+		final IdentityProvider ip = idProviderSet.getProvider(provider);
 		if (!cfg.getAppConfig().getProviderConfig(provider).isEnabled()) {
 			throw new NoSuchIdentityProviderException(provider);
 		}
@@ -1157,7 +1157,7 @@ public class Authentication {
 		getUser(token, Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
 			//throws an exception if no provider by given name
-			idFactory.getProvider(provider);
+			idProviderSet.getProvider(provider);
 		}
 		storage.updateConfig(acs, true);
 		cfg.updateConfig();
@@ -1201,8 +1201,7 @@ public class Authentication {
 		if (username.contains("@")) {
 			username = username.split("@")[0];
 			if (username.isEmpty()) {
-				throw new IllegalParameterException(
-						ErrorType.ILLEGAL_USER_NAME,
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 						ri.getDetails().getUsername());
 			}
 		}
