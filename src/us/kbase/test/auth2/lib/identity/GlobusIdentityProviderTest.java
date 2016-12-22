@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -23,6 +24,8 @@ import org.mockserver.matchers.Times;
 import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
+import org.mockserver.model.Parameter;
+import org.mockserver.model.ParameterBody;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +43,7 @@ import us.kbase.test.auth2.TestCommon;
 public class GlobusIdentityProviderTest {
 	
 	private static final String CONTENT_TYPE = "content-type";
+	private static final String ACCEPT = "accept";
 	private static final String APP_JSON = "application/json";
 	private static final String GLOBUS = "Globus";
 	
@@ -140,8 +144,9 @@ public class GlobusIdentityProviderTest {
 	}
 	
 	@Test
-	public void getIdentities() throws Exception {
+	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
 		final String clientID = "clientID";
+		final String authCode = "authcode";
 		final IdentityProvider idp = new GlobusIdentityProvider(new IdentityProviderConfig(
 				"Globus",
 				new URL("https://login.com"),
@@ -151,30 +156,41 @@ public class GlobusIdentityProviderTest {
 				new URI("http://image.com"),
 				new URL("https://loginredir.com"),
 				new URL("https://linkredir.com")));
+		final String bauth = "Basic " + Base64.getEncoder().encodeToString(
+				(clientID + ":" + "bar").getBytes());
 		
-		
-		//TODO NOW TEST validate sent data is valid 
 		mockClientAndServer.when(
 					new HttpRequest()
 						.withMethod("POST")
-						.withPath("/v2/oauth2/token"),
+						.withPath("/v2/oauth2/token")
+						.withHeader(ACCEPT, APP_JSON)
+						.withHeader("Authorization", bauth)
+						.withBody(new ParameterBody(
+								new Parameter("code", authCode),
+								new Parameter("grant_type", "authorization_code"),
+								new Parameter("redirect_uri", "https://loginredir.com"))
+						),
 					Times.exactly(1)
-		//TODO NOW TEST send response like std Globus response
 				).respond(
 					new HttpResponse()
 						.withStatusCode(200)
-						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withHeader(CONTENT_TYPE, APP_JSON)
 						.withBody(MAPPER.writeValueAsString(
 								ImmutableMap.of("access_token", "footoken"))
 						)
 				);
-		//TODO NOW TEST validate sent data is valid
 		mockClientAndServer.when(
 					new HttpRequest()
 						.withMethod("POST")
-						.withPath("/v2/oauth2/token/introspect"),
+						.withPath("/v2/oauth2/token/introspect")
+						.withHeader(ACCEPT, APP_JSON)
+						.withHeader("Authorization", bauth)
+						.withBody(new ParameterBody(
+								new Parameter("include", "identities_set"),
+								new Parameter("token", "footoken"))
+						),
 					Times.exactly(1)
-		//TODO NOW TEST send response like std Globus response
+		//TODO NOW TEST with null name and email
 				).respond(
 					new HttpResponse()
 						.withStatusCode(200)
@@ -196,13 +212,14 @@ public class GlobusIdentityProviderTest {
 		idents.add(ImmutableMap.of("id", "id2", "username", "user2", "name", "name2", "email",
 				"email2"));
 		
-		//TODO NOW TEST validate sent data is valid
 		mockClientAndServer.when(
 					new HttpRequest()
 						.withMethod("GET")
-						.withPath("/v2/api/identities"),
-						Times.exactly(1)
-		//TODO NOW TEST send response like std Globus response
+						.withPath("/v2/api/identities")
+						.withHeader(ACCEPT, APP_JSON)
+						.withHeader("Authorization", "Bearer " +  "footoken")
+						.withQueryStringParameter("ids", "^ident2,ident1|ident1,ident2$"),
+					Times.exactly(1)
 				).respond(
 					new HttpResponse()
 						.withStatusCode(200)
@@ -213,7 +230,7 @@ public class GlobusIdentityProviderTest {
 				);
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities("code", false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));

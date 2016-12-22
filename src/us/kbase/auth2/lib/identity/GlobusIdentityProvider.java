@@ -167,7 +167,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 			throw new IdentityRetrievalException("The audience for the Globus request does not " +
 					"include this client");
 		}
-		final String id = (String) m.get("sub");
+		final String id = ((String) m.get("sub")).trim();
 		final String username = (String) m.get("username");
 		final String name = (String) m.get("name");
 		final String email = (String) m.get("email");
@@ -176,9 +176,16 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				new RemoteIdentityDetails(username, name, email));
 		@SuppressWarnings("unchecked")
 		final List<String> secids = (List<String>) m.get("identities_set");
-		secids.remove(id);
+		trim(secids);
+		secids.remove(id); // avoids another call to globus if no other ids
 		
 		return new Idents(primary, new HashSet<>(secids));
+	}
+
+	private void trim(final List<String> s) {
+		for (int i = 0; i < s.size(); i++) {
+			s.set(i, s.get(i).trim());
+		}
 	}
 
 	private Set<RemoteIdentity> makeIdentities(
