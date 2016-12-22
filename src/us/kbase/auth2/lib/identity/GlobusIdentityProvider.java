@@ -22,7 +22,7 @@ import javax.ws.rs.core.UriBuilder;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
-/** An identity provider for the Globus (http://globus.org) service.
+/** An identity provider for the <a href="https://globus.org" target="_blank">Globus</a> service.
  * @author gaprice@lbl.gov
  *
  */
@@ -34,8 +34,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	
 	private static final String NAME = "Globus";
 	private static final String SCOPE =
-			"urn:globus:auth:scope:auth.globus.org:view_identities " + 
-			"email";
+			"urn:globus:auth:scope:auth.globus.org:view_identities email";
 	private static final String LOGIN_PATH = "/v2/oauth2/authorize";
 	private static final String TOKEN_PATH = "/v2/oauth2/token";
 	private static final String INTROSPECT_PATH = TOKEN_PATH + "/introspect";
@@ -77,7 +76,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				.path(LOGIN_PATH)
 				.queryParam("scope", SCOPE)
 				.queryParam("state", state)
-				.queryParam("redirect_uri", link? cfg.getLinkRedirectURL() :
+				.queryParam("redirect_uri", link ? cfg.getLinkRedirectURL() :
 					cfg.getLoginRedirectURL())
 				.queryParam("response_type", "code")
 				.queryParam("client_id", cfg.getClientID())
@@ -142,14 +141,11 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				.queryParam("ids", String.join(",", secondaryIDs))
 				.build();
 		
-		final Map<String, Object> ids = globusGetRequest(
-				accessToken, idtarget);
+		final Map<String, Object> ids = globusGetRequest(accessToken, idtarget);
 		@SuppressWarnings("unchecked")
-		final List<Map<String, String>> sids =
-				(List<Map<String, String>>) ids.get("identities");
+		final List<Map<String, String>> sids = (List<Map<String, String>>) ids.get("identities");
 		//TODO CODE check that all identities are in returned list
-		final Set<RemoteIdentity> secondaries = makeIdentities(sids);
-		return secondaries;
+		return makeIdentities(sids);
 	}
 
 	private Idents getPrimaryIdentity(final String accessToken)
@@ -158,21 +154,18 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(INTROSPECT_PATH).build();
 		
-		final MultivaluedMap<String, String> formParameters =
-				new MultivaluedHashMap<>();
+		final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 		formParameters.add("token", accessToken);
 		formParameters.add("include", "identities_set");
 		
-		final Map<String, Object> m = globusPostRequest(
-				formParameters, target);
+		final Map<String, Object> m = globusPostRequest(formParameters, target);
 		// per Globus spec, check that the audience for the requests includes
 		// our client
 		@SuppressWarnings("unchecked")
 		final List<String> audience = (List<String>) m.get("aud");
 		if (!audience.contains(cfg.getClientID())) {
-			throw new IdentityRetrievalException(
-					"The audience for the Globus request does not include " +
-					"this client");
+			throw new IdentityRetrievalException("The audience for the Globus request does not " +
+					"include this client");
 		}
 		final String id = (String) m.get("sub");
 		final String username = (String) m.get("username");
@@ -238,19 +231,16 @@ public class GlobusIdentityProvider implements IdentityProvider {
 
 	private String getAccessToken(final String authcode, final boolean link) {
 		
-		final MultivaluedMap<String, String> formParameters =
-				new MultivaluedHashMap<>();
+		final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 		formParameters.add("code", authcode);
 		formParameters.add("redirect_uri", link ?
 				cfg.getLinkRedirectURL().toString() :
 				cfg.getLoginRedirectURL().toString());
 		formParameters.add("grant_type", "authorization_code");
 		
-		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-				.path(TOKEN_PATH).build();
+		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();
 		
-		final Map<String, Object> m = globusPostRequest(
-				formParameters, target);
+		final Map<String, Object> m = globusPostRequest(formParameters, target);
 		return (String) m.get("access_token");
 	}
 
@@ -266,7 +256,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 					.header("Authorization", bauth)
 					.post(Entity.form(formParameters));
 			@SuppressWarnings("unchecked")
-			//TODO TEST with 500s with HTML
+			//TODO TEST with 500s with HTML and non-200s
+			//TODO TEST with content-type not json
 			final Map<String, Object> mtemp = r.readEntity(Map.class);
 			//TODO IDPROVERR handle {error=?} in object and check response code
 			return mtemp;
