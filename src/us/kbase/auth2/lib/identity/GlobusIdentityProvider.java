@@ -115,13 +115,16 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	
 	@Override
 	public Set<RemoteIdentity> getIdentities(
-			final String authCode,
+			final String authcode,
 			final boolean link)
 			throws IdentityRetrievalException {
 		/* Note authcode only works once. After that globus returns
 		 * {error=invalid_grant}
 		 */
-		final String accessToken = getAccessToken(authCode, link);
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new IllegalArgumentException("authcode cannot be null or empty");
+		}
+		final String accessToken = getAccessToken(authcode, link);
 		final Idents idents = getPrimaryIdentity(accessToken);
 		final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 				accessToken, idents.secondaryIDs);
@@ -148,8 +151,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return makeIdentities(sids);
 	}
 
-	private Idents getPrimaryIdentity(final String accessToken)
-			throws IdentityRetrievalException {
+	private Idents getPrimaryIdentity(final String accessToken) throws IdentityRetrievalException {
 		
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(INTROSPECT_PATH).build();
@@ -236,7 +238,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 
-	private String getAccessToken(final String authcode, final boolean link) {
+	private String getAccessToken(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
 		
 		final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 		formParameters.add("code", authcode);
@@ -248,7 +251,11 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();
 		
 		final Map<String, Object> m = globusPostRequest(formParameters, target);
-		return (String) m.get("access_token");
+		final String token = (String) m.get("access_token");
+		if (token == null || token.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No access token was returned by " + NAME);
+		}
+		return token;
 	}
 
 	private Map<String, Object> globusPostRequest(

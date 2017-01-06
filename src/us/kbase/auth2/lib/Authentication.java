@@ -54,6 +54,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 
 public class Authentication {
 
+	//TODO TEST test unicode for inputs and outputs
 	//TODO TEST unit tests
 	//TODO TEST test logging on startup
 	//TODO TEST test logging on calls

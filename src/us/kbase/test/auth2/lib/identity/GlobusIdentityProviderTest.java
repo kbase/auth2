@@ -10,6 +10,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -30,6 +31,7 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.GlobusIdentityProvider;
 import us.kbase.auth2.lib.identity.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProvider;
@@ -144,41 +146,96 @@ public class GlobusIdentityProviderTest {
 	}
 	
 	@Test
-	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
-		final String clientID = "clientID";
-		final String authCode = "authcode";
-		final IdentityProvider idp = new GlobusIdentityProvider(new IdentityProviderConfig(
+	public void illegalAuthcode() throws Exception {
+		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
+		failGetIdentities(idp, null, true, new IllegalArgumentException(
+				"authcode cannot be null or empty"));
+		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
+				"authcode cannot be null or empty"));
+	}
+	
+	@Test
+	public void returnsIllegalAuthtoken() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final IdentityRetrievalException e =
+				new IdentityRetrievalException("No access token was returned by Globus");
+		setUpCallAuthToken("authcode3", null, redir, bauth);
+		failGetIdentities(idp, "authcode3", false, e);
+		setUpCallAuthToken("authcode3", "     \n    ", redir, bauth);
+		failGetIdentities(idp, "authcode3", false, e);
+		
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final Exception exception) throws Exception {
+		try {
+			idp.getIdentities(authcode, link);
+			fail("got identities with bad setup");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+
+	private IdentityProviderConfig getTestIDConfig()
+			throws IdentityProviderConfigurationException, MalformedURLException,
+			URISyntaxException {
+		return new IdentityProviderConfig(
 				"Globus",
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
-				clientID,
+				"foo",
 				"bar",
 				new URI("http://image.com"),
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com")));
-		final String bauth = "Basic " + Base64.getEncoder().encodeToString(
-				(clientID + ":" + "bar").getBytes());
-		
+				new URL("https://linkredir.com"));
+	}
+
+	private String getBasicAuth(final IdentityProviderConfig idconfig) {
+		return "Basic " + Base64.getEncoder().encodeToString(
+				(idconfig.getClientID() + ":" + idconfig.getClientSecret()).getBytes());
+	}
+
+	private void setUpCallAuthToken(
+			final String authCode,
+			final String authtoken,
+			final String redirect,
+			final String basicAuth)
+			throws Exception {
 		mockClientAndServer.when(
-					new HttpRequest()
-						.withMethod("POST")
-						.withPath("/v2/oauth2/token")
-						.withHeader(ACCEPT, APP_JSON)
-						.withHeader("Authorization", bauth)
-						.withBody(new ParameterBody(
-								new Parameter("code", authCode),
-								new Parameter("grant_type", "authorization_code"),
-								new Parameter("redirect_uri", "https://loginredir.com"))
-						),
-					Times.exactly(1)
-				).respond(
-					new HttpResponse()
-						.withStatusCode(200)
-						.withHeader(CONTENT_TYPE, APP_JSON)
-						.withBody(MAPPER.writeValueAsString(
-								ImmutableMap.of("access_token", "footoken"))
-						)
-				);
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/v2/oauth2/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withHeader("Authorization", basicAuth)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("redirect_uri", redirect))
+					),
+				Times.exactly(1)
+			).respond(
+				new HttpResponse()
+					.withStatusCode(200)
+					.withHeader(CONTENT_TYPE, APP_JSON)
+					.withBody(MAPPER.writeValueAsString(map("access_token", authtoken))
+					)
+			);
+	}
+	
+	@Test
+	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
+		final String authCode = "authcode";
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String bauth = getBasicAuth(testIDConfig);
+
+		setUpCallAuthToken(authCode, "footoken", "https://loginredir.com", bauth);
 		mockClientAndServer.when(
 					new HttpRequest()
 						.withMethod("POST")
@@ -190,27 +247,25 @@ public class GlobusIdentityProviderTest {
 								new Parameter("token", "footoken"))
 						),
 					Times.exactly(1)
-		//TODO NOW TEST with null name and email
 				).respond(
 					new HttpResponse()
 						.withStatusCode(200)
 						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
 						.withBody(MAPPER.writeValueAsString(
 								new ImmutableMap.Builder<String, Object>()
-									.put("aud", Arrays.asList(clientID))
+									.put("aud", Arrays.asList(testIDConfig.getClientID()))
 									.put("sub", "anID")
 									.put("username", "aUsername")
 									.put("name", "fullname")
 									.put("email", "anEmail")
-									.put("identities_set", Arrays.asList("ident1", "ident2"))
+									.put("identities_set",
+											Arrays.asList("ident1", "anID", "ident2"))
 									.build())
 						)
 				);
-		final List<Map<String, String>> idents = new LinkedList<>();
-		idents.add(ImmutableMap.of("id", "id1", "username", "user1", "name", "name1", "email",
-				"email1"));
-		idents.add(ImmutableMap.of("id", "id2", "username", "user2", "name", "name2", "email",
-				"email2"));
+		final List<Map<String, Object>> idents = new LinkedList<>();
+		idents.add(map("id", "id1", "username", "user1", "name", "name1", "email", null));
+		idents.add(map("id", "id2", "username", "user2", "name", null, "email", "email2"));
 		
 		mockClientAndServer.when(
 					new HttpRequest()
@@ -235,9 +290,69 @@ public class GlobusIdentityProviderTest {
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "id1"),
-				new RemoteIdentityDetails("user1", "name1", "email1")));
+				new RemoteIdentityDetails("user1", "name1", null)));
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "id2"),
-				new RemoteIdentityDetails("user2", "name2", "email2")));
+				new RemoteIdentityDetails("user2", null, "email2")));
 		assertThat("incorrect ident set", rids, is(expected));
+	}
+
+	@Test
+	public void getIdentityWithoutSecondariesAndLinkURL() throws Exception {
+		final String clientID = "clientID2";
+		final String authCode = "authcode2";
+		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+				"Globus",
+				new URL("https://login2.com"),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				clientID,
+				"bar2",
+				new URI("http://image2.com"),
+				new URL("https://loginredir2.com"),
+				new URL("https://linkredir2.com"));
+		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
+		final String bauth = getBasicAuth(idconfig);
+		
+		setUpCallAuthToken(authCode, "footoken2", "https://linkredir2.com", bauth);
+		mockClientAndServer.when(
+					new HttpRequest()
+						.withMethod("POST")
+						.withPath("/v2/oauth2/token/introspect")
+						.withHeader(ACCEPT, APP_JSON)
+						.withHeader("Authorization", bauth)
+						.withBody(new ParameterBody(
+								new Parameter("include", "identities_set"),
+								new Parameter("token", "footoken2"))
+						),
+					Times.exactly(1)
+				).respond(
+					new HttpResponse()
+						.withStatusCode(200)
+						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withBody(MAPPER.writeValueAsString(map(
+									"aud", Arrays.asList(clientID),
+									"sub", "anID2",
+									"username", "aUsername2",
+									"name", null,
+									"email", null,
+									"identities_set", Arrays.asList("anID2"))
+								)
+						)
+				);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
+				new RemoteIdentityDetails("aUsername2", null, null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	private Map<String, Object> map(final Object... entries) {
+		if (entries.length % 2 != 0) {
+			throw new IllegalArgumentException();
+		}
+		final Map<String, Object> ret = new HashMap<>();
+		for (int i = 0; i < entries.length; i += 2) {
+			ret.put((String) entries[i], entries[i + 1]);
+		}
+		return ret;
 	}
 }
