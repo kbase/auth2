@@ -51,6 +51,18 @@ public class GlobusIdentityProviderTest {
 	
 	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
+	private static final String STRING1000;
+	private static final String STRING1001;
+	static {
+		final String s = "foobarbaz0";
+		String r = "";
+		for (int i = 0; i < 100; i++) {
+			r += s;
+		}
+		STRING1000 = r;
+		STRING1001 = r + "a";
+	}
+	
 	private static ClientAndServer mockClientAndServer;
 	
 	@BeforeClass
@@ -166,9 +178,49 @@ public class GlobusIdentityProviderTest {
 		failGetIdentities(idp, "authcode3", false, e);
 		setUpCallAuthToken("authcode3", "     \n    ", redir, bauth);
 		failGetIdentities(idp, "authcode3", false, e);
-		
 	}
 	
+	@Test
+	public void returnsBadResponseAuthToken() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final String authCode = "foo";
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 200, "foo bar");
+		failGetIdentities(idp, authCode, false,
+				new IdentityRetrievalException("Unable to parse response from Globus service."));
+		
+		setUpCallAuthToken(authCode, redir, bauth, "text/html", 200,
+				"{\"access_token\":\"foobar\"}");
+		failGetIdentities(idp, authCode, false,
+				new IdentityRetrievalException("Unable to parse response from Globus service."));
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code and unparseable response from Globus service: 500. " +
+				"Response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code and unparseable response from Globus service: 500. " +
+				"Truncated response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with no response body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with no error in the response body from Globus " +
+				"service: 500."));
+		
+		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Globus service returned an error. HTTP code: 500. Error: whee!."));
+	}
+
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
@@ -223,9 +275,36 @@ public class GlobusIdentityProviderTest {
 				new HttpResponse()
 					.withStatusCode(200)
 					.withHeader(CONTENT_TYPE, APP_JSON)
-					.withBody(MAPPER.writeValueAsString(map("access_token", authtoken))
-					)
+					.withBody(MAPPER.writeValueAsString(map("access_token", authtoken)))
 			);
+	}
+	
+	private void setUpCallAuthToken(
+			final String authCode,
+			final String redirect,
+			final String basicAuth,
+			final String contentType,
+			final int retcode,
+			final String response) {
+		final HttpResponse resp = new HttpResponse()
+					.withStatusCode(retcode)
+					.withHeader(CONTENT_TYPE, contentType);
+		if (response != null) {
+			resp.withBody(response);
+		}
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/v2/oauth2/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withHeader("Authorization", basicAuth)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("redirect_uri", redirect))
+					),
+				Times.exactly(1)
+			).respond(resp);
 	}
 	
 	@Test
