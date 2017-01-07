@@ -167,7 +167,16 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		formParameters.add("token", accessToken);
 		formParameters.add("include", "identities_set");
 		
-		final Map<String, Object> m = globusPostRequest(formParameters, target);
+		final Map<String, Object> m;
+		try {
+			// if the token is invalid or not included globus returns a 401 with {"active": false}
+			m = globusPostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Primary identity retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
 		// per Globus spec, check that the audience for the requests includes
 		// our client
 		@SuppressWarnings("unchecked")
@@ -257,7 +266,15 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();
 		
-		final Map<String, Object> m = globusPostRequest(formParameters, target);
+		final Map<String, Object> m;
+		try {
+			m = globusPostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Authtoken retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
 		final String token = (String) m.get("access_token");
 		if (token == null || token.trim().isEmpty()) {
 			throw new IdentityRetrievalException("No access token was returned by " + NAME);

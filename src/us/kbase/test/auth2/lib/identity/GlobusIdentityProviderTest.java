@@ -189,36 +189,143 @@ public class GlobusIdentityProviderTest {
 		final String authCode = "foo";
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 200, "foo bar");
-		failGetIdentities(idp, authCode, false,
-				new IdentityRetrievalException("Unable to parse response from Globus service."));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Unable to parse response from Globus service."));
 		
 		setUpCallAuthToken(authCode, redir, bauth, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
-		failGetIdentities(idp, authCode, false,
-				new IdentityRetrievalException("Unable to parse response from Globus service."));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Unable to parse response from Globus service."));
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1000);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code and unparseable response from Globus service: 500. " +
-				"Response: " + STRING1000));
+				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
+				"from Globus service: 500. Response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1001);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code and unparseable response from Globus service: 500. " +
-				"Truncated response: " + STRING1000));
+				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
+				"from Globus service: 500. Truncated response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, null);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with no response body from Globus service: 500."));
+				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
+				"from Globus service: 500."));
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{}");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with no error in the response body from Globus " +
-				"service: 500."));
+				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
+				"response body from Globus service: 500."));
 		
 		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Globus service returned an error. HTTP code: 500. Error: whee!."));
+				"Authtoken retrieval failed: Globus service returned an error. HTTP code: 500. " +
+				"Error: whee!."));
+	}
+	
+	@Test
+	public void returnsBadAudience() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final String authCode = "foo2";
+		final String authtoken = "footoken";
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, MAPPER.writeValueAsString(
+				new ImmutableMap.Builder<String, Object>()
+					.put("aud", Arrays.asList("thisisabadaudience"))
+					.put("sub", "anID")
+					.put("username", "aUsername")
+					.put("name", "fullname")
+					.put("email", "anEmail")
+					.put("identities_set",
+							Arrays.asList("ident1", "anID", "ident2"))
+					.build()));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"The audience for the Globus request does not include this client"));
+	}
+	
+	@Test
+	public void returnsBadResponsePrimaryID() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final String authCode = "foo";
+		final String authtoken = "bartoken";
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, "bleah");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Unable to parse response from Globus " +
+				"service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, "text/html", 200, MAPPER.writeValueAsString(
+				map("aud", testIDConfig.getClientID())));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Unable to parse response from Globus " +
+				"service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Got unexpected HTTP code and unparseable " +
+				"response from Globus service: 500. Response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Got unexpected HTTP code and unparseable " +
+				"response from Globus service: 500. Truncated response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Got unexpected HTTP code with no response " +
+				"body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Got unexpected HTTP code with no error in " +
+				"the response body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Primary identity retrieval failed: Globus service returned an error. " +
+				"HTTP code: 500. Error: whee!."));
+	}
+
+	private void setUpCallPrimaryID(
+			final String authtoken,
+			final String bauth,
+			final String contentType,
+			final int retcode,
+			final String primaryReturn)
+			throws Exception {
+		final HttpResponse resp = new HttpResponse()
+				.withStatusCode(retcode)
+				.withHeader(new Header(CONTENT_TYPE, contentType));
+		if (primaryReturn != null) {
+			resp.withBody(primaryReturn);
+		}
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/v2/oauth2/token/introspect")
+					.withHeader(ACCEPT, APP_JSON)
+					.withHeader("Authorization", bauth)
+					.withBody(new ParameterBody(
+							new Parameter("include", "identities_set"),
+							new Parameter("token", authtoken))
+					),
+				Times.exactly(1)
+			).respond(
+				resp
+			);
 	}
 
 	private void failGetIdentities(
@@ -315,33 +422,16 @@ public class GlobusIdentityProviderTest {
 		final String bauth = getBasicAuth(testIDConfig);
 
 		setUpCallAuthToken(authCode, "footoken", "https://loginredir.com", bauth);
-		mockClientAndServer.when(
-					new HttpRequest()
-						.withMethod("POST")
-						.withPath("/v2/oauth2/token/introspect")
-						.withHeader(ACCEPT, APP_JSON)
-						.withHeader("Authorization", bauth)
-						.withBody(new ParameterBody(
-								new Parameter("include", "identities_set"),
-								new Parameter("token", "footoken"))
-						),
-					Times.exactly(1)
-				).respond(
-					new HttpResponse()
-						.withStatusCode(200)
-						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
-						.withBody(MAPPER.writeValueAsString(
-								new ImmutableMap.Builder<String, Object>()
-									.put("aud", Arrays.asList(testIDConfig.getClientID()))
-									.put("sub", "anID")
-									.put("username", "aUsername")
-									.put("name", "fullname")
-									.put("email", "anEmail")
-									.put("identities_set",
-											Arrays.asList("ident1", "anID", "ident2"))
-									.build())
-						)
-				);
+		setUpCallPrimaryID("footoken", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
+				new ImmutableMap.Builder<String, Object>()
+						.put("aud", Arrays.asList(testIDConfig.getClientID()))
+						.put("sub", "anID")
+						.put("username", "aUsername")
+						.put("name", "fullname")
+						.put("email", "anEmail")
+						.put("identities_set",
+								Arrays.asList("ident1  ", "anID", "\nident2"))
+						.build()));;
 		final List<Map<String, Object>> idents = new LinkedList<>();
 		idents.add(map("id", "id1", "username", "user1", "name", "name1", "email", null));
 		idents.add(map("id", "id2", "username", "user2", "name", null, "email", "email2"));
@@ -392,31 +482,13 @@ public class GlobusIdentityProviderTest {
 		final String bauth = getBasicAuth(idconfig);
 		
 		setUpCallAuthToken(authCode, "footoken2", "https://linkredir2.com", bauth);
-		mockClientAndServer.when(
-					new HttpRequest()
-						.withMethod("POST")
-						.withPath("/v2/oauth2/token/introspect")
-						.withHeader(ACCEPT, APP_JSON)
-						.withHeader("Authorization", bauth)
-						.withBody(new ParameterBody(
-								new Parameter("include", "identities_set"),
-								new Parameter("token", "footoken2"))
-						),
-					Times.exactly(1)
-				).respond(
-					new HttpResponse()
-						.withStatusCode(200)
-						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
-						.withBody(MAPPER.writeValueAsString(map(
-									"aud", Arrays.asList(clientID),
-									"sub", "anID2",
-									"username", "aUsername2",
-									"name", null,
-									"email", null,
-									"identities_set", Arrays.asList("anID2"))
-								)
-						)
-				);
+		setUpCallPrimaryID("footoken2", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("aud", Arrays.asList(clientID),
+					"sub", "anID2",
+					"username", "aUsername2",
+					"name", null,
+					"email", null,
+					"identities_set", Arrays.asList("anID2  \n"))));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),

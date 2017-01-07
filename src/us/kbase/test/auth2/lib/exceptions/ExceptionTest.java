@@ -107,6 +107,13 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ae.getErr(), is(et));
 		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
 		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
+		
+		final IllegalArgumentException ie = new IllegalArgumentException("bar");
+		final IdentityRetrievalException ae2 = new IdentityRetrievalException("baz", ie);
+		assertThat("incorrect error code", ae2.getErr(), is(et));
+		assertThat("incorrect message", ae2.getMessage(), is(format(et, "baz")));
+		assertThat("incorrect cause", ae2.getCause(), is(ie));
+		
 	}
 	
 	@Test

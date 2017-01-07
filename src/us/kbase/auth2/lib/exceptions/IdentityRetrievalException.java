@@ -10,4 +10,8 @@ public class IdentityRetrievalException extends AuthenticationException {
 	public IdentityRetrievalException(final String message) {
 		super(ErrorType.ID_RETRIEVAL_FAILED, message);
 	}
+	
+	public IdentityRetrievalException(final String message, final Throwable cause) {
+		super(ErrorType.ID_RETRIEVAL_FAILED, message, cause);
+	}
 }
