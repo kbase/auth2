@@ -298,6 +298,39 @@ public class GlobusIdentityProviderTest {
 				"Primary identity retrieval failed: Globus service returned an error. " +
 				"HTTP code: 500. Error: whee!."));
 	}
+	
+	@Test
+	public void returnsBadSecondaryIdentityList() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final String authCode = "foo";
+		final String authtoken = "bartoken";
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, MAPPER.writeValueAsString(
+				new ImmutableMap.Builder<String, Object>()
+				.put("aud", Arrays.asList(testIDConfig.getClientID()))
+				.put("sub", "anID")
+				.put("username", "aUsername")
+				.put("name", "fullname")
+				.put("email", "anEmail")
+				.put("identities_set",
+						Arrays.asList("id1  ", "anID", "\nid2"))
+				.build()));
+		
+		final List<Map<String, Object>> idents = new LinkedList<>();
+		idents.add(map("id", "id1", "username", "user1", "name", "name1", "email", null));
+		idents.add(map("id", "id2", "username", "user2", "name", null, "email", "email2"));
+		idents.add(map("id", "id3", "username", "user3", "name", "name3", "email", "email3"));
+		setupCallSecondaryID(authtoken, "^id2,id1|id1,id2$", APP_JSON, 200,
+				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
+		
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Requested secondary identities do not match recieved: " +
+				"[id1, id2] vs [id1, id2, id3]"));
+	}
 
 	private void setUpCallPrimaryID(
 			final String authtoken,
@@ -420,9 +453,11 @@ public class GlobusIdentityProviderTest {
 		final IdentityProviderConfig testIDConfig = getTestIDConfig();
 		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
 		final String bauth = getBasicAuth(testIDConfig);
+		final String token = "footoken";
+		final int respCode = 200;
 
-		setUpCallAuthToken(authCode, "footoken", "https://loginredir.com", bauth);
-		setUpCallPrimaryID("footoken", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
+		setUpCallAuthToken(authCode, token, "https://loginredir.com", bauth);
+		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 						.put("aud", Arrays.asList(testIDConfig.getClientID()))
 						.put("sub", "anID")
@@ -430,28 +465,14 @@ public class GlobusIdentityProviderTest {
 						.put("name", "fullname")
 						.put("email", "anEmail")
 						.put("identities_set",
-								Arrays.asList("ident1  ", "anID", "\nident2"))
-						.build()));;
+								Arrays.asList("id1  ", "anID", "\nid2"))
+						.build()));
+		
 		final List<Map<String, Object>> idents = new LinkedList<>();
 		idents.add(map("id", "id1", "username", "user1", "name", "name1", "email", null));
 		idents.add(map("id", "id2", "username", "user2", "name", null, "email", "email2"));
-		
-		mockClientAndServer.when(
-					new HttpRequest()
-						.withMethod("GET")
-						.withPath("/v2/api/identities")
-						.withHeader(ACCEPT, APP_JSON)
-						.withHeader("Authorization", "Bearer " +  "footoken")
-						.withQueryStringParameter("ids", "^ident2,ident1|ident1,ident2$"),
-					Times.exactly(1)
-				).respond(
-					new HttpResponse()
-						.withStatusCode(200)
-						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
-						.withBody(MAPPER.writeValueAsString(ImmutableMap.of(
-								"identities", idents))
-						)
-				);
+		setupCallSecondaryID(token, "^id2,id1|id1,id2$", APP_JSON, respCode,
+				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
@@ -463,6 +484,29 @@ public class GlobusIdentityProviderTest {
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "id2"),
 				new RemoteIdentityDetails("user2", null, "email2")));
 		assertThat("incorrect ident set", rids, is(expected));
+	}
+
+	private void setupCallSecondaryID(
+			final String token,
+			final String idRegex,
+			final String contentType,
+			final int respCode,
+			final String body) {
+		mockClientAndServer.when(
+					new HttpRequest()
+						.withMethod("GET")
+						.withPath("/v2/api/identities")
+						.withHeader(ACCEPT, APP_JSON)
+						.withHeader("Authorization", "Bearer " + token)
+						.withQueryStringParameter("ids", idRegex),
+					Times.exactly(1)
+				).respond(
+					new HttpResponse()
+						.withStatusCode(respCode)
+						.withHeader(new Header(CONTENT_TYPE, contentType))
+						.withBody(body
+						)
+				);
 	}
 
 	@Test

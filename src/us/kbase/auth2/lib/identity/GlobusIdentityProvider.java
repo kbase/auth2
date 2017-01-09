@@ -5,11 +5,14 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
@@ -151,11 +154,33 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				.queryParam("ids", String.join(",", secondaryIDs))
 				.build();
 		
-		final Map<String, Object> ids = globusGetRequest(accessToken, idtarget);
+		final Map<String, Object> ids; 
+		try {
+			ids = globusGetRequest(accessToken, idtarget);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Secondary identity retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
 		@SuppressWarnings("unchecked")
 		final List<Map<String, String>> sids = (List<Map<String, String>>) ids.get("identities");
-		//TODO CODE check that all identities are in returned list
-		return makeIdentities(sids);
+		final Set<RemoteIdentity> idents = makeIdentities(sids);
+		final Set<String> got = idents.stream().map(i -> i.getRemoteID().getId())
+				.collect(Collectors.toSet());
+		if (!secondaryIDs.equals(got)) {
+			
+			throw new IdentityRetrievalException(String.format(
+					"Requested secondary identities do not match recieved: %s vs %s",
+					sort(secondaryIDs), sort(got)));
+		}
+		return idents;
+	}
+
+	private List<String> sort(final Set<String> s) {
+		final List<String> l = new ArrayList<>(s);
+		Collections.sort(l);
+		return l;
 	}
 
 	private Idents getPrimaryIdentity(final String accessToken) throws IdentityRetrievalException {
@@ -222,38 +247,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return ret;
 	}
 
-	private Map<String, Object> globusGetRequest(
-			final String accessToken,
-			final URI idtarget)
-			throws IdentityRetrievalException {
-		final WebTarget wt = CLI.target(idtarget);
-		Response r = null;
-		try {
-			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
-					.header("Authorization", "Bearer " + accessToken)
-					.get();
-			//TODO TEST with 500s with HTML
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
-			if (mtemp.containsKey("errors")) {
-				@SuppressWarnings("unchecked")
-				final List<Map<String, String>> errors =
-						(List<Map<String, String>>) mtemp.get("errors");
-				// just deal with the first error for now, change later if necc
-				final Map<String, String> err = errors.get(0);
-				throw new IdentityRetrievalException(String.format(
-						"Identity provider returned an error: %s: %s; id: %s",
-						err.get("code"), err.get("detail"), err.get("id")));
-			}
-			return mtemp;
-		} finally {
-			if (r != null) {
-				r.close();
-			}
-		}
-	}
-
 	private String getAccessToken(final String authcode, final boolean link)
 			throws IdentityRetrievalException {
 		
@@ -302,6 +295,27 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 	
+
+	private Map<String, Object> globusGetRequest(
+			final String accessToken,
+			final URI idtarget)
+			throws IdentityRetrievalException {
+		final WebTarget wt = CLI.target(idtarget);
+		Response r = null;
+		try {
+			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
+					.header("Authorization", "Bearer " + accessToken)
+					.get();
+			return processResponse(r, 200);
+			//TODO TEST with 500s with HTML
+			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
+		} finally {
+			if (r != null) {
+				r.close();
+			}
+		}
+	}
+	
 	private Map<String, Object> processResponse(final Response r, final int expectedCode)
 			throws IdentityRetrievalException {
 		if (r.getStatus() == expectedCode) {
@@ -326,14 +340,29 @@ public class GlobusIdentityProvider implements IdentityProvider {
 						"Got unexpected HTTP code and unparseable response from %s service: %s.",
 						NAME, r.getStatus()) + getTruncatedEntityBody(res));
 			}
-			if (!m.containsKey("error")) {
+			if (m.containsKey("error")) { // authtoken & primary ID
+				throw new IdentityRetrievalException(String.format(
+						"%s service returned an error. HTTP code: %s. Error: %s.",
+						NAME, r.getStatus(), m.get("error")));
+			} else if (m.containsKey("errors")) { // secondary ID
+				@SuppressWarnings("unchecked")
+				final List<Map<String, String>> errors =
+						(List<Map<String, String>>) m.get("errors");
+				// just deal with the first error for now, change later if necc
+				if (errors == null || errors.isEmpty()) {
+					throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code with null error in the response body from %s " +
+						"service: %s.", NAME, r.getStatus()));
+				}
+				final Map<String, String> err = errors.get(0);
+				throw new IdentityRetrievalException(String.format(
+						"%s service returned an error. HTTP code: %s. Error %s: %s; id: %s",
+						NAME, r.getStatus(), err.get("code"), err.get("detail"), err.get("id")));
+			} else {
 				throw new IdentityRetrievalException(String.format(
 						"Got unexpected HTTP code with no error in the response body from %s " +
 						"service: %s.", NAME, r.getStatus()));
 			}
-			throw new IdentityRetrievalException(String.format(
-					"%s service returned an error. HTTP code: %s. Error: %s.", NAME, r.getStatus(),
-					m.get("error")));
 		}
 		throw new IdentityRetrievalException(String.format(
 				"Got unexpected HTTP code with no response body from %s service: %s.",
