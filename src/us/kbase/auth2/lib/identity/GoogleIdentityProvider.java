@@ -132,14 +132,19 @@ public class GoogleIdentityProvider implements IdentityProvider {
 			throws IdentityRetrievalException {
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(IDENTITY_PATH).build();
 		final Map<String, Object> id = googleGetRequest(accessToken, target);
-		if (id.containsKey("error")) {
-			//TODO IDPROVERROR better error handling
-			throw new IdentityRetrievalException(
-					"Provider error: " + id.get("error"));
-		}
+		// could do a whooole lot of type checking here. We'll just assume Google aren't buttholes
+		// that change their API willy nilly
 		@SuppressWarnings("unchecked")
 		final List<Map<String, String>> emails = (List<Map<String, String>>) id.get("emails");
+		if (emails == null || emails.isEmpty()) {
+			throw new IdentityRetrievalException("No username included in response from " + NAME);
+		}
+		// we'll also just grab the first email and assume that if it's null or empty something
+		// is very wrong @ Google
 		final String email = emails.get(0).get("value");
+		if (email == null || email.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No username included in response from " + NAME);
+		}
 		return new RemoteIdentity(
 				new RemoteIdentityID(NAME, (String) id.get("id")),
 				new RemoteIdentityDetails(
@@ -150,18 +155,17 @@ public class GoogleIdentityProvider implements IdentityProvider {
 
 	private Map<String, Object> googleGetRequest(
 			final String accessToken,
-			final URI target) {
+			final URI target)
+			throws IdentityRetrievalException {
 		final WebTarget wt = CLI.target(target);
 		Response r = null;
 		try {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.header("Authorization", "Bearer " + accessToken)
 					.get();
+			return processResponse(r, 200);
 			//TODO TEST with 500s with HTML
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
 			//TODO IDPROVERR handle {error=?} in object and check response code
-			return mtemp;
 		} finally {
 			if (r != null) {
 				r.close();

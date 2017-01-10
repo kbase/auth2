@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -248,6 +249,42 @@ public class GoogleIdentityProviderTest {
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Google service returned an error. HTTP code: 500. " +
 				"Error: whee!. Error description: whoo!"));
+	}
+	
+	@Test
+	public void returnsBadIdentity() throws Exception {
+		final IdentityProviderConfig cfg = getTestIDConfig();
+		final IdentityProvider idp = new GoogleIdentityProvider(cfg);
+		final String redir = cfg.getLoginRedirectURL().toString();
+		final String cliid = cfg.getClientID();
+		final String clisec = cfg.getClientSecret();
+		final String authCode = "foo11";
+		
+		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
+		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
+				map("id", "id7", "displayName", null, "emails", null)));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No username included in response from Google"));
+		
+		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
+		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
+				map("id", "id7", "displayName", null, "emails", new ArrayList<String>())));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No username included in response from Google"));
+		
+		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
+		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
+				map("id", "id7", "displayName", null,
+						"emails", Arrays.asList(map("value", null)))));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No username included in response from Google"));
+		
+		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
+		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
+				map("id", "id7", "displayName", null,
+						"emails", Arrays.asList(map("value", " \t \n  ")))));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No username included in response from Google"));
 	}
 	
 	@Test
