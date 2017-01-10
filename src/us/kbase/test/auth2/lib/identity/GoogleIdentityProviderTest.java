@@ -206,6 +206,51 @@ public class GoogleIdentityProviderTest {
 	}
 	
 	@Test
+	public void returnsBadResponseAuthToken() throws Exception {
+		final IdentityProviderConfig cfg = getTestIDConfig();
+		final IdentityProvider idp = new GoogleIdentityProvider(cfg);
+		final String redir = cfg.getLoginRedirectURL().toString();
+		final String cliid = cfg.getClientID();
+		final String clisec = cfg.getClientSecret();
+		final String authCode = "foo10";
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Unable to parse response from Google service."));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, "text/html", 200,
+				"{\"access_token\":\"foobar\"}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Unable to parse response from Google service."));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
+				"from Google service: 500. Response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
+				"from Google service: 500. Truncated response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
+				"from Google service: 500."));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
+				"response body from Google service: 500."));
+		
+		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500,
+				"{\"error\":\"whee!\",\"error_description\":\"whoo!\"}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Authtoken retrieval failed: Google service returned an error. HTTP code: 500. " +
+				"Error: whee!. Error description: whoo!"));
+	}
+	
+	@Test
 	public void getIdentityWithLoginURL() throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
@@ -277,6 +322,38 @@ public class GoogleIdentityProviderTest {
 					.withHeader(CONTENT_TYPE, APP_JSON)
 					.withBody(MAPPER.writeValueAsString(map("access_token", authtoken)))
 			);
+	}
+	
+	private void setUpCallAuthToken(
+			final String authCode,
+			final String redirect,
+			final String clientID,
+			final String clientSecret,
+			final String contentType,
+			final int retcode,
+			final String response)
+			throws Exception {
+
+		final HttpResponse resp = new HttpResponse()
+				.withStatusCode(retcode)
+				.withHeader(CONTENT_TYPE, contentType);
+		if (response != null) {
+			resp.withBody(response);
+		}
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/oauth2/v4/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("redirect_uri", redirect),
+							new Parameter("client_id", clientID),
+							new Parameter("client_secret", clientSecret))
+					),
+				Times.exactly(1)
+			).respond(resp);
 	}
 	
 	private void setupCallID(
