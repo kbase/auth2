@@ -27,6 +27,7 @@ import org.mockserver.model.ParameterBody;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.GoogleIdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -187,6 +188,21 @@ public class GoogleIdentityProviderTest {
 				new URI("http://gimage.com"),
 				new URL("https://gloginredir.com"),
 				new URL("https://glinkredir.com"));
+	}
+	
+	@Test
+	public void returnsIllegalAuthtoken() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GoogleIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final IdentityRetrievalException e =
+				new IdentityRetrievalException("No access token was returned by Google");
+		setUpCallAuthToken("authcode6", null, redir,
+				testIDConfig.getClientID(), testIDConfig.getClientSecret());
+		failGetIdentities(idp, "authcode6", false, e);
+		setUpCallAuthToken("authcode6", "\t  ", redir,
+				testIDConfig.getClientID(), testIDConfig.getClientSecret());
+		failGetIdentities(idp, "authcode6", false, e);
 	}
 	
 	@Test
