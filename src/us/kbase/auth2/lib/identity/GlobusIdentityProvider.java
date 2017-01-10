@@ -307,8 +307,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 					.header("Authorization", "Bearer " + accessToken)
 					.get();
 			return processResponse(r, 200);
-			//TODO TEST with 500s with HTML
-			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
 		} finally {
 			if (r != null) {
 				r.close();
@@ -355,6 +353,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 						"service: %s.", NAME, r.getStatus()));
 				}
 				final Map<String, String> err = errors.get(0);
+				// could check the keys exist, but then what? null isn't much worse than reporting
+				// a missing key. leave as is for now
 				throw new IdentityRetrievalException(String.format(
 						"%s service returned an error. HTTP code: %s. Error %s: %s; id: %s",
 						NAME, r.getStatus(), err.get("code"), err.get("detail"), err.get("id")));

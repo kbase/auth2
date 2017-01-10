@@ -8,6 +8,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashMap;
@@ -331,6 +332,81 @@ public class GlobusIdentityProviderTest {
 				"Requested secondary identities do not match recieved: " +
 				"[id1, id2] vs [id1, id2, id3]"));
 	}
+	
+	@Test
+	public void returnsBadResponseSecondaryID() throws Exception {
+		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String bauth = getBasicAuth(testIDConfig);
+		final String authCode = "foo5";
+		final String authtoken = "bartoken5";
+		final String idRegex = "^id1$";
+		final String primaryResp = MAPPER.writeValueAsString(
+				new ImmutableMap.Builder<String, Object>()
+				.put("aud", Arrays.asList(testIDConfig.getClientID()))
+				.put("sub", "anID")
+				.put("username", "aUsername")
+				.put("name", "fullname")
+				.put("email", "anEmail")
+				.put("identities_set",
+						Arrays.asList("id1  ", "anID"))
+				.build());
+		
+		//TODO NOW handle case where errors is null or empty
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 200, "bleah");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Unable to parse response from Globus " +
+				"service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, "text/html", 200, MAPPER.writeValueAsString(
+				map("identities", new ArrayList<String>())));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Unable to parse response from Globus " +
+				"service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code and unparseable " +
+				"response from Globus service: 500. Response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code and unparseable " +
+				"response from Globus service: 500. Truncated response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code with no response " +
+				"body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code with no error in " +
+				"the response body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
+				map("errors", Arrays.asList(
+						map("code", "code1", "id", "id1", "detail", "detail1")))));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Globus service returned an error. " +
+				"HTTP code: 500. Error code1: detail1; id: id1"));
+	}
 
 	private void setUpCallPrimaryID(
 			final String authtoken,
@@ -504,8 +580,7 @@ public class GlobusIdentityProviderTest {
 					new HttpResponse()
 						.withStatusCode(respCode)
 						.withHeader(new Header(CONTENT_TYPE, contentType))
-						.withBody(body
-						)
+						.withBody(body)
 				);
 	}
 
