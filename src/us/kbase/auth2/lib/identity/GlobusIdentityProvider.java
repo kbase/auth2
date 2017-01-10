@@ -36,8 +36,6 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
  */
 public class GlobusIdentityProvider implements IdentityProvider {
 
-	//TODO TEST
-	
 	/* Docs: https://docs.globus.org/api/auth/ */
 	
 	private static final String NAME = "Globus";
@@ -343,6 +341,8 @@ public class GlobusIdentityProvider implements IdentityProvider {
 						"%s service returned an error. HTTP code: %s. Error: %s.",
 						NAME, r.getStatus(), m.get("error")));
 			} else if (m.containsKey("errors")) { // secondary ID
+				// all kinds of type checking could be done here; let's just assume Globus doesn't
+				// alter their API willy nilly and not do it
 				@SuppressWarnings("unchecked")
 				final List<Map<String, String>> errors =
 						(List<Map<String, String>>) m.get("errors");

@@ -353,8 +353,6 @@ public class GlobusIdentityProviderTest {
 						Arrays.asList("id1  ", "anID"))
 				.build());
 		
-		//TODO NOW handle case where errors is null or empty
-		
 		setUpCallAuthToken(authCode, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 200, "bleah");
@@ -397,6 +395,22 @@ public class GlobusIdentityProviderTest {
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code with no error in " +
 				"the response body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
+				map("errors", null)));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code with null error " +
+				"in the response body from Globus service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
+		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
+				map("errors", new ArrayList<String>())));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Secondary identity retrieval failed: Got unexpected HTTP code with null error " +
+				"in the response body from Globus service: 500."));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
