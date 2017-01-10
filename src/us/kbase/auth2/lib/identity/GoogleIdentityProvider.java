@@ -1,5 +1,6 @@
 package us.kbase.auth2.lib.identity;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -20,6 +22,9 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
 /** An identity provider for Google accounts.
@@ -28,8 +33,6 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
  */
 public class GoogleIdentityProvider implements IdentityProvider {
 
-	//TODO TEST
-	
 	/* Get creds: https://console.developers.google.com/apis
 	 * Google+ API must be enabled
 	 * Docs:
@@ -49,6 +52,8 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	
 	//thread safe
 	private static final Client CLI = ClientBuilder.newClient();
+	
+	private static final ObjectMapper MAPPER = new ObjectMapper();
 	
 	private final IdentityProviderConfig cfg;
 	
@@ -111,9 +116,11 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	}
 
 	@Override
-	public Set<RemoteIdentity> getIdentities(
-			final String authcode,
-			final boolean link) throws IdentityRetrievalException {
+	public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new IllegalArgumentException("authcode cannot be null or empty");
+		}
 		final String accessToken = getAccessToken(authcode, link);
 		final RemoteIdentity ri = getIdentity(accessToken);
 		return new HashSet<>(Arrays.asList(ri));
@@ -121,19 +128,21 @@ public class GoogleIdentityProvider implements IdentityProvider {
 
 	private RemoteIdentity getIdentity(final String accessToken)
 			throws IdentityRetrievalException {
-		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-				.path(IDENTITY_PATH).build();
-		final Map<String, Object> id = googleGetRequest(
-				accessToken, target);
-		if (id.containsKey("error")) {
-			//TODO IDPROVERROR better error handling
-			throw new IdentityRetrievalException(
-					"Provider error: " + id.get("error"));
-		}
+		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(IDENTITY_PATH).build();
+		final Map<String, Object> id = googleGetRequest(accessToken, target);
+		// could do a whooole lot of type checking here. We'll just assume Google aren't buttholes
+		// that change their API willy nilly
 		@SuppressWarnings("unchecked")
-		final List<Map<String, String>> emails =
-				(List<Map<String, String>>) id.get("emails");
+		final List<Map<String, String>> emails = (List<Map<String, String>>) id.get("emails");
+		if (emails == null || emails.isEmpty()) {
+			throw new IdentityRetrievalException("No username included in response from " + NAME);
+		}
+		// we'll also just grab the first email and assume that if it's null or empty something
+		// is very wrong @ Google
 		final String email = emails.get(0).get("value");
+		if (email == null || email.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No username included in response from " + NAME);
+		}
 		return new RemoteIdentity(
 				new RemoteIdentityID(NAME, (String) id.get("id")),
 				new RemoteIdentityDetails(
@@ -144,18 +153,34 @@ public class GoogleIdentityProvider implements IdentityProvider {
 
 	private Map<String, Object> googleGetRequest(
 			final String accessToken,
-			final URI target) {
+			final URI target)
+			throws IdentityRetrievalException {
 		final WebTarget wt = CLI.target(target);
 		Response r = null;
 		try {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.header("Authorization", "Bearer " + accessToken)
 					.get();
-			//TODO TEST with 500s with HTML
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code
-			return mtemp;
+			return processResponse(r, 200, new ErrorHandler() {
+				
+				@Override
+				public void handleError(final Response r, final Map<String, Object> response)
+						throws IdentityRetrievalException {
+					// ignoring type checking again, assuming that Google aren't jerks
+					@SuppressWarnings("unchecked")
+					final Map<String, Object> m = (Map<String, Object>) response.get("error");
+					// there's more details in the 'errors' key but ignore that for now
+					// could log later
+					if (m == null || !m.containsKey("message")) {
+						throw new IdentityRetrievalException(String.format(
+								"Got unexpected HTTP code with null error in the response body " +
+								"from %s service: %s.", NAME, r.getStatus()));
+					}
+					throw new IdentityRetrievalException(String.format(
+							"%s service returned an error. HTTP code: %s. Error: %s",
+							NAME, r.getStatus(), m.get("message")));
+				}
+			});
 		} finally {
 			if (r != null) {
 				r.close();
@@ -163,7 +188,8 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		}
 	}
 
-	private String getAccessToken(final String authcode, final boolean link) {
+	private String getAccessToken(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
 		final MultivaluedMap<String, String> formParameters =
 				new MultivaluedHashMap<>();
 		formParameters.add("code", authcode);
@@ -177,28 +203,102 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(TOKEN_PATH).build();
 		
-		final Map<String, Object> m = googlePostRequest(
-				formParameters, target);
-		return (String) m.get("access_token");
+		final Map<String, Object> m;
+		try {
+			m = googlePostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Authtoken retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
+		final String token = (String) m.get("access_token");
+		if (token == null || token.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No access token was returned by " + NAME);
+		}
+		return token;
 	}
 
 	private Map<String, Object> googlePostRequest(
 			final MultivaluedMap<String, String> formParameters,
-			final URI target) {
+			final URI target)
+			throws IdentityRetrievalException {
 		final WebTarget wt = CLI.target(target);
 		Response r = null;
 		try {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.post(Entity.form(formParameters));
-			@SuppressWarnings("unchecked")
-			//TODO TEST with 500s with HTML
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code
-			return mtemp;
+			return processResponse(r, 200, new ErrorHandler() {
+				
+				@Override
+				public void handleError(final Response r, final Map<String, Object> response)
+						throws IdentityRetrievalException {
+					throw new IdentityRetrievalException(String.format(
+							"%s service returned an error. HTTP code: %s. Error: %s. " +
+							"Error description: %s",
+							NAME, r.getStatus(), response.get("error"),
+							response.get("error_description")));
+					
+				}
+			});
 		} finally {
 			if (r != null) {
 				r.close();
 			}
+		}
+	}
+	
+	private interface ErrorHandler {
+		void handleError(Response r, Map<String, Object> response)
+				throws IdentityRetrievalException;
+	}
+	
+	private Map<String, Object> processResponse(
+			final Response r,
+			final int expectedCode,
+			final ErrorHandler handler)
+			throws IdentityRetrievalException {
+		if (r.getStatus() == expectedCode) {
+			try { // could check content-type but same result, so...
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> m = r.readEntity(Map.class);
+				return m;
+			} catch (ProcessingException e) { // not json
+				// can't get the entity at this point because readEntity closes the stream
+				// this should never happen in practice so don't worry about it for now
+				throw new IdentityRetrievalException(String.format(
+						"Unable to parse response from %s service.", NAME));
+			}
+		}
+		if (r.hasEntity()) {
+			final String res = r.readEntity(String.class); // we'll assume here that this is small
+			final Map<String, Object> m;
+			try {  // could check content-type but same result, so...
+				m = MAPPER.readValue(res, new TypeReference<Map<String, Object>>() {});
+			} catch (IOException e) { // bad JSON
+				throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code and unparseable response from %s service: %s.",
+						NAME, r.getStatus()) + getTruncatedEntityBody(res));
+			}
+			if (m.containsKey("error")) {
+				handler.handleError(r, m);
+				throw new RuntimeException("error handler didn't handle error");
+			} else {
+				throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code with no error in the response body from %s " +
+						"service: %s.", NAME, r.getStatus()));
+			}
+		}
+		throw new IdentityRetrievalException(String.format(
+				"Got unexpected HTTP code with no response body from %s service: %s.",
+				NAME, r.getStatus()));
+	}
+
+	private String getTruncatedEntityBody(final String r) {
+		if (r.length() > 1000) {
+			return " Truncated response: " + r.substring(0, 1000);
+		} else {
+			return " Response: " + r;
 		}
 	}
 	

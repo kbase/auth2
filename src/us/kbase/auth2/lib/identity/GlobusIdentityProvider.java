@@ -122,9 +122,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	}
 	
 	@Override
-	public Set<RemoteIdentity> getIdentities(
-			final String authcode,
-			final boolean link)
+	public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
 			throws IdentityRetrievalException {
 		/* Note authcode only works once. After that globus returns
 		 * {error=invalid_grant}

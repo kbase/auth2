@@ -198,6 +198,7 @@
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
