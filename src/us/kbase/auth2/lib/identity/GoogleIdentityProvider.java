@@ -123,18 +123,15 @@ public class GoogleIdentityProvider implements IdentityProvider {
 
 	private RemoteIdentity getIdentity(final String accessToken)
 			throws IdentityRetrievalException {
-		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-				.path(IDENTITY_PATH).build();
-		final Map<String, Object> id = googleGetRequest(
-				accessToken, target);
+		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(IDENTITY_PATH).build();
+		final Map<String, Object> id = googleGetRequest(accessToken, target);
 		if (id.containsKey("error")) {
 			//TODO IDPROVERROR better error handling
 			throw new IdentityRetrievalException(
 					"Provider error: " + id.get("error"));
 		}
 		@SuppressWarnings("unchecked")
-		final List<Map<String, String>> emails =
-				(List<Map<String, String>>) id.get("emails");
+		final List<Map<String, String>> emails = (List<Map<String, String>>) id.get("emails");
 		final String email = emails.get(0).get("value");
 		return new RemoteIdentity(
 				new RemoteIdentityID(NAME, (String) id.get("id")),
@@ -165,7 +162,8 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		}
 	}
 
-	private String getAccessToken(final String authcode, final boolean link) {
+	private String getAccessToken(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
 		final MultivaluedMap<String, String> formParameters =
 				new MultivaluedHashMap<>();
 		formParameters.add("code", authcode);
@@ -179,14 +177,26 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(TOKEN_PATH).build();
 		
-		final Map<String, Object> m = googlePostRequest(
-				formParameters, target);
-		return (String) m.get("access_token");
+		final Map<String, Object> m;
+		try {
+			m = googlePostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Authtoken retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
+		final String token = (String) m.get("access_token");
+		if (token == null || token.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No access token was returned by " + NAME);
+		}
+		return token;
 	}
 
 	private Map<String, Object> googlePostRequest(
 			final MultivaluedMap<String, String> formParameters,
-			final URI target) {
+			final URI target)
+			throws IdentityRetrievalException {
 		final WebTarget wt = CLI.target(target);
 		Response r = null;
 		try {
