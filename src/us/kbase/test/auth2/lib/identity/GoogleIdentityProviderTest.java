@@ -16,7 +16,6 @@ import org.mockserver.integration.ClientAndServer;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider;
 import us.kbase.auth2.lib.identity.GoogleIdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -25,6 +24,8 @@ import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfig
 import us.kbase.test.auth2.TestCommon;
 
 public class GoogleIdentityProviderTest {
+	
+	// a lot of code in common with Globus, try to make common class at some point 
 
 	private static final String CONTENT_TYPE = "content-type";
 	private static final String ACCEPT = "accept";
@@ -136,6 +137,42 @@ public class GoogleIdentityProviderTest {
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
 		}
+	}
+	
+	@Test
+	public void illegalAuthcode() throws Exception {
+		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
+		failGetIdentities(idp, null, true, new IllegalArgumentException(
+				"authcode cannot be null or empty"));
+		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
+				"authcode cannot be null or empty"));
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final Exception exception) throws Exception {
+		try {
+			idp.getIdentities(authcode, link);
+			fail("got identities with bad setup");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+	
+	private IdentityProviderConfig getTestIDConfig()
+			throws IdentityProviderConfigurationException, MalformedURLException,
+			URISyntaxException {
+		return new IdentityProviderConfig(
+				"Gooble",
+				new URL("https://glogin.com"),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				"gfoo",
+				"gbar",
+				new URI("http://gimage.com"),
+				new URL("https://gloginredir.com"),
+				new URL("https://glinkredir.com"));
 	}
 	
 }

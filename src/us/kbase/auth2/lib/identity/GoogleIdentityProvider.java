@@ -111,9 +111,11 @@ public class GoogleIdentityProvider implements IdentityProvider {
 	}
 
 	@Override
-	public Set<RemoteIdentity> getIdentities(
-			final String authcode,
-			final boolean link) throws IdentityRetrievalException {
+	public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new IllegalArgumentException("authcode cannot be null or empty");
+		}
 		final String accessToken = getAccessToken(authcode, link);
 		final RemoteIdentity ri = getIdentity(accessToken);
 		return new HashSet<>(Arrays.asList(ri));
