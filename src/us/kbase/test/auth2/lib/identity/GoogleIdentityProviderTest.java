@@ -288,6 +288,73 @@ public class GoogleIdentityProviderTest {
 	}
 	
 	@Test
+	public void returnsBadResponseIdentity() throws Exception {
+		final IdentityProviderConfig cfg = getTestIDConfig();
+		final IdentityProvider idp = new GoogleIdentityProvider(cfg);
+		final String redir = cfg.getLoginRedirectURL().toString();
+		final String cliid = cfg.getClientID();
+		final String clisec = cfg.getClientSecret();
+		final String authCode = "foo";
+		final String authtoken = "bartoken";
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 200, "bleah");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Unable to parse response from Google service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, "text/html", 200, MAPPER.writeValueAsString(
+				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
+						map("value", "email1")))));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Unable to parse response from Google service."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code and unparseable " +
+				"response from Google service: 500. Response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code and unparseable " +
+				"response from Google service: 500. Truncated response: " + STRING1000));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with no response " +
+				"body from Google service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with no error in " +
+				"the response body from Google service: 500."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 401, MAPPER.writeValueAsString(
+				map("error", null)));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with null error in the response body from Google " +
+				"service: 401."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 404, MAPPER.writeValueAsString(
+				map("error", new HashMap<String, String>())));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Got unexpected HTTP code with null error in the response body from Google " +
+						"service: 404."));
+		
+		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
+		setupCallID(authtoken, APP_JSON, 400, MAPPER.writeValueAsString(
+				map("error", map("message", "foobar"))));
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Google service returned an error. HTTP code: 400. Error: foobar"));
+	}
+	
+	@Test
 	public void getIdentityWithLoginURL() throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = getTestIDConfig();

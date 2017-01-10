@@ -33,8 +33,6 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
  */
 public class GoogleIdentityProvider implements IdentityProvider {
 
-	//TODO TEST
-	
 	/* Get creds: https://console.developers.google.com/apis
 	 * Google+ API must be enabled
 	 * Docs:
@@ -163,9 +161,26 @@ public class GoogleIdentityProvider implements IdentityProvider {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.header("Authorization", "Bearer " + accessToken)
 					.get();
-			return processResponse(r, 200);
-			//TODO TEST with 500s with HTML
-			//TODO IDPROVERR handle {error=?} in object and check response code
+			return processResponse(r, 200, new ErrorHandler() {
+				
+				@Override
+				public void handleError(final Response r, final Map<String, Object> response)
+						throws IdentityRetrievalException {
+					// ignoring type checking again, assuming that Google aren't jerks
+					@SuppressWarnings("unchecked")
+					final Map<String, Object> m = (Map<String, Object>) response.get("error");
+					// there's more details in the 'errors' key but ignore that for now
+					// could log later
+					if (m == null || !m.containsKey("message")) {
+						throw new IdentityRetrievalException(String.format(
+								"Got unexpected HTTP code with null error in the response body " +
+								"from %s service: %s.", NAME, r.getStatus()));
+					}
+					throw new IdentityRetrievalException(String.format(
+							"%s service returned an error. HTTP code: %s. Error: %s",
+							NAME, r.getStatus(), m.get("message")));
+				}
+			});
 		} finally {
 			if (r != null) {
 				r.close();
@@ -213,7 +228,19 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		try {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.post(Entity.form(formParameters));
-			return processResponse(r, 200);
+			return processResponse(r, 200, new ErrorHandler() {
+				
+				@Override
+				public void handleError(final Response r, final Map<String, Object> response)
+						throws IdentityRetrievalException {
+					throw new IdentityRetrievalException(String.format(
+							"%s service returned an error. HTTP code: %s. Error: %s. " +
+							"Error description: %s",
+							NAME, r.getStatus(), response.get("error"),
+							response.get("error_description")));
+					
+				}
+			});
 		} finally {
 			if (r != null) {
 				r.close();
@@ -221,7 +248,15 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		}
 	}
 	
-	private Map<String, Object> processResponse(final Response r, final int expectedCode)
+	private interface ErrorHandler {
+		void handleError(Response r, Map<String, Object> response)
+				throws IdentityRetrievalException;
+	}
+	
+	private Map<String, Object> processResponse(
+			final Response r,
+			final int expectedCode,
+			final ErrorHandler handler)
 			throws IdentityRetrievalException {
 		if (r.getStatus() == expectedCode) {
 			try { // could check content-type but same result, so...
@@ -246,29 +281,8 @@ public class GoogleIdentityProvider implements IdentityProvider {
 						NAME, r.getStatus()) + getTruncatedEntityBody(res));
 			}
 			if (m.containsKey("error")) {
-				throw new IdentityRetrievalException(String.format(
-						"%s service returned an error. HTTP code: %s. Error: %s. " +
-						"Error description: %s",
-						NAME, r.getStatus(), m.get("error"), m.get("error_description")));
-				// TODO NOW TEST what do google errors look like?
-			} else if (m.containsKey("errors")) { // secondary ID
-				// all kinds of type checking could be done here; let's just assume Globus doesn't
-				// alter their API willy nilly and not do it
-				@SuppressWarnings("unchecked")
-				final List<Map<String, String>> errors =
-						(List<Map<String, String>>) m.get("errors");
-				// just deal with the first error for now, change later if necc
-				if (errors == null || errors.isEmpty()) {
-					throw new IdentityRetrievalException(String.format(
-						"Got unexpected HTTP code with null error in the response body from %s " +
-						"service: %s.", NAME, r.getStatus()));
-				}
-				final Map<String, String> err = errors.get(0);
-				// could check the keys exist, but then what? null isn't much worse than reporting
-				// a missing key. leave as is for now
-				throw new IdentityRetrievalException(String.format(
-						"%s service returned an error. HTTP code: %s. Error %s: %s; id: %s",
-						NAME, r.getStatus(), err.get("code"), err.get("detail"), err.get("id")));
+				handler.handleError(r, m);
+				throw new RuntimeException("error handler didn't handle error");
 			} else {
 				throw new IdentityRetrievalException(String.format(
 						"Got unexpected HTTP code with no error in the response body from %s " +
