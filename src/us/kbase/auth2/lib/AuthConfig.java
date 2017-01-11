@@ -3,6 +3,7 @@ package us.kbase.auth2.lib;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.TreeMap;
 
 /** Contains the configuration of the authentication instance. This class can be used both to
  * report the current state of the configuration and request changes to the configuration.
@@ -26,7 +27,7 @@ public class AuthConfig {
 	/** Default for whether non-admin logins are allowed. */
 	public static final boolean DEFAULT_LOGIN_ALLOWED = false;
 	
-	/** Default lifetimes for the various token types. */
+	/** Default lifetimes for the various token types in milliseconds. */
 	public static final Map<TokenLifetimeType, Long> DEFAULT_TOKEN_LIFETIMES_MS;
 	static {
 		final Map<TokenLifetimeType, Long> m = new HashMap<>();
@@ -116,8 +117,8 @@ public class AuthConfig {
 	 * changes should be made.
 	 * @param providers the names of providers to be used mapped to their configuration. If a
 	 * provider is missing from the map no changes will be made to their configuration.
-	 * @param tokenLifetimeMS the lifetimes of the various token types. If a lifetime type is
-	 * missing from the map no changes will be made to its configuration.
+	 * @param tokenLifetimeMS the lifetimes of the various token types in milliseconds. If a
+	 * lifetime type is missing from the map no changes will be made to its configuration.
 	 */
 	public AuthConfig(
 			final Boolean loginAllowed,
@@ -128,11 +129,12 @@ public class AuthConfig {
 			providers = new HashMap<>();
 		}
 		for (final String p: providers.keySet()) {
-			if (p == null || p.isEmpty()) {
+			if (p == null || p.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider names cannot be null or empty");
 			}
 			if (providers.get(p) == null) {
-				throw new NullPointerException("Provider config cannot be null");
+				throw new NullPointerException(String.format("provider config for key %s is null",
+						p));
 			}
 		}
 		if (tokenLifetimeMS == null) {
@@ -142,9 +144,13 @@ public class AuthConfig {
 			if (t == null) {
 				throw new NullPointerException("null key in token life time map");
 			}
+			final Long time = tokenLifetimeMS.get(t);
+			if (time == null) {
+				throw new NullPointerException(String.format("lifetime for key %s is null", t));
+			}
 			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE) {
 				throw new IllegalArgumentException(String.format(
-						"token lifetimes must be at least %s ms", MIN_TOKEN_LIFE));
+						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE));
 			}
 		}
 		this.loginAllowed = loginAllowed;
@@ -167,16 +173,16 @@ public class AuthConfig {
 		return providers;
 	}
 
-	/** Returns the lifetimes for each token type defined in this configuration.
+	/** Returns the lifetimes, in milliseconds, for each token type defined in this configuration.
 	 * @return the lifetimes for each token type.
 	 */
 	public Map<TokenLifetimeType, Long> getTokenLifetimeMS() {
 		return tokenLifetimeMS;
 	}
 	
-	/** Get a lifetime for a particular token type.
+	/** Get a lifetime for a particular token type in milliseconds.
 	 * @param type the type of token for which to get a lifetime.
-	 * @return the life time of the token. If the token lifetime was not included in the lifetime
+	 * @return the lifetime of the token. If the token lifetime was not included in the lifetime
 	 * map upon creation of this configuration, the default lifetime is returned.
 	 */
 	public Long getTokenLifetimeMS(final TokenLifetimeType type) {
@@ -205,9 +211,9 @@ public class AuthConfig {
 		builder.append("AuthConfig [loginAllowed=");
 		builder.append(loginAllowed);
 		builder.append(", providers=");
-		builder.append(providers);
+		builder.append(new TreeMap<>(providers));
 		builder.append(", tokenLifetimeMS=");
-		builder.append(tokenLifetimeMS);
+		builder.append(new TreeMap<>(tokenLifetimeMS));
 		builder.append("]");
 		return builder.toString();
 	}
