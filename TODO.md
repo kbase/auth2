@@ -40,7 +40,6 @@ Auth service work
   * Login & signup very different
 * General
   * Password strength checker, check passwords != on reset
-  * Email format validator (hard since almost anything is a valid email address)
   * Mongod auth
 * Logging for all methods - at least log user and action
 * Deploy

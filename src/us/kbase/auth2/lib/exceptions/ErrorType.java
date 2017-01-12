@@ -24,6 +24,8 @@ public enum ErrorType {
 	ILLEGAL_PARAMETER		(30001, "Illegal input parameter"),
 	/** The provided user name was not legal. */
 	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
+	/** The provided email address was not legal. */
+	ILLEGAL_EMAIL_ADDRESS	(30020, "Illegal email address"),
 	/** The user could not be created because it already exists. */
 	USER_ALREADY_EXISTS		(40000, "User already exists"),
 	/** The requested user does not exist. */
