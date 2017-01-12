@@ -9,8 +9,6 @@ package us.kbase.auth2.lib;
  */
 public class AuthConfigSet<T extends ExternalConfig> {
 
-	//TODO TEST
-	
 	private AuthConfig cfg;
 	private T extcfg;
 	

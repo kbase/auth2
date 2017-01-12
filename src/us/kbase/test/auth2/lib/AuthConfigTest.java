@@ -9,7 +9,11 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.auth2.lib.AuthConfig;
+import us.kbase.auth2.lib.AuthConfigSet;
+import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.test.auth2.TestCommon;
@@ -142,17 +146,17 @@ public class AuthConfigTest {
 	public void constructFailOnProvider() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
 		pc.put(null, new ProviderConfig(false, false));
-		failConstruct(pc, null, new IllegalArgumentException(
+		failConstructAuthConfig(pc, null, new IllegalArgumentException(
 				"provider names cannot be null or empty"));
 		
 		pc.clear();
 		pc.put("  \t  ", new ProviderConfig(null, null));
-		failConstruct(pc, null, new IllegalArgumentException(
+		failConstructAuthConfig(pc, null, new IllegalArgumentException(
 				"provider names cannot be null or empty"));
 		
 		pc.clear();
 		pc.put("pc", null);
-		failConstruct(pc, null, new NullPointerException(
+		failConstructAuthConfig(pc, null, new NullPointerException(
 				"provider config for key pc is null"));
 	}
 	
@@ -160,19 +164,21 @@ public class AuthConfigTest {
 	public void constructFailOnLifetimes() throws Exception {
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		lts.put(null, 3000000L);
-		failConstruct(null, lts, new NullPointerException("null key in token life time map"));
+		failConstructAuthConfig(null, lts, new NullPointerException(
+				"null key in token life time map"));
 		
 		lts.clear();
 		lts.put(TokenLifetimeType.DEV, null);
-		failConstruct(null, lts, new NullPointerException("lifetime for key DEV is null"));
+		failConstructAuthConfig(null, lts, new NullPointerException(
+				"lifetime for key DEV is null"));
 		
 		lts.clear();
 		lts.put(TokenLifetimeType.SERV, 59999L);
-		failConstruct(null, lts, new IllegalArgumentException(
+		failConstructAuthConfig(null, lts, new IllegalArgumentException(
 				"lifetime for key SERV must be at least 60000 ms"));
 	}
 
-	private void failConstruct(
+	private void failConstructAuthConfig(
 			final Map<String, ProviderConfig> providers,
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final Exception exception) {
@@ -181,6 +187,56 @@ public class AuthConfigTest {
 			fail("created bad config");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+	
+	class TestExtCfg implements ExternalConfig {
+
+		@Override
+		public Map<String, String> toMap() {
+			return ImmutableMap.of("foo", "bar");
+		}
+		
+		@Override
+		public String toString() {
+			return "This is a very poor toString() implementation. Sad!";
+		}
+		
+	}
+	
+	@Test
+	public void configSetConstructAndGetters() throws Exception {
+		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
+		lts.put(TokenLifetimeType.DEV, 350000L);
+		final AuthConfig cfg = new AuthConfig(false, null, lts);
+		final AuthConfigSet<TestExtCfg> ac = new AuthConfigSet<TestExtCfg>(cfg, new TestExtCfg());
+		assertThat("incorrect config login", ac.getCfg().isLoginAllowed(), is(false));
+		assertThat("incorrect config providers", ac.getCfg().getProviders(), is(new HashMap<>()));
+		assertThat("incorrect config token lifetimes", ac.getCfg().getTokenLifetimeMS(),
+				is(lts));
+		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
+				is(ImmutableMap.of("foo", "bar")));
+		assertThat("incorrect toString", ac.toString(), is(
+				"AuthConfigSet [cfg=AuthConfig [loginAllowed=false, providers={}, " +
+				"tokenLifetimeMS={DEV=350000}], " +
+				"extcfg=This is a very poor toString() implementation. Sad!]"));
+	}
+	
+	@Test
+	public void configSetConstructFail() throws Exception {
+		failConstructConfigSet(null, new TestExtCfg(), "cfg");
+		failConstructConfigSet(new AuthConfig(null, null, null), null, "extcfg");
+	}
+	
+	private void failConstructConfigSet(
+			final AuthConfig ac,
+			final ExternalConfig ec,
+			final String exception) {
+		try {
+			new AuthConfigSet<>(ac, ec);
+			fail("created bad config set");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
 	}
 }
