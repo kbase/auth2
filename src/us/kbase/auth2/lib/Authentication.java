@@ -59,6 +59,7 @@ public class Authentication {
 	//TODO TEST test logging on startup
 	//TODO TEST test logging on calls
 	//TODO JAVADOC 
+	//TODO ZZLATER validate email address by sending an email
 	//TODO AUTH schema version
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO AUTH check workspace for other useful things like the schema manager
