@@ -875,7 +875,6 @@ public class MongoStorage implements AuthStorage {
 	public void deleteCustomRole(final String roleId)
 			throws NoSuchRoleException, AuthStorageException {
 		try {
-			//TODO CODE just do a regular delete and then check the deleted count.
 			final Document role = db.getCollection(COL_CUST_ROLES).findOneAndDelete(
 					new Document(Fields.ROLES_ID, roleId));
 			if (role == null) {
@@ -885,7 +884,7 @@ public class MongoStorage implements AuthStorage {
 			 * db and removed if they don't exist, which protects against race conditions and
 			 * mongo / server downs.
 			 */
-			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull", 
+			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull",
 					new Document(Fields.USER_CUSTOM_ROLES, role.getObjectId(Fields.MONGO_ID))));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
@@ -918,9 +917,9 @@ public class MongoStorage implements AuthStorage {
 			try {
 				ret.add(new CustomRole(d.getString(Fields.ROLES_ID),
 						d.getString(Fields.ROLES_DESC)));
-			} catch (MissingParameterException e) { // should be impossible
+			} catch (MissingParameterException | IllegalParameterException e) {
 				throw new AuthStorageException(
-						"Error in roles colletion - role with missing field", e);
+						"Error in roles colletion - role with illegal or missing field", e);
 			}
 		}
 		return ret;

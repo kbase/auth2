@@ -10,6 +10,22 @@ import org.apache.commons.lang3.exception.ExceptionUtils;
 
 public class TestCommon {
 
+	public static final String LONG101;
+	public static final String LONG1001;
+	static {
+		final StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < 100; i++) {
+			sb.append("a");
+		}
+		final String s100 = sb.toString();
+		final StringBuilder sb2 = new StringBuilder();
+		for (int i = 0; i < 100; i++) {
+			sb2.append(s100);
+		}
+		LONG101 = s100 + "a";
+		LONG1001 = sb2.toString() + "a";
+	}
+	
 	public static void assertExceptionCorrect(
 			final Exception got,
 			final Exception expected) {

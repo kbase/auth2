@@ -475,7 +475,7 @@ public class Admin {
 			@FormParam("desc") final String description)
 			throws MissingParameterException, AuthStorageException,
 			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException {
+			NoTokenProvidedException, IllegalParameterException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				roleId, description);
 	}
