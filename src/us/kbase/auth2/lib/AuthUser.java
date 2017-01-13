@@ -94,7 +94,7 @@ public abstract class AuthUser {
 	
 	public Set<Role> getGrantableRoles() {
 		if (canGrantRoles == null) {
-			canGrantRoles = getRoles().stream().flatMap(r -> r.grants().stream())
+			canGrantRoles = getRoles().stream().flatMap(r -> r.canGrant().stream())
 					.collect(Collectors.toSet());
 		}
 		return canGrantRoles;

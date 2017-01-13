@@ -14,15 +14,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class EmailAddressTest {
 
-	private static final String LONG1001;
-	static {
-		final StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 1001; i++) {
-			sb.append("a");
-		}
-		LONG1001 = sb.toString();
-	}
-	
 	@Test
 	public void construct() throws Exception {
 		final EmailAddress ea = new EmailAddress("   foo@bar.com   \n");
@@ -39,7 +30,8 @@ public class EmailAddressTest {
 				"foo"));
 		failConstruct("foo@bar", new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
 				"foo@bar"));
-		failConstruct(LONG1001, new IllegalParameterException(ErrorType.ILLEGAL_PARAMETER,
+		failConstruct(TestCommon.LONG1001, new IllegalParameterException(
+				ErrorType.ILLEGAL_PARAMETER,
 				"email address size greater than limit 1000"));
 	}
 

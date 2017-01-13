@@ -43,7 +43,7 @@ public class EmailAddress {
 	}
 
 	/** Get the email address. Returns null if the email address is unknown.
-	 * @return
+	 * @return the email address.
 	 */
 	public String getAddress() {
 		return email;

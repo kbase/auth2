@@ -11,8 +11,8 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 /** A user name.
  * 
- * Valid user names are strings of up to 100 characters consisting of lowercase English letters,
- * the underscore, and the digits 0-9. The first character must be a letter.
+ * Valid user names are strings of up to 100 characters consisting of lowercase ASCII letters,
+ * digits, and the underscore. The first character must be a letter.
  * 
  * The only exception is the user name ***ROOT***, which represents the root user.
  * @author gaprice@lbl.gov

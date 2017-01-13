@@ -14,15 +14,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class UserNameTest {
 	
-	private static final String LONG101;
-	static {
-		final StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 101; i++) {
-			sb.append("a");
-		}
-		LONG101 = sb.toString();
-	}
-
 	@Test
 	public void root() throws Exception {
 		final UserName un = new UserName("***ROOT***");
@@ -57,7 +48,8 @@ public class UserNameTest {
 				"Illegal character in user name abaeataΔfoo: Δ"));
 		failConstruct("abaea*tafoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 				"Illegal character in user name abaea*tafoo: *"));
-		failConstruct(LONG101, new IllegalParameterException(ErrorType.ILLEGAL_PARAMETER,
+		failConstruct(TestCommon.LONG101, new IllegalParameterException(
+				ErrorType.ILLEGAL_PARAMETER,
 				"user name size greater than limit 100"));
 	}
 

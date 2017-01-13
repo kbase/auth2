@@ -698,7 +698,7 @@ public class Authentication {
 			final String id,
 			final String description)
 			throws MissingParameterException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException {
+			InvalidTokenException, UnauthorizedException, IllegalParameterException {
 		getUser(incomingToken, Role.ADMIN);
 		storage.setCustomRole(new CustomRole(id, description));
 	}
@@ -708,7 +708,7 @@ public class Authentication {
 			final String roleId)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchRoleException, MissingParameterException {
-		if (roleId == null || roleId.isEmpty()) {
+		if (roleId == null || roleId.trim().isEmpty()) {
 			throw new MissingParameterException("roleId cannot be null or empty");
 		}
 		getUser(token, Role.ADMIN); // ensure admin

@@ -14,15 +14,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class DisplayNameTest {
 	
-	private static final String LONG101;
-	static {
-		final StringBuilder sb = new StringBuilder();
-		for (int i = 0; i < 101; i++) {
-			sb.append("a");
-		}
-		LONG101 = sb.toString();
-	}
-	
 	@Test
 	public void constructor() throws Exception {
 		final DisplayName dn = new DisplayName("    foo\n");
@@ -45,7 +36,8 @@ public class DisplayNameTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new MissingParameterException("display name"));
 		failConstruct("   \n  ", new MissingParameterException("display name"));
-		failConstruct(LONG101, new IllegalParameterException(ErrorType.ILLEGAL_PARAMETER,
+		failConstruct(TestCommon.LONG101, new IllegalParameterException(
+				ErrorType.ILLEGAL_PARAMETER,
 				"display name size greater than limit 100"));
 	}
 

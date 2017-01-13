@@ -193,16 +193,18 @@
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
+      <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserTest"/>
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
