@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.storage.exceptions;
 
 /** 
- * Thrown when an exception occurs regarding the authorization storage system
+ * Thrown when an exception occurs regarding initialization of the authorization storage system
  * @author gaprice@lbl.gov
  *
  */

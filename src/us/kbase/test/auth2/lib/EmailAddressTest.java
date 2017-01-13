@@ -25,7 +25,7 @@ public class EmailAddressTest {
 	
 	@Test
 	public void construct() throws Exception {
-		final EmailAddress ea = new EmailAddress("foo@bar.com");
+		final EmailAddress ea = new EmailAddress("   foo@bar.com   \n");
 		assertThat("incorrect email", ea.getAddress(), is("foo@bar.com"));
 		assertThat("incorrect hashCode", ea.hashCode(), is(1827947467));
 		assertThat("incorrect toString", ea.toString(), is("EmailAddress [email=foo@bar.com]"));
@@ -35,8 +35,6 @@ public class EmailAddressTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new MissingParameterException("email address"));
 		failConstruct("   \n  ", new MissingParameterException("email address"));
-		failConstruct("foo", new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
-				"foo"));
 		failConstruct("foo", new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
 				"foo"));
 		failConstruct("foo@bar", new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
@@ -59,7 +57,7 @@ public class EmailAddressTest {
 		final EmailAddress ea = new EmailAddress("w@c.com");
 		assertThat("incorrect equality", ea.equals(ea), is(true));
 		assertThat("incorrect null", ea.equals(null), is(false));
-		assertThat("incorrect type", ea.equals("foo"), is(false));
+		assertThat("incorrect type", ea.equals("w@c.com"), is(false));
 		assertThat("incorrect bad name", ea.equals(new EmailAddress("x@c.com")), is(false));
 		assertThat("incorrect good name", ea.equals(new EmailAddress("w@c.com")), is(true));
 	}

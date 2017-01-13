@@ -193,6 +193,7 @@
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserTest"/>
