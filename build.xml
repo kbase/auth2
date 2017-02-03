@@ -205,6 +205,7 @@
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
+      <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
