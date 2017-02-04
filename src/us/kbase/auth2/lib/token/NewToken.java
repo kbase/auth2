@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.addLong;
+import static us.kbase.auth2.lib.Utils.addNoOverflow;
 
 import java.util.Date;
 import java.util.UUID;
@@ -47,7 +47,7 @@ public class NewToken {
 		this.tokenName = null;
 		this.token = token;
 		this.userName = userName;
-		this.expirationDate = new Date(addLong(creationDate, lifetimeInMS)).getTime();
+		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
 	}
 	
 	/** Create a new named token.
@@ -78,7 +78,7 @@ public class NewToken {
 		this.tokenName = tokenName;
 		this.token = token;
 		this.userName = userName;
-		this.expirationDate = new Date(addLong(creationDate, lifetimeInMS)).getTime();
+		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
 	}
 
 	/** Get the token's type.

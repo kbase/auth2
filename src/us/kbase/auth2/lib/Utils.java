@@ -10,8 +10,6 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  */
 public class Utils {
 
-	//TODO TESTS
-	
 	/** Check that a string is non-null and has at least one non-whitespace character.
 	 * @param s the string to check.
 	 * @param name the name of the string to use in any error messages.
@@ -68,15 +66,18 @@ public class Utils {
 		}
 	}
 
-	/** Adds two longs, returning Long.MAX_VALUE if the calculation overflows.
+	/** Adds two longs, returning Long.MAX_VALUE or Long.MIN_VALUE, as appropriate, if the
+	 * calculation over- or underflows.
 	 * @param a a long.
 	 * @param b a long.
-	 * @return Long.MAX_VALUE if a + b > Long.MAX_VALUE else a + b
+	 * @return the result of adding two longs.
 	 */
-	public static long addLong(final long a, final long b) {
+	public static long addNoOverflow(final long a, final long b) {
 		final long c;
-		if (Long.MAX_VALUE - a < b) {
+		if (a > 0 && Long.MAX_VALUE - a < b) {
 			c = Long.MAX_VALUE;
+		} else if (a < 0 && Long.MIN_VALUE - a > b) {
+			c = Long.MIN_VALUE;
 		} else {
 			c = a + b;
 		}
