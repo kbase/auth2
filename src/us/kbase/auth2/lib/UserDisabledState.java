@@ -3,6 +3,7 @@ package us.kbase.auth2.lib;
 import java.util.Date;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 /** The disabled state of a user account. Can represent the state for a user account that 1) has
  * never been disabled, 2) is currently disabled, or 3) has been reenabled.
@@ -14,6 +15,7 @@ public class UserDisabledState {
 	
 	//TODO TESTS
 
+	private static final int MAX_DISABLED_REASON_LENGTH = 1000;
 	private final String disabledReason;
 	private final UserName byAdmin;
 	private final Long time;
@@ -22,17 +24,16 @@ public class UserDisabledState {
 	 * @param disabledReason the reason the user was disabled.
 	 * @param byAdmin the administrator that disabled the user.
 	 * @param time the time at which the user was disabled.
-	 * @throws IllegalParameterException if disabledReason is null or has no content.
+	 * @throws IllegalParameterException if disabledReason is too long.
+	 * @throws MissingParameterException if disabledReason is missing.
 	 */
 	public UserDisabledState(
 			final String disabledReason,
 			final UserName byAdmin,
-			final Date time) throws IllegalParameterException {
+			final Date time)
+			throws IllegalParameterException, MissingParameterException {
 		super();
-		if (disabledReason == null || disabledReason.trim().isEmpty()) {
-			throw new IllegalParameterException(
-					"A reason must be provided for why this account was disabled");
-		}
+		Utils.checkString(disabledReason, "Disabled reason", MAX_DISABLED_REASON_LENGTH);
 		if (byAdmin == null) {
 			throw new NullPointerException("byAdmin");
 		}
@@ -100,17 +101,18 @@ public class UserDisabledState {
 	 * @param disabledReason the reason the user was disabled - can be null.
 	 * @param byAdmin the administrator that disabled the user - can be null.
 	 * @param time the time at which the user was disabled - can be null.
+	 * @return the new disabled state object.
 	 * @throws IllegalStateException if the inputs do not correspond to one of the 3 possible
 	 * state permutations (e.g. one of the 3 constructors).
-	 * @return the new disabled state object.
+	 * @throws IllegalParameterException if disabledReason is too long. 
+	 * @throws MissingParameterException if disabledReason is the empty string and byAdmin and time
+	 * are supplied.
 	 */
 	public static UserDisabledState create(
 			final String disabledReason,
 			final UserName byAdmin,
-			final Date time) {
-		if (disabledReason != null && disabledReason.trim().isEmpty()) {
-			throw new IllegalStateException("disabled reason cannot be the empty string");
-		}
+			final Date time)
+			throws IllegalParameterException, MissingParameterException {
 		if (disabledReason == null) {
 			if (byAdmin == null) {
 				if (time != null) {
@@ -128,12 +130,7 @@ public class UserDisabledState {
 				throw new IllegalStateException(
 						"If disabledReason is not null byAdmin and time cannot be null");
 			}
-			try {
-				return new UserDisabledState(disabledReason, byAdmin, time);
-			} catch (IllegalParameterException e) {
-				throw new RuntimeException(
-						"Oh my god reality is collapsing around me plz halp", e);
-			}
+			return new UserDisabledState(disabledReason, byAdmin, time);
 		}
 	}
 }

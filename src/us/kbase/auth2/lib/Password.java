@@ -22,6 +22,7 @@ public class Password {
 	 */
 	public Password(final char[] password) {
 		//TODO PWD appropriate checking that the password is strong
+		//TODO PWD max length
 		// https://github.com/nulab/zxcvbn4j
 		// may need to have a non-checking constructor, only need to check on creation
 		if (password == null) {
