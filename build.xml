@@ -208,6 +208,7 @@
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
+      <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
