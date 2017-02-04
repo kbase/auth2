@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.addLong;
+import static us.kbase.auth2.lib.Utils.addNoOverflow;
 
 import java.util.Date;
 import java.util.UUID;
@@ -27,7 +27,7 @@ public class TemporaryToken {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
 		this.token = token;
-		this.expirationDate = new Date(addLong(creationDate, lifetimeInMS)).getTime();
+		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
 	}
 
 	/** Get the token string.

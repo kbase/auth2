@@ -386,15 +386,24 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				UserDisabledState.create(
-						user.getString(Fields.USER_DISABLED_REASON),
-						getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-						user.getDate(Fields.USER_DISABLED_DATE)),
+				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
 				user.getDate(Fields.USER_RESET_PWD_LAST),
 				this);
+	}
+
+	private UserDisabledState getUserDisabledState(final Document user)
+			throws AuthStorageException {
+		try {
+			return UserDisabledState.create(
+					user.getString(Fields.USER_DISABLED_REASON),
+					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+					user.getDate(Fields.USER_DISABLED_DATE));
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new AuthStorageException("Illegal value stored in database", e);
+		}
 	}
 	
 
@@ -703,10 +712,7 @@ public class MongoStorage implements AuthStorage {
 				new HashSet<>(custroles),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				UserDisabledState.create(
-						user.getString(Fields.USER_DISABLED_REASON),
-						getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-						user.getDate(Fields.USER_DISABLED_DATE)),
+				getUserDisabledState(user),
 				this);
 	}
 	
