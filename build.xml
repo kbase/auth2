@@ -198,6 +198,8 @@
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
+      <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
