@@ -3,8 +3,6 @@ package us.kbase.auth2.service.kbase;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -44,7 +42,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
-	private static final String KEY_SUFFIX_ID_PROVS_IMG = "-image-uri";
 	private static final String KEY_SUFFIX_ID_PROVS_LOGIN_URL = "-login-url";
 	private static final String KEY_SUFFIX_ID_PROVS_API_URL = "-api-url";
 	private static final String KEY_SUFFIX_ID_PROVS_CLIENT_ID = "-client-id";
@@ -119,8 +116,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				continue;
 			}
 			final String pre = KEY_PREFIX_ID_PROVS + p;
-			 // relative url
-			final URI imgURL = getURI(pre + KEY_SUFFIX_ID_PROVS_IMG, cfg);
 			final String cliid = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
 			final String clisec = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
 			final URL login = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_URL, cfg);
@@ -129,7 +124,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
 			try {
 				ips.add(new IdentityProviderConfig(
-						p, login, api, cliid, clisec, imgURL, loginRedirect, linkRedirect));
+						p, login, api, cliid, clisec, loginRedirect, linkRedirect));
 			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
@@ -150,19 +145,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			throw new AuthConfigurationException(String.format(
 					"Value %s of parameter %s in section %s of config " +
 					"file %s is not a valid URL",
-					url, key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
-		}
-	}
-	
-	private URI getURI(final String key, final Map<String, String> cfg)
-			throws AuthConfigurationException {
-		final String url = getString(key, cfg, true);
-		try {
-			return new URI(url);
-		} catch (URISyntaxException e) {
-			throw new AuthConfigurationException(String.format(
-					"Value %s of parameter %s in section %s of config " +
-					"file %s is not a valid URI",
 					url, key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
 		}
 	}

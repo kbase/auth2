@@ -3,7 +3,6 @@ package us.kbase.auth2.lib;
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 
-import java.net.URI;
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
@@ -784,11 +783,6 @@ public class Authentication {
 			throw new NoSuchIdentityProviderException(provider);
 		}
 		return ip;
-	}
-	
-	public URI getIdentityProviderImageURI(final String provider)
-			throws NoSuchIdentityProviderException, AuthStorageException {
-		return getIdentityProvider(provider).getImageURI();
 	}
 	
 	public URL getIdentityProviderURL(

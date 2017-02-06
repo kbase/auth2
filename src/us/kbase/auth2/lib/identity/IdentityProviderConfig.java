@@ -1,6 +1,5 @@
 package us.kbase.auth2.lib.identity;
 
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 
@@ -16,7 +15,6 @@ public class IdentityProviderConfig {
 	private final String identityProviderName;
 	private final String clientID;
 	private final String clientSecret;
-	private final URI imageURI;
 	private final URL loginURL;
 	private final URL apiURL;
 	private final URL loginRedirectURL;
@@ -29,7 +27,6 @@ public class IdentityProviderConfig {
 	 * be directed.
 	 * @param clientID the client ID for the identity provider.
 	 * @param clientSecret the client secret for the identity provider.
-	 * @param imgURI the uri for an image to associate with the identity provider.
 	 * @param loginRedirectURL the url to which the provider should redirect in the process of a
 	 * login.
 	 * @param linkRedirectURL the url to which the provider should redirect in the process of
@@ -42,7 +39,6 @@ public class IdentityProviderConfig {
 			final URL apiURL,
 			final String clientID,
 			final String clientSecret,
-			final URI imgURI,
 			final URL loginRedirectURL,
 			final URL linkRedirectURL)
 			throws IdentityProviderConfigurationException {
@@ -53,16 +49,11 @@ public class IdentityProviderConfig {
 		this.identityProviderName = identityProviderName.trim();
 		this.clientID = clientID.trim();
 		this.clientSecret = clientSecret.trim();
-		this.imageURI = imgURI;
 		this.loginURL = loginURL;
 		this.apiURL = apiURL;
 		this.loginRedirectURL = loginRedirectURL;
 		this.linkRedirectURL = linkRedirectURL;
 
-		if (imageURI == null) {
-			throw new IdentityProviderConfigurationException("Image URI for " +
-					identityProviderName + " identity provider cannot be null");
-		}
 		checkValidURI(this.loginURL, "Login URL");
 		checkValidURI(this.apiURL, "API URL");
 		checkValidURI(this.loginRedirectURL, "Login redirect URL");
@@ -124,13 +115,6 @@ public class IdentityProviderConfig {
 	 */
 	public String getClientSecret() {
 		return clientSecret;
-	}
-
-	/** Get the image URI of an image to associate with the identity provider.
-	 * @return the image URI.
-	 */
-	public URI getImageURI() {
-		return imageURI;
 	}
 
 	/** Get the URL to which the identity provider should redirect when a login is in process.

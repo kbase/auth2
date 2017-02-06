@@ -1,6 +1,5 @@
 package us.kbase.auth2.lib.identity;
 
-import java.net.URI;
 import java.net.URL;
 import java.util.Set;
 
@@ -19,11 +18,6 @@ public interface IdentityProvider {
 	 * @return the identity provider's name.
 	 */
 	String getProviderName();
-	
-	/** Get a URI for an image associated with the identity provider.
-	 * @return an image.
-	 */
-	URI getImageURI();
 	
 	/** Get the url to which a user should be redirected to log in to the identity provider.
 	 * @param state the OAuth2 state variable, generally random data large enough to be

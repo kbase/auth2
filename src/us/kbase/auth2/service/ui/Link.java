@@ -90,12 +90,6 @@ public class Link {
 		for (final String prov: auth.getIdentityProviders()) {
 			final Map<String, String> rep = new HashMap<>();
 			rep.put("name", prov);
-			final URI i = auth.getIdentityProviderImageURI(prov);
-			if (i.isAbsolute()) {
-				rep.put("img", i.toString());
-			} else {
-				rep.put("img", relativize(uriInfo, i));
-			}
 			provs.add(rep);
 		}
 		ret.put("starturl", relativize(uriInfo, UIPaths.LINK_ROOT_START));

@@ -76,11 +76,6 @@ public class GoogleIdentityProvider implements IdentityProvider {
 		return NAME;
 	}
 	
-	@Override
-	public URI getImageURI() {
-		return cfg.getImageURI();
-	}
-
 	// state will be url encoded
 	@Override
 	public URL getLoginURL(final String state, final boolean link) {

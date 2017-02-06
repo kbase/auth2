@@ -153,11 +153,6 @@
     <!-- copy war to jettybase -->
     <copy tofile="./jettybase/webapps/ROOT.war" file="${dist}/${war.file}" />
     <!-- probably a better way to do this -->
-    <delete dir="./jettybase/webapps/assets"/>
-    <mkdir dir="./jettybase/webapps/assets"/>
-    <copy todir="./jettybase/webapps/assets">
-      <fileset dir="./webapps/assets" includes="**"/>  
-    </copy>
     <delete dir="./jettybase/templates"/>
     <mkdir dir="./jettybase/templates"/>
     <copy todir="./jettybase/templates">

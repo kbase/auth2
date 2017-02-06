@@ -6,7 +6,7 @@
 
 <form action="{{starturl}}" method="post">
 {{#providers}}
-	<input type="radio" name="provider" value="{{name}}"/><img src="{{img}}" alt="{{name}}"/><br/>
+	<input type="radio" name="provider" value="{{name}}"/>{{name}}<br/>
 {{/providers}}
 	<input type="checkbox" name="stayLoggedIn"/> Keep me logged in<br/>
 	Redirect after login: <input type="text" name="redirect"/><br/>

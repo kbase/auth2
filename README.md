@@ -11,7 +11,7 @@ Current endpoints
 UI endpoints are not versioned and not necessarily stable - behavior may change as needed to
 support the auth UI.
 
-Note that the UI supplied in this repo is a minimal implementation for the purposes of
+Note that the HTML UI supplied in this repo is a minimal implementation for the purposes of
 testing. In many cases a manual refresh of the page will be required to see
 changes. Further, once a checkbox is manually checked or unchecked that state
 will not change, even with a refresh - to see changes reset the form.

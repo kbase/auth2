@@ -5,7 +5,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -83,11 +82,9 @@ public class GoogleIdentityProviderTest {
 					new URL("https://gsetapiurl.com"),
 					"gfoo",
 					"gbar",
-					new URI("http://gimage.com"),
 					new URL("https://gloginredir.com"),
 					new URL("https://glinkredir.com"));
-		} catch (IdentityProviderConfigurationException | URISyntaxException |
-				MalformedURLException e) {
+		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
 	}
@@ -99,7 +96,6 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect image uri", gip.getImageURI(), is(new URI("http://gimage.com")));
 		assertThat("incorrect login url", gip.getLoginURL("foo3", false),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
@@ -117,7 +113,6 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect image uri", gip.getImageURI(), is(new URI("http://gimage.com")));
 		assertThat("incorrect login url", gip.getLoginURL("foo5", false),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
@@ -140,7 +135,6 @@ public class GoogleIdentityProviderTest {
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
-				CFG.getImageURI(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
 				new IllegalArgumentException("Bad config name: foo"));
@@ -186,7 +180,6 @@ public class GoogleIdentityProviderTest {
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"gfoo",
 				"gbar",
-				new URI("http://gimage.com"),
 				new URL("https://gloginredir.com"),
 				new URL("https://glinkredir.com"));
 	}
@@ -382,7 +375,6 @@ public class GoogleIdentityProviderTest {
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",
 				"bar2",
-				new URI("http://gimage2.com"),
 				new URL("https://gloginredir2.com"),
 				new URL("https://glinkredir2.com"));
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);

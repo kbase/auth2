@@ -17,12 +17,4 @@
         <servlet-name>Auth</servlet-name>
         <url-pattern>/*</url-pattern>
     </servlet-mapping>
-    <servlet>
-        <servlet-name>DefaultServlet</servlet-name>
-        <servlet-class>org.eclipse.jetty.servlet.DefaultServlet</servlet-class>
-    </servlet>
-    <servlet-mapping>
-        <servlet-name>DefaultServlet</servlet-name>
-        <url-pattern>/assets/*</url-pattern>
-    </servlet-mapping>
 </web-app>
