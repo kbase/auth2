@@ -240,7 +240,7 @@ public class Link {
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				getLinkInProcessToken(linktoken));
 		/* there's a possibility here that between the redirects the number
-		 * of identities that aren't already linked was reduced 1. The
+		 * of identities that aren't already linked was reduced to 1. The
 		 * probability is so low that it's not worth special casing it,
 		 * especially since the effect is simply that the user only has one
 		 * choice for link targets.
@@ -261,7 +261,8 @@ public class Link {
 		return ret;
 	}
 
-	private IncomingToken getLinkInProcessToken(final String linktoken) throws NoTokenProvidedException {
+	private IncomingToken getLinkInProcessToken(final String linktoken)
+			throws NoTokenProvidedException {
 		final IncomingToken incToken;
 		try {
 			incToken = new IncomingToken(linktoken);

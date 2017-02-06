@@ -924,8 +924,7 @@ public class Authentication {
 		}
 		final RemoteIdentityWithLocalID match = getIdentity(token, identityID);
 		final Date now = new Date();
-		storage.createUser(new NewUser(userName, email, displayName,
-				new HashSet<>(Arrays.asList(match)), now, now));
+		storage.createUser(new NewUser(userName, email, displayName, match, now, now));
 		return login(userName);
 	}
 
@@ -1219,8 +1218,6 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(un, email, dn,
-				new HashSet<>(Arrays.asList(ri.withID())),
-				new Date(), null));
+		storage.createUser(new NewUser(un, email, dn, ri.withID(), new Date(), null));
 	}
 }
