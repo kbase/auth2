@@ -4,7 +4,6 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.net.URI;
 import java.net.URL;
 
 import org.junit.Test;
@@ -22,14 +21,12 @@ public class IdentityProviderConfigTest {
 				new URL("http://api.com"),
 				"foo",
 				"bar",
-				new URI("http://someimage.com"),
 				new URL("https://loginredirect.com"),
 				new URL("https://linkredirect.com"));
 		assertThat("incorrect api URL", c.getApiURL(), is(new URL("http://api.com")));
 		assertThat("incorrect client id", c.getClientID(), is("foo"));
 		assertThat("incorrect client secret", c.getClientSecret(), is("bar"));
 		assertThat("incorrect provider name", c.getIdentityProviderName(), is("MyProv"));
-		assertThat("incorrect image URI", c.getImageURI(), is(new URI("http://someimage.com")));
 		assertThat("incorrect link redirect URL", c.getLinkRedirectURL(),
 				is(new URL("https://linkredirect.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL(),
@@ -44,7 +41,6 @@ public class IdentityProviderConfigTest {
 		final URL api = new URL("http://api.com");
 		final String clientID = "foo";
 		final String clientSecret = "bar";
-		final URI image = new URI("http://someimage.com");
 		final URL loginRedirect = new URL("https://loginredirect.com");
 		final URL linkRedirect = new URL("https://linkredirect.com");
 		
@@ -52,57 +48,53 @@ public class IdentityProviderConfigTest {
 		final String strexp = exp + " or empty";
 		
 		// id provider name
-		failCreateConfig(null, login, api, clientID, clientSecret, image, loginRedirect,
+		failCreateConfig(null, login, api, clientID, clientSecret, loginRedirect,
 				linkRedirect, "Identity provider name cannot be null or empty");
-		failCreateConfig("\t", login, api, clientID, clientSecret, image, loginRedirect,
+		failCreateConfig("\t", login, api, clientID, clientSecret, loginRedirect,
 				linkRedirect, "Identity provider name cannot be null or empty");
 		
 		//login url
-		failCreateConfig(name, null, api, clientID, clientSecret, image, loginRedirect,
+		failCreateConfig(name, null, api, clientID, clientSecret, loginRedirect,
 				linkRedirect, "Login URL" + exp);
 		failCreateConfig(name, new URL("http://login^foo.com"), api, clientID, clientSecret,
-				image, loginRedirect, linkRedirect,
+				loginRedirect, linkRedirect,
 				"Login URL http://login^foo.com for MyProv identity provider is not a valid " +
 				"URI: Illegal character in authority at index 7: http://login^foo.com");
 		
 		//api url
-		failCreateConfig(name, login, null, clientID, clientSecret, image, loginRedirect,
+		failCreateConfig(name, login, null, clientID, clientSecret, loginRedirect,
 				linkRedirect, "API URL" + exp);
 		failCreateConfig(name, login, new URL("http://api^fo.com"), clientID, clientSecret,
-				image, loginRedirect, linkRedirect,
+				loginRedirect, linkRedirect,
 				"API URL http://api^fo.com for MyProv identity provider is not a valid " +
 				"URI: Illegal character in authority at index 7: http://api^fo.com");
 				// not sure why the index is the same as the login url
 		
 		//client ID
-		failCreateConfig(name, login, api, null, clientSecret, image, loginRedirect,
+		failCreateConfig(name, login, api, null, clientSecret, loginRedirect,
 				linkRedirect, "Client ID" + strexp);
-		failCreateConfig(name, login, api, "", clientSecret, image, loginRedirect,
+		failCreateConfig(name, login, api, "", clientSecret, loginRedirect,
 				linkRedirect, "Client ID" + strexp);
 		
 		//client secret
-		failCreateConfig(name, login, api, clientID, null, image, loginRedirect,
+		failCreateConfig(name, login, api, clientID, null, loginRedirect,
 				linkRedirect, "Client secret" + strexp);
-		failCreateConfig(name, login, api, clientID, " ", image, loginRedirect,
+		failCreateConfig(name, login, api, clientID, " ", loginRedirect,
 				linkRedirect, "Client secret" + strexp);
-		
-		//image uri
-		failCreateConfig(name, login, api, clientID, clientSecret, null, loginRedirect,
-				linkRedirect, "Image URI" + exp);
 		
 		//login redirect
-		failCreateConfig(name, login, api, clientID, clientSecret, image, null,
+		failCreateConfig(name, login, api, clientID, clientSecret, null,
 				linkRedirect, "Login redirect URL" + exp);
 		failCreateConfig(name, login, api, clientID, clientSecret,
-				image, new URL("http://lr^f.com"), linkRedirect,
+				new URL("http://lr^f.com"), linkRedirect,
 				"Login redirect URL http://lr^f.com for MyProv identity provider is not a valid " +
 				"URI: Illegal character in authority at index 7: http://lr^f.com");
 		
 		//link redirect
-		failCreateConfig(name, login, api, clientID, clientSecret, image, login,
+		failCreateConfig(name, login, api, clientID, clientSecret, login,
 				null, "Link redirect URL" + exp);
 		failCreateConfig(name, login, api, clientID, clientSecret,
-				image, login, new URL("http://linkredir^foobar.com"),
+				login, new URL("http://linkredir^foobar.com"),
 				"Link redirect URL http://linkredir^foobar.com for MyProv identity provider is " +
 				"not a valid URI: Illegal character in authority at index 7: " +
 				"http://linkredir^foobar.com");
@@ -114,12 +106,11 @@ public class IdentityProviderConfigTest {
 			final URL api,
 			final String clientID,
 			final String clientSecret,
-			final URI image,
 			final URL loginRedirect,
 			final URL linkRedirect,
 			final String exception) {
 		try {
-			new IdentityProviderConfig(name, login, api, clientID, clientSecret, image,
+			new IdentityProviderConfig(name, login, api, clientID, clientSecret,
 					loginRedirect, linkRedirect);
 			fail("created bad id provider config");
 		} catch (IdentityProviderConfigurationException e) {

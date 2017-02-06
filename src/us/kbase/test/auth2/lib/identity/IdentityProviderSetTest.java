@@ -5,8 +5,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -38,7 +36,6 @@ public class IdentityProviderSetTest {
 					new URL("http://api.com"),
 					"foo",
 					"bar",
-					new URI("https://image.com"),
 					new URL("http://loginre.com"),
 					new URL("http://linkre.com"));
 			CFG2 = new IdentityProviderConfig(
@@ -47,11 +44,9 @@ public class IdentityProviderSetTest {
 					new URL("http://api2.com"),
 					"foo2",
 					"bar2",
-					new URI("https://image2.com"),
 					new URL("http://loginre2.com"),
 					new URL("http://linkre2.com"));
-		} catch (IdentityProviderConfigurationException | URISyntaxException |
-				MalformedURLException e) {
+		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix your tests scrub", e);
 		}
 	}
@@ -95,11 +90,6 @@ public class IdentityProviderSetTest {
 		}
 
 		@Override
-		public URI getImageURI() {
-			return cfg.getImageURI();
-		}
-
-		@Override
 		public URL getLoginURL(final String state, final boolean link) {
 			return cfg.getLoginURL();
 		}
@@ -129,11 +119,6 @@ public class IdentityProviderSetTest {
 		}
 
 		@Override
-		public URI getImageURI() {
-			return cfg.getImageURI();
-		}
-
-		@Override
 		public URL getLoginURL(final String state, final boolean link) {
 			return cfg.getLoginURL();
 		}
@@ -156,7 +141,6 @@ public class IdentityProviderSetTest {
 		assertThat("incorrect locked state", ids.isLocked(), is(false));
 		final IdentityProvider idp = ids.getProvider("Test");
 		assertThat("incorrect provider name", idp.getProviderName(), is("Test"));
-		assertThat("incorrect image URI", idp.getImageURI(), is(new URI("https://image.com")));
 		assertThat("incorrect login URL", idp.getLoginURL("foo", false),
 				is(new URL("http://login.com")));
 		assertThat("incorrect number of identities", idp.getIdentities("foo", false).size(),
@@ -195,7 +179,6 @@ public class IdentityProviderSetTest {
 		assertThat("incorrect locked state", ids.isLocked(), is(false));
 		final IdentityProvider idp = ids.getProvider("Test");
 		assertThat("incorrect provider name", idp.getProviderName(), is("Test"));
-		assertThat("incorrect image URI", idp.getImageURI(), is(new URI("https://image.com")));
 		assertThat("incorrect login URL", idp.getLoginURL("foo", false),
 				is(new URL("http://login.com")));
 		assertThat("incorrect number of identities", idp.getIdentities("foo", false).size(),
@@ -203,7 +186,6 @@ public class IdentityProviderSetTest {
 		
 		final IdentityProvider idp2 = ids.getProvider("Test2");
 		assertThat("incorrect provider name", idp2.getProviderName(), is("Test2"));
-		assertThat("incorrect image URI", idp2.getImageURI(), is(new URI("https://image2.com")));
 		assertThat("incorrect login URL", idp2.getLoginURL("foo", false),
 				is(new URL("http://login2.com")));
 		assertThat("incorrect number of identities", idp2.getIdentities("foo", false).size(),
@@ -220,7 +202,6 @@ public class IdentityProviderSetTest {
 		assertThat("incorrect locked state", ids.isLocked(), is(false));
 		final IdentityProvider idp = ids.getProvider("Test");
 		assertThat("incorrect provider name", idp.getProviderName(), is("Test"));
-		assertThat("incorrect image URI", idp.getImageURI(), is(new URI("https://image.com")));
 		assertThat("incorrect login URL", idp.getLoginURL("foo", false),
 				is(new URL("http://login.com")));
 		assertThat("incorrect number of identities", idp.getIdentities("foo", false).size(),
@@ -233,14 +214,12 @@ public class IdentityProviderSetTest {
 				new URL("http://api2.com"),
 				"foo2",
 				"bar2",
-				new URI("https://image2.com"),
 				new URL("http://loginre2.com"),
 				new URL("http://linkre2.com")));
 		assertThat("incorrect provider list", ids.getProviders(), is(Arrays.asList("Test")));
 		assertThat("incorrect locked state", ids.isLocked(), is(false));
 		final IdentityProvider idp2 = ids.getProvider("Test");
 		assertThat("incorrect provider name", idp2.getProviderName(), is("Test"));
-		assertThat("incorrect image URI", idp2.getImageURI(), is(new URI("https://image2.com")));
 		assertThat("incorrect login URL", idp2.getLoginURL("foo", false),
 				is(new URL("http://login2.com")));
 		assertThat("incorrect number of identities", idp2.getIdentities("foo", false).size(),

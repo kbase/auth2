@@ -5,7 +5,6 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.net.MalformedURLException;
-import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -85,11 +84,9 @@ public class GlobusIdentityProviderTest {
 					new URL("https://setapiurl.com"),
 					"foo",
 					"bar",
-					new URI("http://image.com"),
 					new URL("https://loginredir.com"),
 					new URL("https://linkredir.com"));
-		} catch (IdentityProviderConfigurationException | URISyntaxException |
-				MalformedURLException e) {
+		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
 	}
@@ -101,7 +98,6 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
-		assertThat("incorrect image uri", gip.getImageURI(), is(new URI("http://image.com")));
 		assertThat("incorrect login url", gip.getLoginURL("foo2", false),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
@@ -120,7 +116,6 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = new GlobusIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
-		assertThat("incorrect image uri", gip.getImageURI(), is(new URI("http://image.com")));
 		assertThat("incorrect login url", gip.getLoginURL("foo2", false),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
@@ -143,7 +138,6 @@ public class GlobusIdentityProviderTest {
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
-				CFG.getImageURI(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
 				new IllegalArgumentException("Bad config name: foo"));
@@ -473,7 +467,6 @@ public class GlobusIdentityProviderTest {
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
 				"bar",
-				new URI("http://image.com"),
 				new URL("https://loginredir.com"),
 				new URL("https://linkredir.com"));
 	}
@@ -608,7 +601,6 @@ public class GlobusIdentityProviderTest {
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,
 				"bar2",
-				new URI("http://image2.com"),
 				new URL("https://loginredir2.com"),
 				new URL("https://linkredir2.com"));
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);

@@ -24,7 +24,7 @@ public class LinkIdentities {
 			ids = new HashSet<>();
 		}
 		this.user = user;
-		this.idents = Collections.unmodifiableSet(ids);
+		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
 	}
 
 	public AuthUser getUser() {
