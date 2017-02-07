@@ -14,8 +14,6 @@ public class NewLocalUser extends LocalUser {
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
-	 * @param created the date the user account was created.
-	 * @param lastLogin the date of the user's last login.
 	 * @param passwordHash a salted, hashed password for the user.
 	 * @param salt the salt for the hashed password. 
 	 * @param forceReset whether the user is required to reset their password on the next login.
@@ -24,12 +22,10 @@ public class NewLocalUser extends LocalUser {
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
-			final Date created,
-			final Date lastLogin,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset) {
-		super(userName, email, displayName, Collections.emptySet(), created, lastLogin,
+		super(userName, email, displayName, Collections.emptySet(), new Date(), null,
 				new UserDisabledState(), passwordHash, salt, forceReset, null);
 	}
 

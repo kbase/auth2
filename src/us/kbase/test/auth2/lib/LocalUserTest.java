@@ -156,10 +156,8 @@ public class LocalUserTest {
 	public void newLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz8".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		final Date d = new Date();
-		final Date ll = new Date();
 		final NewLocalUser lu = new NewLocalUser(new UserName("foo"), new EmailAddress("e@g.com"),
-				new DisplayName("bar"), d, ll, pwd, salt, false);
+				new DisplayName("bar"), pwd, salt, false);
 		
 		assertThat("incorrect password hash",
 				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz8"));
@@ -171,7 +169,7 @@ public class LocalUserTest {
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
 				is((UserName) null));
-		assertThat("incorrect created date", lu.getCreated(), is(d));
+		TestCommon.assertDateNoOlderThan(lu.getCreated(), 500);
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", lu.getDisabledState().getByAdmin(),
 				is((UserName) null));
@@ -185,7 +183,7 @@ public class LocalUserTest {
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect last login", lu.getLastLogin(), is(ll));
+		assertThat("incorrect last login", lu.getLastLogin(), is((Date) null));
 		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", lu.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", lu.getUserName(), is(new UserName("foo")));

@@ -245,7 +245,7 @@ public class Authentication {
 		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
+		final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
