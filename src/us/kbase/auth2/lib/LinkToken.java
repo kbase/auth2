@@ -14,14 +14,12 @@ import us.kbase.auth2.lib.token.TemporaryToken;
  */
 public class LinkToken {
 	
-	private final boolean linked;
 	private final TemporaryToken token;
 	
 	/** Create a LinkToken for the case where the linking process is concluded and no further
 	 * actions are required.
 	 */
 	public LinkToken() {
-		this.linked = true;
 		this.token = null;
 	}
 	
@@ -34,19 +32,18 @@ public class LinkToken {
 		if (token == null) {
 			throw new NullPointerException("token");
 		}
-		this.linked = false;
 		this.token = token;
 	}
 
 	/** True if the linking process is completed and no further actions are necessary.
-	 * @return
+	 * @return true if the linking process is complete.
 	 */
 	public boolean isLinked() {
-		return linked;
+		return token == null;
 	}
 
 	/** Get a temporary token to use to complete the linking process.
-	 * @return a token.
+	 * @return a temporary token, or null if the linking process is complete.
 	 */
 	public TemporaryToken getTemporaryToken() {
 		return token;

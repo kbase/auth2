@@ -18,12 +18,7 @@ public class LocalLoginResultTest {
 		final LocalLoginResult llr = new LocalLoginResult(new UserName("foo"));
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(true));
 		assertThat("incorrect username", llr.getUserName(), is(new UserName("foo")));
-		try {
-			llr.getToken();
-			fail("expected exception");
-		} catch (IllegalStateException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("no token"));
-		}
+		assertThat("incorrect token", llr.getToken(), is((NewToken) null));
 	}
 
 	@Test
@@ -39,13 +34,10 @@ public class LocalLoginResultTest {
 		assertThat("incorrect token id", llr.getToken().getId(), is(nt.getId()));
 		assertThat("incorrect token", llr.getToken().getToken(), is("foo"));
 		assertThat("incorrect token name", llr.getToken().getTokenName(), is((String) null));
-		assertThat("incorrect username", llr.getToken().getUserName(), is(new UserName("bar")));
-		try {
-			llr.getUserName();
-			fail("expected exception");
-		} catch (IllegalStateException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("no username"));
-		}
+		assertThat("incorrect token username", llr.getToken().getUserName(),
+				is(new UserName("bar")));
+		
+		assertThat("incorrect username",  llr.getUserName(), is((UserName) null));
 	}
 	
 	@Test

@@ -45,24 +45,16 @@ public class LocalLoginResult {
 	}
 
 	/** Get the user's new token.
-	 * @return the token.
-	 * @throws IllegalStateException if a password reset is required.
+	 * @return the token, or null if a password reset is required.
 	 */
 	public NewToken getToken() {
-		if (token == null) {
-			throw new IllegalStateException("no token");
-		}
 		return token;
 	}
 	
 	/** Get the name of the user requiring a password reset.
-	 * @return the username.
-	 * @throws IllegalStateException if a password reset is not required.
+	 * @return the username, or null if a password reset is not required.
 	 */
 	public UserName getUserName() {
-		if (userName == null) {
-			throw new IllegalStateException("no username");
-		}
 		return userName;
 	}
 }
