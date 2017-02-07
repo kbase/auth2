@@ -191,19 +191,24 @@
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
-      <test name="us.kbase.test.auth2.lib.RoleTest"/>
-      <test name="us.kbase.test.auth2.lib.UserNameTest"/>
-      <test name="us.kbase.test.auth2.lib.UserTest"/>
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
       <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
+      <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
+      <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
+      <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
+      <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
+      <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
+      <test name="us.kbase.test.auth2.lib.UserTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />

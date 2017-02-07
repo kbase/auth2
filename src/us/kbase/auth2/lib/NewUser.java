@@ -1,7 +1,9 @@
 package us.kbase.auth2.lib;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
@@ -15,11 +17,14 @@ public class NewUser extends AuthUser {
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
-			final Set<RemoteIdentityWithLocalID> identities,
+			final RemoteIdentityWithLocalID remoteIdentity,
 			final Date created,
 			final Date lastLogin) {
-		super(userName, email, displayName, identities, Collections.emptySet(), created,
-				lastLogin, new UserDisabledState());
+		super(userName, email, displayName, new HashSet<>(Arrays.asList(remoteIdentity)),
+				Collections.emptySet(), created, lastLogin, new UserDisabledState());
+		if (remoteIdentity == null) {
+			throw new NullPointerException("remoteIdentity");
+		}
 	}
 
 	@Override

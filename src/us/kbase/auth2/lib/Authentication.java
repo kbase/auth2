@@ -880,11 +880,16 @@ public class Authentication {
 		for (final RemoteIdentityWithLocalID ri: ids) {
 			final AuthUser u = storage.getUser(ri);
 			if (u == null) {
-				builder.addIdentity(ri);
+				builder.withIdentity(ri);
 			} else {
-				//don't use the updated RemoteIdentity from the AuthUser here since the ri
-				// associated with the temporary token has not been updated
-				builder.addUser(u, ri);
+				/* there's a possibility of a race condition here:
+				 * 1) temporary token gets created with a RI with a UUID
+				 * 2) RI gets linked to a user and gets a new UUID
+				 * 3) At this point in the code, the UUIDs will differ for the ri variable
+				 * and the equivalent RI in the user
+				 * So just use ri as is so the temporary token lookup works later 
+				 */
+				builder.withUser(u, ri);
 			}
 		}
 		return builder.build();
@@ -924,8 +929,7 @@ public class Authentication {
 		}
 		final RemoteIdentityWithLocalID match = getIdentity(token, identityID);
 		final Date now = new Date();
-		storage.createUser(new NewUser(userName, email, displayName,
-				new HashSet<>(Arrays.asList(match)), now, now));
+		storage.createUser(new NewUser(userName, email, displayName, match, now, now));
 		return login(userName);
 	}
 
@@ -956,17 +960,13 @@ public class Authentication {
 			final UUID identityID)
 			throws AuthStorageException, AuthenticationException {
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		RemoteIdentityWithLocalID match = null;
 		for (final RemoteIdentityWithLocalID ri: ids) {
 			if (ri.getID().equals(identityID)) {
-				match = ri;
+				return ri;
 			}
 		}
-		if (match == null) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Not authorized to manage account linked to provided identity");
-		}
-		return match;
+		throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+				"Not authorized to manage account linked to provided identity");
 	}
 
 
@@ -1219,8 +1219,6 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(un, email, dn,
-				new HashSet<>(Arrays.asList(ri.withID())),
-				new Date(), null));
+		storage.createUser(new NewUser(un, email, dn, ri.withID(), new Date(), null));
 	}
 }
