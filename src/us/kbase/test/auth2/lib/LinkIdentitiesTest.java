@@ -100,6 +100,8 @@ public class LinkIdentitiesTest {
 		failConstruct(AUTH_USER, null, new IllegalArgumentException("No remote IDs provided"));
 		failConstruct(AUTH_USER, new HashSet<>(),
 				new IllegalArgumentException("No remote IDs provided"));
+		failConstruct(AUTH_USER, TestCommon.set(REMOTE1, null),
+				new NullPointerException("null item in ids"));
 	}
 	
 	private void failConstruct(

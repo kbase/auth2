@@ -29,6 +29,7 @@ public class LinkIdentities {
 		if (ids == null || ids.isEmpty()) {
 			throw new IllegalArgumentException("No remote IDs provided");
 		}
+		Utils.noNulls(ids, "null item in ids");
 		this.user = user;
 		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
 	}
