@@ -2,7 +2,7 @@ package us.kbase.auth2.lib;
 
 import us.kbase.auth2.lib.token.NewToken;
 
-/** Represents the result of a successful local login, which can result of one of two states:
+/** Represents the result of a successful local login, which can result of one of two states.
  * 
  * 1) The login is complete and a new token returned.
  * 2) A password reset is required.

@@ -8,9 +8,17 @@ import java.util.Set;
 
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
+/** Represents the state of a user's login request. This state includes:
+ * 
+ * 1) The name of the 3rd party identity provider that provided the user's identities
+ * 2) The set of user accounts associated with those identities
+ * 3) The set of 3rd party identities that are not associated with a user account
+ * 4) Whether non-administrator logins are allowed.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class LoginState {
 
-	//TODO JAVADOC
 	//TODO TEST
 	
 	private final Map<UserName, Set<RemoteIdentityWithLocalID>> userIDs = new HashMap<>();
@@ -24,27 +32,48 @@ public class LoginState {
 		this.nonAdminLoginAllowed = nonAdminLoginAllowed;
 	}
 	
+	/** Get the name of the identity provider that provided the identities for the user.
+	 * @return the identity provider name.
+	 */
 	public String getProvider() {
 		return provider;
 	}
 	
+	/** Returns whether login is allowed for non-administrators.
+	 * @return whether non-administrator login is allowed.
+	 */
 	public boolean isNonAdminLoginAllowed() {
 		return nonAdminLoginAllowed;
 	}
 	
+	/** Returns whether a user is an admin.
+	 * @param name the name of the user to check.
+	 * @return true if the user is an admin, false otherwise.
+	 */
 	public boolean isAdmin(final UserName name) {
 		checkUser(name);
 		return Role.isAdmin(users.get(name).getRoles());
 	}
 	
+	/** Get the set of identities that are not associated with a user account.
+	 * @return the set of identities that are not associated with a user account.
+	 */
 	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return Collections.unmodifiableSet(noUser);
 	}
 	
+	/** Get the names of the user accounts to which the user has login privileges based on the
+	 * identities provided by the identity provider.
+	 * @return the user names.
+	 */
 	public Set<UserName> getUsers() {
 		return Collections.unmodifiableSet(users.keySet());
 	}
 	
+	/** Get the user information for a given user name.
+	 * @param name the user name.
+	 * @return the user information.
+	 */
 	public AuthUser getUser(final UserName name) {
 		checkUser(name);
 		return users.get(name);
@@ -56,16 +85,29 @@ public class LoginState {
 		}
 	}
 	
+	/** Get the remote identities associated with a given user account.
+	 * @param name the user name of the user account.
+	 * @return the set of remote identities.
+	 */
 	public Set<RemoteIdentityWithLocalID> getIdentities(final UserName name) {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
 	
 
+	/** A builder for a LoginState instance.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder {
 		
 		private final LoginState ls;
 
+		/** Create the builder.
+		 * @param provider the name of the identity provider that provided the identities for this
+		 * login attempt.
+		 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
+		 */
 		public Builder(final String provider, final boolean nonAdminLoginAllowed) {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
@@ -73,6 +115,9 @@ public class LoginState {
 			ls = new LoginState(provider, nonAdminLoginAllowed);
 		}
 
+		/** Add a remote identity that is not associated with a user account.
+		 * @param remoteID the remote identity to add.
+		 */
 		public void addIdentity(final RemoteIdentityWithLocalID remoteID) {
 			if (remoteID == null) {
 				throw new NullPointerException("remoteID");
@@ -88,6 +133,10 @@ public class LoginState {
 			}
 		}
 
+		/** Add a user account to which the user has access based on a 3rd party identity.
+		 * @param user the user account.
+		 * @param remoteID the 3rd party identity that grants the user access to the user account.
+		 */
 		public void addUser(final AuthUser user, final RemoteIdentityWithLocalID remoteID) {
 			if (user == null) {
 				throw new NullPointerException("user");
@@ -104,6 +153,9 @@ public class LoginState {
 			ls.userIDs.get(name).add(remoteID);
 		}
 
+		/** Build a new LoginState instance.
+		 * @return the new instance.
+		 */
 		public LoginState build() {
 			return ls;
 		}
