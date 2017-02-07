@@ -29,8 +29,6 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
  */
 public abstract class AuthUser {
 
-	//TODO TEST unit test
-	
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
@@ -61,6 +59,7 @@ public abstract class AuthUser {
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState) {
+		// should probably check that if username == root then roles contains root
 		super();
 		if (userName == null) {
 			throw new NullPointerException("userName");
@@ -82,6 +81,20 @@ public abstract class AuthUser {
 			roles = new HashSet<>();
 		}
 		this.roles = Collections.unmodifiableSet(roles);
+		/* this is a little worrisome as there are two sources of truth for root. Maybe
+		 * automatically add the role for root? Or have a root user subclass?
+		 * This'll do for now
+		 */
+		if (userName.equals(UserName.ROOT)) {
+			if (!(roles.size() == 1 && roles.contains(Role.ROOT))) {
+				throw new IllegalStateException("Root username must only have the ROOT role");
+			}
+			if (!identities.isEmpty()) {
+				throw new IllegalStateException("Root user cannot have identities");
+			}
+		} else if (roles.contains(Role.ROOT)) {
+			throw new IllegalStateException("Non-root username with root role");
+		}
 		this.canGrantRoles = getRoles().stream().flatMap(r -> r.canGrant().stream())
 				.collect(Collectors.toSet());
 		if (created == null) {

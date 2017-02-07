@@ -4,11 +4,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Arrays;
+import static us.kbase.test.auth2.TestCommon.set;
+
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -44,11 +43,6 @@ public class LoginStateTest {
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c5671539"),
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
-	
-	@SafeVarargs
-	private static <T> Set<T> set(T... objects) {
-		return new HashSet<T>(Arrays.asList(objects));
-	}
 	
 	private final static AuthUser AUTH_USER1;
 	private final static AuthUser AUTH_USER2;
