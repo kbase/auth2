@@ -201,6 +201,7 @@
       <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
