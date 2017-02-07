@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import java.util.Collection;
+
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -90,6 +92,18 @@ public class Utils {
 	public static void clear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			bytes[i] = 0;
+		}
+	}
+	
+	/** Throws a null pointer exception if any elements in a collection are null.
+	 * @param col the collection to check.
+	 * @param message the exception message.
+	 */
+	public static <T> void noNulls(final Collection<T> col, final String message) {
+		for (final T item: col) {
+			if (item == null) {
+				throw new NullPointerException(message);
+			}
 		}
 	}
 }

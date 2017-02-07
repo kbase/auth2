@@ -211,6 +211,10 @@ public class AuthUserTest {
 				new IllegalStateException("Root user cannot have identities"));
 		failConstruct(un, email, dn, ids, set(Role.ADMIN, Role.ROOT), created, ds,
 				new IllegalStateException("Non-root username with root role"));
+		failConstruct(un, email, dn, set(REMOTE, null), roles, created, ds,
+				new NullPointerException("null item in identities"));
+		failConstruct(un, email, dn, ids, set(Role.ADMIN, null), created, ds,
+				new NullPointerException("null item in roles"));
 	}
 	
 	private void failConstruct(

@@ -76,10 +76,12 @@ public abstract class AuthUser {
 		if (identities == null) {
 			identities = new HashSet<>();
 		}
+		Utils.noNulls(identities, "null item in identities");
 		this.identities = Collections.unmodifiableSet(identities);
 		if (roles == null) {
 			roles = new HashSet<>();
 		}
+		Utils.noNulls(roles, "null item in roles");
 		this.roles = Collections.unmodifiableSet(roles);
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
