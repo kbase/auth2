@@ -75,6 +75,12 @@ import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 
+/** A MongoDB based implementation of the authentication storage system.
+ * 
+ * @see AuthStorage
+ * @author gaprice@lbl.gov
+ *
+ */
 public class MongoStorage implements AuthStorage {
 
 	/* Don't use mongo built in object mapping to create the returned objects
@@ -84,7 +90,6 @@ public class MongoStorage implements AuthStorage {
 	 */
 	
 	//TODO TEST unit tests
-	//TODO JAVADOC
 	
 	private static final int SCHEMA_VERSION = 1;
 	
@@ -156,8 +161,8 @@ public class MongoStorage implements AuthStorage {
 		
 		//temporary token indexes
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
-		temptoken.put(Arrays.asList(Fields.TEMP_TOKEN_TOKEN), IDX_UNIQ);
-		temptoken.put(Arrays.asList(Fields.TEMP_TOKEN_EXPIRY),
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
 				// this causes the tokens to expire at their expiration date
 				//TODO TEST that tokens expire appropriately
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
@@ -166,7 +171,7 @@ public class MongoStorage implements AuthStorage {
 		//config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
 		//ensure only one config object
-		cfg.put(Arrays.asList(Fields.DB_CONFIG_KEY), IDX_UNIQ);
+		cfg.put(Arrays.asList(Fields.DB_SCHEMA_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG, cfg);
 		
 		// application config indexes
@@ -188,6 +193,10 @@ public class MongoStorage implements AuthStorage {
 	
 	private MongoDatabase db;
 	
+	/** Create a new MongoDB authentication storage system.
+	 * @param db the MongoDB database to use for storage.
+	 * @throws StorageInitException if the storage system could not be initialized.
+	 */
 	public MongoStorage(final MongoDatabase db) throws StorageInitException {
 		if (db == null) {
 			throw new NullPointerException("db");
@@ -201,45 +210,39 @@ public class MongoStorage implements AuthStorage {
 	
 	private void checkConfig() throws StorageInitException  {
 		final MongoCollection<Document> col = db.getCollection(COL_CONFIG);
-		final Document cfg = new Document(
-				Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE);
-		cfg.put(Fields.DB_CONFIG_UPDATE, false);
-		cfg.put(Fields.DB_CONFIG_SCHEMA_VERSION, SCHEMA_VERSION);
+		final Document cfg = new Document(Fields.DB_SCHEMA_KEY, Fields.DB_SCHEMA_VALUE);
+		cfg.put(Fields.DB_SCHEMA_UPDATE, false);
+		cfg.put(Fields.DB_SCHEMA_VERSION, SCHEMA_VERSION);
 		try {
 			col.insertOne(cfg);
 		} catch (MongoWriteException dk) {
 			if (!isDuplicateKeyException(dk)) {
-				throw new StorageInitException(
-						"There was a problem communicating with the " +
+				throw new StorageInitException("There was a problem communicating with the " +
 						"database: " + dk.getMessage(), dk);
 			}
-			//ok, the version doc is already there, this isn't the first
-			//startup
+			//ok, the version doc is already there, this isn't the first startup
 			if (col.count() != 1) {
 				throw new StorageInitException(
 						"Multiple config objects found in the database. " +
 						"This should not happen, something is very wrong.");
 			}
 			final FindIterable<Document> cur = db.getCollection(COL_CONFIG)
-					.find(Filters.eq(Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE));
+					.find(Filters.eq(Fields.DB_SCHEMA_KEY, Fields.DB_SCHEMA_VALUE));
 			final Document doc = cur.first();
-			if ((Integer) doc.get(Fields.DB_CONFIG_SCHEMA_VERSION) !=
-					SCHEMA_VERSION) {
+			if ((Integer) doc.get(Fields.DB_SCHEMA_VERSION) != SCHEMA_VERSION) {
 				throw new StorageInitException(String.format(
-						"Incompatible database schema. Server is v%s, " +
-						"DB is v%s", SCHEMA_VERSION,
-						doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
+						"Incompatible database schema. Server is v%s, DB is v%s",
+						SCHEMA_VERSION, doc.get(Fields.DB_SCHEMA_VERSION)));
 			}
-			if ((Boolean) doc.get(Fields.DB_CONFIG_UPDATE)) {
+			if ((Boolean) doc.get(Fields.DB_SCHEMA_UPDATE)) {
 				throw new StorageInitException(String.format(
 						"The database is in the middle of an update from " +
 								"v%s of the schema. Aborting startup.", 
-								doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
+								doc.get(Fields.DB_SCHEMA_VERSION)));
 			}
 		} catch (MongoException me) {
 			throw new StorageInitException(
-					"There was a problem communicating with the database: " +
-					me.getMessage(), me);
+					"There was a problem communicating with the database: " + me.getMessage(), me);
 		}
 	}
 
@@ -1059,11 +1062,11 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException {
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
-				Fields.TEMP_TOKEN_ID, t.getId().toString())
-				.append(Fields.TEMP_TOKEN_TOKEN, t.getTokenHash())
-				.append(Fields.TEMP_TOKEN_EXPIRY, t.getExpirationDate())
-				.append(Fields.TEMP_TOKEN_CREATION, t.getCreationDate())
-				.append(Fields.TEMP_TOKEN_IDENTITIES, ids);
+				Fields.TOKEN_TEMP_ID, t.getId().toString())
+				.append(Fields.TOKEN_TEMP_TOKEN, t.getTokenHash())
+				.append(Fields.TOKEN_TEMP_EXPIRY, t.getExpirationDate())
+				.append(Fields.TOKEN_TEMP_CREATION, t.getCreationDate())
+				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
 			//TODO CODE catch duplicate key exception and throw TokenExistsException (or something)
@@ -1087,14 +1090,14 @@ public class MongoStorage implements AuthStorage {
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
 		final Document d = findOne(COL_TEMP_TOKEN,
-				new Document(Fields.TEMP_TOKEN_TOKEN, token.getTokenHash()));
+				new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
 		if (d == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
-		final List<Document> ids = (List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
+		final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
 		if (ids == null) {
-			final String tid = d.getString(Fields.TEMP_TOKEN_ID);
+			final String tid = d.getString(Fields.TOKEN_TEMP_ID);
 			throw new AuthStorageException(String.format(
 					"Temporary token %s has no associated IDs field", tid));
 		}

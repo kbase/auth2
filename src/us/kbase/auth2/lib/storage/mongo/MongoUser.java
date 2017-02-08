@@ -15,9 +15,15 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
+/** A MongoDB specific implementation of AuthUser.
+ * 
+ * @see AuthUser
+ * 
+ * @author gaprice@lbl.gov
+ *
+ */
 public class MongoUser extends AuthUser {
 
-	//TODO JAVADOC
 	//TODO TESTS
 	
 	private final MongoStorage storage;

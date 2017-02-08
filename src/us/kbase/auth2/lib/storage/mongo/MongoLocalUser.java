@@ -14,9 +14,15 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
+/** A MongoDB specific implementation of a LocalUser.
+ * 
+ * @see LocalUser
+ * 
+ * @author gaprice@lbl.gov
+ *
+ */
 public class MongoLocalUser extends LocalUser {
 
-	//TODO JAVADOC
 	//TODO TESTS
 	
 	private final MongoStorage storage;
