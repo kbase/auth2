@@ -12,6 +12,7 @@ accounts and tests if any, allow setting auth service url
 * Perl auth & server stubs - Keith
 * Handle service & manager - Keith
 * Narrative (Login UI and Lua) - Bill R. (external to auth team)
+  * Token cleanup - remove backup token, make simple token format
 * kb_sdk
   * Tests support token vs uid/pwd & setting auth url
   * Recompile & test all SDK modules
