@@ -212,6 +212,7 @@
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
+      <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
