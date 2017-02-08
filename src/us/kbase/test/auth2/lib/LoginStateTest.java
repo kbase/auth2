@@ -4,11 +4,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Arrays;
+import static us.kbase.test.auth2.TestCommon.set;
+
 import java.util.Collections;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -45,17 +44,12 @@ public class LoginStateTest {
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
 	
-	@SafeVarargs
-	private static <T> Set<T> set(T... objects) {
-		return new HashSet<T>(Arrays.asList(objects));
-	}
-	
 	private final static AuthUser AUTH_USER1;
 	private final static AuthUser AUTH_USER2;
 	static {
 		try {
 			AUTH_USER1 = new NewUser(new UserName("foo4"), new EmailAddress("f@g.com"),
-					new DisplayName("bar4"), REMOTE1, NOW, null);
+					new DisplayName("bar4"), REMOTE1, null);
 			AUTH_USER2 = new AuthUserSuppliedCRoles(new UserName("foo5"),
 					new EmailAddress("f@g5.com"), new DisplayName("bar5"), set(REMOTE2, REMOTE3),
 					set(Role.ADMIN), Collections.emptySet(), NOW, NOW, new UserDisabledState());

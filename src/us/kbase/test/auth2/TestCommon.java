@@ -5,6 +5,10 @@ import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.Arrays;
+import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 
@@ -67,6 +71,16 @@ public class TestCommon {
 			}
 		}
 		throw new IllegalStateException("Could not find a free TCP/IP port");
+	}
+	
+	@SafeVarargs
+	public static <T> Set<T> set(T... objects) {
+		return new HashSet<T>(Arrays.asList(objects));
+	}
+	
+	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
+		assertThat("date older than expected", (d.getTime() + milliseconds) < new Date().getTime(),
+				is(false));
 	}
 	
 }

@@ -4,6 +4,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.HashSet;
+
 import org.junit.Test;
 
 import us.kbase.auth2.lib.Utils;
@@ -105,6 +109,26 @@ public class UtilsTest {
 			fail("check string failed");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void noNullsCollection() throws Exception {
+		Utils.noNulls(Arrays.asList("foo", "bar"), "whee"); // should work
+	}
+	
+	@Test
+	public void noNullsCollectionFail() throws Exception {
+		failNoNullsCollection(new HashSet<>(Arrays.asList("foo", null, "bar")), "whee");
+		failNoNullsCollection(Arrays.asList("foo", null, "bar"), "whee1");
+	}
+	
+	private void failNoNullsCollection(final Collection<?> col, final String message) {
+		try {
+			Utils.noNulls(col, message);
+			fail("expected exception");
+		} catch (NullPointerException npe) {
+			assertThat("incorrect exception message", npe.getMessage(), is(message));
 		}
 	}
 	

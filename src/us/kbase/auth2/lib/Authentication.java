@@ -245,7 +245,7 @@ public class Authentication {
 		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
 		final byte[] salt = pwdcrypt.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, new Date(), null,
+		final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
@@ -928,8 +928,7 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
 		final RemoteIdentityWithLocalID match = getIdentity(token, identityID);
-		final Date now = new Date();
-		storage.createUser(new NewUser(userName, email, displayName, match, now, now));
+		storage.createUser(new NewUser(userName, email, displayName, match, new Date()));
 		return login(userName);
 	}
 
@@ -1219,6 +1218,6 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(un, email, dn, ri.withID(), new Date(), null));
+		storage.createUser(new NewUser(un, email, dn, ri.withID(), null));
 	}
 }

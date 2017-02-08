@@ -35,13 +35,11 @@ public class LinkIdentitiesTest {
 			new RemoteIdentityID("foo1", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 			
-	private final static Date NOW = new Date();
-
 	private final static AuthUser AUTH_USER;
 	static {
 		try {
 			AUTH_USER = new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-					new DisplayName("bar"), REMOTE1, NOW, null);
+					new DisplayName("bar"), REMOTE1, null);
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
@@ -65,7 +63,8 @@ public class LinkIdentitiesTest {
 						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
 						new RemoteIdentityID("foo", "bar"),
 						new RemoteIdentityDetails("user", "full", "email"))));
-		assertThat("incorrect creation date", li.getUser().getCreated(), is(NOW));
+		assertThat("incorrect creation date", li.getUser().getCreated(),
+				is(AUTH_USER.getCreated()));
 		assertThat("incorrect login date", li.getUser().getLastLogin(), is((Date) null));
 		
 		//check the identity is correct
@@ -100,6 +99,8 @@ public class LinkIdentitiesTest {
 		failConstruct(AUTH_USER, null, new IllegalArgumentException("No remote IDs provided"));
 		failConstruct(AUTH_USER, new HashSet<>(),
 				new IllegalArgumentException("No remote IDs provided"));
+		failConstruct(AUTH_USER, TestCommon.set(REMOTE1, null),
+				new NullPointerException("null item in ids"));
 	}
 	
 	private void failConstruct(

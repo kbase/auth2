@@ -188,6 +188,7 @@
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
@@ -200,16 +201,18 @@
       <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
+      <test name="us.kbase.test.auth2.lib.NewUserTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
-      <test name="us.kbase.test.auth2.lib.UserTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
+      <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
