@@ -1,0 +1,15 @@
+# To run tests, copy this file to test.cfg and set the values below appropriately.
+
+[auth2test]
+
+# path to the mongodb executable to use for the tests.
+test.mongo.exe=/path/to/mongodbexecutable
+
+# true to use wired tiger, anything else for false.
+test.mongo.wired_tiger=false
+
+# path to a temporary directory to use for tests.
+test.temp.dir=/path/to/temp/dir/make/sure/this/is/safe
+
+# true to keep the temporary directory contents after running tests. 
+test.temp.dir.keep=false
