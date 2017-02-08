@@ -204,6 +204,7 @@
       <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
+      <test name="us.kbase.test.auth2.lib.NewUserTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>

@@ -23,8 +23,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
  */
 public class NewUser extends AuthUser {
 	
-	//TODO TESTS
-	
 	/** Create a new user.
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.
@@ -40,13 +38,17 @@ public class NewUser extends AuthUser {
 			final DisplayName displayName,
 			final RemoteIdentityWithLocalID remoteIdentity,
 			final Date lastLogin) {
-		super(userName, email, displayName, new HashSet<>(Arrays.asList(remoteIdentity)),
-				Collections.emptySet(), new Date(), lastLogin, new UserDisabledState());
-		if (remoteIdentity == null) {
-			throw new NullPointerException("remoteIdentity");
-		}
+		super(userName, email, displayName, getIdentity(remoteIdentity), Collections.emptySet(),
+				new Date(), lastLogin, new UserDisabledState());
 	}
 
+	private static Set<RemoteIdentityWithLocalID> getIdentity(final RemoteIdentityWithLocalID id) {
+		if (id == null) {
+			throw new NullPointerException("remoteIdentity");
+		}
+		return new HashSet<>(Arrays.asList(id));
+	}
+	
 	@Override
 	public Set<String> getCustomRoles() {
 		return Collections.emptySet();
