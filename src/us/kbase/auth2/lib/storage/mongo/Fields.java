@@ -71,8 +71,7 @@ public class Fields {
 	public static final String CONFIG_APP_ALLOW_LOGIN = "allowlogin";
 	public static final String CONFIG_PROVIDER = "prov";
 	public static final String CONFIG_PROVIDER_ENABLED = "enabled";
-	public static final String CONFIG_PROVIDER_FORCE_LINK_CHOICE =
-			"linkchoice";
+	public static final String CONFIG_PROVIDER_FORCE_LINK_CHOICE = "linkchoice";
 	public static final String CONFIG_APP_TOKEN_LIFE_CACHE = "tokenlifecache";
 	public static final String CONFIG_APP_TOKEN_LIFE_LOGIN = "tokenlifelogin";
 	public static final String CONFIG_APP_TOKEN_LIFE_DEV = "tokenlifedev";

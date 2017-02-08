@@ -177,6 +177,7 @@
              use="true"
              version="true">
       <link href="http://docs.oracle.com/javase/8/docs/api/"/>
+      <link href="http://api.mongodb.com/java/3.3/"/>
     </javadoc>
   </target>
 	
