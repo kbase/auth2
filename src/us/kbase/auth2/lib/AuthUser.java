@@ -47,7 +47,8 @@ public abstract class AuthUser {
 	 * users.
 	 * @param roles any roles the user possesses.
 	 * @param created the date the user account was created.
-	 * @param lastLogin the date of the user's last login.
+	 * @param lastLogin the date of the user's last login. If this time is before the created
+	 * date it will be silently modified to match the creation date.
 	 * @param disabledState whether the user account is disabled.
 	 */
 	public AuthUser(
@@ -103,7 +104,8 @@ public abstract class AuthUser {
 			throw new NullPointerException("created");
 		}
 		this.created = created.getTime(); // will throw npe
-		this.lastLogin = lastLogin == null ? null : lastLogin.getTime();
+		this.lastLogin = lastLogin == null ? null :
+			(lastLogin.before(created) ? created.getTime() : lastLogin.getTime());
 		if (disabledState == null) {
 			throw new NullPointerException("disabledState");
 		}

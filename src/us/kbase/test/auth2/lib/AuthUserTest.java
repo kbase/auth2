@@ -183,6 +183,17 @@ public class AuthUserTest {
 	}
 	
 	@Test
+	public void lastLogin() throws Exception {
+		final Date ll = new Date();
+		Thread.sleep(2);
+		final Date c = new Date();
+		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("foo"),
+				new EmailAddress("f@g.com"), new DisplayName("bar"), null,
+				null, null, c, ll, new UserDisabledState());
+		assertThat("last login not updated correctly", u.getLastLogin(), is(c));
+	}
+	
+	@Test
 	public void constructFail() throws Exception {
 		final UserName un = new UserName("foo");
 		final EmailAddress email = new EmailAddress("f@g.com");
