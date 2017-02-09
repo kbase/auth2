@@ -7,14 +7,9 @@ import static org.junit.Assert.fail;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
-import com.mongodb.MongoClient;
-import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
@@ -23,41 +18,9 @@ import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
-import us.kbase.auth2.lib.storage.mongo.MongoStorage;
-import us.kbase.common.test.controllers.mongo.MongoController;
-import us.kbase.test.auth2.TestCommon;
 
-public class MongoStorageTest {
+public class MongoStorageConfigTest extends MongoStorageTester {
 
-	private static MongoController mongo;
-	private static MongoClient mc;
-	private static MongoDatabase db;
-	private static MongoStorage storage;
-	
-	@BeforeClass
-	public static void beforeClass() throws Exception {
-		TestCommon.stfuLoggers();
-		mongo = new MongoController(TestCommon.getMongoExe().toString(),
-				TestCommon.getTempDir(),
-				TestCommon.useWiredTigerEngine());
-		mc = new MongoClient("localhost:" + mongo.getServerPort());
-		db = mc.getDatabase("test_mongostorage");
-		storage = new MongoStorage(db);
-	}
-	
-	@AfterClass
-	public static void tearDownClass() throws Exception {
-		mc.close();
-		if (mongo != null) {
-			mongo.destroy(TestCommon.isDeleteTempFiles());
-		}
-	}
-	
-	@Before
-	public void clearDB() throws Exception {
-		TestCommon.destroyDB(db);
-	}
-	
 	private class TestConfig implements ExternalConfig {
 		
 		private final String aThing;
