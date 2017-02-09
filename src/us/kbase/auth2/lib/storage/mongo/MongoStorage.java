@@ -1359,18 +1359,27 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 	
-	private Map<String, Map<String, Document>> getProviderConfig() {
+	private Map<String, ProviderConfig> getProviderConfig() {
 		final FindIterable<Document> proviter = db.getCollection(COL_CONFIG_PROVIDERS).find();
-		final Map<String, Map<String, Document>> ret = new HashMap<>();
+		final Map<String, Map<String, Document>> provdocs = new HashMap<>();
 		for (final Document d: proviter) {
 			final String p = d.getString(Fields.CONFIG_PROVIDER);
 			final String key = d.getString(Fields.CONFIG_KEY);
-			if (!ret.containsKey(p)) {
-				ret.put(p, new HashMap<>());
+			if (!provdocs.containsKey(p)) {
+				provdocs.put(p, new HashMap<>());
 			}
-			ret.get(p).put(key, d);
+			provdocs.get(p).put(key, d);
 		}
-		return ret;
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		for (final Entry<String, Map<String, Document>> d: provdocs.entrySet()) {
+			final ProviderConfig pc = new ProviderConfig(
+					d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
+							.getBoolean(Fields.CONFIG_VALUE),
+					d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
+							.getBoolean(Fields.CONFIG_VALUE));
+			provs.put(d.getKey(), pc);
+		}
+		return provs;
 	}
 			
 	@Override
@@ -1383,20 +1392,15 @@ public class MongoStorage implements AuthStorage {
 			for (final Document d: extiter) {
 				ext.put(d.getString(Fields.CONFIG_KEY), d.getString(Fields.CONFIG_VALUE));
 			}
-			final Map<String, Map<String, Document>> provcfg = getProviderConfig();
-			//TODO CODE add the below to getProviderConfig()
-			final Map<String, ProviderConfig> provs = new HashMap<>();
-			for (final Entry<String, Map<String, Document>> d: provcfg.entrySet()) {
-				final ProviderConfig pc = new ProviderConfig(
-						d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
-								.getBoolean(Fields.CONFIG_VALUE),
-						d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
-								.getBoolean(Fields.CONFIG_VALUE));
-				provs.put(d.getKey(), pc);
-			}
+			final Map<String, ProviderConfig> provs = getProviderConfig();
 			final Map<String, Document> appcfg = getAppConfig();
-			final Boolean allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
-					.getBoolean(Fields.CONFIG_VALUE);
+			final Boolean allowLogin;
+			if (appcfg.containsKey(Fields.CONFIG_APP_ALLOW_LOGIN)) {
+				allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
+						.getBoolean(Fields.CONFIG_VALUE);
+			} else {
+				allowLogin = null;
+			}
 			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
 			for (final Entry<TokenLifetimeType, String> e: TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
 				if (appcfg.get(e.getValue()) != null) {

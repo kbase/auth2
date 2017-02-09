@@ -85,6 +85,16 @@ public class MongoStorageTest {
 	}
 	
 	@Test
+	public void getEmptyConfig() throws Exception {
+		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
+		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is((Boolean) null));
+		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS().isEmpty(),
+				is(true));
+		assertThat("incorrect tprovider config", res.getCfg().getProviders().isEmpty(), is(true));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is((String) null));
+	}
+	
+	@Test
 	public void updateConfigAndGet() throws Exception {
 		final AuthConfigSet<TestConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
@@ -262,5 +272,24 @@ public class MongoStorageTest {
 		assertThat("incorrect provider config",
 				res.getCfg().getProviderConfig("prov3").isForceLinkChoice(), is(true));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+	}
+	
+	private class BadMapper implements ExternalConfigMapper<TestConfig> {
+
+		@Override
+		public TestConfig fromMap(final Map<String, String> config)
+				throws ExternalConfigMappingException {
+			throw new ExternalConfigMappingException("borkborkbork");
+		}
+	}
+	
+	@Test
+	public void externalConfigMappingException() throws Exception {
+		try {
+			storage.getConfig(new BadMapper());
+			fail("expected exception");
+		} catch (ExternalConfigMappingException e) {
+			assertThat("correct exception message", e.getMessage(), is("borkborkbork"));
+		}
 	}
 }
