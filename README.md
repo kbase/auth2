@@ -142,7 +142,7 @@ To start server
 start mongodb  
 cd into the auth2 repo  
 `ant build`  
-copy deploy.cfg.example to deploy.cfg and fill in appropriately  
+copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
 `export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
@@ -160,7 +160,7 @@ Set a root password:
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
-needing to login as root.
+needing to login as root. The root account can then be disabled.
 
 Start & stop server w/o a pid
 -----------------------------
@@ -168,6 +168,12 @@ Start & stop server w/o a pid
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
 
 Omit the stop key to have jetty generate one for you.
+
+Running tests
+-------------
+* Copy test.cfg.example to test.cfg and fill in the values appropriately.
+  * If it works as is start buying lottery tickets immediately.
+* `ant test`
 
 Ancient history
 ---------------
