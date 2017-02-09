@@ -1300,7 +1300,7 @@ public class MongoStorage implements AuthStorage {
 			final String collection,
 			final Document query,
 			final Object value,
-			final boolean overwrite)
+			final boolean overwrite) // may want to have an action type to allow remove?
 			throws AuthStorageException {
 		if (value == null) {
 			return;
