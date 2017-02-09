@@ -12,8 +12,6 @@ import java.util.TreeMap;
  */
 public class AuthConfig {
 
-	//TODO TEST
-	
 	/* might want to have separate current config state classes and config
 	 * change classes. Try with the conflated semantics for now.
 	 */

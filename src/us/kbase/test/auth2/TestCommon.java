@@ -14,7 +14,10 @@ import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.bson.Document;
 import org.ini4j.Ini;
+
+import com.mongodb.client.MongoDatabase;
 
 import us.kbase.common.test.TestException;
 
@@ -46,6 +49,14 @@ public class TestCommon {
 	}
 	
 	private static Map<String, String> testConfig = null;
+	
+	public static void stfuLoggers() {
+//		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+//				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
+//			.setLevel(ch.qos.logback.classic.Level.OFF);
+		java.util.logging.Logger.getLogger("com.mongodb")
+			.setLevel(java.util.logging.Level.OFF);
+	}
 	
 	public static void assertExceptionCorrect(
 			final Exception got,
@@ -157,4 +168,12 @@ public class TestCommon {
 		return Paths.get(testCfgFilePathStr).toAbsolutePath().normalize();
 	}
 	
+	public static void destroyDB(MongoDatabase db) {
+		for (String name: db.listCollectionNames()) {
+			if (!name.startsWith("system.")) {
+				// dropping collection also drops indexes
+				db.getCollection(name).deleteMany(new Document());
+			}
+		}
+	}
 }

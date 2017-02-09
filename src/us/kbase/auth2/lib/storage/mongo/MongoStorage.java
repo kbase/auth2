@@ -89,6 +89,15 @@ public class MongoStorage implements AuthStorage {
 	 * mapping purposes that produce the returned classes.
 	 */
 	
+	/* Testing the (many) catch blocks for the general mongo exception is pretty hard, since it
+	 * appears as though the mongo clients have a heartbeat, so just stopping mongo might trigger
+	 * the heartbeat exception rather than the exception you're going for.
+	 * 
+	 * Mocking the mongo client is probably not the answer...?
+	 * http://stackoverflow.com/questions/7413985/unit-testing-with-mongodb
+	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
+	 */
+	
 	//TODO TEST unit tests
 	
 	private static final int SCHEMA_VERSION = 1;
@@ -1390,7 +1399,9 @@ public class MongoStorage implements AuthStorage {
 					.getBoolean(Fields.CONFIG_VALUE);
 			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
 			for (final Entry<TokenLifetimeType, String> e: TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
-				tokens.put(e.getKey(), appcfg.get(e.getValue()).getLong(Fields.CONFIG_VALUE));
+				if (appcfg.get(e.getValue()) != null) {
+					tokens.put(e.getKey(), appcfg.get(e.getValue()).getLong(Fields.CONFIG_VALUE));
+				}
 			}
 			return new AuthConfigSet<T>(new AuthConfig(allowLogin, provs, tokens),
 					mapper.fromMap(ext));
