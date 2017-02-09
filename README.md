@@ -171,7 +171,7 @@ Omit the stop key to have jetty generate one for you.
 
 Running tests
 -------------
-* Copy test.cfg.example to test.cfg and fill in the values appropriately.
+* Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
   * If it works as is start buying lottery tickets immediately.
 * `ant test`
 

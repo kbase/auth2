@@ -93,7 +93,7 @@ public class MongoStorage implements AuthStorage {
 	 * appears as though the mongo clients have a heartbeat, so just stopping mongo might trigger
 	 * the heartbeat exception rather than the exception you're going for.
 	 * 
-	 * Mocking the mongo client is probably not the answer...?
+	 * Mocking the mongo client is probably not the answer:
 	 * http://stackoverflow.com/questions/7413985/unit-testing-with-mongodb
 	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
 	 */
@@ -213,8 +213,8 @@ public class MongoStorage implements AuthStorage {
 		this.db = db;
 		
 		//TODO MISC check workspace startup for stuff to port over
+		ensureIndexes(); // MUST come before checkConfig();
 		checkConfig();
-		ensureIndexes();
 	}
 	
 	private void checkConfig() throws StorageInitException  {
@@ -229,8 +229,11 @@ public class MongoStorage implements AuthStorage {
 				throw new StorageInitException("There was a problem communicating with the " +
 						"database: " + dk.getMessage(), dk);
 			}
-			//ok, the version doc is already there, this isn't the first startup
+			// ok, duplicate key means the version doc is already there, this isn't the first
+			// startup
 			if (col.count() != 1) {
+				// if this occurs the indexes are broken, so there's no way to test without
+				// altering ensureIndexes()
 				throw new StorageInitException(
 						"Multiple config objects found in the database. " +
 						"This should not happen, something is very wrong.");
