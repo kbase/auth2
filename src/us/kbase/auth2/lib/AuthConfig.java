@@ -95,6 +95,44 @@ public class AuthConfig {
 		}
 
 		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((enabled == null) ? 0 : enabled.hashCode());
+			result = prime * result + ((forceLinkChoice == null) ? 0 : forceLinkChoice.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			ProviderConfig other = (ProviderConfig) obj;
+			if (enabled == null) {
+				if (other.enabled != null) {
+					return false;
+				}
+			} else if (!enabled.equals(other.enabled)) {
+				return false;
+			}
+			if (forceLinkChoice == null) {
+				if (other.forceLinkChoice != null) {
+					return false;
+				}
+			} else if (!forceLinkChoice.equals(other.forceLinkChoice)) {
+				return false;
+			}
+			return true;
+		}
+
+		@Override
 		public String toString() {
 			StringBuilder builder = new StringBuilder();
 			builder.append("ProviderConfig [enabled=");
@@ -122,7 +160,9 @@ public class AuthConfig {
 			final Boolean loginAllowed,
 			Map<String, ProviderConfig> providers,
 			Map<TokenLifetimeType, Long> tokenLifetimeMS) {
-		// nulls indicate no value or no change depending on context	
+		// nulls indicate no value or no change depending on context
+		// which is probably bad
+		// should probably switch this to a builder
 		if (providers == null) {
 			providers = new HashMap<>();
 		}
@@ -131,8 +171,8 @@ public class AuthConfig {
 				throw new IllegalArgumentException("provider names cannot be null or empty");
 			}
 			if (providers.get(p) == null) {
-				throw new NullPointerException(String.format("provider config for key %s is null",
-						p));
+				throw new NullPointerException(String.format(
+						"provider config for provider %s is null", p));
 			}
 		}
 		if (tokenLifetimeMS == null) {
@@ -201,6 +241,52 @@ public class AuthConfig {
 					provider);
 		}
 		return providers.get(provider);
+	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((loginAllowed == null) ? 0 : loginAllowed.hashCode());
+		result = prime * result + ((providers == null) ? 0 : providers.hashCode());
+		result = prime * result + ((tokenLifetimeMS == null) ? 0 : tokenLifetimeMS.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		AuthConfig other = (AuthConfig) obj;
+		if (loginAllowed == null) {
+			if (other.loginAllowed != null) {
+				return false;
+			}
+		} else if (!loginAllowed.equals(other.loginAllowed)) {
+			return false;
+		}
+		if (providers == null) {
+			if (other.providers != null) {
+				return false;
+			}
+		} else if (!providers.equals(other.providers)) {
+			return false;
+		}
+		if (tokenLifetimeMS == null) {
+			if (other.tokenLifetimeMS != null) {
+				return false;
+			}
+		} else if (!tokenLifetimeMS.equals(other.tokenLifetimeMS)) {
+			return false;
+		}
+		return true;
 	}
 
 	@Override

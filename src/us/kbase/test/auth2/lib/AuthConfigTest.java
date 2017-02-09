@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.ExternalConfig;
@@ -50,6 +51,16 @@ public class AuthConfigTest {
 		assertThat("incorrect force link", pc2.isForceLinkChoice(), is((Boolean) null));
 		assertThat("incorrect to string", pc2.toString(),
 				is("ProviderConfig [enabled=null, forceLinkChoice=null]"));
+	}
+	
+	@Test
+	public void providerEquals() {
+		EqualsVerifier.forClass(ProviderConfig.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void authConfigEquals() {
+		EqualsVerifier.forClass(AuthConfig.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -157,7 +168,7 @@ public class AuthConfigTest {
 		pc.clear();
 		pc.put("pc", null);
 		failConstructAuthConfig(pc, null, new NullPointerException(
-				"provider config for key pc is null"));
+				"provider config for provider pc is null"));
 	}
 	
 	@Test

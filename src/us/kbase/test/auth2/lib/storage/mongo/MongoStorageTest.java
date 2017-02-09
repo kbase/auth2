@@ -87,10 +87,7 @@ public class MongoStorageTest {
 	@Test
 	public void getEmptyConfig() throws Exception {
 		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
-		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is((Boolean) null));
-		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS().isEmpty(),
-				is(true));
-		assertThat("incorrect tprovider config", res.getCfg().getProviders().isEmpty(), is(true));
+		assertThat("incorrect config", res.getCfg(), is(new AuthConfig(null, null, null)));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is((String) null));
 	}
 	
@@ -107,27 +104,21 @@ public class MongoStorageTest {
 				new TestConfig("foo"));
 		storage.updateConfig(cfgSet, false);
 		
+		final AuthConfig expected = new AuthConfig(true,
+				ImmutableMap.of(
+						"prov1", new ProviderConfig(false, true),
+						"prov2", new ProviderConfig(true, false)),
+				ImmutableMap.of(
+						TokenLifetimeType.DEV, 200000L,
+						TokenLifetimeType.LOGIN, 300000L));
 		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
-		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is(true));
-		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS(),
-				is(ImmutableMap.of(TokenLifetimeType.DEV, 200000L,
-						TokenLifetimeType.LOGIN, 300000L)));
-		assertThat("incorrect provider config count", res.getCfg().getProviders().size(), is(2));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isEnabled(), is(false));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isForceLinkChoice(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isForceLinkChoice(), is(false));
+		assertThat("incorrect config", res.getCfg(), is(expected));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
 	}
 	
 	@Test
 	public void updateConfigWithoutOverwrite() throws Exception {
 		final AuthConfigSet<TestConfig> cfgSet = new AuthConfigSet<>(
-				// should really consider making a builder for this
 				new AuthConfig(true,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(false, true),
@@ -151,32 +142,22 @@ public class MongoStorageTest {
 				new TestConfig("foo1"));
 		storage.updateConfig(cfgSet2, false);
 		
-		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
-		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is(true));
-		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS(),
-				is(ImmutableMap.of(
+		final AuthConfig expected = new AuthConfig(true,
+				ImmutableMap.of(
+						"prov1", new ProviderConfig(false, true),
+						"prov2", new ProviderConfig(true, false),
+						"prov3", new ProviderConfig(true, true)),
+				ImmutableMap.of(
 						TokenLifetimeType.DEV, 200000L,
 						TokenLifetimeType.LOGIN, 300000L,
-						TokenLifetimeType.SERV, 800000L)));
-		assertThat("incorrect provider config count", res.getCfg().getProviders().size(), is(3));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isEnabled(), is(false));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isForceLinkChoice(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isForceLinkChoice(), is(false));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isForceLinkChoice(), is(true));
+						TokenLifetimeType.SERV, 800000L));
+		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
 	}
 	
 	@Test
 	public void updateConfigWithOverwrite() throws Exception {
-		//also tests that a null value causes no update
 		final AuthConfigSet<TestConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
@@ -201,26 +182,17 @@ public class MongoStorageTest {
 				new TestConfig("foo1"));
 		storage.updateConfig(cfgSet2, true);
 		
-		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
-		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is(false));
-		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS(),
-				is(ImmutableMap.of(
+		final AuthConfig expected = new AuthConfig(false,
+				ImmutableMap.of(
+						"prov1", new ProviderConfig(true, true),
+						"prov2", new ProviderConfig(true, true),
+						"prov3", new ProviderConfig(true, true)),
+				ImmutableMap.of(
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 600000L,
-						TokenLifetimeType.SERV, 800000L)));
-		assertThat("incorrect provider config count", res.getCfg().getProviders().size(), is(3));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isForceLinkChoice(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isForceLinkChoice(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isForceLinkChoice(), is(true));
+						TokenLifetimeType.SERV, 800000L));
+		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo1"));
 	}
 	
@@ -251,26 +223,17 @@ public class MongoStorageTest {
 				new TestConfig(null));
 		storage.updateConfig(cfgSet2, true);
 		
-		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
-		assertThat("incorrect login allowed", res.getCfg().isLoginAllowed(), is(true));
-		assertThat("incorrect token lifetimes", res.getCfg().getTokenLifetimeMS(),
-				is(ImmutableMap.of(
+		final AuthConfig expected = new AuthConfig(true,
+				ImmutableMap.of(
+						"prov1", new ProviderConfig(true, true),
+						"prov2", new ProviderConfig(true, false),
+						"prov3", new ProviderConfig(true, true)),
+				ImmutableMap.of(
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 300000L,
-						TokenLifetimeType.SERV, 800000L)));
-		assertThat("incorrect provider config count", res.getCfg().getProviders().size(), is(3));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov1").isForceLinkChoice(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov2").isForceLinkChoice(), is(false));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isEnabled(), is(true));
-		assertThat("incorrect provider config",
-				res.getCfg().getProviderConfig("prov3").isForceLinkChoice(), is(true));
+						TokenLifetimeType.SERV, 800000L));
+		final AuthConfigSet<TestConfig> res = storage.getConfig(new TestConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
 		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
 	}
 	

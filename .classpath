@@ -51,5 +51,6 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-lang3-3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-validator-1.5.1.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/equalsverifier/equalsverifier-2.2.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
