@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -50,6 +51,11 @@ public class CustomRoleTest {
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
 		}
+	}
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(CustomRole.class).usingGetClass().verify();
 	}
 	
 }
