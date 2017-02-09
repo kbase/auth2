@@ -84,6 +84,7 @@
     <include name="junit/junit-4.9.jar"/>
     <include name="apache_commons/commons-lang3-3.1.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
+    <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
   </fileset>
 	
   <union id="serverjars">
@@ -177,6 +178,7 @@
              use="true"
              version="true">
       <link href="http://docs.oracle.com/javase/8/docs/api/"/>
+      <link href="http://api.mongodb.com/java/3.3/"/>
     </javadoc>
   </target>
 	
@@ -185,6 +187,7 @@
     <junit failureproperty="test.failed" fork="yes">
       <classpath refid="test.classpath"/>
       <formatter type="plain" usefile="false" />
+      <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.TokenGeneratorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
@@ -192,12 +195,6 @@
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
-      <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
@@ -213,6 +210,13 @@
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
       <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
+      <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

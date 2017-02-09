@@ -60,7 +60,6 @@ public abstract class AuthUser {
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState) {
-		// should probably check that if username == root then roles contains root
 		super();
 		if (userName == null) {
 			throw new NullPointerException("userName");

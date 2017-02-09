@@ -5,15 +5,33 @@ import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.net.ServerSocket;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
+import org.bson.Document;
+import org.ini4j.Ini;
+
+import com.mongodb.client.MongoDatabase;
+
+import us.kbase.common.test.TestException;
 
 public class TestCommon {
 
+	public static final String MONGOEXE = "test.mongo.exe";
+	public static final String MONGO_USE_WIRED_TIGER = "test.mongo.wired_tiger";
+	
+	public static final String TEST_TEMP_DIR = "test.temp.dir";
+	public static final String KEEP_TEMP_DIR = "test.temp.dir.keep";
+	
+	public static final String TEST_CONFIG_FILE_PROP_NAME = "AUTH2_TEST_CONFIG";
+	public static final String TEST_CONFIG_FILE_SECTION = "auth2test";
+	
 	public static final String LONG101;
 	public static final String LONG1001;
 	static {
@@ -28,6 +46,16 @@ public class TestCommon {
 		}
 		LONG101 = s100 + "a";
 		LONG1001 = sb2.toString() + "a";
+	}
+	
+	private static Map<String, String> testConfig = null;
+	
+	public static void stfuLoggers() {
+//		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+//				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
+//			.setLevel(ch.qos.logback.classic.Level.OFF);
+		java.util.logging.Logger.getLogger("com.mongodb")
+			.setLevel(java.util.logging.Level.OFF);
 	}
 	
 	public static void assertExceptionCorrect(
@@ -82,5 +110,70 @@ public class TestCommon {
 		assertThat("date older than expected", (d.getTime() + milliseconds) < new Date().getTime(),
 				is(false));
 	}
+
+	public static Path getMongoExe() {
+		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();
+	}
+
+	public static Path getTempDir() {
+		return Paths.get(getTestProperty(TEST_TEMP_DIR)).toAbsolutePath().normalize();
+	}
 	
+	public static boolean isDeleteTempFiles() {
+		return !"true".equals(getTestProperty(KEEP_TEMP_DIR));
+	}
+
+	public static boolean useWiredTigerEngine() {
+		return "true".equals(System.getProperty(MONGO_USE_WIRED_TIGER));
+	}
+	
+	private static String getTestProperty(final String propertyKey) {
+		getTestConfig();
+		final String prop = testConfig.get(propertyKey);
+		if (prop == null || prop.trim().isEmpty()) {
+			throw new TestException(String.format(
+					"Property %s in section %s of test file %s is missing",
+					propertyKey, TEST_CONFIG_FILE_SECTION, getConfigFilePath()));
+		}
+		return prop;
+	}
+
+	private static void getTestConfig() {
+		if (testConfig != null) {
+			return;
+		}
+		final Path testCfgFilePath = getConfigFilePath();
+		final Ini ini;
+		try {
+			ini = new Ini(testCfgFilePath.toFile());
+		} catch (IOException ioe) {
+			throw new TestException(String.format(
+					"IO Error reading the test configuration file %s: %s",
+					testCfgFilePath, ioe.getMessage()), ioe);
+		}
+		testConfig = ini.get(TEST_CONFIG_FILE_SECTION);
+		if (testConfig == null) {
+			throw new TestException(String.format("No section %s found in test config file %s",
+					TEST_CONFIG_FILE_SECTION, testCfgFilePath));
+		}
+	}
+
+	private static Path getConfigFilePath() {
+		final String testCfgFilePathStr = System.getProperty(TEST_CONFIG_FILE_PROP_NAME);
+		if (testCfgFilePathStr == null || testCfgFilePathStr.trim().isEmpty()) {
+			throw new TestException(String.format("Cannot get the test config file path." +
+					" Ensure the java system property %s is set to the test config file location.",
+					TEST_CONFIG_FILE_PROP_NAME));
+		}
+		return Paths.get(testCfgFilePathStr).toAbsolutePath().normalize();
+	}
+	
+	public static void destroyDB(MongoDatabase db) {
+		for (String name: db.listCollectionNames()) {
+			if (!name.startsWith("system.")) {
+				// dropping collection also drops indexes
+				db.getCollection(name).deleteMany(new Document());
+			}
+		}
+	}
 }
