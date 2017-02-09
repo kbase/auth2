@@ -84,6 +84,7 @@
     <include name="junit/junit-4.9.jar"/>
     <include name="apache_commons/commons-lang3-3.1.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
+    <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
   </fileset>
 	
   <union id="serverjars">
