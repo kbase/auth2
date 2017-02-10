@@ -10,6 +10,9 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
+// maybe the better way to handle this is note that using eq or hc could cause DB access and
+// implement calling the abstract method
+
 /** A user in the authentication system.
  * 
  * There are two types of user: local users and standard users. Local users' accounts are managed
@@ -77,12 +80,12 @@ public abstract class AuthUser {
 			identities = new HashSet<>();
 		}
 		Utils.noNulls(identities, "null item in identities");
-		this.identities = Collections.unmodifiableSet(identities);
+		this.identities = Collections.unmodifiableSet(new HashSet<>(identities));
 		if (roles == null) {
 			roles = new HashSet<>();
 		}
 		Utils.noNulls(roles, "null item in roles");
-		this.roles = Collections.unmodifiableSet(roles);
+		this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
 		 * This'll do for now
@@ -97,8 +100,8 @@ public abstract class AuthUser {
 		} else if (roles.contains(Role.ROOT)) {
 			throw new IllegalStateException("Non-root username with root role");
 		}
-		this.canGrantRoles = getRoles().stream().flatMap(r -> r.canGrant().stream())
-				.collect(Collectors.toSet());
+		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
+				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
 		if (created == null) {
 			throw new NullPointerException("created");
 		}

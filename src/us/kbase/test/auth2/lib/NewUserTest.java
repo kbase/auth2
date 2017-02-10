@@ -46,6 +46,7 @@ public class NewUserTest {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
+		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
 		assertThat("incorrect last login", u.getLastLogin(), is((Date) null));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -73,6 +74,7 @@ public class NewUserTest {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
+		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));

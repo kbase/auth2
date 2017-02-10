@@ -232,4 +232,58 @@ public class AuthUserTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void immutableIdentities() throws Exception {
+		final Set<RemoteIdentityWithLocalID> ids = set(REMOTE);
+		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), ids,
+				null, null, NOW, null, new UserDisabledState());
+		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
+				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+				new RemoteIdentityID("prov2", "bar2"),
+				new RemoteIdentityDetails("user2", "full2", "email2"));
+		
+		try {
+			u.getIdentities().add(ri);
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		ids.add(ri);
+		assertThat("incorrect remote ids", u.getIdentities(), is(set(REMOTE)));
+	}
+	
+	@Test
+	public void immutableRoles() throws Exception {
+		final Set<Role> roles = set(Role.DEV_TOKEN);
+		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
+				roles, null, NOW, null, new UserDisabledState());
+		
+		try {
+			u.getRoles().add(Role.ADMIN);
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		roles.add(Role.ADMIN);
+		assertThat("incorrect roles", u.getRoles(), is(set(Role.DEV_TOKEN)));
+	}
+	
+	@Test
+	public void immutableGrantableRoles() throws Exception {
+		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
+				null, null, NOW, null, new UserDisabledState());
+		
+		try {
+			u.getGrantableRoles().add(Role.ADMIN);
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+	}
 }

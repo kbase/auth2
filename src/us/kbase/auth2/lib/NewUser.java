@@ -54,6 +54,12 @@ public class NewUser extends AuthUser {
 		return Collections.emptySet();
 	}
 	
-	//TODO CODE make getRemoteIdentity that returns the one identity and throws IllegalStateException if size() != 1
-
+	public RemoteIdentityWithLocalID getIdentity() {
+		if (getIdentities().size() != 1) {
+			// this is untestable without some nutty reflection stuff, look into it later
+			// should never happen since AuthUser is immutable
+			throw new IllegalStateException("new user must have exactly one identity");
+		}
+		return getIdentities().iterator().next();
+	}
 }

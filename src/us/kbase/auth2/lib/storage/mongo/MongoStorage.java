@@ -449,17 +449,6 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException {
-		// A NewUser cannot fail either of these checks
-//		if (user.isLocal()) {
-//			throw new IllegalArgumentException("cannot create a local user");
-//		}
-//		if (user.getIdentities().size() > 1) {
-//			throw new IllegalArgumentException(
-//					"user can only have one identity");
-//		}
-		final RemoteIdentityWithLocalID ri = user.getIdentities().iterator().next();
-		final Document id = toDocument(ri);
-		
 		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
@@ -470,7 +459,7 @@ public class MongoStorage implements AuthStorage {
 						user.getDisplayName()))
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
-				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
+				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
 				.append(Fields.USER_CREATED, user.getCreated())
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
