@@ -9,7 +9,6 @@ import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
@@ -39,26 +38,6 @@ import us.kbase.auth2.lib.token.TemporaryHashedToken;
  *
  */
 public interface AuthStorage {
-	
-	/** Create or update the root user.
-	 * The password hash and salt are cleared as soon as possible.
-	 * displayName, email, and created are only set when creating the root user
-	 * for the first time.
-	 * Custom roles are set to the null set when creating the root user, but
-	 * are otherwise left alone.
-	 * @param root the root user name
-	 * @param displayName the root user's full name.
-	 * @param email the root user's email.
-	 * @param roles the root user's roles.
-	 * @param created the root user account's creation date.
-	 * @param passwordHash the hash of the root user's password.
-	 * @param salt the password salt.
-	 * @throws AuthStorageException if a problem connecting with the storage
-	 * system occurs. 
-	 */
-	void createRoot(UserName root, DisplayName displayName, EmailAddress email,
-			Set<Role> roles, Date created, byte[] passwordHash,
-			byte[] salt) throws AuthStorageException;
 	
 	/** Create a new local account. Note that new accounts are always created
 	 * with no roles.

@@ -81,12 +81,8 @@ public class LocalUserTest {
 				is(new UserName("who")));
 		assertThat("incorrect created date", lu.getCreated(), is(d));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(set("foobar")));
-		assertThat("incorrect disabled state", lu.getDisabledState().getByAdmin(),
-				is(new UserName("who")));
-		assertThat("incorrect disabled state", lu.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getTime(), is(d));
-		assertThat("incorrect disabled state", lu.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
+				new UserName("who"), d)));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is(d));
@@ -171,12 +167,7 @@ public class LocalUserTest {
 				is((UserName) null));
 		TestCommon.assertDateNoOlderThan(lu.getCreated(), 500);
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
-		assertThat("incorrect disabled state", lu.getDisabledState().getByAdmin(),
-				is((UserName) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getTime(), is((Date) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("e@g.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));

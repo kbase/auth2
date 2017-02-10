@@ -202,20 +202,39 @@ public class Authentication {
 			throw new NullPointerException("pwd");
 		}
 		final byte[] salt = pwdcrypt.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(
-				pwd.getPassword(), salt);
+		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		pwd.clear();
-		final DisplayName root;
+		final DisplayName dn;
 		final EmailAddress email;
 		try {
-			root = new DisplayName("root");
+			dn = new DisplayName("root");
 			email = new EmailAddress("root@unknown.unknown");
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This is impossible", e);
 		}
-		storage.createRoot(UserName.ROOT, root, email,
-				new HashSet<>(Arrays.asList(Role.ROOT)),
-				new Date(), passwordHash, salt);
+		final NewLocalUser root = new NewLocalUser(UserName.ROOT, email, dn, passwordHash, salt,
+				false);
+		try {
+			storage.createLocalUser(root);
+			try {
+				storage.updateRoles(UserName.ROOT, new HashSet<>(Arrays.asList(Role.ROOT)),
+						Collections.emptySet());
+			} catch (NoSuchUserException nsue) { // ok, wtf storage system
+				throw new RuntimeException("AIIIGGG my liver", nsue);
+			}
+		// only way to avoid a race condition. Checking existence before creating user means if
+		// user is added between check and update update will fail
+		} catch (UserExistsException uee) {
+			try {
+				storage.changePassword(UserName.ROOT, passwordHash, salt, false);
+				// just in case the ROOT role wasn't set above on account creation
+				storage.updateRoles(UserName.ROOT, new HashSet<>(Arrays.asList(Role.ROOT)),
+						Collections.emptySet());
+				storage.enableAccount(UserName.ROOT, UserName.ROOT);
+			} catch (NoSuchUserException nsue) {
+				throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+			}
+		}
 		clear(passwordHash);
 		clear(salt);
 	}

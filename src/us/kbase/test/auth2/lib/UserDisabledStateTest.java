@@ -8,6 +8,7 @@ import java.util.Date;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -146,5 +147,10 @@ public class UserDisabledStateTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
+	}
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(UserDisabledState.class).usingGetClass().verify();
 	}
 }

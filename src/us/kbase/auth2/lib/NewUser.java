@@ -53,5 +53,7 @@ public class NewUser extends AuthUser {
 	public Set<String> getCustomRoles() {
 		return Collections.emptySet();
 	}
+	
+	//TODO CODE make getRemoteIdentity that returns the one identity and throws IllegalStateException if size() != 1
 
 }

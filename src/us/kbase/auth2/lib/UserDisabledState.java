@@ -133,4 +133,51 @@ public class UserDisabledState {
 			return new UserDisabledState(disabledReason, byAdmin, time);
 		}
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((byAdmin == null) ? 0 : byAdmin.hashCode());
+		result = prime * result + ((disabledReason == null) ? 0 : disabledReason.hashCode());
+		result = prime * result + ((time == null) ? 0 : time.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		UserDisabledState other = (UserDisabledState) obj;
+		if (byAdmin == null) {
+			if (other.byAdmin != null) {
+				return false;
+			}
+		} else if (!byAdmin.equals(other.byAdmin)) {
+			return false;
+		}
+		if (disabledReason == null) {
+			if (other.disabledReason != null) {
+				return false;
+			}
+		} else if (!disabledReason.equals(other.disabledReason)) {
+			return false;
+		}
+		if (time == null) {
+			if (other.time != null) {
+				return false;
+			}
+		} else if (!time.equals(other.time)) {
+			return false;
+		}
+		return true;
+	}
+	
 }
