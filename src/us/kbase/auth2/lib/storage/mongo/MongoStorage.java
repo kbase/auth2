@@ -279,19 +279,6 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private List<String> getCanonicalDisplayName(final DisplayName display) {
-		//TODO SEARCH remove punctuation
-		final String[] parts = display.getName().toLowerCase().split("\\s");
-		final List<String> ret = new LinkedList<>();
-		for (String p: parts) {
-			p = p.trim();
-			if (!p.isEmpty()) {
-				ret.add(p);
-			}
-		}
-		return ret;
-	}
-	
 	@Override
 	public void createLocalUser(final NewLocalUser local)
 			throws UserExistsException, AuthStorageException {
@@ -308,8 +295,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LOCAL, true)
 				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						local.getDisplayName()))
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, local.getDisplayName()
+						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
@@ -455,8 +442,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						user.getDisplayName()))
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, user.getDisplayName()
+						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
@@ -1207,8 +1194,8 @@ public class MongoStorage implements AuthStorage {
 		final Document d = new Document();
 		if (update.getDisplayName() != null) {
 			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						update.getDisplayName()));
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, 
+						update.getDisplayName().getCanonicalDisplayName());
 		}
 		if (update.getEmail() != null) {
 			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());

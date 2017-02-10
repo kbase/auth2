@@ -126,6 +126,7 @@ UI developer notes
   display. The fields are noted where they occur in the test UI. Currently the fields include:
   * Custom role descriptions
   * The reason for why a user account was enabled and disabled.
+  * User display names and email addresses.
 
 Requirements
 ------------

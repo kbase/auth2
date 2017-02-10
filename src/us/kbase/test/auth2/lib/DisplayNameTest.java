@@ -4,8 +4,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
+
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -16,20 +19,15 @@ public class DisplayNameTest {
 	
 	@Test
 	public void constructor() throws Exception {
-		final DisplayName dn = new DisplayName("    foo\n");
-		assertThat("incorrect displayname", dn.getName(), is("foo"));
-		assertThat("incorrect hashCode", dn.hashCode(), is(101605));
-		assertThat("incorrect toString", dn.toString(), is("DisplayName [name=foo]"));
+		//tests removing control characters
+		final DisplayName dn = new DisplayName("    fo\no\boΔ\n");
+		assertThat("incorrect displayname", dn.getName(), is("foooΔ"));
+		assertThat("incorrect toString", dn.toString(), is("DisplayName [name=foooΔ]"));
 	}
 	
 	@Test
 	public void equals() throws Exception {
-		final DisplayName dn = new DisplayName("Mrs. Entity");
-		assertThat("incorrect equality", dn.equals(dn), is(true));
-		assertThat("incorrect null", dn.equals(null), is(false));
-		assertThat("incorrect type", dn.equals("Mrs. Entity"), is(false));
-		assertThat("incorrect bad name", dn.equals(new DisplayName("Mr. Entity")), is(false));
-		assertThat("incorrect good name", dn.equals(new DisplayName("Mrs. Entity")), is(true));
+		EqualsVerifier.forClass(DisplayName.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -48,6 +46,13 @@ public class DisplayNameTest {
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
 		}
+	}
+	
+	@Test
+	public void canonical() throws Exception {
+		final DisplayName dn = new DisplayName("whEe      BA\nR  \n bleΔah   wuΞgga");
+		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(),
+				is(Arrays.asList("whee", "bar", "bleδah", "wuξgga")));
 	}
 
 }
