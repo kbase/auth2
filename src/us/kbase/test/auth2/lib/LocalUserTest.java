@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
@@ -23,6 +24,13 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.test.auth2.TestCommon;
 
 public class LocalUserTest {
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(LocalUser.class).usingGetClass()
+				.withIgnoredFields("canGrantRoles").verify();
+
+	}
 	
 	@Test
 	public void constructWithoutReset() throws Exception {

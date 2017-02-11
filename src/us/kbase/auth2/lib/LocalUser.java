@@ -1,5 +1,6 @@
 package us.kbase.auth2.lib;
 
+import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
 
@@ -84,6 +85,46 @@ public class LocalUser extends AuthUser {
 	public Date getLastPwdReset() {
 		return lastReset == null ? null : new Date(lastReset);
 	}
-	
-	//TODO EQUALS
+
+	@Override
+	public final int hashCode() {
+		final int prime = 31;
+		int result = super.hashCode();
+		result = prime * result + (forceReset ? 1231 : 1237);
+		result = prime * result + ((lastReset == null) ? 0 : lastReset.hashCode());
+		result = prime * result + Arrays.hashCode(passwordHash);
+		result = prime * result + Arrays.hashCode(salt);
+		return result;
+	}
+
+	@Override
+	public final boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (!super.equals(obj)) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		LocalUser other = (LocalUser) obj;
+		if (forceReset != other.forceReset) {
+			return false;
+		}
+		if (lastReset == null) {
+			if (other.lastReset != null) {
+				return false;
+			}
+		} else if (!lastReset.equals(other.lastReset)) {
+			return false;
+		}
+		if (!Arrays.equals(passwordHash, other.passwordHash)) {
+			return false;
+		}
+		if (!Arrays.equals(salt, other.salt)) {
+			return false;
+		}
+		return true;
+	}
 }

@@ -264,7 +264,6 @@ public class AuthUser {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((canGrantRoles == null) ? 0 : canGrantRoles.hashCode());
 		result = prime * result + (int) (created ^ (created >>> 32));
 		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
 		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
@@ -289,13 +288,6 @@ public class AuthUser {
 			return false;
 		}
 		AuthUser other = (AuthUser) obj;
-		if (canGrantRoles == null) {
-			if (other.canGrantRoles != null) {
-				return false;
-			}
-		} else if (!canGrantRoles.equals(other.canGrantRoles)) {
-			return false;
-		}
 		if (created != other.created) {
 			return false;
 		}

@@ -37,7 +37,8 @@ public class AuthUserTest {
 	
 	@Test
 	public void equals() {
-		EqualsVerifier.forClass(AuthUser.class).usingGetClass().verify();
+		EqualsVerifier.forClass(AuthUser.class).usingGetClass()
+				.withIgnoredFields("canGrantRoles").verify();
 	}
 	
 	@Test
