@@ -52,6 +52,7 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -434,7 +435,10 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void createUser(final NewUser user)
-			throws UserExistsException, AuthStorageException {
+			throws UserExistsException, AuthStorageException, IdentityLinkedException {
+		if (user == null) {
+			throw new NullPointerException("user");
+		}
 		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
@@ -456,11 +460,18 @@ public class MongoStorage implements AuthStorage {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
 			if (isDuplicateKeyException(mwe)) {
-				//TODO ERRHANDLE handle case where duplicate is a remote id, not the username
-				throw new UserExistsException(user.getUserName().getName());
-			} else {
-				throw new AuthStorageException("Database write failed", mwe);
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_USERS + ".$" + Fields.USER_NAME)) {
+					throw new UserExistsException(user.getUserName().getName());
+				} else if (msg.contains(COL_USERS + ".$" + Fields.USER_IDENTITIES)) {
+					// either the provider / prov id combo or the local identity uuid are already
+					// in the db
+					final RemoteIdentityID ri = user.getIdentity().getRemoteID();
+					throw new IdentityLinkedException(ri.getProvider() + " : " + ri.getId());
+				} // otherwise throw next exception
 			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}

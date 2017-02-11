@@ -10,6 +10,7 @@ import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -113,7 +114,15 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ae2.getErr(), is(et));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et, "baz")));
 		assertThat("incorrect cause", ae2.getCause(), is(ie));
-		
+	}
+	
+	@Test
+	public void identityLinked() throws Exception {
+		final ErrorType et = ErrorType.ID_ALREADY_LINKED;
+		final IdentityLinkedException ile = new IdentityLinkedException("bar");
+		assertThat("incorrect error code", ile.getErr(), is(et));
+		assertThat("incorrect message", ile.getMessage(), is(format(et, "bar")));
+		assertThat("incorrect cause", ile.getCause(), is((Throwable) null));
 	}
 	
 	@Test

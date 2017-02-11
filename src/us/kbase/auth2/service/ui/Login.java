@@ -44,6 +44,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -360,7 +361,7 @@ public class Login {
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
-				UnauthorizedException {
+				UnauthorizedException, IdentityLinkedException {
 		//TODO INPUT sanity check inputs
 		
 		// might want to enapsulate the user data in a NewUser class

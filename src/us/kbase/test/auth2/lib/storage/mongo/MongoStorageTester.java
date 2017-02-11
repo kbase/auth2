@@ -31,7 +31,9 @@ public class MongoStorageTester {
 	
 	@AfterClass
 	public static void tearDownClass() throws Exception {
-		mc.close();
+		if (mc != null) {
+			mc.close();
+		}
 		if (mongo != null) {
 			mongo.destroy(TestCommon.isDeleteTempFiles());
 		}

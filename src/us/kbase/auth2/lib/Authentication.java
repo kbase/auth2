@@ -21,6 +21,7 @@ import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.TokenGenerator;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
@@ -59,7 +60,6 @@ public class Authentication {
 	//TODO TEST test logging on calls
 	//TODO JAVADOC 
 	//TODO ZZLATER validate email address by sending an email
-	//TODO AUTH schema version
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO AUTH check workspace for other useful things like the schema manager
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token
@@ -934,7 +934,7 @@ public class Authentication {
 			final DisplayName displayName,
 			final EmailAddress email)
 			throws AuthStorageException, AuthenticationException,
-				UserExistsException, UnauthorizedException {
+				UserExistsException, UnauthorizedException, IdentityLinkedException {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
@@ -1203,7 +1203,7 @@ public class Authentication {
 	// do not expose this method in the public API
 	public void importUser(final RemoteIdentity ri)
 			throws IllegalParameterException, UserExistsException,
-			AuthStorageException {
+			AuthStorageException, IdentityLinkedException {
 		if (ri == null) {
 			throw new NullPointerException("ri");
 		}

@@ -19,6 +19,7 @@ import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -81,9 +82,11 @@ public interface AuthStorage {
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
+	 * @throws IdentityLinkedException if the remote identity provided with the user is already
+	 * linked to a different user.
 	 */
 	void createUser(NewUser authUser)
-			throws UserExistsException, AuthStorageException;
+			throws UserExistsException, AuthStorageException, IdentityLinkedException;
 	
 	/** Based on a user name suggestion, returns a username that does not exist in the database.
 	 * @param suggestedUserName the suggested username.
