@@ -36,6 +36,7 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -182,7 +183,8 @@ public class AuthCLI {
 			try {
 				auth.importUser(ri);
 				success++;
-			} catch (UserExistsException | IllegalParameterException | AuthStorageException e) {
+			} catch (UserExistsException | IllegalParameterException | IdentityLinkedException |
+					AuthStorageException e) {
 				error("\tError for user " + user, e, a, true);
 			}
 		}

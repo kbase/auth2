@@ -2,6 +2,9 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.checkString;
 
+import java.util.Arrays;
+import java.util.List;
+
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -26,7 +29,7 @@ public class DisplayName {
 	public DisplayName(final String name)
 			throws MissingParameterException, IllegalParameterException {
 		checkString(name, "display name", MAX_NAME_LENGTH);
-		this.name = name.trim();
+		this.name = name.trim().replaceAll("\\p{Cntrl}", "");;
 	}
 	
 	/** Get the display name.
@@ -35,7 +38,16 @@ public class DisplayName {
 	public String getName() {
 		return name;
 	}
-
+	
+	/** Get the canonical display name for this name. Returns a list of the whitespace separated
+	 * tokens in the display name. The tokens are lowercased.
+	 * @return the canonical display name.
+	 */
+	public List<String> getCanonicalDisplayName() {
+		//TODO SEARCH remove punctuation on the outside of tokens, needs to handle unicode
+		return Arrays.asList(name.toLowerCase().split("\\s+"));
+	}
+	
 	@Override
 	public String toString() {
 		StringBuilder builder = new StringBuilder();
@@ -49,7 +61,7 @@ public class DisplayName {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + name.hashCode();
+		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		return result;
 	}
 
@@ -65,10 +77,13 @@ public class DisplayName {
 			return false;
 		}
 		DisplayName other = (DisplayName) obj;
-		if (!name.equals(other.name)) {
+		if (name == null) {
+			if (other.name != null) {
+				return false;
+			}
+		} else if (!name.equals(other.name)) {
 			return false;
 		}
 		return true;
 	}
-	
 }

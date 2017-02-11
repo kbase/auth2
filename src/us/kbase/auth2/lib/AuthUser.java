@@ -8,7 +8,6 @@ import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
-import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 /** A user in the authentication system.
  * 
@@ -16,24 +15,17 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
  * locally and are not associated with 3rd party identity providers. Standard users' accounts
  * are always associated with at least one 3rd party identity.
  * 
- * Note that since some fields in AuthUser may be lazily fetched from the authentication storage
- * system, equals() and hashcode() are not implemented, as they would require database access when
- * often the fields are not actually necessary for the operation in process.
- * 
- * Usernames are expected to be unique, so testing for equality via comparison of the username is
- * a reasonable substitute, although care must be taken to never initialize a user with an
- * incorrect username.
- * 
  * @author gaprice@lbl.gov
  *
  */
-public abstract class AuthUser {
+public class AuthUser {
 
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;
+	private final Set<String> customRoles;
 	private final Set<RemoteIdentityWithLocalID> identities;
 	private final long created;
 	private final Long lastLogin;
@@ -46,6 +38,7 @@ public abstract class AuthUser {
 	 * @param identities any 3rd party identities associated with the user. Empty or null for local
 	 * users.
 	 * @param roles any roles the user possesses.
+	 * @param customRoles any custom roles the user possesses.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date it will be silently modified to match the creation date.
@@ -57,6 +50,7 @@ public abstract class AuthUser {
 			final DisplayName displayName,
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
+			Set<String> customRoles,
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState) {
@@ -77,12 +71,17 @@ public abstract class AuthUser {
 			identities = new HashSet<>();
 		}
 		Utils.noNulls(identities, "null item in identities");
-		this.identities = Collections.unmodifiableSet(identities);
+		this.identities = Collections.unmodifiableSet(new HashSet<>(identities));
 		if (roles == null) {
 			roles = new HashSet<>();
 		}
 		Utils.noNulls(roles, "null item in roles");
-		this.roles = Collections.unmodifiableSet(roles);
+		this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
+		if (customRoles == null) {
+			customRoles = new HashSet<>();
+		}
+		Utils.noNulls(customRoles, "null item in customRoles");
+		this.customRoles = Collections.unmodifiableSet(new HashSet<>(customRoles));
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
 		 * This'll do for now
@@ -97,8 +96,8 @@ public abstract class AuthUser {
 		} else if (roles.contains(Role.ROOT)) {
 			throw new IllegalStateException("Non-root username with root role");
 		}
-		this.canGrantRoles = getRoles().stream().flatMap(r -> r.canGrant().stream())
-				.collect(Collectors.toSet());
+		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
+				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
 		if (created == null) {
 			throw new NullPointerException("created");
 		}
@@ -109,6 +108,17 @@ public abstract class AuthUser {
 			throw new NullPointerException("disabledState");
 		}
 		this.disabledState = disabledState;
+	}
+	
+	/** Create a new AuthUser identical to the provided AuthUser except with a new set of remote
+	 * identities.
+	 * @param user the AuthUser from which to generate a new AuthUser.
+	 * @param newIDs the new remote IDs for the new AuthUser.
+	 */
+	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
+		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
+				user.getCustomRoles(), user.getCreated(), user.getLastLogin(),
+				user.getDisabledState());
 	}
 
 	/** Returns whether this user is the root user.
@@ -170,10 +180,10 @@ public abstract class AuthUser {
 
 	/** Get the user's custom roles.
 	 * @return the users's custom roles.
-	 * @throws AuthStorageException if a storage exception occurred while trying to get the custom
-	 * roles.
 	 */
-	public abstract Set<String> getCustomRoles() throws AuthStorageException;
+	public Set<String> getCustomRoles() {
+		return customRoles;
+	}
 	
 	/** Get the 3rd party identities associated with this user.
 	 * @return the user's remote identities.
@@ -249,4 +259,96 @@ public abstract class AuthUser {
 		}
 		return null;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (created ^ (created >>> 32));
+		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
+		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
+		result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
+		result = prime * result + ((email == null) ? 0 : email.hashCode());
+		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
+		result = prime * result + ((lastLogin == null) ? 0 : lastLogin.hashCode());
+		result = prime * result + ((roles == null) ? 0 : roles.hashCode());
+		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		AuthUser other = (AuthUser) obj;
+		if (created != other.created) {
+			return false;
+		}
+		if (customRoles == null) {
+			if (other.customRoles != null) {
+				return false;
+			}
+		} else if (!customRoles.equals(other.customRoles)) {
+			return false;
+		}
+		if (disabledState == null) {
+			if (other.disabledState != null) {
+				return false;
+			}
+		} else if (!disabledState.equals(other.disabledState)) {
+			return false;
+		}
+		if (displayName == null) {
+			if (other.displayName != null) {
+				return false;
+			}
+		} else if (!displayName.equals(other.displayName)) {
+			return false;
+		}
+		if (email == null) {
+			if (other.email != null) {
+				return false;
+			}
+		} else if (!email.equals(other.email)) {
+			return false;
+		}
+		if (identities == null) {
+			if (other.identities != null) {
+				return false;
+			}
+		} else if (!identities.equals(other.identities)) {
+			return false;
+		}
+		if (lastLogin == null) {
+			if (other.lastLogin != null) {
+				return false;
+			}
+		} else if (!lastLogin.equals(other.lastLogin)) {
+			return false;
+		}
+		if (roles == null) {
+			if (other.roles != null) {
+				return false;
+			}
+		} else if (!roles.equals(other.roles)) {
+			return false;
+		}
+		if (userName == null) {
+			if (other.userName != null) {
+				return false;
+			}
+		} else if (!userName.equals(other.userName)) {
+			return false;
+		}
+		return true;
+	}
+	
+	
 }

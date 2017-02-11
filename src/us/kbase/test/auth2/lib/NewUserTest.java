@@ -15,6 +15,7 @@ import org.junit.Test;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -38,18 +39,14 @@ public class NewUserTest {
 				is((UserName) null));
 		TestCommon.assertDateNoOlderThan(u.getCreated(), 500);
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
-		assertThat("incorrect disabled state", u.getDisabledState().getByAdmin(),
-				is((UserName) null));
-		assertThat("incorrect disabled state", u.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", u.getDisabledState().getTime(), is((Date) null));
-		assertThat("incorrect disabled state", u.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e@g.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
+		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
 		assertThat("incorrect last login", u.getLastLogin(), is((Date) null));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -70,18 +67,14 @@ public class NewUserTest {
 				is((UserName) null));
 		TestCommon.assertDateNoOlderThan(u.getCreated(), 500);
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
-		assertThat("incorrect disabled state", u.getDisabledState().getByAdmin(),
-				is((UserName) null));
-		assertThat("incorrect disabled state", u.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", u.getDisabledState().getTime(), is((Date) null));
-		assertThat("incorrect disabled state", u.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e@g.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
+		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));

@@ -28,6 +28,8 @@ public enum ErrorType {
 	ILLEGAL_EMAIL_ADDRESS	(30020, "Illegal email address"),
 	/** The user could not be created because it already exists. */
 	USER_ALREADY_EXISTS		(40000, "User already exists"),
+	/** The identity is already linked to a different user */
+	ID_ALREADY_LINKED		(40010, "Identity already linked"),
 	/** The requested user does not exist. */
 	NO_SUCH_USER			(50000, "No such user"),
 	/** The requested local user does not exist. */

@@ -13,6 +13,7 @@ import java.util.Set;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
@@ -20,37 +21,15 @@ import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.test.auth2.TestCommon;
 
 public class LocalUserTest {
 	
-	private class LocalUserSuppliedCRoles extends LocalUser {
-		
-		private final Set<String> customRoles;
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(LocalUser.class).usingGetClass()
+				.withIgnoredFields("canGrantRoles").verify();
 
-		public LocalUserSuppliedCRoles(
-				final UserName userName,
-				final EmailAddress email,
-				final DisplayName displayName,
-				final Set<Role> roles,
-				final Set<String> customRoles,
-				final Date created,
-				final Date lastLogin,
-				final UserDisabledState disabledState,
-				final byte[] passwordHash,
-				final byte[] salt,
-				final boolean forceReset,
-				final Date lastReset) {
-			super(userName, email, displayName, roles, created, lastLogin, disabledState,
-					passwordHash, salt, forceReset, lastReset);
-			this.customRoles = customRoles;
-		}
-		
-		@Override
-		public Set<String> getCustomRoles() throws AuthStorageException {
-			return customRoles;
-		}
 	}
 	
 	@Test
@@ -67,7 +46,7 @@ public class LocalUserTest {
 		final byte[] pwd = "foobarbazb".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wh".getBytes(StandardCharsets.UTF_8);
 		
-		final LocalUser lu = new LocalUserSuppliedCRoles(un, e, dn, r, cr, d, ll, uds,
+		final LocalUser lu = new LocalUser(un, e, dn, r, cr, d, ll, uds,
 				pwd, salt, false, null);
 		assertThat("incorrect password hash",
 				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbazb"));
@@ -81,12 +60,8 @@ public class LocalUserTest {
 				is(new UserName("who")));
 		assertThat("incorrect created date", lu.getCreated(), is(d));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(set("foobar")));
-		assertThat("incorrect disabled state", lu.getDisabledState().getByAdmin(),
-				is(new UserName("who")));
-		assertThat("incorrect disabled state", lu.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getTime(), is(d));
-		assertThat("incorrect disabled state", lu.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
+				new UserName("who"), d)));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is(d));
@@ -113,7 +88,7 @@ public class LocalUserTest {
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "we".getBytes(StandardCharsets.UTF_8);
 		
-		final LocalUser lu = new LocalUserSuppliedCRoles(un, e, dn, r, cr, d, null, uds,
+		final LocalUser lu = new LocalUser(un, e, dn, r, cr, d, null, uds,
 				pwd, salt, true, d);
 		assertThat("incorrect password hash",
 				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz1"));
@@ -143,7 +118,7 @@ public class LocalUserTest {
 			final byte[] salt,
 			final Exception e) {
 		try {
-			new LocalUserSuppliedCRoles(new UserName("foo"), new EmailAddress("e@g.com"),
+			new LocalUser(new UserName("foo"), new EmailAddress("e@g.com"),
 					new DisplayName("bar"), Collections.emptySet(), Collections.emptySet(),
 					new Date(), null, new UserDisabledState(), passwordHash, salt, false, null);
 			fail("excpected exception");
@@ -171,12 +146,7 @@ public class LocalUserTest {
 				is((UserName) null));
 		TestCommon.assertDateNoOlderThan(lu.getCreated(), 500);
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
-		assertThat("incorrect disabled state", lu.getDisabledState().getByAdmin(),
-				is((UserName) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getDisabledReason(),
-				is((String) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().getTime(), is((Date) null));
-		assertThat("incorrect disabled state", lu.getDisabledState().isDisabled(), is(false));
+		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("e@g.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));

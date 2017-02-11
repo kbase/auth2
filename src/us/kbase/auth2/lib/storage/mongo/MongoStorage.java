@@ -1,7 +1,5 @@
 package us.kbase.auth2.lib.storage.mongo;
 
-import static us.kbase.auth2.lib.Utils.clear;
-
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -54,6 +52,7 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -212,7 +211,7 @@ public class MongoStorage implements AuthStorage {
 		}
 		this.db = db;
 		
-		//TODO MISC check workspace startup for stuff to port over
+		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver
 		ensureIndexes(); // MUST come before checkConfig();
 		checkConfig();
 	}
@@ -281,70 +280,12 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private List<String> getCanonicalDisplayName(final DisplayName display) {
-		//TODO SEARCH remove punctuation
-		final String[] parts = display.getName().toLowerCase().split("\\s");
-		final List<String> ret = new LinkedList<>();
-		for (String p: parts) {
-			p = p.trim();
-			if (!p.isEmpty()) {
-				ret.add(p);
-			}
-		}
-		return ret;
-	}
-	
-	@Override
-	public void createRoot(
-			final UserName root,
-			final DisplayName displayName,
-			final EmailAddress email,
-			final Set<Role> roles,
-			final Date created,
-			final byte[] passwordHash,
-			final byte[] salt) throws AuthStorageException {
-		
-		final String encpwd = Base64.getEncoder().encodeToString(passwordHash);
-		clear(passwordHash);
-		final String encsalt = Base64.getEncoder().encodeToString(salt);
-		clear(salt);
-		final Document q = new Document(Fields.USER_NAME, root.getName());
-		final List<String> rolestr = roles.stream().map(r -> r.getID())
-				.collect(Collectors.toList());
-		final Document set = new Document(
-				Fields.USER_LOCAL, true)
-				.append(Fields.USER_ROLES, rolestr)
-				.append(Fields.USER_RESET_PWD, false)
-				.append(Fields.USER_PWD_HSH, encpwd)
-				.append(Fields.USER_SALT, encsalt)
-				/* ideally only set admin name to  root if 1) the root account already exists and
-				 * 2) the field isn't set to root, but that's too much trouble for now
-				 * could do it with an insert/update cycle
-				 */
-				.append(Fields.USER_DISABLED_ADMIN, null)
-				.append(Fields.USER_DISABLED_REASON, null); // always enable
-		final Document setIfMissing = new Document(
-				Fields.USER_EMAIL, email.getAddress())
-				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(displayName))
-				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
-				.append(Fields.USER_CREATED, created)
-				.append(Fields.USER_LAST_LOGIN, null)
-				.append(Fields.USER_DISABLED_DATE, null)
-				.append(Fields.USER_RESET_PWD_LAST, null);
-		final Document u = new Document("$set", set)
-				.append("$setOnInsert", setIfMissing);
-		try {
-			db.getCollection(COL_USERS).updateOne(q, u,
-					new UpdateOptions().upsert(true));
-		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
-		}
-	}
-	
 	@Override
 	public void createLocalUser(final NewLocalUser local)
 			throws UserExistsException, AuthStorageException {
+		if (local == null) {
+			throw new NullPointerException("local");
+		}
 		final String pwdhsh = Base64.getEncoder().encodeToString(
 				local.getPasswordHash());
 		final String salt = Base64.getEncoder().encodeToString(
@@ -355,12 +296,13 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_LOCAL, true)
 				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						local.getDisplayName()))
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, local.getDisplayName()
+						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
+				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
 				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
@@ -393,20 +335,19 @@ public class MongoStorage implements AuthStorage {
 		@SuppressWarnings("unchecked")
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		
-		return new MongoLocalUser(
+		return new LocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
-				user.getDate(Fields.USER_RESET_PWD_LAST),
-				this);
+				user.getDate(Fields.USER_RESET_PWD_LAST));
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
@@ -417,10 +358,10 @@ public class MongoStorage implements AuthStorage {
 					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
 					user.getDate(Fields.USER_DISABLED_DATE));
 		} catch (IllegalParameterException | MissingParameterException e) {
+			//TODO TEST manipulate DB to cause this
 			throw new AuthStorageException("Illegal value stored in database", e);
 		}
 	}
-	
 
 	private UserName getUserNameAllowNull(final String namestr) throws AuthStorageException {
 		if (namestr == null) {
@@ -432,6 +373,7 @@ public class MongoStorage implements AuthStorage {
 	private UserName getUserName(String namestr) throws AuthStorageException {
 		try {
 			return new UserName(namestr);
+			//TODO TEST manipulate DB to cause this
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
@@ -440,6 +382,7 @@ public class MongoStorage implements AuthStorage {
 	private DisplayName getDisplayName(final String displayName) throws AuthStorageException {
 		try {
 			return new DisplayName(displayName);
+			//TODO TEST manipulate DB to cause this
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
@@ -451,6 +394,7 @@ public class MongoStorage implements AuthStorage {
 		}
 		try {
 			return new EmailAddress(email);
+			//TODO TEST manipulate DB to cause this
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
@@ -491,30 +435,24 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void createUser(final NewUser user)
-			throws UserExistsException, AuthStorageException {
-		if (user.isLocal()) {
-			throw new IllegalArgumentException("cannot create a local user");
+			throws UserExistsException, AuthStorageException, IdentityLinkedException {
+		if (user == null) {
+			throw new NullPointerException("user");
 		}
-		if (user.getIdentities().size() > 1) {
-			throw new IllegalArgumentException(
-					"user can only have one identity");
-		}
-		final RemoteIdentityWithLocalID ri = user.getIdentities().iterator().next();
-		final Document id = toDocument(ri);
-		
 		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						user.getDisplayName()))
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, user.getDisplayName()
+						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
-				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
+				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
 				.append(Fields.USER_CREATED, user.getCreated())
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
 				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
@@ -522,11 +460,18 @@ public class MongoStorage implements AuthStorage {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
 			if (isDuplicateKeyException(mwe)) {
-				//TODO ERRHANDLE handle case where duplicate is a remote id, not the username
-				throw new UserExistsException(user.getUserName().getName());
-			} else {
-				throw new AuthStorageException("Database write failed", mwe);
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_USERS + ".$" + Fields.USER_NAME)) {
+					throw new UserExistsException(user.getUserName().getName());
+				} else if (msg.contains(COL_USERS + ".$" + Fields.USER_IDENTITIES)) {
+					// either the provider / prov id combo or the local identity uuid are already
+					// in the db
+					final RemoteIdentityID ri = user.getIdentity().getRemoteID();
+					throw new IdentityLinkedException(ri.getProvider() + " : " + ri.getId());
+				} // otherwise throw next exception
 			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -534,6 +479,9 @@ public class MongoStorage implements AuthStorage {
 
 	private Document getUserDoc(final UserName userName, final boolean local)
 			throws AuthStorageException, NoSuchUserException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
 		final Document projection = local ? null : new Document(
 				Fields.USER_PWD_HSH, 0).append(Fields.USER_SALT, 0);
 		final Document user = findOne(COL_USERS,
@@ -708,7 +656,7 @@ public class MongoStorage implements AuthStorage {
 		return toUser(getUserDoc(userName, false));
 	}
 
-	private MongoUser toUser(final Document user) throws AuthStorageException {
+	private AuthUser toUser(final Document user) throws AuthStorageException {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
@@ -717,18 +665,18 @@ public class MongoStorage implements AuthStorage {
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
+		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
 		
-		return new MongoUser(
-				getUserName(user.getString(Fields.USER_NAME)),
+		return new AuthUser(
+				userName,
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				toIdentities(ids),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				getUserDisabledState(user),
-				this);
+				getUserDisabledState(user));
 	}
 	
 	@Override
@@ -946,7 +894,7 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 
-	Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
+	private Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
 			throws AuthStorageException {
 		final Set<Document> roledocs = getCustomRoles(new Document(
 				Fields.MONGO_ID, new Document("$in", roleIds)));
@@ -1019,7 +967,7 @@ public class MongoStorage implements AuthStorage {
 		if (u == null) {
 			return null;
 		}
-		MongoUser user = toUser(u);
+		AuthUser user = toUser(u);
 		/* could do a findAndModify to set the fields on the first query, but
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
@@ -1035,7 +983,7 @@ public class MongoStorage implements AuthStorage {
 			final Set<RemoteIdentityWithLocalID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new MongoUser(user, newIDs);
+			user = new AuthUser(user, newIDs);
 			updateIdentity(remoteID);
 		}
 		return user;
@@ -1257,8 +1205,8 @@ public class MongoStorage implements AuthStorage {
 		final Document d = new Document();
 		if (update.getDisplayName() != null) {
 			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, getCanonicalDisplayName(
-						update.getDisplayName()));
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, 
+						update.getDisplayName().getCanonicalDisplayName());
 		}
 		if (update.getEmail() != null) {
 			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());
