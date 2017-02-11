@@ -110,7 +110,11 @@ public class AuthUser {
 		this.disabledState = disabledState;
 	}
 	
-	//TODO TEST after EQUALS
+	/** Create a new AuthUser identical to the provided AuthUser except with a new set of remote
+	 * identities.
+	 * @param user the AuthUser from which to generate a new AuthUser.
+	 * @param newIDs the new remote IDs for the new AuthUser.
+	 */
 	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
 		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
 				user.getCustomRoles(), user.getCreated(), user.getLastLogin(),
@@ -255,6 +259,104 @@ public class AuthUser {
 		}
 		return null;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((canGrantRoles == null) ? 0 : canGrantRoles.hashCode());
+		result = prime * result + (int) (created ^ (created >>> 32));
+		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
+		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
+		result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
+		result = prime * result + ((email == null) ? 0 : email.hashCode());
+		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
+		result = prime * result + ((lastLogin == null) ? 0 : lastLogin.hashCode());
+		result = prime * result + ((roles == null) ? 0 : roles.hashCode());
+		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		AuthUser other = (AuthUser) obj;
+		if (canGrantRoles == null) {
+			if (other.canGrantRoles != null) {
+				return false;
+			}
+		} else if (!canGrantRoles.equals(other.canGrantRoles)) {
+			return false;
+		}
+		if (created != other.created) {
+			return false;
+		}
+		if (customRoles == null) {
+			if (other.customRoles != null) {
+				return false;
+			}
+		} else if (!customRoles.equals(other.customRoles)) {
+			return false;
+		}
+		if (disabledState == null) {
+			if (other.disabledState != null) {
+				return false;
+			}
+		} else if (!disabledState.equals(other.disabledState)) {
+			return false;
+		}
+		if (displayName == null) {
+			if (other.displayName != null) {
+				return false;
+			}
+		} else if (!displayName.equals(other.displayName)) {
+			return false;
+		}
+		if (email == null) {
+			if (other.email != null) {
+				return false;
+			}
+		} else if (!email.equals(other.email)) {
+			return false;
+		}
+		if (identities == null) {
+			if (other.identities != null) {
+				return false;
+			}
+		} else if (!identities.equals(other.identities)) {
+			return false;
+		}
+		if (lastLogin == null) {
+			if (other.lastLogin != null) {
+				return false;
+			}
+		} else if (!lastLogin.equals(other.lastLogin)) {
+			return false;
+		}
+		if (roles == null) {
+			if (other.roles != null) {
+				return false;
+			}
+		} else if (!roles.equals(other.roles)) {
+			return false;
+		}
+		if (userName == null) {
+			if (other.userName != null) {
+				return false;
+			}
+		} else if (!userName.equals(other.userName)) {
+			return false;
+		}
+		return true;
+	}
 	
-	//TODO EQUALS
+	
 }

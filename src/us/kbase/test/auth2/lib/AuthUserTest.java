@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -33,6 +34,11 @@ public class AuthUserTest {
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(AuthUser.class).usingGetClass().verify();
+	}
 	
 	@Test
 	public void constructMinimal() throws Exception {
@@ -115,6 +121,38 @@ public class AuthUserTest {
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
+		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
+		assertThat("incorrect is disabled", u.isDisabled(), is(false));
+		assertThat("incorrect is local", u.isLocal(), is(false));
+		assertThat("incorrect is root", u.isRoot(), is(false));
+	}
+	
+	@Test
+	public void newRoles() throws Exception {
+		final AuthUser pre = new AuthUser(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
+				null, null, NOW, null, new UserDisabledState());
+		
+		final RemoteIdentityWithLocalID ri2 = new RemoteIdentityWithLocalID(
+				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+				new RemoteIdentityID("prov2", "bar2"),
+				new RemoteIdentityDetails("user2", "full2", "email2"));
+		
+		final AuthUser u = new AuthUser(pre, set(ri2));
+		
+		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
+				is((UserName) null));
+		assertThat("incorrect created date", u.getCreated(), is(NOW));
+		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
+		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
+		assertThat("incorrect last login", u.getLastLogin(), is((Date) null));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
 		assertThat("incorrect is local", u.isLocal(), is(false));
