@@ -30,7 +30,6 @@ import us.kbase.test.auth2.TestCommon;
 
 /* Test creating and getting local and standard users. Does not test any other user manipulations.
  * Also does not test display name canonicalization.
- * TODO test display name canonicalization.
  */
 
 public class MongoStorageUserCreateGetTest extends MongoStorageTester {
@@ -178,4 +177,6 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	}
 	
 	//TODO NOW TEST add tests for regular users
+	//TODO NOW TEST add test getting local user as regular user
+	
 }

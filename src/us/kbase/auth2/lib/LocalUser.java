@@ -5,18 +5,10 @@ import java.util.Set;
 
 /** A local user.
  * 
- * Note that since some fields in LocalUser may be lazily fetched from the authentication storage
- * system, equals() and hashcode() are not implemented, as they would require database access when
- * often the fields are not actually necessary for the operation in process.
- * 
- * Usernames are expected to be unique, so testing for equality via comparison of the username is
- * a reasonable substitute, although care must be taken to never initialize a user with an
- * incorrect username.
- * 
  * @author gaprice@lbl.gov
  *
  */
-public abstract class LocalUser extends AuthUser {
+public class LocalUser extends AuthUser {
 	
 	private final byte[] passwordHash;
 	private final byte[] salt;
@@ -28,6 +20,7 @@ public abstract class LocalUser extends AuthUser {
 	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
 	 * @param roles any roles the user possesses.
+	 * @param customRoles any custom roles the user possesses.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login.
 	 * @param disabledState whether the user account is disabled.
@@ -41,6 +34,7 @@ public abstract class LocalUser extends AuthUser {
 			final EmailAddress email,
 			final DisplayName displayName,
 			final Set<Role> roles,
+			final Set<String> customRoles,
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState,
@@ -48,7 +42,8 @@ public abstract class LocalUser extends AuthUser {
 			final byte[] salt,
 			final boolean forceReset,
 			final Date lastReset) {
-		super(userName, email, displayName, null, roles, created, lastLogin, disabledState);
+		super(userName, email, displayName, null, roles, customRoles, created, lastLogin,
+				disabledState);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException("passwordHash missing or too small");
@@ -89,4 +84,6 @@ public abstract class LocalUser extends AuthUser {
 	public Date getLastPwdReset() {
 		return lastReset == null ? null : new Date(lastReset);
 	}
+	
+	//TODO EQUALS
 }

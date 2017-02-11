@@ -301,7 +301,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
-				// admin is always null for new local user, but check for safety
+				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
 				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
@@ -334,20 +334,19 @@ public class MongoStorage implements AuthStorage {
 		@SuppressWarnings("unchecked")
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		
-		return new MongoLocalUser(
+		return new LocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
-				user.getDate(Fields.USER_RESET_PWD_LAST),
-				this);
+				user.getDate(Fields.USER_RESET_PWD_LAST));
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
@@ -449,6 +448,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
 				.append(Fields.USER_CREATED, user.getCreated())
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
 				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
@@ -645,7 +645,7 @@ public class MongoStorage implements AuthStorage {
 		return toUser(getUserDoc(userName, false));
 	}
 
-	private MongoUser toUser(final Document user) throws AuthStorageException {
+	private AuthUser toUser(final Document user) throws AuthStorageException {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
@@ -654,18 +654,18 @@ public class MongoStorage implements AuthStorage {
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
+		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
 		
-		return new MongoUser(
-				getUserName(user.getString(Fields.USER_NAME)),
+		return new AuthUser(
+				userName,
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				toIdentities(ids),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				getUserDisabledState(user),
-				this);
+				getUserDisabledState(user));
 	}
 	
 	@Override
@@ -883,7 +883,7 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 
-	Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
+	private Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
 			throws AuthStorageException {
 		final Set<Document> roledocs = getCustomRoles(new Document(
 				Fields.MONGO_ID, new Document("$in", roleIds)));
@@ -956,7 +956,7 @@ public class MongoStorage implements AuthStorage {
 		if (u == null) {
 			return null;
 		}
-		MongoUser user = toUser(u);
+		AuthUser user = toUser(u);
 		/* could do a findAndModify to set the fields on the first query, but
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
@@ -972,7 +972,7 @@ public class MongoStorage implements AuthStorage {
 			final Set<RemoteIdentityWithLocalID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new MongoUser(user, newIDs);
+			user = new AuthUser(user, newIDs);
 			updateIdentity(remoteID);
 		}
 		return user;

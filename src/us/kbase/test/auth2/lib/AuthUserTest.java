@@ -36,14 +36,14 @@ public class AuthUserTest {
 	
 	@Test
 	public void constructMinimal() throws Exception {
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("foo"),
+		final AuthUser u = new AuthUser(new UserName("foo"),
 				new EmailAddress("f@g.com"), new DisplayName("bar"), null,
 				null, null, NOW, null, new UserDisabledState());
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is((UserName) null));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
-		assertThat("incorrect custom roles", u.getCustomRoles(), is((Set<String>) null));
+		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g.com")));
@@ -65,7 +65,7 @@ public class AuthUserTest {
 		Thread.sleep(2);
 		final Date d = new Date();
 		
-		final AuthUser u = new AuthUserSuppliedCRoles(UserName.ROOT,
+		final AuthUser u = new AuthUser(UserName.ROOT,
 				new EmailAddress("f@g1.com"), new DisplayName("bar1"), null,
 				set(Role.ROOT), set("foo", "bar"), NOW, ll, new UserDisabledState(
 						"reason", new UserName("whee"), d));
@@ -96,7 +96,7 @@ public class AuthUserTest {
 		Thread.sleep(2);
 		final Date d = new Date();
 		
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
 				set(Role.DEV_TOKEN, Role.SERV_TOKEN), set("foo1"), NOW, ll, new UserDisabledState(
 						new UserName("whee1"), d));
@@ -123,7 +123,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void roleMethods() throws Exception {
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), null, 
 				set(Role.ADMIN, Role.DEV_TOKEN), null, NOW, null,
 				new UserDisabledState());
@@ -145,7 +145,7 @@ public class AuthUserTest {
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 		
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE, ri2),
 				null, null, NOW, null, new UserDisabledState());
 		
@@ -174,7 +174,7 @@ public class AuthUserTest {
 		final Date ll = new Date();
 		Thread.sleep(2);
 		final Date c = new Date();
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("foo"),
+		final AuthUser u = new AuthUser(new UserName("foo"),
 				new EmailAddress("f@g.com"), new DisplayName("bar"), null,
 				null, null, c, ll, new UserDisabledState());
 		assertThat("last login not updated correctly", u.getLastLogin(), is(c));
@@ -187,32 +187,35 @@ public class AuthUserTest {
 		final DisplayName dn = new DisplayName("bar");
 		final Set<RemoteIdentityWithLocalID> ids = set(REMOTE);
 		final Set<Role> roles = Collections.emptySet();
+		final Set<String> croles = Collections.emptySet();
 		final Date created = new Date();
 		final UserDisabledState ds = new UserDisabledState();
-		failConstruct(null, email, dn, ids, roles, created, ds,
+		failConstruct(null, email, dn, ids, roles, croles, created, ds,
 				new NullPointerException("userName"));
-		failConstruct(un, null, dn, ids, roles, created, ds,
+		failConstruct(un, null, dn, ids, roles, croles, created, ds,
 				new NullPointerException("email"));
-		failConstruct(un, email, null, ids, roles, created, ds,
+		failConstruct(un, email, null, ids, roles, croles, created, ds,
 				new NullPointerException("displayName"));
-		failConstruct(un, email, dn, ids, roles, null, ds,
+		failConstruct(un, email, dn, ids, roles, croles, null, ds,
 				new NullPointerException("created"));
-		failConstruct(un, email, dn, ids, roles, created, null,
+		failConstruct(un, email, dn, ids, roles, croles, created, null,
 				new NullPointerException("disabledState"));
-		failConstruct(UserName.ROOT, email, dn, null, roles, created, ds,
+		failConstruct(UserName.ROOT, email, dn, null, roles, croles, created, ds,
 				new IllegalStateException("Root username must only have the ROOT role"));
-		failConstruct(UserName.ROOT, email, dn, null, set(Role.ADMIN), created, ds,
+		failConstruct(UserName.ROOT, email, dn, null, set(Role.ADMIN), croles, created, ds,
 				new IllegalStateException("Root username must only have the ROOT role"));
-		failConstruct(UserName.ROOT, email, dn, null, set(Role.ADMIN, Role.ROOT), created, ds,
-				new IllegalStateException("Root username must only have the ROOT role"));
-		failConstruct(UserName.ROOT, email, dn, ids, set(Role.ROOT), created, ds,
+		failConstruct(UserName.ROOT, email, dn, null, set(Role.ADMIN, Role.ROOT), croles, created,
+				ds, new IllegalStateException("Root username must only have the ROOT role"));
+		failConstruct(UserName.ROOT, email, dn, ids, set(Role.ROOT), croles, created, ds,
 				new IllegalStateException("Root user cannot have identities"));
-		failConstruct(un, email, dn, ids, set(Role.ADMIN, Role.ROOT), created, ds,
+		failConstruct(un, email, dn, ids, set(Role.ADMIN, Role.ROOT), croles, created, ds,
 				new IllegalStateException("Non-root username with root role"));
-		failConstruct(un, email, dn, set(REMOTE, null), roles, created, ds,
+		failConstruct(un, email, dn, set(REMOTE, null), roles, croles, created, ds,
 				new NullPointerException("null item in identities"));
-		failConstruct(un, email, dn, ids, set(Role.ADMIN, null), created, ds,
+		failConstruct(un, email, dn, ids, set(Role.ADMIN, null), croles, created, ds,
 				new NullPointerException("null item in roles"));
+		failConstruct(un, email, dn, ids, roles, set("foo", null), created, ds,
+				new NullPointerException("null item in customRoles"));
 	}
 	
 	private void failConstruct(
@@ -221,12 +224,13 @@ public class AuthUserTest {
 			final DisplayName displayName,
 			final Set<RemoteIdentityWithLocalID> identities,
 			final Set<Role> roles,
+			final Set<String> customRoles,
 			final Date created,
 			final UserDisabledState disabledState,
 			final Exception e) {
 		try {
-			new AuthUserSuppliedCRoles(userName, email, displayName, identities, roles,
-					Collections.emptySet(), created, null, disabledState);
+			new AuthUser(userName, email, displayName, identities, roles,
+					customRoles, created, null, disabledState);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -236,7 +240,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableIdentities() throws Exception {
 		final Set<RemoteIdentityWithLocalID> ids = set(REMOTE);
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), ids,
 				null, null, NOW, null, new UserDisabledState());
 		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
@@ -258,7 +262,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableRoles() throws Exception {
 		final Set<Role> roles = set(Role.DEV_TOKEN);
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
 				roles, null, NOW, null, new UserDisabledState());
 		
@@ -274,8 +278,26 @@ public class AuthUserTest {
 	}
 	
 	@Test
+	public void immutableCustomRoles() throws Exception {
+		final Set<String> croles = set("foo");
+		final AuthUser u = new AuthUser(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
+				null, croles, NOW, null, new UserDisabledState());
+		
+		try {
+			u.getCustomRoles().add("bar");
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		croles.add("baz");
+		assertThat("incorrect roles", u.getCustomRoles(), is(set("foo")));
+	}
+	
+	@Test
 	public void immutableGrantableRoles() throws Exception {
-		final AuthUser u = new AuthUserSuppliedCRoles(new UserName("whoo"),
+		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
 				null, null, NOW, null, new UserDisabledState());
 		

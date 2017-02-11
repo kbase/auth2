@@ -1,10 +1,8 @@
 package us.kbase.auth2.lib;
 
-import java.util.Collections;
 import java.util.Date;
-import java.util.Set;
 
-/** A newly created local user. See the notes for LocalUser.
+/** A newly created local user.
  * @author gaprice@lbl.gov
  *
  */
@@ -25,13 +23,7 @@ public class NewLocalUser extends LocalUser {
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset) {
-		super(userName, email, displayName, Collections.emptySet(), new Date(), null,
+		super(userName, email, displayName, null, null, new Date(), null,
 				new UserDisabledState(), passwordHash, salt, forceReset, null);
 	}
-
-	@Override
-	public Set<String> getCustomRoles() {
-		return Collections.emptySet();
-	}
-
 }

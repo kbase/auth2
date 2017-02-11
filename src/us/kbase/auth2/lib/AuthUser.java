@@ -8,10 +8,6 @@ import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
-import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-
-// maybe the better way to handle this is note that using eq or hc could cause DB access and
-// implement calling the abstract method
 
 /** A user in the authentication system.
  * 
@@ -19,24 +15,17 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
  * locally and are not associated with 3rd party identity providers. Standard users' accounts
  * are always associated with at least one 3rd party identity.
  * 
- * Note that since some fields in AuthUser may be lazily fetched from the authentication storage
- * system, equals() and hashcode() are not implemented, as they would require database access when
- * often the fields are not actually necessary for the operation in process.
- * 
- * Usernames are expected to be unique, so testing for equality via comparison of the username is
- * a reasonable substitute, although care must be taken to never initialize a user with an
- * incorrect username.
- * 
  * @author gaprice@lbl.gov
  *
  */
-public abstract class AuthUser {
+public class AuthUser {
 
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;
+	private final Set<String> customRoles;
 	private final Set<RemoteIdentityWithLocalID> identities;
 	private final long created;
 	private final Long lastLogin;
@@ -49,6 +38,7 @@ public abstract class AuthUser {
 	 * @param identities any 3rd party identities associated with the user. Empty or null for local
 	 * users.
 	 * @param roles any roles the user possesses.
+	 * @param customRoles any custom roles the user possesses.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date it will be silently modified to match the creation date.
@@ -60,6 +50,7 @@ public abstract class AuthUser {
 			final DisplayName displayName,
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
+			Set<String> customRoles,
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState) {
@@ -86,6 +77,11 @@ public abstract class AuthUser {
 		}
 		Utils.noNulls(roles, "null item in roles");
 		this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
+		if (customRoles == null) {
+			customRoles = new HashSet<>();
+		}
+		Utils.noNulls(customRoles, "null item in customRoles");
+		this.customRoles = Collections.unmodifiableSet(new HashSet<>(customRoles));
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
 		 * This'll do for now
@@ -112,6 +108,13 @@ public abstract class AuthUser {
 			throw new NullPointerException("disabledState");
 		}
 		this.disabledState = disabledState;
+	}
+	
+	//TODO TEST after EQUALS
+	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
+		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
+				user.getCustomRoles(), user.getCreated(), user.getLastLogin(),
+				user.getDisabledState());
 	}
 
 	/** Returns whether this user is the root user.
@@ -173,10 +176,10 @@ public abstract class AuthUser {
 
 	/** Get the user's custom roles.
 	 * @return the users's custom roles.
-	 * @throws AuthStorageException if a storage exception occurred while trying to get the custom
-	 * roles.
 	 */
-	public abstract Set<String> getCustomRoles() throws AuthStorageException;
+	public Set<String> getCustomRoles() {
+		return customRoles;
+	}
 	
 	/** Get the 3rd party identities associated with this user.
 	 * @return the user's remote identities.
@@ -252,4 +255,6 @@ public abstract class AuthUser {
 		}
 		return null;
 	}
+	
+	//TODO EQUALS
 }
