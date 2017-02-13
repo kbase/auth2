@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Date;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -13,6 +14,7 @@ import org.junit.Test;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.UserName;
@@ -85,5 +87,99 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		assertThat("expected forced password reset",
 				storage.getLocalUser(new UserName("foo2")).isPwdResetRequired(), is(true));
 	}
+	
+	@Test
+	public void changePassword() throws Exception {
+		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		storage.createLocalUser(new NewLocalUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), passwordHash, salt, false));
+		final LocalUser user = storage.getLocalUser(new UserName("foo"));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is((Date) null));
+		
+		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
+		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);
+		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, false);
+		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
+		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
+				is("foobarbaz2"));
+		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
+				is("wo2"));
+		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(false));
+		TestCommon.assertDateNoOlderThan(updated.getLastPwdReset(), 200);
+	}
+	
+	@Test
+	public void changePasswordAndForceReset() throws Exception {
+		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		storage.createLocalUser(new NewLocalUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), passwordHash, salt, false));
+		final LocalUser user = storage.getLocalUser(new UserName("foo"));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is((Date) null));
+		
+		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
+		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);
+		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, true);
+		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
+		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
+				is("foobarbaz2"));
+		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
+				is("wo2"));
+		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(true));
+		TestCommon.assertDateNoOlderThan(updated.getLastPwdReset(), 200);
+	}
+	
+	@Test
+	public void changePasswordFailNulls() throws Exception {
+		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		failChangePassword(null, pwd, salt, new NullPointerException("userName"));
+		failChangePassword(new UserName("bar"), null, salt,
+				new IllegalArgumentException("pwdHash cannot be null or empty"));
+		failChangePassword(new UserName("bar"), pwd, null,
+				new IllegalArgumentException("salt cannot be null or empty"));
+	}
+	
+	@Test
+	public void changePasswordFailEmptyBytes() throws Exception {
+		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		failChangePassword(new UserName("bar"), new byte[0], salt,
+				new IllegalArgumentException("pwdHash cannot be null or empty"));
+		failChangePassword(new UserName("bar"), pwd, new byte[0],
+				new IllegalArgumentException("salt cannot be null or empty"));
+	}
+	
+	@Test
+	public void changePasswordFailNoUser() throws Exception {
+		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		failChangePassword(new UserName("foo"), pwd, salt, new NoSuchUserException("foo"));
+		
+	}
+	
+	@Test
+	public void changePasswordFailNoLocalUser() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE, null));
+		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
+		failChangePassword(new UserName("foo"), pwd, salt, new NoSuchLocalUserException("foo"));
+	}
+	
+	private void failChangePassword(
+			final UserName name,
+			final byte[] pwd,
+			final byte salt[],
+			final Exception e) {
+		try {
+			storage.changePassword(name, pwd, salt, false);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 	
 }

@@ -71,7 +71,7 @@ public interface AuthStorage {
 	 */
 	void forcePasswordReset(UserName name) throws NoSuchUserException, AuthStorageException;
 	
-	/** Force all users to reset their passwords on the next login.
+	/** Force all local users to reset their passwords on the next login.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
