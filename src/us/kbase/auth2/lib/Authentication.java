@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
@@ -530,7 +531,7 @@ public class Authentication {
 			throw new NullPointerException("searchFields");
 		}
 		return storage.getUserDisplayNames(prefix, searchFields, Collections.emptySet(),
-				Collections.emptySet(), MAX_RETURNED_USERS);
+				Collections.emptySet(), MAX_RETURNED_USERS, false);
 	}
 	
 	// if searchfields is empty searches all fields
@@ -555,7 +556,7 @@ public class Authentication {
 			throw new NullPointerException("searchCustomRoles");
 		}
 		return storage.getUserDisplayNames(prefix, searchFields, searchRoles, searchCustomRoles,
-				MAX_RETURNED_USERS);
+				MAX_RETURNED_USERS, false);
 	}
 	
 	public void revokeToken(
@@ -987,7 +988,7 @@ public class Authentication {
 				"Not authorized to manage account linked to provided identity");
 	}
 
-
+	// returns null if can't find a reasonable name, although this should be a very rare occurence
 	public UserName getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		if (suggestedUserName == null) {
@@ -995,9 +996,52 @@ public class Authentication {
 		}
 		final UserName un = UserName.sanitizeName(suggestedUserName);
 		if (un == null) {
-			return storage.getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
+			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
 		} else {
-			return storage.getAvailableUserName(un, false);
+			return getAvailableUserName(un, false);
+		}
+	}
+	
+	public UserName getAvailableUserName(
+			final UserName suggestedUserName,
+			final boolean forceNumericSuffix) throws AuthStorageException {
+		
+		final String sugName = suggestedUserName.getName();
+		final String sugStrip = sugName.replaceAll("\\d*$", "");
+		/* this might return a lot of names, but not super likely and it'd take a *lot* to cause
+		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
+		 * db side and search and sort db side.
+		 */
+		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(
+				// checked that this does indeed use an index for the mongo implementation
+				"^" + Pattern.quote(sugStrip) + "\\d*$",
+				new HashSet<>(Arrays.asList(SearchField.DISPLAYNAME)), Collections.emptySet(),
+				Collections.emptySet(), -1, true);
+		boolean match = false;
+		long largest = 0;
+		for (final UserName d: users.keySet()) {
+			final String lastName = d.getName();
+			match = match || sugName.equals(lastName);
+			final String num = lastName.replace(sugStrip, "");
+			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
+			largest = n > largest ? n : largest;
+		}
+		final String newName;
+		if (largest == 0 || !match) {
+			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+			newName = suggestedUserName.getName() +
+					(!hasNumSuffix && forceNumericSuffix ? (largest + 1) : "");
+		} else {
+			newName = sugStrip + (largest + 1);
+		}
+		if (newName.length() > UserName.MAX_NAME_LENGTH) {
+			 // not worth trying to do something clever here, should never happen
+			return null;
+		}
+		try {
+			return new UserName(newName);
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("this should be impossible", e);
 		}
 	}
 	

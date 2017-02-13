@@ -36,7 +36,7 @@ public class UserName {
 	
 	private static final String INVALID_CHARS_REGEX = "[^a-z\\d_]+";
 	private final static Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
-	private final static int MAX_NAME_LENGTH = 100;
+	public final static int MAX_NAME_LENGTH = 100;
 	
 	private final String name;
 
