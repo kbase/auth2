@@ -32,7 +32,6 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.test.auth2.TestCommon;
 
 /* Test creating and getting local and standard users. Does not test any other user manipulations.
- * Also does not test display name canonicalization.
  */
 
 public class MongoStorageUserCreateGetTest extends MongoStorageTester {
