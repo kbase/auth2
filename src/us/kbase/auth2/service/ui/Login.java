@@ -296,7 +296,8 @@ public class Login {
 			final Map<String, String> c = new HashMap<>();
 			c.put("id", id.getID().toString());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
-			c.put("usernamesugg", auth.getAvailableUserName(suggestedUserName).getName());
+			final UserName availName = auth.getAvailableUserName(suggestedUserName);
+			c.put("usernamesugg", availName == null ? null : availName.getName());
 			c.put("prov_username", id.getDetails().getUsername());
 			c.put("prov_fullname", id.getDetails().getFullname());
 			c.put("prov_email", id.getDetails().getEmail());

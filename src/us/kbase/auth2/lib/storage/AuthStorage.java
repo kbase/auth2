@@ -88,17 +88,6 @@ public interface AuthStorage {
 	void createUser(NewUser authUser)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException;
 	
-	/** Based on a user name suggestion, returns a username that does not exist in the database.
-	 * @param suggestedUserName the suggested username.
-	 * @param forceNumericSuffix force the returned username to always have a numeric suffix.
-	 * @return a new username that does not currently exist in the database, based on the suggested
-	 * name.
-	 * @throws AuthStorageException if a problem connecting with the storage
-	 * system occurs.
-	 */
-	UserName getAvailableUserName(UserName suggestedUserName, boolean forceNumericSuffix)
-			throws AuthStorageException;
-
 	/** Disable a user account.
 	 * @param user the name of the account to be disabled.
 	 * @param admin the admin disabling the account.
@@ -158,6 +147,8 @@ public interface AuthStorage {
 	 * @param searchRoles limit the returned users to those with these roles.
 	 * @param searchCustomRoles limit the returned users to those with these custom roles.
 	 * @param maxReturnedUsers the maximum number of users to return.
+	 * @param isRegex true if the prefix is a regex. If the prefix is sourced from user provided
+	 * information, be very careful when setting this flag to true.
 	 * @return a mapping of user name to display name for the discovered users.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
@@ -167,7 +158,8 @@ public interface AuthStorage {
 			Set<SearchField> searchFields,
 			Set<Role> searchRoles,
 			Set<String> searchCustomRoles,
-			int maxReturnedUsers)
+			int maxReturnedUsers,
+			boolean isRegex)
 			throws AuthStorageException;
 
 	/** Get a local user.
