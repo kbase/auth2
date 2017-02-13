@@ -406,6 +406,12 @@ public class MongoStorage implements AuthStorage {
 			final byte[] salt,
 			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
+		if (pwdHash == null || pwdHash.length == 0) {
+			throw new IllegalArgumentException("pwdHash cannot be null or empty");
+		}
+		if (salt == null || salt.length == 0) {
+			throw new IllegalArgumentException("salt cannot be null or empty");
+		}
 		getUserDoc(name, true); //check the user actually is local
 		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
