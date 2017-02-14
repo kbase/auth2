@@ -1,7 +1,6 @@
 package us.kbase.test.auth2;
 
 import org.eclipse.jetty.server.Server;
-import org.eclipse.jetty.servlet.DefaultServlet;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
@@ -31,7 +30,6 @@ public class StartAuthServer {
 		jerseyServlet.setInitOrder(1);
 		jerseyServlet.setInitParameter("javax.ws.rs.Application",
 				"us.kbase.auth2.service.AuthenticationService");
-		context.addServlet(DefaultServlet.class, "/assets/*");
 		server.start();
 		server.join();
 	}

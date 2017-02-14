@@ -18,7 +18,9 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewLocalUser;
+import us.kbase.auth2.lib.NewRootUser;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
@@ -115,6 +117,43 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
 		assertThat("incorrect is local", lu.isLocal(), is(true));
 		assertThat("incorrect is root", lu.isRoot(), is(false));
+	}
+	
+	@Test
+	public void createGetRootUser() throws Exception {
+		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
+		final NewRootUser nlu = new NewRootUser(new EmailAddress("f@g.com"),
+				new DisplayName("bang"), pwd, salt);
+				
+		storage.createLocalUser(nlu);
+		
+		final LocalUser lu = storage.getLocalUser(UserName.ROOT);
+		
+		assertThat("incorrect password hash",
+				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz3"));
+		assertThat("incorrect password salt",
+				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whoo"));
+		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
+				is((UserName) null));
+		TestCommon.assertDateNoOlderThan(lu.getCreated(), 500);
+		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
+		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
+		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bang")));
+		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
+				is(set(Role.CREATE_ADMIN)));
+		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
+		assertThat("incorrect last login", lu.getLastLogin(), is((Date) null));
+		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect roles", lu.getRoles(), is(set(Role.ROOT)));
+		assertThat("incorrect user name", lu.getUserName(), is(UserName.ROOT));
+		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
+		assertThat("incorrect is local", lu.isLocal(), is(true));
+		assertThat("incorrect is root", lu.isRoot(), is(true));
 	}
 	
 	@Test

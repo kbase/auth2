@@ -107,8 +107,10 @@ public class TestCommon {
 	}
 	
 	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
-		assertThat("date older than expected", (d.getTime() + milliseconds) < new Date().getTime(),
+		final Date now = new Date();
+		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
 				is(false));
+		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
 	}
 
 	public static Path getMongoExe() {

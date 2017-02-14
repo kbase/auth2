@@ -127,10 +127,12 @@ UI developer notes
   * Custom role descriptions
   * The reason for why a user account was enabled and disabled.
   * User display names and email addresses.
+  * Token names
 
 Requirements
 ------------
 Java 8 (OpenJDK OK)  
+Apache Ant (http://ant.apache.org/)  
 MongoDB 2.4+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  

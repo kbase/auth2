@@ -209,29 +209,21 @@ public class Authentication {
 		final EmailAddress email;
 		try {
 			dn = new DisplayName("root");
-			email = new EmailAddress("root@unknown.unknown");
+			email = EmailAddress.UNKNOWN;
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This is impossible", e);
 		}
-		final NewLocalUser root = new NewLocalUser(UserName.ROOT, email, dn, passwordHash, salt,
-				false);
+		final NewRootUser root = new NewRootUser(email, dn, passwordHash, salt);
 		try {
 			storage.createLocalUser(root);
-			try {
-				storage.updateRoles(UserName.ROOT, new HashSet<>(Arrays.asList(Role.ROOT)),
-						Collections.emptySet());
-			} catch (NoSuchUserException nsue) { // ok, wtf storage system
-				throw new RuntimeException("AIIIGGG my liver", nsue);
-			}
 		// only way to avoid a race condition. Checking existence before creating user means if
 		// user is added between check and update update will fail
 		} catch (UserExistsException uee) {
 			try {
 				storage.changePassword(UserName.ROOT, passwordHash, salt, false);
-				// just in case the ROOT role wasn't set above on account creation
-				storage.updateRoles(UserName.ROOT, new HashSet<>(Arrays.asList(Role.ROOT)),
-						Collections.emptySet());
-				storage.enableAccount(UserName.ROOT, UserName.ROOT);
+				if (storage.getUser(UserName.ROOT).isDisabled()) {
+					storage.enableAccount(UserName.ROOT, UserName.ROOT);
+				}
 			} catch (NoSuchUserException nsue) {
 				throw new RuntimeException("OK. This is really bad. I give up.", nsue);
 			}
