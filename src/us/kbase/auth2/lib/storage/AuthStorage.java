@@ -193,10 +193,12 @@ public interface AuthStorage {
 	/** Store a token in the database. No checking is done on the validity
 	 * of the token - passing in tokens with bad data is a programming error.
 	 * @param t the token to store.
+	 * @throws IllegalArgumentException if the token or the token ID already exists in the
+	 * database.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void storeToken(HashedToken t) throws AuthStorageException;
+	void storeToken(HashedToken token) throws AuthStorageException;
 
 	/** Get a token from the database based on the hash of the token.
 	 * @param token the hashed token from which to retrieve details.

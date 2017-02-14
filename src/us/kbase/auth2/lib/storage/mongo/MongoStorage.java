@@ -533,21 +533,34 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void storeToken(final HashedToken t) throws AuthStorageException {
+	public void storeToken(final HashedToken token) throws AuthStorageException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document td = new Document(
-				Fields.TOKEN_TYPE, t.getTokenType().getID())
-				.append(Fields.TOKEN_USER_NAME, t.getUserName().getName())
-				.append(Fields.TOKEN_ID, t.getId().toString())
-				.append(Fields.TOKEN_NAME, t.getTokenName())
-				.append(Fields.TOKEN_TOKEN, t.getTokenHash())
-				.append(Fields.TOKEN_EXPIRY, t.getExpirationDate())
-				.append(Fields.TOKEN_CREATION, t.getCreationDate());
+				Fields.TOKEN_TYPE, token.getTokenType().getID())
+				.append(Fields.TOKEN_USER_NAME, token.getUserName().getName())
+				.append(Fields.TOKEN_ID, token.getId().toString())
+				.append(Fields.TOKEN_NAME, token.getTokenName())
+				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_EXPIRY, token.getExpirationDate())
+				.append(Fields.TOKEN_CREATION, token.getCreationDate());
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
-			/* could catch a duplicate key exception here but that indicates
-			 * a programming error - should never try to insert a duplicate
-			 *  token
-			 */
+		} catch (MongoWriteException mwe) {
+			if (isDuplicateKeyException(mwe)) {
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_ID)) {
+					throw new IllegalArgumentException(String.format(
+							"Token ID %s already exists in the database", token.getId()));
+				} else if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_TOKEN)) {
+					throw new IllegalArgumentException(String.format(
+							"Token hash for token ID %s already exists in the database",
+							token.getId()));
+				} // otherwise throw next exception
+			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -581,6 +594,9 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public HashedToken getToken(final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document t = findOne(COL_TOKEN, new Document(
 				Fields.TOKEN_TOKEN, token.getTokenHash()));
 		if (t == null) {
@@ -591,7 +607,6 @@ public class MongoStorage implements AuthStorage {
 		 * only runs ~1/min, so check here
 		 */
 		if (new Date().after(htoken.getExpirationDate())) {
-			// not really possible to write a test for this... maybe turn off the auto deletion?
 			throw new NoSuchTokenException("Token not found");
 		}
 		return htoken;
@@ -732,6 +747,12 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void deleteToken(final UserName userName, final UUID tokenId)
 			throws AuthStorageException, NoSuchTokenException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		if (tokenId == null) {
+			throw new NullPointerException("tokenId");
+		}
 		try {
 			final DeleteResult dr = db.getCollection(COL_TOKEN)
 					.deleteOne(new Document(Fields.TOKEN_USER_NAME, userName.getName())
@@ -749,6 +770,9 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void deleteTokens(final UserName userName)
 			throws AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
 		deleteTokens(new Document(Fields.TOKEN_USER_NAME, userName.getName()));
 	}
 

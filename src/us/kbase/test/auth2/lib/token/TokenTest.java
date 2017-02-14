@@ -13,6 +13,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.token.HashedToken;
@@ -27,6 +28,11 @@ import us.kbase.test.auth2.TestCommon;
 
 public class TokenTest {
 
+	@Test
+	public void equalsHashedToken() throws Exception {
+		EqualsVerifier.forClass(HashedToken.class).usingGetClass().verify();
+	}
+	
 	@Test
 	public void tokenTypeGetType() throws Exception {
 		assertThat("failed to get login token type", TokenType.getType("Login"),
