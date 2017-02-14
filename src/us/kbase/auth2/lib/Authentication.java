@@ -873,7 +873,7 @@ public class Authentication {
 				.map(id -> id.withID()).collect(Collectors.toSet());
 		hasUser.stream().forEach(id -> store.add(id));
 
-		final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 10 * 60 * 1000);
+		final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 		return new LoginToken(tt);
 	}

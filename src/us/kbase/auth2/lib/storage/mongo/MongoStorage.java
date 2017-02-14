@@ -161,8 +161,10 @@ public class MongoStorage implements AuthStorage {
 		token.put(Arrays.asList(Fields.TOKEN_TOKEN), IDX_UNIQ);
 		token.put(Arrays.asList(Fields.TOKEN_ID), IDX_UNIQ);
 		token.put(Arrays.asList(Fields.TOKEN_EXPIRY),
-				// this causes the tokens to expire at their expiration date
-				//TODO TEST that tokens expire appropriately
+				/* this causes the tokens to be deleted at their expiration date
+				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
+				 * way to trigger a run, so tested manually
+				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TOKEN, token);
 		
@@ -171,7 +173,10 @@ public class MongoStorage implements AuthStorage {
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
 				// this causes the tokens to expire at their expiration date
-				//TODO TEST that tokens expire appropriately
+				/* this causes the tokens to be deleted at their expiration date
+				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
+				 * way to trigger a run, so tested manually
+				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEMP_TOKEN, temptoken);
 		
@@ -210,7 +215,7 @@ public class MongoStorage implements AuthStorage {
 		}
 		this.db = db;
 		
-		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver
+		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver)
 		ensureIndexes(); // MUST come before checkConfig();
 		checkConfig();
 	}
