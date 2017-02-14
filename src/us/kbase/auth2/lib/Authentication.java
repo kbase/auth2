@@ -1007,7 +1007,7 @@ public class Authentication {
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(
 				// checked that this does indeed use an index for the mongo implementation
 				"^" + Pattern.quote(sugStrip) + "\\d*$",
-				new HashSet<>(Arrays.asList(SearchField.DISPLAYNAME)), Collections.emptySet(),
+				new HashSet<>(Arrays.asList(SearchField.USERNAME)), Collections.emptySet(),
 				Collections.emptySet(), -1, true);
 		boolean match = false;
 		long largest = 0;
