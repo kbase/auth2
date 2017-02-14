@@ -136,4 +136,69 @@ public class HashedToken {
 		return Base64.getEncoder().encodeToString(hash);
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (creationDate ^ (creationDate >>> 32));
+		result = prime * result + (int) (expirationDate ^ (expirationDate >>> 32));
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((tokenHash == null) ? 0 : tokenHash.hashCode());
+		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
+		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		HashedToken other = (HashedToken) obj;
+		if (creationDate != other.creationDate) {
+			return false;
+		}
+		if (expirationDate != other.expirationDate) {
+			return false;
+		}
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
+			return false;
+		}
+		if (tokenHash == null) {
+			if (other.tokenHash != null) {
+				return false;
+			}
+		} else if (!tokenHash.equals(other.tokenHash)) {
+			return false;
+		}
+		if (tokenName == null) {
+			if (other.tokenName != null) {
+				return false;
+			}
+		} else if (!tokenName.equals(other.tokenName)) {
+			return false;
+		}
+		if (type != other.type) {
+			return false;
+		}
+		if (userName == null) {
+			if (other.userName != null) {
+				return false;
+			}
+		} else if (!userName.equals(other.userName)) {
+			return false;
+		}
+		return true;
+	}
 }
