@@ -363,9 +363,8 @@ public class MongoStorage implements AuthStorage {
 					user.getString(Fields.USER_DISABLED_REASON),
 					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
 					user.getDate(Fields.USER_DISABLED_DATE));
-		} catch (IllegalParameterException | MissingParameterException e) {
-			//TODO TEST manipulate DB to cause this
-			throw new AuthStorageException("Illegal value stored in database", e);
+		} catch (IllegalParameterException | MissingParameterException | IllegalStateException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
 	}
 
@@ -379,7 +378,6 @@ public class MongoStorage implements AuthStorage {
 	private UserName getUserName(String namestr) throws AuthStorageException {
 		try {
 			return new UserName(namestr);
-			//TODO TEST manipulate DB to cause this
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
@@ -388,7 +386,6 @@ public class MongoStorage implements AuthStorage {
 	private DisplayName getDisplayName(final String displayName) throws AuthStorageException {
 		try {
 			return new DisplayName(displayName);
-			//TODO TEST manipulate DB to cause this
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
@@ -400,7 +397,6 @@ public class MongoStorage implements AuthStorage {
 		}
 		try {
 			return new EmailAddress(email);
-			//TODO TEST manipulate DB to cause this
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
