@@ -87,7 +87,7 @@
     <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
   </fileset>
 	
-  <union id="serverjars">
+  <union id="applicationjars">
     <fileset refid="jerseydeps"/>
     <fileset refid="jerseydep_hk2"/>
     <fileset refid="jackson"/>
@@ -97,7 +97,7 @@
   </union>
 
   <path id="compile.classpath">
-    <union refid="serverjars"/>
+    <union refid="applicationjars"/>
     <fileset refid="testlibs"/>
   </path>
 
@@ -143,7 +143,7 @@
     <!-- make the war file for the server-->
     <mkdir dir="${war.dir}/lib"/>
     <copy todir="${war.dir}/lib/" flatten="true">
-      <union refid="serverjars"/>
+      <union refid="applicationjars"/>
     </copy>
     <war destfile="${dist}/${war.file}" webxml="${war.dir}/web.xml">
       <classes dir="${classes}" includes="us/kbase/auth2/**"/>
@@ -217,6 +217,7 @@
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
@@ -225,7 +226,7 @@
   </target>
 	
   <target name="script" depends="compile" description="create cli script">
-    <pathconvert targetos="unix" property="lib.classpath" refid="compile.classpath"/>
+    <pathconvert targetos="unix" property="lib.classpath" refid="applicationjars"/>
     <echo file="./manage_auth">#!/bin/sh
 java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     </echo>

@@ -12,7 +12,6 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
@@ -40,14 +39,13 @@ import us.kbase.auth2.lib.token.TemporaryHashedToken;
  */
 public interface AuthStorage {
 	
-	/** Create a new local account. Note that new accounts are always created
-	 * with no roles.
+	/** Create a new local account.
 	 * @param local the user to create.
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void createLocalUser(NewLocalUser local)
+	void createLocalUser(LocalUser local)
 			throws AuthStorageException, UserExistsException;
 
 	/** Change a local user's password.
@@ -77,7 +75,7 @@ public interface AuthStorage {
 	 */
 	void forcePasswordReset() throws AuthStorageException;
 	
-	/** Create a non-local account. Note that accounts are always created without roles.
+	/** Create a non-local account.
 	 * @param authUser the user to create.
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage

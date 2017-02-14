@@ -44,7 +44,6 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.SearchField;
@@ -281,7 +280,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void createLocalUser(final NewLocalUser local)
+	public void createLocalUser(final LocalUser local)
 			throws UserExistsException, AuthStorageException {
 		if (local == null) {
 			throw new NullPointerException("local");
@@ -290,6 +289,8 @@ public class MongoStorage implements AuthStorage {
 				local.getPasswordHash());
 		final String salt = Base64.getEncoder().encodeToString(
 				local.getSalt());
+		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
 		final UserName admin = local.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
@@ -298,7 +299,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
 				.append(Fields.USER_DISPLAY_NAME_CANONICAL, local.getDisplayName()
 						.getCanonicalDisplayName())
-				.append(Fields.USER_ROLES, new LinkedList<String>())
+				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
@@ -508,11 +509,17 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void disableAccount(final UserName user, final UserName admin, final String reason)
 			throws NoSuchUserException, AuthStorageException {
+		if (reason == null || reason.trim().isEmpty()) {
+			throw new IllegalArgumentException("reason cannot be null or empty");
+		}
 		toggleAccount(user, admin, reason);
 	}
 
 	private void toggleAccount(final UserName user, final UserName admin, final String reason)
 			throws NoSuchUserException, AuthStorageException {
+		if (admin == null) {
+			throw new NullPointerException("admin");
+		}
 		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
 				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
 				.append(Fields.USER_DISABLED_DATE, new Date());
@@ -1189,6 +1196,10 @@ public class MongoStorage implements AuthStorage {
 			final UserName userName,
 			final Document update)
 			throws NoSuchUserException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		// assume coders are not stupid enough to pass in a null document
 		final Document q = new Document(Fields.USER_NAME, userName.getName());
 		final Document u = new Document("$set", update);
 		try {
