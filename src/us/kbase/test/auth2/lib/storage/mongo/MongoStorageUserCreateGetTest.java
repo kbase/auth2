@@ -83,10 +83,11 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
 	@Test
 	public void createGetLocalUser2() throws Exception {
+		// tests unknown email address
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final NewLocalUser nlu = new NewLocalUser(
-				new UserName("baz"), new EmailAddress("f@g.com"), new DisplayName("bang"),
+				new UserName("baz"), EmailAddress.UNKNOWN, new DisplayName("bang"),
 				pwd, salt, true);
 				
 		storage.createLocalUser(nlu);
@@ -105,7 +106,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bang")));
-		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", lu.getEmail(), is(EmailAddress.UNKNOWN));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
