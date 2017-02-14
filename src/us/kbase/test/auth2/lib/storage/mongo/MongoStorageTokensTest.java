@@ -4,6 +4,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import static us.kbase.test.auth2.TestCommon.set;
+
+import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
 
@@ -111,11 +114,123 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
-
-	/* TODO:
-	 * all error conditions
-	 * getTokens()
-	 * deleteToken 3 methods
-	 */
 	
+	@Test
+	public void getTokens() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		final HashedToken ht2 = new NewToken(TokenType.LOGIN, "foo", "sometoken1",
+				new UserName("bar2"), 0).getHashedToken();
+		final HashedToken ht3 = new NewToken(TokenType.LOGIN, "sometoken3",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		storage.storeToken(ht2);
+		storage.storeToken(ht3);
+		
+		assertThat("incorrect tokens", storage.getTokens(new UserName("bar")), is(set(ht3, ht)));
+	}
+	
+	@Test
+	public void getTokensFail() throws Exception {
+		try {
+			storage.getTokens(null);
+			fail("expected exception");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is("userName"));
+		}
+	}
+	
+	@Test
+	public void deleteToken() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		final HashedToken ht2 = new NewToken(TokenType.LOGIN, "foo", "sometoken1",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		storage.storeToken(ht2);
+		storage.deleteToken(new UserName("bar"), ht.getId());
+		assertThat("incorrect tokens", storage.getTokens(new UserName("bar")), is(set(ht2)));
+	}
+	
+	@Test
+	public void deleteTokenFailNulls() throws Exception {
+		failDeleteToken(null, UUID.randomUUID(), new NullPointerException("userName"));
+		failDeleteToken(new UserName("bar"), null, new NullPointerException("tokenId"));
+	}
+	
+	@Test
+	public void deleteTokenFailBadID() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		final UUID id = UUID.randomUUID();
+		failDeleteToken(new UserName("bar"), id, new NoSuchTokenException(
+				String.format("No token %s for user bar exists", id)));
+	}
+	
+	@Test
+	public void deleteTokenFailBadUser() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		failDeleteToken(new UserName("bar1"), ht.getId(), new NoSuchTokenException(
+				String.format("No token %s for user bar1 exists", ht.getId())));
+	}
+	
+	private void failDeleteToken(final UserName name, final UUID id, final Exception e) {
+		try {
+			storage.deleteToken(name, id);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void deleteTokensForUser() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		final HashedToken ht2 = new NewToken(TokenType.LOGIN, "foo", "sometoken1",
+				new UserName("bar2"), 0).getHashedToken();
+		final HashedToken ht3 = new NewToken(TokenType.LOGIN, "sometoken3",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		storage.storeToken(ht2);
+		storage.storeToken(ht3);
+		
+		storage.deleteTokens(new UserName("bar"));
+		assertThat("tokens remaining", storage.getTokens(new UserName("bar")),
+				is(Collections.emptySet()));
+		
+		assertThat("incorrect tokens", storage.getTokens(new UserName("bar2")), is(set(ht2)));
+	}
+	
+	@Test
+	public void deleteTokensForUserFail() throws Exception {
+		try {
+			storage.deleteTokens(null);
+			fail("expected exception");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is("userName"));
+		}
+	}
+	
+	@Test
+	public void deleteTokens() throws Exception {
+		final HashedToken ht = new NewToken(TokenType.LOGIN, "foo", "sometoken",
+				new UserName("bar"), 0).getHashedToken();
+		final HashedToken ht2 = new NewToken(TokenType.LOGIN, "foo", "sometoken1",
+				new UserName("bar2"), 0).getHashedToken();
+		final HashedToken ht3 = new NewToken(TokenType.LOGIN, "sometoken3",
+				new UserName("bar"), 0).getHashedToken();
+		storage.storeToken(ht);
+		storage.storeToken(ht2);
+		storage.storeToken(ht3);
+		
+		storage.deleteTokens();
+		assertThat("tokens remaining", storage.getTokens(new UserName("bar")),
+				is(Collections.emptySet()));
+		assertThat("tokens remaining", storage.getTokens(new UserName("bar2")),
+				is(Collections.emptySet()));
+	}
 }
