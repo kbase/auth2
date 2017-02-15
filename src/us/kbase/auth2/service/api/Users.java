@@ -19,13 +19,14 @@ import javax.ws.rs.core.MediaType;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 
 @Path(APIPaths.API_V2_USERS)
@@ -77,20 +78,28 @@ public class Users {
 			@QueryParam("fields") final String fields)
 			throws InvalidTokenException, NoTokenProvidedException, AuthStorageException,
 			IllegalParameterException {
-		final Set<SearchField> searchFields = new HashSet<>();
+		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
+		if (prefix == null || prefix.length() < 1) {
+			throw new IllegalParameterException("prefix must contain at least one character");
+		}
+		build.withSearchPrefix(prefix);
 		if (fields != null) {
 			final String[] splitFields = fields.split(",");
 			for (String s: splitFields) {
 				s = s.trim();
 				if (s.equals("username")) {
-					searchFields.add(SearchField.USERNAME);
+					build.withSearchOnUserName(true);
 				} else if (s.equals("displayname")) {
-					searchFields.add(SearchField.DISPLAYNAME);
+					build.withSearchOnDisplayName(true);
 				}
 			}
 		}
-		final Map<UserName, DisplayName> dns = auth.getUserDisplayNames(
-				getToken(token), prefix, searchFields);
+		final Map<UserName, DisplayName> dns;
+		try {
+			dns = auth.getUserDisplayNames(getToken(token), build.build());
+		} catch (UnauthorizedException e) {
+			throw new RuntimeException("this should be impossible", e);
+		}
 		final Map<String, String> ret = new HashMap<>();
 		for (final Entry<UserName, DisplayName> e: dns.entrySet()) {
 			ret.put(e.getKey().getName(), e.getValue().getName());

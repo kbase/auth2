@@ -179,6 +179,7 @@
              version="true">
       <link href="http://docs.oracle.com/javase/8/docs/api/"/>
       <link href="http://api.mongodb.com/java/3.3/"/>
+      <link href="https://google.github.io/guava/releases/18.0/api/docs/"/>
     </javadoc>
   </target>
 	
@@ -207,6 +208,7 @@
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
+      <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
       <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
@@ -218,6 +220,7 @@
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageGetDisplayNamesTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageInvalidDBDataTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>

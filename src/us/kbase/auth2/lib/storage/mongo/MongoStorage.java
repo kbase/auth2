@@ -46,10 +46,11 @@ import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -675,16 +676,23 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
 			throws AuthStorageException {
+		if (users == null) {
+			throw new NullPointerException("users");
+		}
+		Utils.noNulls(users, "Null username in users set");
 		if (users.isEmpty()) {
 			return new HashMap<>();
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
-		return getDisplayNames(query, -1);
+		return getDisplayNames(query, Fields.USER_NAME, -1);
 	}
 
-	private Map<UserName, DisplayName> getDisplayNames(final Document query, final int limit)
+	private Map<UserName, DisplayName> getDisplayNames(
+			final Document query,
+			final String sortField,
+			final int limit)
 			throws AuthStorageException {
 		final Document projection = new Document(Fields.USER_NAME, 1)
 				.append(Fields.USER_DISPLAY_NAME, 1);
@@ -692,7 +700,7 @@ public class MongoStorage implements AuthStorage {
 			final FindIterable<Document> docs = db.getCollection(COL_USERS)
 					.find(query).projection(projection);
 			if (limit > 0) {
-				docs.limit(limit);
+				docs.sort(new Document(sortField, 1)).limit(limit);
 			}
 			final Map<UserName, DisplayName> ret = new HashMap<>();
 			for (final Document d: docs) {
@@ -705,25 +713,36 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
+	private static final Map<UserSearchSpec.SearchField, String> SEARCHFIELD_TO_FIELD;
+	static {
+		final Map<UserSearchSpec.SearchField, String> m = new HashMap<>();
+		m.put(UserSearchSpec.SearchField.USERNAME, Fields.USER_NAME);
+		m.put(UserSearchSpec.SearchField.DISPLAYNAME, Fields.USER_DISPLAY_NAME_CANONICAL);
+		m.put(UserSearchSpec.SearchField.ROLE, Fields.USER_ROLES);
+		m.put(UserSearchSpec.SearchField.CUSTOMROLE, Fields.USER_CUSTOM_ROLES);
+		SEARCHFIELD_TO_FIELD = m;
+	}
+
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(
-			final String prefix,
-			final Set<SearchField> searchFields,
-			final Set<Role> searchRoles,
-			final Set<String> searchCustomRoles,
+			final UserSearchSpec spec,
 			final int limit,
 			final boolean isRegex)
 			throws AuthStorageException {
+		if (spec == null) {
+			throw new NullPointerException("spec");
+		}
 		final Document query = new Document();
-		if (prefix != null) {
+		if (spec.getSearchPrefix().isPresent()) {
+			final String prefix = spec.getSearchPrefix().get();
 			final List<Document> queries = new LinkedList<>();
 			final Document regex = new Document("$regex", isRegex ? prefix :
 				"^" + Pattern.quote(prefix.toLowerCase()));
-			if (searchFields.contains(SearchField.USERNAME) || searchFields.isEmpty()) {
-				queries.add(new Document(Fields.USER_NAME, regex));
-			}
-			if (searchFields.contains(SearchField.DISPLAYNAME) || searchFields.isEmpty()) {
+			if (spec.isDisplayNameSearch()) {
 				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
+			}
+			if (spec.isUserNameSearch()) {
+				queries.add(new Document(Fields.USER_NAME, regex));
 			}
 			if (queries.size() == 1) {
 				query.putAll(queries.get(0));
@@ -732,17 +751,17 @@ public class MongoStorage implements AuthStorage {
 			}
 			
 		}
-		if (!searchRoles.isEmpty()) {
-			query.put(Fields.USER_ROLES, new Document("$all",
-					searchRoles.stream().map(r -> r.getID()).collect(Collectors.toSet())));
+		if (spec.isRoleSearch()) {
+			query.put(Fields.USER_ROLES, new Document("$all", spec.getSearchRoles()
+					.stream().map(r -> r.getID()).collect(Collectors.toSet())));
 		}
-		if (!searchCustomRoles.isEmpty()) {
+		if (spec.isCustomRoleSearch()) {
 			final Set<Document> crs = getCustomRoles(new Document(Fields.ROLES_ID,
-					new Document("$in", searchCustomRoles)));
+					new Document("$in", spec.getSearchCustomRoles())));
 			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
 					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
 		}
-		return getDisplayNames(query, limit);
+		return getDisplayNames(query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
 	}
 
 	@Override
