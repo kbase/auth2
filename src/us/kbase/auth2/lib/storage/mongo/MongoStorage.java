@@ -697,7 +697,7 @@ public class MongoStorage implements AuthStorage {
 		final Document projection = new Document(Fields.USER_NAME, 1)
 				.append(Fields.USER_DISPLAY_NAME, 1);
 		try {
-			FindIterable<Document> docs = db.getCollection(COL_USERS)
+			final FindIterable<Document> docs = db.getCollection(COL_USERS)
 					.find(query).projection(projection);
 			if (limit > 0) {
 				docs.sort(new Document(sortField, 1)).limit(limit);

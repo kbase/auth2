@@ -14,9 +14,11 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -175,6 +177,44 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	}
 	
 	@Test
+	public void searchNoResults() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("e").build(), -1, false), is(expected));
+	}
+	
+	@Test
+	public void searchAllResults() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("whoo"));
+		expected.put(new UserName("whee"), new DisplayName("bar"));
+		expected.put(new UserName("wugga"), new DisplayName("wonk"));
+		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(
+				UserSearchSpec.getBuilder().build(), -1, false), is(expected));
+	}
+	
+	@Test
 	public void searchUserRegex() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("baz"), REMOTE1, null));
@@ -189,6 +229,23 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
 				.withSearchPrefix("^.+oo$").withSearchOnUserName(true).build(), -1, true),
+				is(expected));
+	}
+	
+	
+	@Test
+	public void searchWithIgnoredRegex() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("baz"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whoo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("^.+oo$").withSearchOnUserName(true).build(), -1, false),
 				is(expected));
 	}
 	
@@ -231,5 +288,203 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				is(expected));
 	}
 	
-	//TODO search on roles, some multi search tests with limits, check error conditions, no prefix, test prefix w/ regex is ignored if regex not set
+	@Test
+	public void searchRoles() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
+				Collections.emptySet());
+		storage.updateRoles(new UserName("wugga"), set(Role.DEV_TOKEN), Collections.emptySet());
+		storage.updateRoles(new UserName("thewrock"), set(Role.DEV_TOKEN), Collections.emptySet());
+		
+		//testing with a limit here isn't repeatable because it depends on the natural ordering
+		// of the users, since there's no order to a set of users with the same roles 
+		// can't sort on usernames since we're not indexing on usernames (not scalable in mongo)
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		expected.put(new UserName("wugga"), new DisplayName("wonk"));
+		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnRole(Role.DEV_TOKEN).build(), -1, false), is(expected));
+	}
+	
+	@Test
+	public void searchMultipleRoles() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
+				Collections.emptySet());
+		storage.updateRoles(new UserName("wugga"), set(Role.DEV_TOKEN), Collections.emptySet());
+		storage.updateRoles(new UserName("thewrock"), set(Role.DEV_TOKEN), Collections.emptySet());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnRole(Role.DEV_TOKEN).withSearchOnRole(Role.ADMIN).build(), 2, false),
+				is(expected));
+	}
+	
+	@Test
+	public void searchCustomRoles() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.setCustomRole(new CustomRole("baz", "bleah"));
+		storage.setCustomRole(new CustomRole("bat", "bleah"));
+		
+		storage.updateCustomRoles(new UserName("whee"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wugga"), set("baz"), Collections.emptySet());
+		storage.updateCustomRoles(new UserName("thewrock"), set("baz"), Collections.emptySet());
+		
+		//testing with a limit here isn't repeatable because it depends on the natural ordering
+		// of the users, since there's no order to a set of users with the same roles 
+		// can't sort on usernames since we're not indexing on usernames (not scalable in mongo)
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		expected.put(new UserName("wugga"), new DisplayName("wonk"));
+		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnCustomRole("baz").build(), -1, false), is(expected));
+	}
+	
+	@Test
+	public void searchMultipleCustomRoles() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.setCustomRole(new CustomRole("baz", "bleah"));
+		storage.setCustomRole(new CustomRole("bat", "bleah"));
+		
+		storage.updateCustomRoles(new UserName("whee"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wugga"), set("baz"), Collections.emptySet());
+		storage.updateCustomRoles(new UserName("thewrock"), set("baz"), Collections.emptySet());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnCustomRole("baz").withSearchOnCustomRole("bat").build(), 2, false),
+				is(expected));
+	}
+	
+	@Test
+	public void searchFail() throws Exception {
+		//only one way to actually cause an exception
+		try {
+			storage.getUserDisplayNames(null, -1, false);
+			fail("expected exception");
+		} catch (NullPointerException e) {
+			assertThat("incorrect execption message", e.getMessage(), is("spec"));
+		}
+	}
+	
+	@Test
+	public void searchAllFields() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("wrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.setCustomRole(new CustomRole("baz", "bleah"));
+		storage.setCustomRole(new CustomRole("bat", "bleah"));
+		
+		storage.updateCustomRoles(new UserName("foo"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("whee"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wugga"), set("baz"), Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wrock"), set("bat"), Collections.emptySet());
+		
+		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN), Collections.emptySet());
+		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
+				Collections.emptySet());
+		storage.updateRoles(new UserName("wugga"), set(Role.SERV_TOKEN), Collections.emptySet());
+		storage.updateRoles(new UserName("wrock"), set(Role.DEV_TOKEN), Collections.emptySet());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnCustomRole("baz")
+				.withSearchOnRole(Role.DEV_TOKEN)
+				.withSearchPrefix("w")
+				.withSearchOnUserName(true).build(), -1, false),
+				is(expected));
+	}
+	
+	@Test
+	public void searchAllFieldsWithLimit() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("fwhoo"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("wbar"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("wrock"), new EmailAddress("f@g.com"),
+				new DisplayName("smellywcooking"), REMOTE4, null));
+		
+		storage.setCustomRole(new CustomRole("baz", "bleah"));
+		storage.setCustomRole(new CustomRole("bat", "bleah"));
+		
+		storage.updateCustomRoles(new UserName("foo"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("whee"), set("baz", "bat"),
+				Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wugga"), set("baz"), Collections.emptySet());
+		storage.updateCustomRoles(new UserName("wrock"), set("bat"), Collections.emptySet());
+		
+		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN), Collections.emptySet());
+		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
+				Collections.emptySet());
+		storage.updateRoles(new UserName("wugga"), set(Role.DEV_TOKEN, Role.SERV_TOKEN),
+				Collections.emptySet());
+		storage.updateRoles(new UserName("wrock"), set(Role.DEV_TOKEN), Collections.emptySet());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("wbar"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchOnCustomRole("baz")
+				.withSearchOnRole(Role.DEV_TOKEN)
+				.withSearchPrefix("w")
+				.withSearchOnDisplayName(true).build(), 1, false),
+				is(expected));
+	}
 }
