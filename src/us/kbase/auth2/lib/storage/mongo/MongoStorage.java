@@ -868,6 +868,9 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setCustomRole(final CustomRole role)
 			throws AuthStorageException {
+		if (role == null) {
+			throw new NullPointerException("role");
+		}
 		try {
 			db.getCollection(COL_CUST_ROLES).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
@@ -880,7 +883,9 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void deleteCustomRole(final String roleId)
-			throws NoSuchRoleException, AuthStorageException {
+			throws NoSuchRoleException, AuthStorageException,
+			MissingParameterException, IllegalParameterException {
+		CustomRole.checkValidRoleID(roleId);
 		try {
 			final Document role = db.getCollection(COL_CUST_ROLES).findOneAndDelete(
 					new Document(Fields.ROLES_ID, roleId));
@@ -926,7 +931,7 @@ public class MongoStorage implements AuthStorage {
 						d.getString(Fields.ROLES_DESC)));
 			} catch (MissingParameterException | IllegalParameterException e) {
 				throw new AuthStorageException(
-						"Error in roles colletion - role with illegal or missing field", e);
+						"Error in roles collection - role with illegal or missing field", e);
 			}
 		}
 		return ret;

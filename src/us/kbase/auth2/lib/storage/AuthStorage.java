@@ -19,7 +19,9 @@ import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -259,8 +261,11 @@ public interface AuthStorage {
 	 * @throws NoSuchRoleException if there is no such role.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
+	 * @throws IllegalParameterException if the roleId is illegal.
+	 * @throws MissingParameterException if the roleId is null or the empty string.
 	 */
-	void deleteCustomRole(String roleId) throws NoSuchRoleException, AuthStorageException;
+	void deleteCustomRole(String roleId) throws NoSuchRoleException, AuthStorageException,
+			MissingParameterException, IllegalParameterException;
 
 	/** Get all the custom roles in the database.
 	 * @return the custom roles.
