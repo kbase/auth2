@@ -50,8 +50,8 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -156,25 +156,28 @@ public class Admin {
 			throws InvalidTokenException, IllegalParameterException, NoTokenProvidedException,
 			AuthStorageException, UnauthorizedException {
 		final String prefix = form.getFirst("prefix");
-		final Set<SearchField> searchFields = new HashSet<>();
+		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
+		if (prefix != null && !prefix.trim().isEmpty()) {
+			build.withSearchPrefix(prefix);
+		}
 		if (!nullOrEmpty(form.getFirst("username"))) {
-			searchFields.add(SearchField.USERNAME);
+			build.withSearchOnUserName(true);
 		}
 		if (!nullOrEmpty(form.getFirst("displayname"))) {
-			searchFields.add(SearchField.DISPLAYNAME);
+			build.withSearchOnDisplayname(true);
 		}
-		final Set<Role> searchRoles = getRolesFromForm(form);
-		final Set<String> searchCustomRoles = new HashSet<>();
+		for (final Role r: getRolesFromForm(form)) {
+			build.withSearchOnRole(r);
+		}
 		for (final String key: form.keySet()) {
 			if (key.startsWith("crole_")) {
 				if (!nullOrEmpty(form.getFirst(key))) {
-					searchCustomRoles.add(key.replace("crole_", ""));
+					build.withSearchOnCustomRole(key.replace("crole_", ""));
 				}
 			}
 		}
 		final Map<UserName, DisplayName> users = auth.getUserDisplayNames(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				prefix, searchFields, searchRoles, searchCustomRoles);
+				getTokenFromCookie(headers, cfg.getTokenCookieName()), build.build());
 		final List<Map<String, String>> uiusers = new LinkedList<>();
 		for (final UserName user: users.keySet()) {
 			final Map<String, String> u = new HashMap<>();

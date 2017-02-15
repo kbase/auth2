@@ -46,9 +46,9 @@ import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -716,29 +716,33 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	// TODO CODE make a builder for input, force no nulls
+	private static final Map<UserSearchSpec.SearchField, String> SEARCHFIELD_TO_FIELD;
+	static {
+		final Map<UserSearchSpec.SearchField, String> m = new HashMap<>();
+		m.put(UserSearchSpec.SearchField.USERNAME, Fields.USER_NAME);
+		m.put(UserSearchSpec.SearchField.DISPLAYNAME, Fields.USER_DISPLAY_NAME_CANONICAL);
+		m.put(UserSearchSpec.SearchField.ROLE, Fields.USER_ROLES);
+		m.put(UserSearchSpec.SearchField.CUSTOMROLE, Fields.USER_CUSTOM_ROLES);
+		SEARCHFIELD_TO_FIELD = m;
+	}
+
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(
-			final String prefix,
-			final Set<SearchField> searchFields,
-			final Set<Role> searchRoles,
-			final Set<String> searchCustomRoles,
+			final UserSearchSpec spec,
 			final int limit,
 			final boolean isRegex)
 			throws AuthStorageException {
 		final Document query = new Document();
-		String sortField = null;
-		if (prefix != null) {
+		if (spec.getSearchPrefix().isPresent()) {
+			final String prefix = spec.getSearchPrefix().get();
 			final List<Document> queries = new LinkedList<>();
 			final Document regex = new Document("$regex", isRegex ? prefix :
 				"^" + Pattern.quote(prefix.toLowerCase()));
-			if (searchFields.contains(SearchField.DISPLAYNAME) || searchFields.isEmpty()) {
+			if (spec.isDisplayNameSearch()) {
 				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
-				sortField = Fields.USER_DISPLAY_NAME_CANONICAL;
 			}
-			if (searchFields.contains(SearchField.USERNAME) || searchFields.isEmpty()) {
+			if (spec.isUserNameSearch()) {
 				queries.add(new Document(Fields.USER_NAME, regex));
-				sortField = Fields.USER_NAME; // e.g prefer username if both fields are searched
 			}
 			if (queries.size() == 1) {
 				query.putAll(queries.get(0));
@@ -747,17 +751,17 @@ public class MongoStorage implements AuthStorage {
 			}
 			
 		}
-		if (!searchRoles.isEmpty()) {
-			query.put(Fields.USER_ROLES, new Document("$all",
-					searchRoles.stream().map(r -> r.getID()).collect(Collectors.toSet())));
+		if (spec.isRoleSearch()) {
+			query.put(Fields.USER_ROLES, new Document("$all", spec.getSearchRoles()
+					.stream().map(r -> r.getID()).collect(Collectors.toSet())));
 		}
-		if (!searchCustomRoles.isEmpty()) {
+		if (spec.isCustomRoleSearch()) {
 			final Set<Document> crs = getCustomRoles(new Document(Fields.ROLES_ID,
-					new Document("$in", searchCustomRoles)));
+					new Document("$in", spec.getSearchCustomRoles())));
 			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
 					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
 		}
-		return getDisplayNames(query, sortField, limit);
+		return getDisplayNames(query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
 	}
 
 	@Override

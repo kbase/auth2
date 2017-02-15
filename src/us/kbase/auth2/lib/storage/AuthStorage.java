@@ -14,8 +14,8 @@ import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.SearchField;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
@@ -138,24 +138,17 @@ public interface AuthStorage {
 			throws AuthStorageException;
 	
 	/** Search for users based on a prefix of the user and display names and the user's roles.
-	 * @param prefix a string prefix with which to search. The prefix matches the start of the
-	 * username or the start of any part of the whitespace tokenized display name.
-	 * @param searchFields the fields on which the prefix search will be performed. If empty, the
-	 * search will proceed on all fields.
-	 * @param searchRoles limit the returned users to those with these roles.
-	 * @param searchCustomRoles limit the returned users to those with these custom roles.
+	 * @param spec the specification for the search.
 	 * @param maxReturnedUsers the maximum number of users to return.
-	 * @param isRegex true if the prefix is a regex. If the prefix is sourced from user provided
-	 * information, be very careful when setting this flag to true.
+	 * @param isRegex true if the search prefix in the spec should be treated as a regex. If the
+	 * prefix is sourced from user provided information, be very careful when setting this flag to
+	 * true.
 	 * @return a mapping of user name to display name for the discovered users.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	Map<UserName, DisplayName> getUserDisplayNames(
-			String prefix,
-			Set<SearchField> searchFields,
-			Set<Role> searchRoles,
-			Set<String> searchCustomRoles,
+			UserSearchSpec spec,
 			int maxReturnedUsers,
 			boolean isRegex)
 			throws AuthStorageException;

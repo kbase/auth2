@@ -509,46 +509,22 @@ public class Authentication {
 		return storage.getUserDisplayNames(usernames);
 	}
 	
-	// if searchfields is empty searches all fields
 	public Map<UserName, DisplayName> getUserDisplayNames(
 			final IncomingToken token,
-			final String prefix,
-			final Set<SearchField> searchFields)
-			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
-		getToken(token); // just check the token is valid
-		if (prefix == null || prefix.length() < 1) {
-			throw new IllegalParameterException("prefix must contain at least one character");
-		}
-		if (searchFields == null) {
-			throw new NullPointerException("searchFields");
-		}
-		return storage.getUserDisplayNames(prefix, searchFields, Collections.emptySet(),
-				Collections.emptySet(), MAX_RETURNED_USERS, false);
-	}
-	
-	// if searchfields is empty searches all fields
-	public Map<UserName, DisplayName> getUserDisplayNames(
-			final IncomingToken token,
-			String prefix,
-			final Set<SearchField> searchFields,
-			final Set<Role> searchRoles,
-			final Set<String> searchCustomRoles)
+			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.ADMIN); // force admin
-		if (prefix != null && prefix.isEmpty()) {
-			prefix = null;
+		final AuthUser user = getUser(token);
+		if (!Role.ADMIN.isSatisfiedBy(user.getRoles())) {
+			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only admins may search on roles");
+			}
+			if (!spec.getSearchPrefix().isPresent()) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only admins may search without a prefix");
+			}
 		}
-		if (searchFields == null) {
-			throw new NullPointerException("searchFields");
-		}
-		if (searchRoles == null) {
-			throw new NullPointerException("searchRoles");
-		}
-		if (searchCustomRoles == null) {
-			throw new NullPointerException("searchCustomRoles");
-		}
-		return storage.getUserDisplayNames(prefix, searchFields, searchRoles, searchCustomRoles,
-				MAX_RETURNED_USERS, false);
+		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS, false);
 	}
 	
 	public void revokeToken(
@@ -1004,11 +980,11 @@ public class Authentication {
 		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
 		 * db side and search and sort db side.
 		 */
-		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(
+		final UserSearchSpec spec = UserSearchSpec.getBuilder()
 				// checked that this does indeed use an index for the mongo implementation
-				"^" + Pattern.quote(sugStrip) + "\\d*$",
-				new HashSet<>(Arrays.asList(SearchField.USERNAME)), Collections.emptySet(),
-				Collections.emptySet(), -1, true);
+				.withSearchPrefix("^" + Pattern.quote(sugStrip) + "\\d*$")
+				.withSearchOnUserName(true).build();
+		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1, true);
 		boolean match = false;
 		long largest = 0;
 		for (final UserName d: users.keySet()) {
