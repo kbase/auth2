@@ -815,6 +815,19 @@ public class MongoStorage implements AuthStorage {
 			final Set<Role> addRoles,
 			final Set<Role> removeRoles)
 			throws AuthStorageException, NoSuchUserException {
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
+		}
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
+		}
+		if (addRoles.contains(Role.ROOT) || removeRoles.contains(Role.ROOT)) {
+			// I don't like this at all. The whole way the root user is managed needs a rethink.
+			// note that the Authorization code shouldn't allow this either, but to be safe...
+			throw new IllegalArgumentException("Cannot change root role");
+		}
+		Utils.noNulls(addRoles, "Null role in addRoles");
+		Utils.noNulls(removeRoles, "Null role in removeRoles");
 		final Set<Object> stradd = addRoles.stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		final Set<Object> strremove = removeRoles.stream().map(r -> r.getID())
@@ -828,6 +841,9 @@ public class MongoStorage implements AuthStorage {
 			final Set<Object> removeRoles,
 			final String field)
 			throws NoSuchUserException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
 		if (addRoles.isEmpty() && removeRoles.isEmpty()) {
 			return;
 		}
