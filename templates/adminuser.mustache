@@ -1,10 +1,12 @@
 <html>
 <body>
+<p>Note that in a proper UI, the display name, email, role descriptions, and disable reason should be HTML-escaped.</p>
+
+
 <h3>User info</h3>
 User name: {{user}}<br/>
 {{#disabled}}
 <p>
-<p>Note that in a proper UI, the disable reason should be HTML-escaped.</p>
 DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
 {{disabledreason}}
 {{/disabled}}</p>
