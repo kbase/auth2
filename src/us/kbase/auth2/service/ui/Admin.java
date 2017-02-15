@@ -76,7 +76,7 @@ public class Admin {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	//TODO UI add html escaping code for all outgoing html ui methods & note in template that UIs need to escape code
+	//TODO UI add html escaping code for all outgoing html ui methods
 
 	private static final String SEP = UIPaths.SEP;
 	
