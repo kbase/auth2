@@ -157,14 +157,19 @@ public class Admin {
 			AuthStorageException, UnauthorizedException {
 		final String prefix = form.getFirst("prefix");
 		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
+		final boolean hasPrefix;
 		if (prefix != null && !prefix.trim().isEmpty()) {
 			build.withSearchPrefix(prefix);
+			hasPrefix = true;
+		} else {
+			hasPrefix = false;
 		}
-		if (!nullOrEmpty(form.getFirst("username"))) {
+		
+		if (hasPrefix && !nullOrEmpty(form.getFirst("username"))) {
 			build.withSearchOnUserName(true);
 		}
-		if (!nullOrEmpty(form.getFirst("displayname"))) {
-			build.withSearchOnDisplayname(true);
+		if (hasPrefix && !nullOrEmpty(form.getFirst("displayname"))) {
+			build.withSearchOnDisplayName(true);
 		}
 		for (final Role r: getRolesFromForm(form)) {
 			build.withSearchOnRole(r);

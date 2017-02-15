@@ -699,11 +699,8 @@ public class MongoStorage implements AuthStorage {
 		try {
 			FindIterable<Document> docs = db.getCollection(COL_USERS)
 					.find(query).projection(projection);
-			if (sortField != null) {
-				docs = docs.sort(new Document(sortField, 1));
-			}
 			if (limit > 0) {
-				docs.limit(limit);
+				docs.sort(new Document(sortField, 1)).limit(limit);
 			}
 			final Map<UserName, DisplayName> ret = new HashMap<>();
 			for (final Document d: docs) {
@@ -732,6 +729,9 @@ public class MongoStorage implements AuthStorage {
 			final int limit,
 			final boolean isRegex)
 			throws AuthStorageException {
+		if (spec == null) {
+			throw new NullPointerException("spec");
+		}
 		final Document query = new Document();
 		if (spec.getSearchPrefix().isPresent()) {
 			final String prefix = spec.getSearchPrefix().get();

@@ -90,7 +90,7 @@ public class Users {
 				if (s.equals("username")) {
 					build.withSearchOnUserName(true);
 				} else if (s.equals("displayname")) {
-					build.withSearchOnDisplayname(true);
+					build.withSearchOnDisplayName(true);
 				}
 			}
 		}
