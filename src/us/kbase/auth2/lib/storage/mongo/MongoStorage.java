@@ -307,6 +307,7 @@ public class MongoStorage implements AuthStorage {
 						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
+				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
 				// admin is always null for new user, but check for safety
@@ -1054,15 +1055,22 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public void storeIdentitiesTemporarily(
-			final TemporaryHashedToken t,
+			final TemporaryHashedToken token,
 			final Set<RemoteIdentityWithLocalID> identitySet)
 			throws AuthStorageException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
+		if (identitySet == null) {
+			throw new NullPointerException("identitySet");
+		}
+		Utils.noNulls(identitySet, "Null value in identitySet");
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
-				Fields.TOKEN_TEMP_ID, t.getId().toString())
-				.append(Fields.TOKEN_TEMP_TOKEN, t.getTokenHash())
-				.append(Fields.TOKEN_TEMP_EXPIRY, t.getExpirationDate())
-				.append(Fields.TOKEN_TEMP_CREATION, t.getCreationDate())
+				Fields.TOKEN_TEMP_ID, token.getId().toString())
+				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_TEMP_EXPIRY, token.getExpirationDate())
+				.append(Fields.TOKEN_TEMP_CREATION, token.getCreationDate())
 				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
@@ -1086,9 +1094,16 @@ public class MongoStorage implements AuthStorage {
 	public Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document d = findOne(COL_TEMP_TOKEN,
 				new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
 		if (d == null) {
+			throw new NoSuchTokenException("Token not found");
+		}
+		if (new Date().after(d.getDate(Fields.TOKEN_TEMP_EXPIRY))) {
+			// if we do this anywhere else should make a method to go from doc -> temptoken class
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
@@ -1103,9 +1118,6 @@ public class MongoStorage implements AuthStorage {
 
 	private Set<RemoteIdentityWithLocalID> toIdentities(final List<Document> ids) {
 		final Set<RemoteIdentityWithLocalID> ret = new HashSet<>();
-		if (ids == null) {
-			return ret;
-		}
 		for (final Document i: ids) {
 			final RemoteIdentityID rid = new RemoteIdentityID(
 					i.getString(Fields.IDENTITIES_PROVIDER),
