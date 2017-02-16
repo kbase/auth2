@@ -126,6 +126,7 @@
            classpathref="compile.classpath"
            target="1.8"
            source="1.8">
+      <compilerarg line="-encoding utf-8"/>
     </javac>
     <!-- Make main jar file-->
     <jar destfile="${dist}/${jar.file}"
