@@ -497,7 +497,7 @@ public class Admin {
 			@FormParam("id") final String roleId)
 			throws MissingParameterException, AuthStorageException,
 			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException, NoSuchRoleException {
+			NoTokenProvidedException, NoSuchRoleException, IllegalParameterException {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	

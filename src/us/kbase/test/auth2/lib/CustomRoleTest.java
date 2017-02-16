@@ -43,6 +43,33 @@ public class CustomRoleTest {
 				"Illegal character in custom role id bar*: *"));
 		
 	}
+	
+	@Test
+	public void idCheckPass() throws Exception {
+		CustomRole.checkValidRoleID("7_fooAZ9A");
+	}
+	
+	@Test
+	public void idCheckFail() throws Exception {
+		failIDCheck(null,  new MissingParameterException("custom role id"));
+		failIDCheck("   \n  ", new MissingParameterException("custom role id"));
+		failIDCheck(TestCommon.LONG101, new IllegalParameterException(
+				ErrorType.ILLEGAL_PARAMETER,
+				"custom role id size greater than limit 100"));
+		failIDCheck("barઔ", new IllegalParameterException(
+				"Illegal character in custom role id barઔ: ઔ"));
+		failIDCheck("bar*", new IllegalParameterException(
+				"Illegal character in custom role id bar*: *"));
+	}
+	
+	private void failIDCheck(final String id, final Exception e) {
+		try {
+			CustomRole.checkValidRoleID(id);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 
 	private void failConstruct(final String id, final String desc, final Exception exception) {
 		try {

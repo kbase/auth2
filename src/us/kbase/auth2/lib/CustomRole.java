@@ -36,15 +36,20 @@ public class CustomRole {
 	public CustomRole(final String id, final String desc)
 			throws MissingParameterException, IllegalParameterException {
 		super();
-		checkString(id, "custom role id", MAX_ROLE_LENGTH);
+		checkValidRoleID(id);
 		checkString(desc, "custom role description", MAX_DESC_LENGTH);
+		this.id = id;
+		this.desc = desc.trim();
+	}
+	
+	public static void checkValidRoleID(final String id)
+			throws MissingParameterException, IllegalParameterException {
+		checkString(id, "custom role id", MAX_ROLE_LENGTH);
 		final Matcher m = INVALID_CHARS.matcher(id);
 		if (m.find()) {
 			throw new IllegalParameterException(String.format(
 					"Illegal character in custom role id %s: %s", id, m.group()));
 		}
-		this.id = id;
-		this.desc = desc.trim();
 	}
 
 	/** Get the role ID.

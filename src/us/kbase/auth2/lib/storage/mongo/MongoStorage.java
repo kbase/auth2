@@ -868,6 +868,9 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setCustomRole(final CustomRole role)
 			throws AuthStorageException {
+		if (role == null) {
+			throw new NullPointerException("role");
+		}
 		try {
 			db.getCollection(COL_CUST_ROLES).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
@@ -880,7 +883,9 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void deleteCustomRole(final String roleId)
-			throws NoSuchRoleException, AuthStorageException {
+			throws NoSuchRoleException, AuthStorageException,
+			MissingParameterException, IllegalParameterException {
+		CustomRole.checkValidRoleID(roleId);
 		try {
 			final Document role = db.getCollection(COL_CUST_ROLES).findOneAndDelete(
 					new Document(Fields.ROLES_ID, roleId));
@@ -926,7 +931,7 @@ public class MongoStorage implements AuthStorage {
 						d.getString(Fields.ROLES_DESC)));
 			} catch (MissingParameterException | IllegalParameterException e) {
 				throw new AuthStorageException(
-						"Error in roles colletion - role with illegal or missing field", e);
+						"Error in roles collection - role with illegal or missing field", e);
 			}
 		}
 		return ret;
@@ -940,24 +945,21 @@ public class MongoStorage implements AuthStorage {
 				.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet());
 		for (final ObjectId role: roleIds) {
 			if (!extantRoleIds.contains(role)) {
-				//TODO TEST need to exercise this race condition, generally shouldn't happen
-				removeCustomRole(user, role);
+				// should very rarely happen, if at all, so don't worry about optimization
+				final Document query = new Document(Fields.USER_NAME, user.getName());
+				final Document mod = new Document("$pull",
+						new Document(Fields.USER_CUSTOM_ROLES, role));
+				try {
+					// don't care if no changes are made, just means the role is already gone
+					db.getCollection(COL_USERS).updateOne(query, mod);
+				} catch (MongoException e) {
+					throw new AuthStorageException("Connection to database failed: " +
+							e.getMessage(), e);
+				}
 			}
 		}
 		return roledocs.stream().map(d -> d.getString(Fields.ROLES_ID))
 				.collect(Collectors.toSet());
-	}
-
-	private void removeCustomRole(final UserName user, final ObjectId role)
-			throws AuthStorageException {
-		final Document query = new Document(Fields.USER_NAME, user.getName());
-		final Document mod = new Document("$pull", new Document(Fields.USER_CUSTOM_ROLES, role));
-		try {
-			// don't care if no changes are made, just means the role is already gone
-			db.getCollection(COL_USERS).updateOne(query, mod);
-		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
-		}
 	}
 
 	@Override
@@ -966,25 +968,24 @@ public class MongoStorage implements AuthStorage {
 			final Set<String> addRoles,
 			final Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
+		}
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
+		}
+		Utils.noNulls(addRoles, "Null role in addRoles");
+		Utils.noNulls(removeRoles, "Null role in removeRoles");
 		final Set<String> allRoles = new HashSet<>(addRoles);
 		allRoles.addAll(removeRoles);
-		final Map<String, ObjectId> roleIDs;
-		try {
-			final Set<Document> docroles = getCustomRoles(new Document(Fields.ROLES_ID,
-					new Document("$in", allRoles)));
-			roleIDs = docroles.stream().collect(Collectors.toMap(
-					d -> d.getString(Fields.ROLES_ID), d -> d.getObjectId(Fields.MONGO_ID)));
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
-		}
+		final Map<String, ObjectId> roleIDs =
+				getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", allRoles)))
+						.stream().collect(Collectors.toMap(
+								d -> d.getString(Fields.ROLES_ID),
+								d -> d.getObjectId(Fields.MONGO_ID)));
 		if (allRoles.size() != roleIDs.size()) {
-			for (final String role: allRoles) {
-				if (!roleIDs.containsKey(role)) {
-					throw new NoSuchRoleException(role);
-				}
-			}
-			throw new RuntimeException("Hole in reality matrix detected, please try turning " +
-					"reality off and then on again");
+			allRoles.removeAll(roleIDs.keySet());
+			throw new NoSuchRoleException(allRoles.iterator().next());
 		}
 		final Set<Object> addRoleIDs = addRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());

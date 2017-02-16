@@ -694,7 +694,7 @@ public class Authentication {
 			final IncomingToken token,
 			final String roleId)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			NoSuchRoleException, MissingParameterException {
+			NoSuchRoleException, MissingParameterException, IllegalParameterException {
 		if (roleId == null || roleId.trim().isEmpty()) {
 			throw new MissingParameterException("roleId cannot be null or empty");
 		}
