@@ -76,8 +76,6 @@ public class Admin {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	//TODO UI add html escaping code for all outgoing html ui methods
-
 	private static final String SEP = UIPaths.SEP;
 	
 	private static final int MIN_IN_MS = 60 * 1000;
