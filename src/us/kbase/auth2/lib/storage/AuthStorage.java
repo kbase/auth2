@@ -275,6 +275,8 @@ public interface AuthStorage {
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
 	/** Updates custom roles for a user.
+	 * If a role is in addRoles and removeRoles it will be removed.
+	 * Removing non-existent roles has no effect.
 	 * @param userName the user to modify.
 	 * @param addRoles the roles to add to the user.
 	 * @param removeRoles the roles to remove from the user. 
