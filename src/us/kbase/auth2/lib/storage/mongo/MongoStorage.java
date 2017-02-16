@@ -1033,7 +1033,6 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_PROV_ID, remoteID.getRemoteID().getId())));
 	}
 	
-	//TODO TEST exercise this function with tests
 	private void updateIdentity(final RemoteIdentity remoteID)
 			throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
