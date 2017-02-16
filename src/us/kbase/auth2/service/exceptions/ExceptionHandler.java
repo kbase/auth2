@@ -9,6 +9,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.ext.ExceptionMapper;
 
 import org.slf4j.LoggerFactory;
@@ -39,11 +40,21 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 	private SLF4JAutoLogger logger;
 	@Inject
 	private Authentication auth;
+	@Inject
+	private UriInfo uriInfo;
 
 	@Override
 	public Response toResponse(Throwable ex) {
-
-		final MediaType mt = getMediaType();
+		
+		MediaType mt = getMediaType();
+		//TODO CODE this is a gross hack. Really want to know the produces annotation for the method that threw the error
+		if (mt == null) {
+			if (uriInfo.getPath().startsWith("api")) {
+				mt = MediaType.APPLICATION_JSON_TYPE;
+			} else {
+				mt = MediaType.TEXT_HTML_TYPE;
+			}
+		}
 		LoggerFactory.getLogger(getClass()).error("Logging exception:", ex);
 
 		boolean includeStack = false;
@@ -73,7 +84,6 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 		} else {
 			ret = template.process("error", em);
 		}
-		
 		return Response.status(em.getHttpCode()).entity(ret).type(mt).build();
 	}
 
@@ -90,9 +100,6 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 					break;
 				}
 			}
-		}
-		if (mt == null) {
-			mt = MediaType.TEXT_HTML_TYPE;
 		}
 		return mt;
 	}
