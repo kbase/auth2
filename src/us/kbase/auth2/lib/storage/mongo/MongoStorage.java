@@ -995,8 +995,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public AuthUser getUser(final RemoteIdentity remoteID)
-			throws AuthStorageException {
+	public AuthUser getUser(final RemoteIdentity remoteID) throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
 		//note a user with identities should never have these fields, but
 		//doesn't hurt to be safe

@@ -34,6 +34,7 @@ public class LegacyKBase {
 	private Authentication auth;
 	
 	@GET
+	@Produces(MediaType.APPLICATION_JSON)
 	public void dummyGetMethod() throws AuthenticationException {
 		throw new AuthenticationException(ErrorType.UNSUPPORTED_OP, 
 				"This is just here for compatibility with the old client: " +
