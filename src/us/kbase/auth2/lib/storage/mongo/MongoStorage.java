@@ -1263,7 +1263,10 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public void updateUser(final UserName userName, final UserUpdate update)
-			throws NoSuchUserException, AuthStorageException{
+			throws NoSuchUserException, AuthStorageException {
+		if (update == null) {
+			throw new NullPointerException("update");
+		}
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
@@ -1303,6 +1306,9 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setLastLogin(final UserName user, final Date lastLogin) 
 			throws NoSuchUserException, AuthStorageException {
+		if (lastLogin == null) {
+			throw new NullPointerException("lastLogin");
+		}
 		updateUser(user, new Document(Fields.USER_LAST_LOGIN, lastLogin));
 	}
 
