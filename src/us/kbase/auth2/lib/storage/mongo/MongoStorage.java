@@ -97,8 +97,6 @@ public class MongoStorage implements AuthStorage {
 	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
 	 */
 	
-	//TODO TEST unit tests
-	
 	private static final int SCHEMA_VERSION = 1;
 	
 	private static final String COL_CONFIG = "config";
@@ -1149,13 +1147,15 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 	
+	/* See notes for this method between this method and the next. These two methods are tightly
+	 * coupled.
+	 */
 	@Override
 	public void link(final UserName user, final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
 		int count = 0;
 		boolean complete = false;
-		// could just put addIdentity into the while loop but this is more readable IMO
 		while (!complete) {
 			count++;
 			if (count > 5) {
@@ -1163,12 +1163,17 @@ public class MongoStorage implements AuthStorage {
 				throw new RuntimeException("Attempted link update 5 times without success. " +
 						"There's probably a programming error here.");
 			}
-			complete = addIdentity(user, remoteID);
+			complete = addIdentity(getUser(user), remoteID);
 		}
 	}
 	
+	/* The method above and below are split for two reasons: 1) readability, and 2) so that
+	 * tests can use reflection to exercise the method below with the case where the user 
+	 * identities change between getting the user and updating the identities.
+	 */
+	
 	private boolean addIdentity(
-			final UserName userName,
+			final AuthUser user,
 			final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
@@ -1184,7 +1189,6 @@ public class MongoStorage implements AuthStorage {
 		if (remoteID == null) {
 			throw new NullPointerException("remoteID");
 		}
-		final AuthUser user = getUser(userName);
 		if (user.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to a local user");
 		}
@@ -1212,7 +1216,8 @@ public class MongoStorage implements AuthStorage {
 		final List<Document> idQuery = oldIDs.stream().map(d -> new Document("$elemMatch", d))
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, user.getUserName().getName())
-				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery));
+				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery))
+				.append(Fields.USER_IDENTITIES, new Document("$size", idQuery.size()));
 		
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query,

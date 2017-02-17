@@ -6,11 +6,13 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 import org.junit.Test;
 
+import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewLocalUser;
@@ -22,6 +24,7 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageLinkTest extends MongoStorageTester {
@@ -95,7 +98,61 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	}
 	
 	@Test
+	public void linkReflectionPass() throws Exception {
+		final Method m = MongoStorage.class.getDeclaredMethod(
+				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
+		m.setAccessible(true);
+		
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE1, null));
+		final AuthUser au = storage.getUser(new UserName("foo"));
+		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
+		assertThat("expected successful link", p, is(true));
+		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
+				is(set(REMOTE1, REMOTE2)));
+	}
+	
+	@Test
+	public void linkReflectionAddIDFail() throws Exception {
+		/* This tests the case where a user's identities are changed between pulling the user from
+		 * the db and running the link.
+		 */
+		final Method m = MongoStorage.class.getDeclaredMethod(
+				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
+		m.setAccessible(true);
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE1, null));
+		final AuthUser au = storage.getUser(new UserName("foo"));
+		storage.link(new UserName("foo"), REMOTE3);
+		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
+		assertThat("expected failed link", p, is(false));
+		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
+				is(set(REMOTE1, REMOTE3)));
+	}
+	
+	@Test
+	public void linkReflectionRemoveIDFail() throws Exception {
+		/* This tests the case where a user's identities are changed between pulling the user from
+		 * the db and running the link.
+		 */
+		final Method m = MongoStorage.class.getDeclaredMethod(
+				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
+		m.setAccessible(true);
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE1, null));
+		storage.link(new UserName("foo"), REMOTE2);
+		final AuthUser au = storage.getUser(new UserName("foo"));
+		storage.unlink(new UserName("foo"), REMOTE1.getID());
+		final boolean p = (boolean) m.invoke(storage, au, REMOTE3);
+		assertThat("expected failed link", p, is(false));
+		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
+				is(set(REMOTE2)));
+	}
+	
+	@Test
 	public void linkFailNulls() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE1, null));
 		failLink(null, REMOTE1, new NullPointerException("userName"));
 		failLink(new UserName("foo"), null, new NullPointerException("remoteID"));
 	}

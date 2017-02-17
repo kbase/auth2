@@ -314,6 +314,12 @@ public interface AuthStorage {
 			throws AuthStorageException, NoSuchTokenException;
 
 	/** Link an account to a remote identity.
+	 * If the account is already linked to the identity, the method proceeds without error, but has
+	 * the following effects:
+	 * 1) The UUID of the identity in the database is NOT overwritten by the UUID of the passed in
+	 * identity.
+	 * 2) If the provider details (provider username, email address, and full name) are different,
+	 * the details in the database are overwritten by the passed in identity details. 
 	 * @param userName the user to which the remote identity will be linked. 
 	 * @param remoteID the remote identity.
 	 * @throws NoSuchUserException if the user does not exist.
