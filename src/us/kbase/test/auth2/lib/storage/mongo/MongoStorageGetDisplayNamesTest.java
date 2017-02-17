@@ -488,5 +488,67 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				is(expected));
 	}
 	
-	//TODO TEST with display name canonicalization taken into account - lower case & split
+	//TODO TEST will need tests for punctuation removal
+	@Test
+	public void canonicalSearch1() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("Doug").withSearchOnDisplayName(true).build(), -1, false),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearch2() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("Douglas").withSearchOnDisplayName(true).build(), -1, false),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearch3() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("Al").withSearchOnDisplayName(true).build(), -1, false),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearch4() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("Alb").withSearchOnDisplayName(true).build(), -1, false),
+				is(expected));
+	}
+
+	private void createUsersForCanonicalSearch() throws Exception {
+		storage.createUser(new NewUser(new UserName("u1"), new EmailAddress("f@g.com"),
+				new DisplayName("Douglas J Adams"), REMOTE1, null));
+		storage.createUser(new NewUser(new UserName("u2"), new EmailAddress("f@g.com"),
+				new DisplayName("Herbert Dougie Howser"), REMOTE2, null));
+		storage.createUser(new NewUser(new UserName("u3"), new EmailAddress("f@g.com"),
+				new DisplayName("al douglas"), REMOTE3, null));
+		storage.createUser(new NewUser(new UserName("u4"), new EmailAddress("f@g.com"),
+				new DisplayName("Albert HevensyDouglas"), REMOTE4, null));
+	}
 }

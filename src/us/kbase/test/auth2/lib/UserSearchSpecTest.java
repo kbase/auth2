@@ -20,7 +20,7 @@ public class UserSearchSpecTest {
 	@Test
 	public void buildWithEverything() {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder()
-				.withSearchPrefix("foo")
+				.withSearchPrefix("Foo")
 				.withSearchOnUserName(true)
 				.withSearchOnDisplayName(true)
 				.withSearchOnRole(Role.ADMIN)
@@ -59,7 +59,7 @@ public class UserSearchSpecTest {
 	@Test
 	public void buildWithPrefixOnly() {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder()
-				.withSearchPrefix("foo").build();
+				.withSearchPrefix("foO").build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
