@@ -44,6 +44,8 @@ public class UserNameTest {
 		failConstruct("   \t \n    ", new MissingParameterException("user name"));
 		failConstruct("9aabaea", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 				"Username must start with a letter"));
+		failConstruct("abaeataDfoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+				"Illegal character in user name abaeataDfoo: D"));
 		failConstruct("abaeataΔfoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
 				"Illegal character in user name abaeataΔfoo: Δ"));
 		failConstruct("abaea*tafoo", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,

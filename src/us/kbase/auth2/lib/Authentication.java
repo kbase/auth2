@@ -438,7 +438,7 @@ public class Authentication {
 		try {
 			return getUser(token, new Role[0]);
 		} catch (DisabledUserException e) {
-			throw e;
+			throw e; // what the hell is the point of this?
 		} catch (UnauthorizedException e) {
 			throw new RuntimeException("Good job dude, you just broke reality", e);
 		}
@@ -1100,13 +1100,13 @@ public class Authentication {
 			final UUID identityID)
 			throws AuthStorageException, AuthenticationException,
 			LinkFailedException, DisabledUserException {
-		final AuthUser ht = getUser(token);
+		final AuthUser au = getUser(token);
 		final RemoteIdentityWithLocalID ri = getIdentity(linktoken, identityID);
 		try {
-			storage.link(ht.getUserName(), ri);
+			storage.link(au.getUserName(), ri);
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
-					ht.getUserName().getName());
+					au.getUserName().getName());
 		}
 	}
 
@@ -1114,12 +1114,17 @@ public class Authentication {
 			final IncomingToken token,
 			final UUID id)
 			throws InvalidTokenException, AuthStorageException,
-			UnLinkFailedException {
+			UnLinkFailedException, DisabledUserException {
 		if (id == null) {
 			throw new NullPointerException("id");
 		}
-		final HashedToken ht = getToken(token);
-		storage.unlink(ht.getUserName(), id);
+		final AuthUser au = getUser(token);
+		try {
+			storage.unlink(au.getUserName(), id);
+		} catch (NoSuchUserException e) {
+			throw new AuthStorageException("User magically disappeared from database: " +
+					au.getUserName().getName());
+		}
 		
 	}
 

@@ -329,13 +329,14 @@ public interface AuthStorage {
 	/** Remove a remote identity from a user.
 	 * @param userName the user.
 	 * @param id the remote identity to remove from the user.
-	 * @throws UnLinkFailedException if the user doesn't exist, the user only has one identity,
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws UnLinkFailedException if the user only has one identity
 	 * or the user does not possess the specified identity.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	void unlink(UserName userName, UUID id)
-			throws AuthStorageException, UnLinkFailedException;
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException;
 
 	/** Update the system configuration.
 	 * @param authConfigSet the configuration to set. Null values are ignored.
