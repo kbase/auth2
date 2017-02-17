@@ -487,4 +487,6 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				.withSearchOnDisplayName(true).build(), 1, false),
 				is(expected));
 	}
+	
+	//TODO TEST with display name canonicalization taken into account - lower case & split
 }
