@@ -229,6 +229,7 @@
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />

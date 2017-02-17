@@ -11,10 +11,10 @@ import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -34,11 +34,11 @@ public class LegacyKBase {
 	private Authentication auth;
 	
 	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	public void dummyGetMethod() throws AuthenticationException {
-		throw new AuthenticationException(ErrorType.UNSUPPORTED_OP, 
-				"This is just here for compatibility with the old client: " +
-				"\"user_id\": null");
+	@Produces(MediaType.TEXT_HTML)
+	public Response dummyGetMethod() throws AuthenticationException {
+		return Response.status(401).entity("This GET method is just here for compatibility with " +
+				"the old java client and does nothing useful. Here's the compatibility part: " +
+				"\"user_id\": null").build();
 	}
 	
 	// this just exists to capture requests when the content-type header isn't

@@ -13,8 +13,6 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  */
 public class UserDisabledState {
 	
-	//TODO TESTS
-
 	private static final int MAX_DISABLED_REASON_LENGTH = 1000;
 	private final String disabledReason;
 	private final UserName byAdmin;

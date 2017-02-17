@@ -12,8 +12,6 @@ package us.kbase.auth2.lib;
  */
 public class Password {
 
-	//TODO TEST
-	
 	private final char[] password;
 	
 	/** Create a password. Note that the incoming array is not copied, and any changes to the array
