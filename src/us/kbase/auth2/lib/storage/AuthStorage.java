@@ -314,6 +314,12 @@ public interface AuthStorage {
 			throws AuthStorageException, NoSuchTokenException;
 
 	/** Link an account to a remote identity.
+	 * If the account is already linked to the identity, the method proceeds without error, but has
+	 * the following effects:
+	 * 1) The UUID of the identity in the database is NOT overwritten by the UUID of the passed in
+	 * identity.
+	 * 2) If the provider details (provider username, email address, and full name) are different,
+	 * the details in the database are overwritten by the passed in identity details. 
 	 * @param userName the user to which the remote identity will be linked. 
 	 * @param remoteID the remote identity.
 	 * @throws NoSuchUserException if the user does not exist.
@@ -329,13 +335,14 @@ public interface AuthStorage {
 	/** Remove a remote identity from a user.
 	 * @param userName the user.
 	 * @param id the remote identity to remove from the user.
-	 * @throws UnLinkFailedException if the user doesn't exist, the user only has one identity,
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws UnLinkFailedException if the user only has one identity
 	 * or the user does not possess the specified identity.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	void unlink(UserName userName, UUID id)
-			throws AuthStorageException, UnLinkFailedException;
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException;
 
 	/** Update the system configuration.
 	 * @param authConfigSet the configuration to set. Null values are ignored.

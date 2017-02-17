@@ -111,7 +111,7 @@ public class Me {
 			@Context final HttpHeaders headers,
 			@PathParam("id") final UUID id)
 			throws NoTokenProvidedException, InvalidTokenException,
-			AuthStorageException, UnLinkFailedException {
+			AuthStorageException, UnLinkFailedException, DisabledUserException {
 		// id can't be null
 		auth.unlink(getTokenFromCookie(headers, cfg.getTokenCookieName()), id);
 	}

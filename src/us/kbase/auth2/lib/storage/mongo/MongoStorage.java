@@ -97,8 +97,6 @@ public class MongoStorage implements AuthStorage {
 	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
 	 */
 	
-	//TODO TEST unit tests
-	
 	private static final int SCHEMA_VERSION = 1;
 	
 	private static final String COL_CONFIG = "config";
@@ -1149,25 +1147,33 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 	
+	/* See notes for this method between this method and the next. These two methods are tightly
+	 * coupled.
+	 */
 	@Override
 	public void link(final UserName user, final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
 		int count = 0;
 		boolean complete = false;
-		// could just put addIdentity into the while loop but this is more readable IMO
 		while (!complete) {
 			count++;
 			if (count > 5) {
+				// there's not really any way to test this without some crazy timing stuff
 				throw new RuntimeException("Attempted link update 5 times without success. " +
 						"There's probably a programming error here.");
 			}
-			complete = addIdentity(user, remoteID);
+			complete = addIdentity(getUser(user), remoteID);
 		}
 	}
 	
+	/* The method above and below are split for two reasons: 1) readability, and 2) so that
+	 * tests can use reflection to exercise the method below with the case where the user 
+	 * identities change between getting the user and updating the identities.
+	 */
+	
 	private boolean addIdentity(
-			final UserName userName,
+			final AuthUser user,
 			final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
@@ -1180,10 +1186,11 @@ public class MongoStorage implements AuthStorage {
 		 * Splitting the user doc from the provider docs has a whole host of other issues, mostly
 		 * wrt deletion
 		 */
-		
-		final AuthUser user = getUser(userName);
+		if (remoteID == null) {
+			throw new NullPointerException("remoteID");
+		}
 		if (user.isLocal()) {
-			throw new LinkFailedException("Cannot link accounts to a local user");
+			throw new LinkFailedException("Cannot link identities to a local user");
 		}
 		// firstly check to see if the ID is already linked. If so, just update the associated
 		// user info.
@@ -1209,7 +1216,8 @@ public class MongoStorage implements AuthStorage {
 		final List<Document> idQuery = oldIDs.stream().map(d -> new Document("$elemMatch", d))
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, user.getUserName().getName())
-				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery));
+				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery))
+				.append(Fields.USER_IDENTITIES, new Document("$size", idQuery.size()));
 		
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query,
@@ -1231,10 +1239,17 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void unlink(
-			final UserName username,
+			final UserName userName,
 			final UUID id)
-			throws AuthStorageException, UnLinkFailedException {
-		final Document q = new Document(Fields.USER_NAME, username.getName())
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException {
+		if (id == null) {
+			throw new NullPointerException("id");
+		}
+		final AuthUser u = getUser(userName);
+		if (u.isLocal()) {
+			throw new UnLinkFailedException("Local users have no identities");
+		}
+		final Document q = new Document(Fields.USER_NAME, userName.getName())
 				/* this a neat trick to ensure that there's at least 2
 				 * identities for the user. See http://stackoverflow.com/a/15224544/643675
 				 * Normal users must always have at least one identity.
@@ -1245,9 +1260,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(q, a);
 			if (r.getMatchedCount() != 1) {
-				// could pull the user here to ensure it exists, but meh
-				throw new UnLinkFailedException("Either the user doesn't " +
-						"exist or only has one associated identity");
+				throw new UnLinkFailedException("The user has only one associated identity");
 			}
 			if (r.getModifiedCount() != 1) {
 				throw new UnLinkFailedException("The user is not linked to the provided identity");
