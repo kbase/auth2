@@ -227,6 +227,7 @@
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRolesTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
     </junit>

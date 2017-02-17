@@ -241,6 +241,11 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", 1)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
+						.append("ns", "test_mongostorage.temptokens"),
+				new Document("v", 1)
+						.append("unique", true)
+						.append("key", new Document("id", 1))
+						.append("name", "id_1")
 						.append("ns", "test_mongostorage.temptokens")
 				)));
 	}

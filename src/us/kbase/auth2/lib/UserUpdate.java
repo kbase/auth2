@@ -6,6 +6,8 @@ package us.kbase.auth2.lib;
  */
 public class UserUpdate {
 	
+	//TODO CODE use optionals
+	
 	private DisplayName displayName = null;
 	private EmailAddress email = null;
 	

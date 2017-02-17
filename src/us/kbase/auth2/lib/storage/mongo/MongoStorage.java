@@ -172,6 +172,7 @@ public class MongoStorage implements AuthStorage {
 		//temporary token indexes
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_ID), IDX_UNIQ);
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
 				// this causes the tokens to expire at their expiration date
 				/* this causes the tokens to be deleted at their expiration date
@@ -1064,6 +1065,7 @@ public class MongoStorage implements AuthStorage {
 		if (identitySet == null) {
 			throw new NullPointerException("identitySet");
 		}
+		// ok for the set to be empty
 		Utils.noNulls(identitySet, "Null value in identitySet");
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
@@ -1074,7 +1076,21 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
-			//TODO CODE catch duplicate key exception and throw TokenExistsException (or something)
+		} catch (MongoWriteException mwe) {
+			if (isDuplicateKeyException(mwe)) {
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_ID)) {
+					throw new IllegalArgumentException(String.format(
+							"Temporary token ID %s already exists in the database",
+							token.getId()));
+				} else if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_TOKEN)) {
+					throw new IllegalArgumentException(String.format(
+							"Token hash for temporary token ID %s already exists in the database",
+							token.getId()));
+				} // otherwise throw next exception
+			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -1102,8 +1118,8 @@ public class MongoStorage implements AuthStorage {
 		if (d == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
+		// if we do this anywhere else should make a method to go from doc -> temptoken class
 		if (new Date().after(d.getDate(Fields.TOKEN_TEMP_EXPIRY))) {
-			// if we do this anywhere else should make a method to go from doc -> temptoken class
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
