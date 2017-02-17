@@ -289,6 +289,9 @@ public interface AuthStorage {
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
 	/** Store a temporary token with a set of remote identities.
+	 * Storing an empty set is allowed.
+	 * No checking is done on the validity of the token - passing in tokens with bad data is a
+	 * programming error.
 	 * @param token the temporary token.
 	 * @param ids the set of remote identities.
 	 * @throws AuthStorageException if a problem connecting with the storage
