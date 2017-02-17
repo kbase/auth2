@@ -143,6 +143,7 @@ public class UserSearchSpec {
 		/** Set a prefix by which the user name and / or display name will be searched.
 		 * The prefix matches the start of the username or the start of any part of the whitespace
 		 * tokenized display name.
+		 * The prefix is always converted to lower case.
 		 * Once the prefix is set in this builder it cannot be removed.
 		 * @param prefix the prefix.
 		 * @return this builder.
@@ -151,7 +152,7 @@ public class UserSearchSpec {
 			if (prefix == null || prefix.trim().isEmpty()) {
 				throw new IllegalArgumentException("Prefix cannot be null or the empty string");
 			}
-			uss.prefix = Optional.of(prefix);
+			uss.prefix = Optional.of(prefix.toLowerCase());
 			return this;
 		}
 		
