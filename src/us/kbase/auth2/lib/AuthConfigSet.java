@@ -9,8 +9,8 @@ package us.kbase.auth2.lib;
  */
 public class AuthConfigSet<T extends ExternalConfig> {
 
-	private AuthConfig cfg;
-	private T extcfg;
+	private final AuthConfig cfg;
+	private final T extcfg;
 	
 	/** Create a configuration set.
 	 * @param cfg the authentication instance configuration.
@@ -39,6 +39,45 @@ public class AuthConfigSet<T extends ExternalConfig> {
 	 */
 	public T getExtcfg() {
 		return extcfg;
+	}
+	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((cfg == null) ? 0 : cfg.hashCode());
+		result = prime * result + ((extcfg == null) ? 0 : extcfg.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		@SuppressWarnings("unchecked")
+		AuthConfigSet<T> other = (AuthConfigSet<T>) obj;
+		if (cfg == null) {
+			if (other.cfg != null) {
+				return false;
+			}
+		} else if (!cfg.equals(other.cfg)) {
+			return false;
+		}
+		if (extcfg == null) {
+			if (other.extcfg != null) {
+				return false;
+			}
+		} else if (!extcfg.equals(other.extcfg)) {
+			return false;
+		}
+		return true;
 	}
 
 	@Override

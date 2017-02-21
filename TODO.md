@@ -43,7 +43,6 @@ Auth service work
   * Password strength checker, check passwords != on reset
   * Mongod auth
   * Lock local account for X m after Y failed logins
-  * investigate auto-building login & link urls
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
