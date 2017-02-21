@@ -212,7 +212,6 @@ public class AuthConfigTest {
 		public String toString() {
 			return "This is a very poor toString() implementation. Sad!";
 		}
-		
 	}
 	
 	@Test
@@ -237,6 +236,11 @@ public class AuthConfigTest {
 	public void configSetConstructFail() throws Exception {
 		failConstructConfigSet(null, new TestExtCfg(), "cfg");
 		failConstructConfigSet(new AuthConfig(null, null, null), null, "extcfg");
+	}
+	
+	@Test
+	public void configSetEquals() {
+		EqualsVerifier.forClass(AuthConfigSet.class).usingGetClass().verify();
 	}
 	
 	private void failConstructConfigSet(

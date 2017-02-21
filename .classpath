@@ -52,5 +52,9 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-validator-1.5.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/equalsverifier/equalsverifier-2.2.1.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-1.6.8.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-agent-1.6.8.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/mockito/mockito-core-2.7.10.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/objenesis/objenesis-2.5.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

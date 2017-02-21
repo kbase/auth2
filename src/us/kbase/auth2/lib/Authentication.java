@@ -20,6 +20,7 @@ import java.util.stream.Collectors;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.TokenGenerator;
+import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
@@ -110,7 +111,10 @@ public class Authentication {
 			throw new NullPointerException("storage");
 		}
 		if (identityProviderSet == null) {
-			throw new NullPointerException("identityProviderFactory");
+			throw new NullPointerException("identityProviderSet");
+		}
+		if (defaultExternalConfig == null) {
+			throw new NullPointerException("defaultExternalConfig");
 		}
 		this.storage = storage;
 		this.idProviderSet = identityProviderSet;
@@ -133,30 +137,6 @@ public class Authentication {
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to initialize config manager: " +
 					e.getMessage(), e);
-		}
-	}
-	
-	private static class CollectingExternalConfig implements ExternalConfig {
-		
-		private final Map<String, String> cfg;
-		
-		private CollectingExternalConfig(
-				final Map<String, String> map) {
-			cfg = map;
-		}
-		
-		@Override
-		public Map<String, String> toMap() {
-			return cfg;
-		}
-
-		@Override
-		public String toString() {
-			StringBuilder builder = new StringBuilder();
-			builder.append("CollectingExternalConfig [cfg=");
-			builder.append(cfg);
-			builder.append("]");
-			return builder.toString();
 		}
 	}
 	
@@ -188,7 +168,7 @@ public class Authentication {
 	
 		public synchronized void updateConfig() throws AuthStorageException {
 			try {
-				cfg = storage.getConfig(m -> new CollectingExternalConfig(m));
+				cfg = storage.getConfig(new CollectingExternalConfigMapper());
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
