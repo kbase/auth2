@@ -196,5 +196,34 @@ public class LocalUserTest {
 		assertThat("incorrect is local", lu.isLocal(), is(true));
 		assertThat("incorrect is root", lu.isRoot(), is(true));
 	}
+	
+	@Test
+	public void localUserToString() throws Exception {
+		final UserName un = new UserName("foo");
+		final EmailAddress e = new EmailAddress("f@g.com");
+		final DisplayName dn = new DisplayName("bar");
+		final Set<Role> r = set(Role.CREATE_ADMIN);
+		final Set<String> cr = set("foobar");
+		final Date d = new Date();
+		Thread.sleep(2);
+		final Date ll = new Date();
+		final UserDisabledState uds = new UserDisabledState(new UserName("who"), d);
+		final byte[] pwd = "foobarbazb".getBytes(StandardCharsets.UTF_8);
+		final byte[] salt = "wh".getBytes(StandardCharsets.UTF_8);
+		
+		final LocalUser lu = new LocalUser(un, e, dn, r, cr, d, ll, uds,
+				pwd, salt, false, d);
+		
+		assertThat("incorrect toString", lu.toString(), is(String.format(
+				"LocalUser [passwordHash=[102, 111, 111, 98, 97, 114, 98, 97, 122, 98], " +
+				"salt=[119, 104], forceReset=false, lastReset=%s, " +
+				"getDisplayName()=DisplayName [name=bar], " +
+				"getEmail()=EmailAddress [email=f@g.com], getUserName()=UserName [name=foo], " +
+				"getRoles()=[CREATE_ADMIN], getCustomRoles()=[foobar], " +
+				"getCreated()=%s, getLastLogin()=%s, " +
+				"getDisabledState()=UserDisabledState [disabledReason=null, " +
+				"byAdmin=UserName [name=who], time=%s]]", d.getTime(), d, ll, d.getTime())));
+		
+	}
 
 }

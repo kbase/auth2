@@ -153,4 +153,20 @@ public class UserDisabledStateTest {
 	public void equals() {
 		EqualsVerifier.forClass(UserDisabledState.class).usingGetClass().verify();
 	}
+	
+	@Test
+	public void toStringEmpty() {
+		final UserDisabledState uds = new UserDisabledState();
+		assertThat("incorrect toString", uds.toString(),
+				is("UserDisabledState [disabledReason=null, byAdmin=null, time=null]"));
+	}
+	
+	@Test
+	public void toStringFull() throws Exception {
+		final Date now = new Date();
+		final UserDisabledState uds = new UserDisabledState("foo", new UserName("bar"), now);
+		assertThat("incorrect toString", uds.toString(), is(String.format(
+				"UserDisabledState [disabledReason=foo, byAdmin=UserName [name=bar], time=%s]",
+				now.getTime())));
+	}
 }

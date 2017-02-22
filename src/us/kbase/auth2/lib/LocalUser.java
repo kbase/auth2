@@ -127,4 +127,37 @@ public class LocalUser extends AuthUser {
 		}
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("LocalUser [passwordHash=");
+		builder.append(Arrays.toString(passwordHash));
+		builder.append(", salt=");
+		builder.append(Arrays.toString(salt));
+		builder.append(", forceReset=");
+		builder.append(forceReset);
+		builder.append(", lastReset=");
+		builder.append(lastReset);
+		builder.append(", getDisplayName()=");
+		builder.append(getDisplayName());
+		builder.append(", getEmail()=");
+		builder.append(getEmail());
+		builder.append(", getUserName()=");
+		builder.append(getUserName());
+		builder.append(", getRoles()=");
+		builder.append(getRoles());
+		builder.append(", getCustomRoles()=");
+		builder.append(getCustomRoles());
+		builder.append(", getCreated()=");
+		builder.append(getCreated());
+		builder.append(", getLastLogin()=");
+		builder.append(getLastLogin());
+		builder.append(", getDisabledState()=");
+		builder.append(getDisabledState());
+		builder.append("]");
+		return builder.toString();
+	}
+	
+	
 }

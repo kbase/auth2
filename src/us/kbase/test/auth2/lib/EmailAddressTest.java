@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -46,12 +47,7 @@ public class EmailAddressTest {
 	
 	@Test
 	public void equals() throws Exception {
-		final EmailAddress ea = new EmailAddress("w@c.com");
-		assertThat("incorrect equality", ea.equals(ea), is(true));
-		assertThat("incorrect null", ea.equals(null), is(false));
-		assertThat("incorrect type", ea.equals("w@c.com"), is(false));
-		assertThat("incorrect bad name", ea.equals(new EmailAddress("x@c.com")), is(false));
-		assertThat("incorrect good name", ea.equals(new EmailAddress("w@c.com")), is(true));
+		EqualsVerifier.forClass(EmailAddress.class).usingGetClass().verify();
 	}
 	
 	@Test
