@@ -34,6 +34,8 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -296,8 +298,8 @@ public class Login {
 			final Map<String, String> c = new HashMap<>();
 			c.put("id", id.getID().toString());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
-			final UserName availName = auth.getAvailableUserName(suggestedUserName);
-			c.put("usernamesugg", availName == null ? null : availName.getName());
+			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
+			c.put("usernamesugg", availName.isPresent() ? availName.get().getName() : null);
 			c.put("prov_username", id.getDetails().getUsername());
 			c.put("prov_fullname", id.getDetails().getFullname());
 			c.put("prov_email", id.getDetails().getEmail());

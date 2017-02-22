@@ -18,6 +18,7 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.server.mvc.Template;
 import org.glassfish.jersey.server.mvc.Viewable;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -53,11 +54,11 @@ public class Logout {
 	@Path(UIPaths.LOGOUT_RESULT)
 	public Response logoutResult(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException {
-		final HashedToken ht = auth.revokeToken(
+		final Optional<HashedToken> ht = auth.revokeToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return Response.ok(
-				new Viewable("/logoutresult",
-						ImmutableMap.of("user", ht == null ? null : ht.getUserName().getName())))
+				new Viewable("/logoutresult", ImmutableMap.of("user", ht.isPresent() ?
+						ht.get().getUserName().getName() : null)))
 				.cookie(getLoginCookie(cfg.getTokenCookieName(), null))
 				.build();
 	}
