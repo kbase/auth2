@@ -2,6 +2,7 @@ package us.kbase.test.auth2;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -111,6 +112,14 @@ public class TestCommon {
 		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
 				is(false));
 		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
+	}
+	
+	public static void assertClear(final byte[] bytes) {
+		for (int i = 0; i < bytes.length; i++) {
+			if (bytes[i] != 0) {
+				fail(String.format("found non-zero byte at position %s: %s", i, bytes[i]));
+			}
+		}
 	}
 	
 	public static boolean dateWithin(final Date d, final int milliseconds) {

@@ -11,6 +11,8 @@ import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static us.kbase.test.auth2.TestCommon.assertClear;
+
 import java.lang.reflect.Field;
 
 import org.junit.Test;
@@ -61,6 +63,8 @@ public class AuthenticationCreateRootTest {
 	private class RootUserAnswerMatcher implements Answer<NewRootUser> {
 
 		private final Password pwd;
+		public byte[] savedSalt;
+		public byte[] savedHash;
 		
 		public RootUserAnswerMatcher(final Password pwd) {
 			this.pwd = pwd;
@@ -69,6 +73,8 @@ public class AuthenticationCreateRootTest {
 		@Override
 		public NewRootUser answer(InvocationOnMock inv) throws Throwable {
 			final NewRootUser user = inv.getArgument(0);
+			savedSalt = user.getSalt();
+			savedHash = user.getPasswordHash();
 			/* sort of bogus to use the same pwd gen code from the method under test in the test
 			 * but the pwd gen code is tested elsewhere and trying to do this manually
 			 * would be a major pain. Maybe look into mocking the pwd gen code..?
@@ -76,9 +82,9 @@ public class AuthenticationCreateRootTest {
 			 * salt is entirely random so salt is impossible to test other than getting the size
 			 */
 			final byte[] hash = new PasswordCrypt().getEncryptedPassword(
-					pwd.getPassword(), user.getSalt());
+					pwd.getPassword(), savedSalt);
 			final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
-					hash, user.getSalt());
+					hash, savedSalt);
 			/* omg you bad person */
 			final Field f = AuthUser.class.getDeclaredField("created");
 			f.setAccessible(true);
@@ -102,10 +108,13 @@ public class AuthenticationCreateRootTest {
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		// pwd will be cleared before the method call
 		final Password pwd2 = new Password("foobarbazbat".toCharArray());
-		doAnswer(new RootUserAnswerMatcher(pwd2)).when(storage).createLocalUser(any());
+		final RootUserAnswerMatcher matcher = new RootUserAnswerMatcher(pwd2);
+		doAnswer(matcher).when(storage).createLocalUser(any());
 		auth.createRoot(pwd);
 		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
 		assertThat("password not cleared", pwd.getPassword(), is(clearpwd));
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
 		/* ensure method was called at least once
 		 * Usually not necessary when mocking the call, but since createLU returns null
 		 * need to ensure the method was actually called and therefore the RootuserAnswerMatcher
