@@ -13,6 +13,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -411,7 +413,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
 				new DisplayName("bar1"), REMOTE1, null);
 		storage.createUser(nu);
-		final AuthUser au = storage.getUser(REMOTE1);
+		final AuthUser au = storage.getUser(REMOTE1).get();
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect identities", au.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
@@ -425,7 +427,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new DisplayName("bar1"), REMOTE1, null);
 		storage.createUser(nu);
 		storage.link(new UserName("user1"), REMOTE2);
-		final AuthUser au = storage.getUser(REMOTE2);
+		final AuthUser au = storage.getUser(REMOTE2).get();
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect identities", au.getIdentities(), is(set(REMOTE1, REMOTE2)));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
@@ -438,7 +440,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
 				new DisplayName("bar1"), REMOTE1, null);
 		storage.createUser(nu);
-		assertThat("incorrect user", storage.getUser(REMOTE2), is((AuthUser) null));
+		assertThat("incorrect user", storage.getUser(REMOTE2), is(Optional.absent()));
 	}
 	
 	//TODO TEST case where user starts login, stores identity linked to user, id is unlinked, and then completes login. In Authentication tests
@@ -461,7 +463,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user3", "full3", "email3"));
 		
-		final AuthUser au = storage.getUser(ri3);
+		final AuthUser au = storage.getUser(ri3).get();
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect identities", au.getIdentities(), is(set(REMOTE1, expected)));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));

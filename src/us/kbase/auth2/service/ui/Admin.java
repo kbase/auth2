@@ -485,7 +485,7 @@ public class Admin {
 			InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				roleId, description);
+				new CustomRole(roleId, description));
 	}
 	
 	@POST // should take DELETE as well

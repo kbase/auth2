@@ -36,9 +36,12 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -124,14 +127,14 @@ public class AuthCLI {
 				System.out.println("No globus API url included in the deployment config file");
 				System.exit(1);
 			}
-			importUsers(a, auth, globusAPIURL);
+			importGlobusUsers(a, auth, globusAPIURL);
 			System.exit(0);
 		}
 		
 		jc.usage();
 	}
 
-	private static void importUsers(
+	private static void importGlobusUsers(
 			final Args a,
 			final Authentication auth,
 			final URL globusAPIURL) {
@@ -181,7 +184,7 @@ public class AuthCLI {
 			System.out.println("\tFull name: " + ri.getDetails().getFullname());
 			System.out.println("\tEmail    : " + ri.getDetails().getEmail());
 			try {
-				auth.importUser(ri);
+				auth.importUser(getGlobusUserName(ri), ri);
 				success++;
 			} catch (UserExistsException | IllegalParameterException | IdentityLinkedException |
 					AuthStorageException e) {
@@ -191,6 +194,27 @@ public class AuthCLI {
 		final Duration d = Duration.between(now, LocalDateTime.now());
 		System.out.println(String.format("Imported %s out of %s users from file %s in %s",
 				success, users.size(), p, getDurationString(d)));
+	}
+
+	private static UserName getGlobusUserName(final RemoteIdentity ri)
+			throws IllegalParameterException {
+		String username = ri.getDetails().getUsername();
+		/* Do NOT otherwise change the username here - this is importing
+		 * existing users, and so changing the username will mean erroneous
+		 * resource assignments
+		 */
+		if (username.contains("@")) {
+			username = username.split("@")[0];
+			if (username.trim().isEmpty()) {
+				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						ri.getDetails().getUsername());
+			}
+		}
+		try {
+			return new UserName(username);
+		} catch (MissingParameterException e) {
+			throw new RuntimeException("Impossible", e);
+		}
 	}
 
 	private static boolean printNexusErrorAndCheckIfFatal(

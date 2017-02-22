@@ -19,6 +19,7 @@ import java.util.stream.Collectors;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import com.google.common.base.Optional;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -995,7 +996,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public AuthUser getUser(final RemoteIdentity remoteID) throws AuthStorageException {
+	public Optional<AuthUser> getUser(final RemoteIdentity remoteID) throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
 		//note a user with identities should never have these fields, but
 		//doesn't hurt to be safe
@@ -1003,7 +1004,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_SALT, 0);
 		final Document u = findOne(COL_USERS, query, projection);
 		if (u == null) {
-			return null;
+			return Optional.absent();
 		}
 		AuthUser user = toUser(u);
 		/* could do a findAndModify to set the fields on the first query, but
@@ -1024,7 +1025,7 @@ public class MongoStorage implements AuthStorage {
 			user = new AuthUser(user, newIDs);
 			updateIdentity(remoteID);
 		}
-		return user;
+		return Optional.of(user);
 	}
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {

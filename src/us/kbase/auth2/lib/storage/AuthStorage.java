@@ -5,6 +5,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
@@ -119,15 +121,15 @@ public interface AuthStorage {
 	AuthUser getUser(UserName userName)
 			throws AuthStorageException, NoSuchUserException;
 	
-	/** Gets a user linked to a remote identity. Returns null if the user doesn't exist. If the 
-	 * provider details (provider username, email address, and full name) are different, the
-	 * details are updated in the storage system.
+	/** Gets a user linked to a remote identity. Returns an empty Optional if the user doesn't
+	 * exist. If the provider details (provider username, email address, and full name) are
+	 * different, the details are updated in the storage system.
 	 * @param remoteID a remote identity linked to a user.
 	 * @return the user linked to the remote identity or null if there is no such user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	AuthUser getUser(RemoteIdentity remoteID) throws AuthStorageException;
+	Optional<AuthUser> getUser(RemoteIdentity remoteID) throws AuthStorageException;
 	
 	/** Get the display names for a set of users. Any non-existent users are left out of the
 	 * returned map.
