@@ -14,8 +14,11 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.lang.reflect.Field;
+import java.util.Collections;
+import java.util.Date;
 
 import org.junit.Test;
 
@@ -33,8 +36,11 @@ import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewRootUser;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -224,6 +230,33 @@ public class AuthenticationCreateRootTest {
 		} catch (RuntimeException e) {
 			TestCommon.assertExceptionCorrect(e,
 					new RuntimeException("OK. This is really bad. I give up."));
+		}
+	}
+	
+	@Test
+	public void enableRoot() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		doThrow(new UserExistsException(UserName.ROOT.getName()))
+				.when(storage).createLocalUser(any(NewRootUser.class));
+		// ignore the change password call, tested elsewhere
+		final LocalUser disabled = new LocalUser(UserName.ROOT, EmailAddress.UNKNOWN,
+				new DisplayName("root"), set(Role.ROOT), Collections.emptySet(),
+				new Date(), new Date(), new UserDisabledState("foo", UserName.ROOT, new Date()),
+				new byte[10], new byte[8], false, null);
+		when(storage.getUser(UserName.ROOT)).thenReturn(disabled);
+		auth.createRoot(new Password("foobarbazbat".toCharArray()));
+		verify(storage).enableAccount(UserName.ROOT, UserName.ROOT);
+	}
+	
+	@Test
+	public void nullPwd() throws Exception {
+		try {
+			initTestAuth().auth.createRoot(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("pwd"));
 		}
 	}
 }
