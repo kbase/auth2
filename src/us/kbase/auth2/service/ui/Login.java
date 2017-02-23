@@ -375,13 +375,20 @@ public class Login {
 	
 	private static class PickChoice {
 		
-		public final UUID id;
+		private final String id;
 
+		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
-		public PickChoice(@JsonProperty("id") final String id) throws IllegalParameterException {
-			super();
+		public PickChoice(@JsonProperty("id") final String id) {
+			this.id = id;
+		}
+		
+		public UUID getID() throws IllegalParameterException, MissingParameterException {
+			if (id == null) {
+				throw new MissingParameterException("id field is required");
+			}
 			try {
-				this.id = UUID.fromString(id);
+				return UUID.fromString(id);
 			} catch (IllegalArgumentException e) {
 				throw new IllegalParameterException("id is not a valid UUID: " + id);
 			}
@@ -398,13 +405,14 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
-			AuthStorageException, IllegalParameterException {
-		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.id);
+			AuthStorageException, IllegalParameterException, MissingParameterException {
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.getID());
 		return createLoginResponseJSON(redirect, newtoken, !FALSE.equals(session));
 	}
 
 	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
