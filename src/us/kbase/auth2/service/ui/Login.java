@@ -16,10 +16,12 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -34,7 +36,10 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
@@ -223,6 +228,21 @@ public class Login {
 				.cookie(getRedirectCookie(null)).build();
 	}
 	
+	private Response createLoginResponseJSON(
+			final String redirect,
+			final NewToken newtoken,
+			final boolean session)
+			throws IllegalParameterException, AuthStorageException {
+		
+		return Response.ok().entity(ImmutableMap.of(
+				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT)))
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
+				.cookie(getSessionChoiceCookie(null))
+				.cookie(getLoginInProcessCookie(null))
+				.cookie(getStateCookie(null))
+				.cookie(getRedirectCookie(null)).build();
+	}
+	
 	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
 		final URL url;
 		try {
@@ -335,8 +355,8 @@ public class Login {
 		return incToken;
 	}
 	
-	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
@@ -348,6 +368,36 @@ public class Login {
 		
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token), identityID);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
+	}
+	
+	private static class PickChoice {
+		
+		public final UUID id;
+
+		@JsonCreator
+		public PickChoice(@JsonProperty("id") final String id) throws IllegalParameterException {
+			super();
+			try {
+				this.id = UUID.fromString(id);
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException("id is not a valid UUID: " + id);
+			}
+		}
+	}
+	
+	@PUT
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LOGIN_PICK)
+	public Response pickAccountJSON(
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			final PickChoice pick)
+			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException, IllegalParameterException {
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.id);
+		return createLoginResponseJSON(redirect, newtoken, !FALSE.equals(session));
 	}
 
 	// may need another POST endpoint for AJAX with query params and no redirect
