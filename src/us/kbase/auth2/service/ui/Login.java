@@ -37,6 +37,7 @@ import javax.ws.rs.core.UriInfo;
 import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -235,13 +236,24 @@ public class Login {
 				.cookie(getRedirectCookie(null));
 	}
 	
-	private Response createLoginResponseJSON(
+	private Response createLoginResponseJSONOK(
 			final String redirect,
 			final NewToken newtoken,
 			final boolean session)
 			throws IllegalParameterException, AuthStorageException {
 		
 		return setLoginCookies(Response.ok().entity(ImmutableMap.of(
+				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
+				newtoken, session).build();
+	}
+	
+	private Response createLoginResponseJSONCreated(
+			final String redirect,
+			final NewToken newtoken,
+			final boolean session)
+			throws IllegalParameterException, AuthStorageException {
+		
+		return setLoginCookies(Response.status(Response.Status.CREATED).entity(ImmutableMap.of(
 				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
 				newtoken, session).build();
 	}
@@ -373,6 +385,8 @@ public class Login {
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
+	// otherwise extra field errors are thrown and aren't picked up by custom error handler
+	@JsonIgnoreProperties(ignoreUnknown = true)
 	private static class PickChoice {
 		
 		private final String id;
@@ -407,10 +421,9 @@ public class Login {
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, IllegalParameterException, MissingParameterException {
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.getID());
-		return createLoginResponseJSON(redirect, newtoken, !FALSE.equals(session));
+		return createLoginResponseJSONOK(redirect, newtoken, !FALSE.equals(session));
 	}
 
-	// may need another POST endpoint for AJAX with query params and no redirect
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_CREATE)
@@ -426,12 +439,60 @@ public class Login {
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException, IdentityLinkedException {
-		//TODO INPUT sanity check inputs
 		
-		// might want to enapsulate the user data in a NewUser class
-		final NewToken newtoken = auth.createUser(getLoginInProcessToken(token), identityID,
-				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
+		if (identityID == null) {
+			throw new MissingParameterException("identityID");
+		}
+		final NewToken newtoken = auth.createUser(
+				getLoginInProcessToken(token),
+				identityID,
+				new UserName(userName),
+				new DisplayName(displayName),
+				new EmailAddress(email));
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
+	}
+	
+	private static class CreateChoice extends PickChoice{
+		
+		public final String user;
+		public final String displayName;
+		public final String email;
+
+		// don't throw error from constructor, doesn't get picked up by the custom error handler 
+		@JsonCreator
+		public CreateChoice(
+				@JsonProperty("id") final String id,
+				@JsonProperty("user") final String userName,
+				@JsonProperty("display") final String displayName,
+				@JsonProperty("email") final String email) {
+			super(id);
+			this.user = userName;
+			this.displayName = displayName;
+			this.email = email;
+		}
+	}
+	
+	@PUT
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LOGIN_CREATE)
+	public Response createUserJSON(
+			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			final CreateChoice create)
+			throws AuthenticationException, AuthStorageException,
+				UserExistsException, NoTokenProvidedException,
+				MissingParameterException, IllegalParameterException,
+				UnauthorizedException, IdentityLinkedException {
+		
+		final NewToken newtoken = auth.createUser(
+				getLoginInProcessToken(token),
+				create.getID(),
+				new UserName(create.user),
+				new DisplayName(create.displayName),
+				new EmailAddress(create.email));
+		return createLoginResponseJSONCreated(redirect, newtoken, !FALSE.equals(session));
 	}
 	
 	//Assumes valid URI in URL form
