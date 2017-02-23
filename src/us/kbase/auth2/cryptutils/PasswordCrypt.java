@@ -34,6 +34,7 @@ public class PasswordCrypt {
 	private final SecretKeyFactory keyfac;
 	
 	// VERY important to use SecureRandom instead of just Random
+	// note SecureRandom is thread safe
 	private final SecureRandom random;
 
 	/** Create a new password crypt instance.

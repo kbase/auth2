@@ -6,6 +6,8 @@ import static org.junit.Assert.fail;
 
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.verify;
@@ -33,6 +35,8 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewRootUser;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
@@ -60,7 +64,7 @@ public class AuthenticationCreateRootTest {
 	 * incoming user's salt.
 	 * The created date is checked to be within 200 ms of the current time.
 	 */
-	private class RootUserAnswerMatcher implements Answer<NewRootUser> {
+	private class RootUserAnswerMatcher implements Answer<Void> {
 
 		private final Password pwd;
 		public byte[] savedSalt;
@@ -71,7 +75,7 @@ public class AuthenticationCreateRootTest {
 		}
 		
 		@Override
-		public NewRootUser answer(InvocationOnMock inv) throws Throwable {
+		public Void answer(final InvocationOnMock inv) throws Throwable {
 			final NewRootUser user = inv.getArgument(0);
 			savedSalt = user.getSalt();
 			savedHash = user.getPasswordHash();
@@ -89,9 +93,8 @@ public class AuthenticationCreateRootTest {
 			final Field f = AuthUser.class.getDeclaredField("created");
 			f.setAccessible(true);
 			f.set(exp, user.getCreated().getTime());
-			String message = "local user does not match. Salt was not checked. " +
-					"Created date was not checked.";
-			assertThat(message, user, is(exp));
+			assertThat("local user does not match. Salt was not checked. " +
+					"Created date was not checked.", user, is(exp));
 			assertThat("creation date not within 200ms",
 					TestCommon.dateWithin(user.getCreated(), 200), is(true));
 			assertThat("salt not 8 bytes", user.getSalt().length, is(8));
@@ -109,7 +112,7 @@ public class AuthenticationCreateRootTest {
 		// pwd will be cleared before the method call
 		final Password pwd2 = new Password("foobarbazbat".toCharArray());
 		final RootUserAnswerMatcher matcher = new RootUserAnswerMatcher(pwd2);
-		doAnswer(matcher).when(storage).createLocalUser(any());
+		doAnswer(matcher).when(storage).createLocalUser(any(NewRootUser.class));
 		auth.createRoot(pwd);
 		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
 		assertThat("password not cleared", pwd.getPassword(), is(clearpwd));
@@ -133,5 +136,74 @@ public class AuthenticationCreateRootTest {
 		
 		return new TestAuth(storage, new Authentication(
 				storage, new IdentityProviderSet(), new TestExternalConfig("foo")));
+	}
+	
+	private class ChangePasswordAnswerMatcher implements Answer<Void> {
+		
+		private final UserName name;
+		private final Password pwd;
+		private final boolean forceReset;
+		private byte[] savedSalt;
+		private byte[] savedHash;
+		
+		public ChangePasswordAnswerMatcher(
+				final UserName name,
+				final Password pwd,
+				final boolean forceReset) {
+			this.name = name;
+			this.pwd = pwd;
+			this.forceReset = forceReset;
+		}
+
+		@Override
+		public Void answer(final InvocationOnMock args) throws Throwable {
+			final UserName un = args.getArgument(0);
+			savedHash = args.getArgument(1);
+			savedSalt = args.getArgument(2);
+			final boolean forceReset = args.getArgument(3);
+			/* sort of bogus to use the same pwd gen code from the method under test in the test
+			 * but the pwd gen code is tested elsewhere and trying to do this manually
+			 * would be a major pain. Maybe look into mocking the pwd gen code..?
+			 * 
+			 * salt is entirely random so salt is impossible to test other than getting the size
+			 */
+			final byte[] hash = new PasswordCrypt().getEncryptedPassword(
+					pwd.getPassword(), savedSalt);
+			assertThat("incorrect username", un, is(name));
+			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
+			assertThat("incorrect hash", savedHash, is(hash));
+			assertThat("salt not 8 bytes", savedSalt.length, is(8));
+			return null;
+		}
+	}
+	
+	@Test
+	public void resetRootPassword() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final Password pwd = new Password("foobarbazbat".toCharArray());
+		// pwd will be cleared before the method call
+		final Password pwd2 = new Password("foobarbazbat".toCharArray());
+		final ChangePasswordAnswerMatcher matcher =
+				new ChangePasswordAnswerMatcher(UserName.ROOT, pwd2, false);
+		doThrow(new UserExistsException(UserName.ROOT.getName()))
+				.when(storage).createLocalUser(any(NewRootUser.class));
+		doAnswer(matcher).when(storage).changePassword(
+				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));
+		when(storage.getUser(UserName.ROOT)).thenReturn(new NewRootUser(EmailAddress.UNKNOWN,
+				new DisplayName("root"), new byte[10], new byte[8]));
+		auth.createRoot(pwd);
+		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
+		assertThat("password not cleared", pwd.getPassword(), is(clearpwd));
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
+		
+		/* ensure method was called at least once
+		 * Usually not necessary when mocking the call, but since changepwd returns null
+		 * need to ensure the method was actually called and therefore the matcher ran
+		 */
+		verify(storage).changePassword(
+				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));
 	}
 }
