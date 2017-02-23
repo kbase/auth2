@@ -1,7 +1,6 @@
 package us.kbase.auth2.cryptutils;
 
 import java.security.NoSuchAlgorithmException;
-import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.security.spec.KeySpec;
 
@@ -32,18 +31,11 @@ public class PasswordCrypt {
 	 */
 	private static final int ITERATIONS = 20000;
 	
-	// VERY important to use SecureRandom instead of just Random
-	// note SecureRandom is thread safe
-	private final SecureRandom random;
-
 	/** Create a new password crypt instance.
 	 * @throws NoSuchAlgorithmException if one of the required cryptography algorithms is not
 	 * available.
 	 */
 	public PasswordCrypt() throws NoSuchAlgorithmException {
-		// sha1 is ok for generating random bits:
-		// http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar1.pdf
-		random = SecureRandom.getInstance("SHA1PRNG");
 		// not clear if this is thread safe. Doesn't explicitly say so.
 		SecretKeyFactory.getInstance(CRYPTALG); // fail early
 	}
@@ -115,15 +107,4 @@ public class PasswordCrypt {
 					"checked alg existed at startup, now it doesn't. That's annoying", e);
 		}
 	}
-
-	/** Generates a random 64 bit salt.
-	 * @return the salt.
-	 */
-	public byte[] generateSalt() {
-		// Generate a 8 byte (64 bit) salt as recommended by RSA PKCS5
-		final byte[] salt = new byte[8];
-		random.nextBytes(salt);
-		return salt;
-	}
-	
 }

@@ -8,11 +8,10 @@ import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
 
@@ -25,15 +24,10 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
-import us.kbase.auth2.lib.AuthConfig;
-import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.CollectingExternalConfig;
-import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
@@ -44,9 +38,9 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
 
 public class AuthenticationCreateRootTest {
 	
@@ -56,16 +50,6 @@ public class AuthenticationCreateRootTest {
 	 * http://stackoverflow.com/questions/9085738/can-mockito-verify-parameters-based-on-their-values-at-the-time-of-method-call
 	 * 
 	 */
-	
-	private class TestAuth {
-		final AuthStorage storageMock;
-		final Authentication auth;
-		
-		public TestAuth(AuthStorage storageMock, Authentication auth) {
-			this.storageMock = storageMock;
-			this.auth = auth;
-		}
-	}
 	
 	/* Note that the salt is *not* checked. the pwd hash is checked by regenerating from the
 	 * incoming user's salt.
@@ -133,18 +117,6 @@ public class AuthenticationCreateRootTest {
 		verify(storage).createLocalUser(any());
 	}
 
-	private TestAuth initTestAuth() throws Exception {
-		final AuthStorage storage = mock(AuthStorage.class);
-		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
-				new AuthConfigSet<>(ac,
-						new CollectingExternalConfig(ImmutableMap.of("thing", "foo"))));
-		
-		return new TestAuth(storage, new Authentication(
-				storage, new IdentityProviderSet(), new TestExternalConfig("foo")));
-	}
-	
 	private class ChangePasswordAnswerMatcher implements Answer<Void> {
 		
 		private final UserName name;
