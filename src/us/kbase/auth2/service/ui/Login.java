@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -36,8 +37,9 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonCreator;
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -385,11 +387,10 @@ public class Login {
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
-	// otherwise extra field errors are thrown and aren't picked up by custom error handler
-	@JsonIgnoreProperties(ignoreUnknown = true)
 	private static class PickChoice {
 		
 		private final String id;
+		private final Map<String, Object> additionalProperties = new TreeMap<>();
 
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
@@ -407,6 +408,24 @@ public class Login {
 				throw new IllegalParameterException("id is not a valid UUID: " + id);
 			}
 		}
+		
+		@JsonAnyGetter
+		public Map<String, Object> getAdditionalProperties() {
+			return this.additionalProperties;
+		}
+
+		@JsonAnySetter
+		public void setAdditionalProperties(String name, Object value) {
+			this.additionalProperties.put(name, value);
+		}
+		
+		public void exceptOnAdditionalProperties() throws IllegalParameterException {
+			if (!additionalProperties.isEmpty()) {
+				throw new IllegalParameterException("Unexpected parameters in request: " + 
+						String.join(", ", additionalProperties.keySet()));
+			}
+		}
+		
 	}
 	
 	@PUT
@@ -420,6 +439,7 @@ public class Login {
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, IllegalParameterException, MissingParameterException {
+		pick.exceptOnAdditionalProperties();
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.getID());
 		return createLoginResponseJSONOK(redirect, newtoken, !FALSE.equals(session));
 	}
@@ -485,6 +505,8 @@ public class Login {
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException, IdentityLinkedException {
+		
+		create.exceptOnAdditionalProperties();
 		
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
