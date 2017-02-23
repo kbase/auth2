@@ -41,6 +41,8 @@ public class PasswordCrypt {
 	 * available.
 	 */
 	public PasswordCrypt() throws NoSuchAlgorithmException {
+		// sha1 is ok for generating random bits:
+		// http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar1.pdf
 		random = SecureRandom.getInstance("SHA1PRNG");
 		// not clear if this is thread safe. Doesn't explicitly say so.
 		SecretKeyFactory.getInstance(CRYPTALG); // fail early

@@ -25,6 +25,8 @@ public class TokenGenerator {
 	 * @throws NoSuchAlgorithmException if a required algorithm is missing.
 	 */
 	public TokenGenerator() throws NoSuchAlgorithmException {
+		// sha1 is ok for generating random bits:
+		// http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar1.pdf
 		random = SecureRandom.getInstance("SHA1PRNG");
 	}
 	
