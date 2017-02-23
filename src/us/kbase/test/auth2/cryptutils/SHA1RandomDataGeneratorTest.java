@@ -9,7 +9,7 @@ import org.junit.Test;
 
 import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
 
-public class TokenGeneratorTest {
+public class SHA1RandomDataGeneratorTest {
 	
 	public static final String PASSWORD_CHARACTERS =
 			"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789+!@$%&*";
