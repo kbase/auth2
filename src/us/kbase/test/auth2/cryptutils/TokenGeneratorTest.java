@@ -7,7 +7,7 @@ import static org.junit.Assert.fail;
 import org.apache.commons.codec.binary.Base32;
 import org.junit.Test;
 
-import us.kbase.auth2.cryptutils.TokenGenerator;
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
 
 public class TokenGeneratorTest {
 	
@@ -17,7 +17,7 @@ public class TokenGeneratorTest {
 	@Test
 	public void getToken() throws Exception {
 		// not much to test here other than it's base32 compatible and 160 bits
-		final String t = new TokenGenerator().getToken();
+		final String t = new RandomDataGenerator().getToken();
 		final byte[] b = new Base32().decode(t);
 		assertThat("incorrect bit count", b.length, is(20));
 	}
@@ -25,7 +25,7 @@ public class TokenGeneratorTest {
 	@Test
 	public void failCreatePassword() throws Exception {
 		try {
-			new TokenGenerator().getTemporaryPassword(7);
+			new RandomDataGenerator().getTemporaryPassword(7);
 			fail("got bad temp pwd");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
@@ -36,7 +36,7 @@ public class TokenGeneratorTest {
 	@Test
 	public void getTempPwd() throws Exception {
 		//again not much to test here other than the size is right and the characters are correct
-		final char[] pwd = new TokenGenerator().getTemporaryPassword(8);
+		final char[] pwd = new RandomDataGenerator().getTemporaryPassword(8);
 		assertThat("incorrect pwd length", pwd.length, is(8));
 		for (final char c: pwd) {
 			if (PASSWORD_CHARACTERS.indexOf(c) < 0) {

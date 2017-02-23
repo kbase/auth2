@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
-import us.kbase.auth2.cryptutils.TokenGenerator;
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -113,7 +113,7 @@ public class Authentication {
 
 	private final AuthStorage storage;
 	private final IdentityProviderSet idProviderSet;
-	private final TokenGenerator tokens;
+	private final RandomDataGenerator tokens;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	
@@ -133,7 +133,7 @@ public class Authentication {
 			throws StorageInitException {
 		
 		try {
-			tokens = new TokenGenerator();
+			tokens = new RandomDataGenerator();
 			pwdcrypt = new PasswordCrypt();
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);

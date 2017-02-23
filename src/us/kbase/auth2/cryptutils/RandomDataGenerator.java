@@ -10,7 +10,7 @@ import org.apache.commons.codec.binary.Base32;
  * @author gaprice@lbl.gov
  *
  */
-public class TokenGenerator {
+public class RandomDataGenerator {
 
 	private static final char[] PWD_ALLOWED_CHARS =
 			"abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789+!@$%&*"
@@ -24,7 +24,7 @@ public class TokenGenerator {
 	/** Create a token generator.
 	 * @throws NoSuchAlgorithmException if a required algorithm is missing.
 	 */
-	public TokenGenerator() throws NoSuchAlgorithmException {
+	public RandomDataGenerator() throws NoSuchAlgorithmException {
 		// sha1 is ok for generating random bits:
 		// http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-131Ar1.pdf
 		random = SecureRandom.getInstance("SHA1PRNG");
