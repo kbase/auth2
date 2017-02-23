@@ -113,7 +113,7 @@ public class Authentication {
 
 	private final AuthStorage storage;
 	private final IdentityProviderSet idProviderSet;
-	private final RandomDataGenerator tokens;
+	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	
@@ -133,7 +133,7 @@ public class Authentication {
 			throws StorageInitException {
 		
 		try {
-			tokens = new RandomDataGenerator();
+			randGen = new RandomDataGenerator();
 			pwdcrypt = new PasswordCrypt();
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
@@ -226,7 +226,7 @@ public class Authentication {
 		if (pwd == null) {
 			throw new NullPointerException("pwd");
 		}
-		final byte[] salt = pwdcrypt.generateSalt();
+		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		pwd.clear();
 		final DisplayName dn;
@@ -288,8 +288,8 @@ public class Authentication {
 		if (email == null) {
 			throw new NullPointerException("email");
 		}
-		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = pwdcrypt.generateSalt();
+		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
 				passwordHash, salt, true);
@@ -366,7 +366,7 @@ public class Authentication {
 		}
 		//TODO PWD do any cross pwd checks like checking they're not the same
 		getLocalUser(userName, pwdold); //checks pwd validity and nulls
-		final byte[] salt = pwdcrypt.generateSalt();
+		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
 		pwdnew.clear();
 		try {
@@ -398,8 +398,8 @@ public class Authentication {
 		}
 		getUser(token, Role.ADMIN); // force admin
 		
-		final Password pwd = new Password(tokens.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = pwdcrypt.generateSalt();
+		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		storage.changePassword(userName, passwordHash, salt, true);
 		clear(passwordHash);
@@ -440,7 +440,7 @@ public class Authentication {
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
-		final NewToken nt = new NewToken(TokenType.LOGIN, tokens.getToken(),
+		final NewToken nt = new NewToken(TokenType.LOGIN, randGen.getToken(),
 				userName, cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
@@ -546,7 +546,7 @@ public class Authentication {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
 		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
-				tokenName, tokens.getToken(), au.getUserName(), life);
+				tokenName, randGen.getToken(), au.getUserName(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
 	}
@@ -1068,7 +1068,7 @@ public class Authentication {
 	 * @return a token.
 	 */
 	public String getBareToken() {
-		return tokens.getToken();
+		return randGen.getToken();
 	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1155,7 +1155,7 @@ public class Authentication {
 				.map(id -> id.withID()).collect(Collectors.toSet());
 		hasUser.stream().forEach(id -> store.add(id));
 
-		final TemporaryToken tt = new TemporaryToken(tokens.getToken(), 30 * 60 * 1000);
+		final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 		return new LoginToken(tt);
 	}
@@ -1449,7 +1449,7 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(tokens.getToken(),
+			final TemporaryToken tt = new TemporaryToken(randGen.getToken(),
 					10 * 60 * 1000);
 			storage.storeIdentitiesTemporarily(tt.getHashedToken(),
 					ids.stream().map(r -> r.withID())

@@ -6,7 +6,7 @@ import java.security.SecureRandom;
 import org.apache.commons.codec.binary.Base32;
 
 
-/** Generates tokens and temporary passwords randomly using the SHA1PRNG algorithm.
+/** Generates salts, tokens and temporary passwords randomly using the SHA1PRNG algorithm.
  * @author gaprice@lbl.gov
  *
  */
@@ -55,5 +55,15 @@ public class RandomDataGenerator {
 			pwd[i] = PWD_ALLOWED_CHARS[index];
 		}
 		return pwd;
+	}
+	
+	/** Generates a random 64 bit salt.
+	 * @return the salt.
+	 */
+	public byte[] generateSalt() {
+		// Generate a 8 byte (64 bit) salt as recommended by RSA PKCS5
+		final byte[] salt = new byte[8];
+		random.nextBytes(salt);
+		return salt;
 	}
 }

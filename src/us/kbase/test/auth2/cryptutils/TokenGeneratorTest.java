@@ -44,5 +44,13 @@ public class TokenGeneratorTest {
 			}
 		}
 	}
+	
+	@Test
+	public void generateSalt() throws Exception {
+		// not much to test here other than it returns an 8 byte array
+		// even all 0s is a valid output
+		final byte[] salt = new RandomDataGenerator().generateSalt();
+		assertThat("incorrect salt length", salt.length, is(8));
+	}
 
 }
