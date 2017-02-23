@@ -220,12 +220,19 @@ public class Login {
 			final boolean session)
 			throws IllegalParameterException, AuthStorageException {
 		
-		return Response.seeOther(getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
+		return setLoginCookies(Response.seeOther(
+				getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT)), newtoken, session).build();
+	}
+	
+	private ResponseBuilder setLoginCookies(
+			final ResponseBuilder resp,
+			final NewToken newtoken,
+			final boolean session) {
+		return resp.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
 				.cookie(getSessionChoiceCookie(null))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getStateCookie(null))
-				.cookie(getRedirectCookie(null)).build();
+				.cookie(getRedirectCookie(null));
 	}
 	
 	private Response createLoginResponseJSON(
@@ -234,13 +241,9 @@ public class Login {
 			final boolean session)
 			throws IllegalParameterException, AuthStorageException {
 		
-		return Response.ok().entity(ImmutableMap.of(
-				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT)))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
-				.cookie(getSessionChoiceCookie(null))
-				.cookie(getLoginInProcessCookie(null))
-				.cookie(getStateCookie(null))
-				.cookie(getRedirectCookie(null)).build();
+		return setLoginCookies(Response.ok().entity(ImmutableMap.of(
+				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
+				newtoken, session).build();
 	}
 	
 	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
