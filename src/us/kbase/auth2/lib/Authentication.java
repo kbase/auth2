@@ -21,6 +21,7 @@ import java.util.stream.Collectors;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ErrorType;
@@ -113,7 +114,7 @@ public class Authentication {
 
 	private final AuthStorage storage;
 	private final IdentityProviderSet idProviderSet;
-	private final SHA1RandomDataGenerator randGen;
+	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	
