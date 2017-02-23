@@ -31,7 +31,6 @@ public class PasswordCrypt {
 	 * http://blog.crackpassword.com/2010/09/smartphone-forensics-cracking-blackberry-backup-passwords/
 	 */
 	private static final int ITERATIONS = 20000;
-	private final SecretKeyFactory keyfac;
 	
 	// VERY important to use SecureRandom instead of just Random
 	// note SecureRandom is thread safe
@@ -43,7 +42,8 @@ public class PasswordCrypt {
 	 */
 	public PasswordCrypt() throws NoSuchAlgorithmException {
 		random = SecureRandom.getInstance("SHA1PRNG");
-		keyfac = SecretKeyFactory.getInstance(CRYPTALG);
+		// not clear if this is thread safe. Doesn't explicitly say so.
+		SecretKeyFactory.getInstance(CRYPTALG); // fail early
 	}
 	
 	/** Checks a password matches an encrypted password.
@@ -105,9 +105,12 @@ public class PasswordCrypt {
 		}
 		final KeySpec spec = new PBEKeySpec(password, salt, ITERATIONS, DERIVED_KEY_LENGTH);
 		try {
-			return keyfac.generateSecret(spec).getEncoded();
+			return SecretKeyFactory.getInstance(CRYPTALG).generateSecret(spec).getEncoded();
 		} catch (InvalidKeySpecException e) {
 			throw new RuntimeException("This should never happen", e);
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException(
+					"checked alg existed at startup, now it doesn't. That's annoying", e);
 		}
 	}
 
