@@ -88,7 +88,6 @@ public class Authentication {
 	//TODO TEST unit tests
 	//TODO TEST test logging on startup
 	//TODO TEST test logging on calls
-	//TODO JAVADOC 
 	//TODO ZZLATER validate email address by sending an email
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token
@@ -175,6 +174,7 @@ public class Authentication {
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
+	//TODO TEST config manager
 	private class ConfigManager {
 	
 		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
@@ -216,6 +216,8 @@ public class Authentication {
 	 * If the root account exists and is disabled, it will be enabled.
 	 * 
 	 * This method should not be exposed in public APIs.
+	 * 
+	 * The method calls pwd.clear() on the passed-in password as soon as possible.
 	 * 
 	 * @param pwd the new password for the root account.
 	 * @throws AuthStorageException if updating the root account fails.

@@ -177,5 +177,17 @@ public class UserDisabledState {
 		}
 		return true;
 	}
-	
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("UserDisabledState [disabledReason=");
+		builder.append(disabledReason);
+		builder.append(", byAdmin=");
+		builder.append(byAdmin);
+		builder.append(", time=");
+		builder.append(time);
+		builder.append("]");
+		return builder.toString();
+	}
 }
