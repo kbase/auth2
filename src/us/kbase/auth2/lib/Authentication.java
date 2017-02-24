@@ -132,9 +132,27 @@ public class Authentication {
 			final IdentityProviderSet identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
-		
+		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator());
+	}
+
+	private static RandomDataGenerator getDefaultRandomGenerator() {
 		try {
-			randGen = new SHA1RandomDataGenerator();
+			return new SHA1RandomDataGenerator();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	/* This constructor is for testing purposes only. */
+	private Authentication(
+			final AuthStorage storage,
+			final IdentityProviderSet identityProviderSet,
+			final ExternalConfig defaultExternalConfig,
+			final RandomDataGenerator randGen)
+			throws StorageInitException {
+		
+		this.randGen = randGen;
+		try {
 			pwdcrypt = new PasswordCrypt();
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
