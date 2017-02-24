@@ -132,9 +132,27 @@ public class Authentication {
 			final IdentityProviderSet identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
-		
+		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator());
+	}
+
+	private static RandomDataGenerator getDefaultRandomGenerator() {
 		try {
-			randGen = new SHA1RandomDataGenerator();
+			return new SHA1RandomDataGenerator();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	/* This constructor is for testing purposes only. */
+	private Authentication(
+			final AuthStorage storage,
+			final IdentityProviderSet identityProviderSet,
+			final ExternalConfig defaultExternalConfig,
+			final RandomDataGenerator randGen)
+			throws StorageInitException {
+		
+		this.randGen = randGen;
+		try {
 			pwdcrypt = new PasswordCrypt();
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
@@ -643,6 +661,7 @@ public class Authentication {
 			final Set<UserName> usernames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
 		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
+		//TODO SEARCH never include root user
 		getToken(token); // just check the token is valid
 		if (usernames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
@@ -671,6 +690,7 @@ public class Authentication {
 		if (spec == null) {
 			throw new NullPointerException("spec");
 		}
+		//TODO SEARCH only include root user if admin and requested (add to search spec)
 		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
 		final AuthUser user = getUser(token);
 		if (!Role.ADMIN.isSatisfiedBy(user.getRoles())) {
