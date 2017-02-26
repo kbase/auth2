@@ -8,8 +8,9 @@ import com.google.common.base.Optional;
 
 /** A specification for how a user search should be conducted.
  * 
- * If a search prefix is supplied and neither withSearchOnUserName() nor withSearchOnDisplayName()
- * are called with a true argument then both fields are treated as search targets.
+ * If a search prefix or regex is supplied and neither withSearchOnUserName() nor
+ * withSearchOnDisplayName() are called with a true argument then both fields are treated as search
+ * targets.
  * @author gaprice@lbl.gov
  *
  */
@@ -20,36 +21,48 @@ public class UserSearchSpec {
 	private boolean searchDisplayName = false;
 	private final Set<Role> searchRoles = new HashSet<>();
 	private final Set<String> searchCustomRoles = new HashSet<>();
+	private boolean isRegex = false;
 	
 	private UserSearchSpec() {}
 
-	/** Returns the user and/or display name prefix for the search, if any.
+	/** Returns the user and/or display name prefix or regex for the search, if any.
 	 * The prefix matches the start of the username or the start of any part of the whitespace
 	 * tokenized display name.
+	 * 
+	 * A regex should be applied as is. isRegex() will be true if the prefix is actually a regex.
 	 * @return the search prefix.
 	 */
 	public Optional<String> getSearchPrefix() {
 		return prefix;
 	}
+	
+	/** Returns true if a search prefix is set and that prefix should be treated as a regular
+	 * expression rather than just a prefix, false otherwise.
+	 * @return
+	 */
+	public boolean isRegex() {
+		return isRegex;
+	}
 
 	/** Returns true if a search should occur on the user's user name.
 	 * 
-	 * True when a) a prefix is provided and b) withSearchOnUserName() was called with a true
-	 * argument or neither searchOnUserName() nor searchOnDisplayName() were called with a true
-	 * argument.
-	 * @return whether the search should occur on the user's user name with the provided prefix.
+	 * True when a) a prefix or regex is provided and b) withSearchOnUserName() was called with a
+	 * true argument or neither searchOnUserName() nor searchOnDisplayName() were called with a
+	 * true argument.
+	 * @return whether the search should occur on the user's user name with the provided prefix or
+	 * regex.
 	 */
 	public boolean isUserNameSearch() {
 		return searchUser || (prefix.isPresent() && !searchDisplayName);
 	}
 
-	/** Returns true if a search should occur on the user's display name.
+	/** Returns true if a search should occur on the user's tokenized display name.
 	 * 
-	 * True when a) a prefix is provided and b) withSearchOnDisplayName() was called with a true
-	 * argument or neither searchOnUserName() nor searchOnDisplayName() were called with a true
-	 * argument.
+	 * True when a) a prefix or regex is provided and b) withSearchOnDisplayName() was called with
+	 * a true argument or neither searchOnUserName() nor searchOnDisplayName() were called with a
+	 * true argument.
 	 * @return whether the search should occur on the users's display name with the provided
-	 * prefix.
+	 * prefix or regex.
 	 */
 	public boolean isDisplayNameSearch() {
 		return searchDisplayName || (prefix.isPresent() && !searchUser);
@@ -140,11 +153,12 @@ public class UserSearchSpec {
 		
 		private Builder() {}
 		
-		/** Set a prefix by which the user name and / or display name will be searched.
+		/** Set a prefix by which the user name and / or tokenized display name will be searched.
+		 * The prefix will replace the search regex, if any.
 		 * The prefix matches the start of the username or the start of any part of the whitespace
 		 * tokenized display name.
 		 * The prefix is always converted to lower case.
-		 * Once the prefix is set in this builder it cannot be removed.
+		 * Once the prefix or search regex is set in this builder it cannot be removed.
 		 * @param prefix the prefix.
 		 * @return this builder.
 		 */
@@ -153,6 +167,25 @@ public class UserSearchSpec {
 				throw new IllegalArgumentException("Prefix cannot be null or the empty string");
 			}
 			uss.prefix = Optional.of(prefix.toLowerCase());
+			uss.isRegex = false; //TODO TEST test switching regex on and off
+			return this;
+		}
+		
+		/** Set a regex by which the user name and / or tokenized display name will be searched.
+		 * The regex will replace the search prefix, if any.
+		 * Once the regex or search prefix is set in this builder it cannot be removed.
+		 * 
+		 * Be careful when sourcing a regex from user input. No safety measures are taken to
+		 * prevent misuse of the regex.
+		 * @param regex the regex.
+		 * @return this builder.
+		 */
+		public Builder withSearchRegex(final String regex) {
+			if (regex == null || regex.trim().isEmpty()) {
+				throw new IllegalArgumentException("Regex cannot be null or the empty string");
+			}
+			uss.prefix = Optional.of(regex);
+			uss.isRegex = true;
 			return this;
 		}
 		

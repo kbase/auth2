@@ -30,6 +30,7 @@ public class UserSearchSpecTest {
 				.build();
 		
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(true));
@@ -46,6 +47,7 @@ public class UserSearchSpecTest {
 	public void buildWithNothing() {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder().build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().isPresent(), is(false));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(false));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(false));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
@@ -61,6 +63,7 @@ public class UserSearchSpecTest {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder()
 				.withSearchPrefix("foO").build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
@@ -77,6 +80,7 @@ public class UserSearchSpecTest {
 				.withSearchPrefix("foo")
 				.withSearchOnUserName(true).build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(false));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
@@ -95,6 +99,7 @@ public class UserSearchSpecTest {
 				.withSearchOnCustomRole("bar")
 				.withSearchOnRole(Role.SERV_TOKEN).build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(false));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(true));
@@ -110,6 +115,7 @@ public class UserSearchSpecTest {
 				.withSearchOnCustomRole("foo")
 				.withSearchOnRole(Role.DEV_TOKEN).build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().isPresent(), is(false));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(false));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(false));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(true));
@@ -124,6 +130,7 @@ public class UserSearchSpecTest {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder()
 				.withSearchOnRole(Role.DEV_TOKEN).build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().isPresent(), is(false));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(false));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(false));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(true));
@@ -139,6 +146,55 @@ public class UserSearchSpecTest {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withSearchOnUserName(false).withSearchOnDisplayName(false).build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
+		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
+		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
+		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
+		assertThat("incorrect custom role search", uss.isCustomRoleSearch(), is(false));
+		assertThat("incorrect search roles", uss.getSearchRoles(), is(Collections.emptySet()));
+		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
+				is(Collections.emptySet()));
+		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+	}
+	
+	@Test
+	public void regex() {
+		final UserSearchSpec uss = UserSearchSpec.getBuilder()
+				.withSearchRegex("\\Qfoo.bar\\E").build();
+		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("\\Qfoo.bar\\E"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(true));
+		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
+		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
+		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
+		assertThat("incorrect custom role search", uss.isCustomRoleSearch(), is(false));
+		assertThat("incorrect search roles", uss.getSearchRoles(), is(Collections.emptySet()));
+		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
+				is(Collections.emptySet()));
+		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+	}
+	
+	@Test
+	public void prefixToRegex() {
+		final UserSearchSpec uss = UserSearchSpec.getBuilder().withSearchPrefix("foo")
+				.withSearchRegex("\\Qfoo.bar\\E").build();
+		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("\\Qfoo.bar\\E"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(true));
+		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
+		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
+		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
+		assertThat("incorrect custom role search", uss.isCustomRoleSearch(), is(false));
+		assertThat("incorrect search roles", uss.getSearchRoles(), is(Collections.emptySet()));
+		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
+				is(Collections.emptySet()));
+		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+	}
+	
+	@Test
+	public void regexToPrefix() {
+		final UserSearchSpec uss = UserSearchSpec.getBuilder()
+				.withSearchRegex("\\Qfoo.bar\\E").withSearchPrefix("foo").build();
+		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
 		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
 		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
@@ -184,6 +240,23 @@ public class UserSearchSpecTest {
 	private void failAddPrefix(final String prefix, final Exception e) {
 		try {
 			UserSearchSpec.getBuilder().withSearchPrefix(prefix);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void addRegexFail() {
+		failAddRegex(null, new IllegalArgumentException(
+				"Regex cannot be null or the empty string"));
+		failAddRegex("   \t   \n  ", new IllegalArgumentException(
+				"Regex cannot be null or the empty string"));
+	}
+	
+	private void failAddRegex(final String regex, final Exception e) {
+		try {
+			UserSearchSpec.getBuilder().withSearchRegex(regex);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
