@@ -1242,6 +1242,8 @@ public class Authentication {
 	 * @param userName the user name for the new user.
 	 * @param displayName the display name for the new user.
 	 * @param email the email address for the new user.
+	 * @param linkAll link all other available identities associated with the temporary token to
+	 * this account.
 	 * @return a new login token for the new user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws AuthenticationException if the id is not included in the login state associated with
@@ -1249,15 +1251,17 @@ public class Authentication {
 	 * @throws UserExistsException if the user name is already in use.
 	 * @throws UnauthorizedException if login is disabled or the username is the root user name.
 	 * @throws IdentityLinkedException if the specified identity is already linked to a user.
+	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
 			final UUID identityID,
 			final UserName userName,
 			final DisplayName displayName,
-			final EmailAddress email)
-			throws AuthStorageException, AuthenticationException,
-				UserExistsException, UnauthorizedException, IdentityLinkedException {
+			final EmailAddress email,
+			final boolean linkAll)
+			throws AuthStorageException, AuthenticationException, UserExistsException,
+			UnauthorizedException, IdentityLinkedException, LinkFailedException {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
@@ -1274,12 +1278,18 @@ public class Authentication {
 		if (email == null) {
 			throw new NullPointerException("email");
 		}
-		final Optional<RemoteIdentityWithLocalID> match = getIdentity(token, identityID);
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentityWithLocalID> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		storage.createUser(new NewUser(userName, email, displayName, match.get(), new Date()));
+		if (linkAll) {
+			ids.remove(match);
+			filterLinkCandidates(ids);
+			link(userName, ids);
+		}
 		return login(userName);
 	}
 
@@ -1304,7 +1314,7 @@ public class Authentication {
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
 			LinkFailedException {
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(token, identityID, ids);
+		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to login to user with remote identity %s", identityID));
@@ -1325,21 +1335,13 @@ public class Authentication {
 		}
 		if (linkAll) {
 			ids.remove(ri);
+			filterLinkCandidates(ids);
 			link(u.get().getUserName(), ids);
 		}
 		return login(u.get().getUserName());
 	}
 	
 	private Optional<RemoteIdentityWithLocalID> getIdentity(
-			final IncomingToken token,
-			final UUID identityID)
-			throws AuthStorageException, InvalidTokenException {
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		return getIdentity(token, identityID, ids);
-	}
-	
-	private Optional<RemoteIdentityWithLocalID> getIdentity(
-			final IncomingToken token,
 			final UUID identityID,
 			final Set<RemoteIdentityWithLocalID> identities)
 			throws AuthStorageException, InvalidTokenException {
@@ -1561,7 +1563,8 @@ public class Authentication {
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 			InvalidTokenException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(linktoken, identityID);
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(linktoken);
+		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
 					identityID));

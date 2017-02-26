@@ -22,7 +22,6 @@ import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -418,7 +417,7 @@ public class Login {
 			}
 		}
 		
-		public boolean getLinkAll() throws IllegalParameterException {
+		public boolean isLinkAll() throws IllegalParameterException {
 			if (!(linkAll instanceof Boolean)) {
 				throw new IllegalParameterException("linkall must be a boolean");
 			}
@@ -458,7 +457,7 @@ public class Login {
 			LinkFailedException {
 		pick.exceptOnAdditionalProperties();
 		final NewToken newtoken = auth.login(
-				getLoginInProcessToken(token), pick.getID(), pick.getLinkAll());
+				getLoginInProcessToken(token), pick.getID(), pick.isLinkAll());
 		return createLoginResponseJSONOK(redirect, newtoken, !FALSE.equals(session));
 	}
 
@@ -472,12 +471,13 @@ public class Login {
 			@FormParam("id") final UUID identityID,
 			@FormParam("user") final String userName,
 			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
+			@FormParam("email") final String email,
+			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException {
-		
+				UnauthorizedException, IdentityLinkedException, LinkFailedException {
+	
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
@@ -486,11 +486,12 @@ public class Login {
 				identityID,
 				new UserName(userName),
 				new DisplayName(displayName),
-				new EmailAddress(email));
+				new EmailAddress(email),
+				linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
-	private static class CreateChoice extends PickChoice{
+	private static class CreateChoice extends PickChoice {
 		
 		public final String user;
 		public final String displayName;
@@ -511,7 +512,7 @@ public class Login {
 		}
 	}
 	
-	@PUT
+	@POST //non-idempotent
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_CREATE)
@@ -523,7 +524,7 @@ public class Login {
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException {
+				UnauthorizedException, IdentityLinkedException, LinkFailedException {
 		
 		create.exceptOnAdditionalProperties();
 		
@@ -532,7 +533,8 @@ public class Login {
 				create.getID(),
 				new UserName(create.user),
 				new DisplayName(create.displayName),
-				new EmailAddress(create.email));
+				new EmailAddress(create.email),
+				create.isLinkAll());
 		return createLoginResponseJSONCreated(redirect, newtoken, !FALSE.equals(session));
 	}
 	
