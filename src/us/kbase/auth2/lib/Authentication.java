@@ -1242,6 +1242,8 @@ public class Authentication {
 	 * @param userName the user name for the new user.
 	 * @param displayName the display name for the new user.
 	 * @param email the email address for the new user.
+	 * @param linkAll link all other available identities associated with the temporary token to
+	 * this account.
 	 * @return a new login token for the new user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws AuthenticationException if the id is not included in the login state associated with
@@ -1249,15 +1251,17 @@ public class Authentication {
 	 * @throws UserExistsException if the user name is already in use.
 	 * @throws UnauthorizedException if login is disabled or the username is the root user name.
 	 * @throws IdentityLinkedException if the specified identity is already linked to a user.
+	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
 			final UUID identityID,
 			final UserName userName,
 			final DisplayName displayName,
-			final EmailAddress email)
-			throws AuthStorageException, AuthenticationException,
-				UserExistsException, UnauthorizedException, IdentityLinkedException {
+			final EmailAddress email,
+			final boolean linkAll)
+			throws AuthStorageException, AuthenticationException, UserExistsException,
+			UnauthorizedException, IdentityLinkedException, LinkFailedException {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
@@ -1274,12 +1278,18 @@ public class Authentication {
 		if (email == null) {
 			throw new NullPointerException("email");
 		}
-		final Optional<RemoteIdentityWithLocalID> match = getIdentity(token, identityID);
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentityWithLocalID> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		storage.createUser(new NewUser(userName, email, displayName, match.get(), new Date()));
+		if (linkAll) {
+			ids.remove(match);
+			filterLinkCandidates(ids);
+			link(userName, ids);
+		}
 		return login(userName);
 	}
 
@@ -1290,16 +1300,21 @@ public class Authentication {
 	 * @param identityID the id of the identity associated with the user account that is the login
 	 * target. This identity must be included in the login state associated with the temporary
 	 * token. 
+	 * @param linkAll link all other available identities associated with the temporary token to
+	 * this account.
 	 * @return a new login token.
 	 * @throws AuthenticationException if the id is not included in the login state associated with
 	 * the token or there is no user associated with the remote identity.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an administrator and non-admin login
 	 * is not allowed or the user account is disabled.
+	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
-	public NewToken login(final IncomingToken token, final UUID identityID)
-			throws AuthenticationException, AuthStorageException, UnauthorizedException {
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(token, identityID);
+	public NewToken login(final IncomingToken token, final UUID identityID, final boolean linkAll)
+			throws AuthenticationException, AuthStorageException, UnauthorizedException,
+			LinkFailedException {
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to login to user with remote identity %s", identityID));
@@ -1318,18 +1333,23 @@ public class Authentication {
 		if (u.get().isDisabled()) {
 			throw new DisabledUserException("This account is disabled");
 		}
+		if (linkAll) {
+			ids.remove(ri);
+			filterLinkCandidates(ids);
+			link(u.get().getUserName(), ids);
+		}
 		return login(u.get().getUserName());
 	}
 	
 	private Optional<RemoteIdentityWithLocalID> getIdentity(
-			final IncomingToken token,
-			final UUID identityID)
+			final UUID identityID,
+			final Set<RemoteIdentityWithLocalID> identities)
 			throws AuthStorageException, InvalidTokenException {
+	
 		if (identityID == null) {
 			throw new NullPointerException("identityID");
 		}
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		for (final RemoteIdentityWithLocalID ri: ids) {
+		for (final RemoteIdentityWithLocalID ri: identities) {
 			if (ri.getID().equals(identityID)) {
 				return Optional.of(ri);
 			}
@@ -1521,7 +1541,7 @@ public class Authentication {
 		return new LinkIdentities(u, ids);
 	}
 
-	/** Complete the OAuth2 account linking process.
+	/** Complete the OAuth2 account linking process by linking one identity to the current user.
 	 * 
 	 * This method is expected to be called after
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
@@ -1542,17 +1562,49 @@ public class Authentication {
 			final UUID identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 			InvalidTokenException {
-		final AuthUser au = getUser(token);
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(linktoken, identityID);
+		final AuthUser au = getUser(token); // checks user isn't disabled
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(linktoken);
+		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
 					identityID));
 		}
-		try {
-			storage.link(au.getUserName(), ri.get());
-		} catch (NoSuchUserException e) {
-			throw new AuthStorageException("User magically disappeared from database: " +
-					au.getUserName().getName());
+		link(au.getUserName(), new HashSet<>(Arrays.asList(ri.get())));
+	}
+	
+	/** Complete the OAuth2 account linking process by linking all available identities to the
+	 * current user.
+	 * 
+	 * This method is expected to be called after
+	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
+	 * 
+	 * @param token the user's token.
+	 * @param linktoken a temporary token associated with the link process state.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws LinkFailedException if the identity is already linked, the id is not included in
+	 * the link state associated with the temporary token, or the user is a local user.
+	 * @throws DisabledUserException if the user is disabled.
+	 * @throws InvalidTokenException if either token is invalid.
+	 */
+	public void linkAll(final IncomingToken token, final IncomingToken linkToken)
+			throws InvalidTokenException, AuthStorageException, DisabledUserException,
+			LinkFailedException {
+		final AuthUser au = getUser(token); // checks user isn't disabled
+		final Set<RemoteIdentityWithLocalID> identities = getTemporaryIdentities(linkToken);
+		filterLinkCandidates(identities);
+		link(au.getUserName(), identities);
+	}
+
+	private void link(final UserName userName, final Set<RemoteIdentityWithLocalID> identities)
+			throws AuthStorageException, LinkFailedException {
+		for (final RemoteIdentityWithLocalID ri: identities) {
+			// could make a bulk op, but probably not necessary. Wait for now.
+			try {
+				storage.link(userName, ri);
+			} catch (NoSuchUserException e) {
+				throw new AuthStorageException("User magically disappeared from database: " +
+						userName.getName());
+			}
 		}
 	}
 

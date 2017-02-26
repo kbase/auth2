@@ -22,7 +22,6 @@ import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -57,6 +56,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -379,23 +379,31 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			@FormParam("id") final UUID identityID)
+			@FormParam("id") final UUID identityID,
+			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, UnauthorizedException, IllegalParameterException {
+			AuthStorageException, UnauthorizedException, IllegalParameterException,
+			LinkFailedException {
 		
-		final NewToken newtoken = auth.login(getLoginInProcessToken(token), identityID);
+		final NewToken newtoken = auth.login(
+				getLoginInProcessToken(token), identityID, linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
+	// TODO CODE make parent class for json input with the add props code and helpers for getting various types
 	private static class PickChoice {
 		
 		private final String id;
+		private final Object linkAll;
 		private final Map<String, Object> additionalProperties = new TreeMap<>();
 
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
-		public PickChoice(@JsonProperty("id") final String id) {
+		public PickChoice(
+				@JsonProperty("id") final String id,
+				@JsonProperty("linkall") final Object linkAll) {
 			this.id = id;
+			this.linkAll = linkAll;
 		}
 		
 		public UUID getID() throws IllegalParameterException, MissingParameterException {
@@ -407,6 +415,13 @@ public class Login {
 			} catch (IllegalArgumentException e) {
 				throw new IllegalParameterException("id is not a valid UUID: " + id);
 			}
+		}
+		
+		public boolean isLinkAll() throws IllegalParameterException {
+			if (!(linkAll instanceof Boolean)) {
+				throw new IllegalParameterException("linkall must be a boolean");
+			}
+			return Boolean.TRUE.equals(linkAll) ? true : false;
 		}
 		
 		@JsonAnyGetter
@@ -428,7 +443,7 @@ public class Login {
 		
 	}
 	
-	@PUT
+	@POST // non-idempotent
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_PICK)
@@ -438,9 +453,11 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
-			AuthStorageException, IllegalParameterException, MissingParameterException {
+			AuthStorageException, IllegalParameterException, MissingParameterException,
+			LinkFailedException {
 		pick.exceptOnAdditionalProperties();
-		final NewToken newtoken = auth.login(getLoginInProcessToken(token), pick.getID());
+		final NewToken newtoken = auth.login(
+				getLoginInProcessToken(token), pick.getID(), pick.isLinkAll());
 		return createLoginResponseJSONOK(redirect, newtoken, !FALSE.equals(session));
 	}
 
@@ -454,12 +471,13 @@ public class Login {
 			@FormParam("id") final UUID identityID,
 			@FormParam("user") final String userName,
 			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
+			@FormParam("email") final String email,
+			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException {
-		
+				UnauthorizedException, IdentityLinkedException, LinkFailedException {
+	
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
@@ -468,11 +486,12 @@ public class Login {
 				identityID,
 				new UserName(userName),
 				new DisplayName(displayName),
-				new EmailAddress(email));
+				new EmailAddress(email),
+				linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
-	private static class CreateChoice extends PickChoice{
+	private static class CreateChoice extends PickChoice {
 		
 		public final String user;
 		public final String displayName;
@@ -484,15 +503,16 @@ public class Login {
 				@JsonProperty("id") final String id,
 				@JsonProperty("user") final String userName,
 				@JsonProperty("display") final String displayName,
-				@JsonProperty("email") final String email) {
-			super(id);
+				@JsonProperty("email") final String email,
+				@JsonProperty("linkall") final Object linkAll) {
+			super(id, linkAll);
 			this.user = userName;
 			this.displayName = displayName;
 			this.email = email;
 		}
 	}
 	
-	@PUT
+	@POST //non-idempotent
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_CREATE)
@@ -504,7 +524,7 @@ public class Login {
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException {
+				UnauthorizedException, IdentityLinkedException, LinkFailedException {
 		
 		create.exceptOnAdditionalProperties();
 		
@@ -513,7 +533,8 @@ public class Login {
 				create.getID(),
 				new UserName(create.user),
 				new DisplayName(create.displayName),
-				new EmailAddress(create.email));
+				new EmailAddress(create.email),
+				create.isLinkAll());
 		return createLoginResponseJSONCreated(redirect, newtoken, !FALSE.equals(session));
 	}
 	
