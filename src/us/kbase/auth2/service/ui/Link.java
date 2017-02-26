@@ -13,18 +13,18 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
@@ -36,6 +36,12 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonAnyGetter;
+import com.fasterxml.jackson.annotation.JsonAnySetter;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
@@ -44,6 +50,7 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -273,45 +280,96 @@ public class Link {
 	}
 	
 	// for dumb HTML pages that use forms
+	// if identityID is not provided, links all
 	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_PICK)
-	public Response pickAccountPOST(
+	public Response pickAccountForm(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException, DisabledUserException {
 		
-		pickAccount(headers, linktoken, identityID);
+		pickAccount(headers, linktoken, Optional.fromNullable(identityID));
 		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
+	private static class LinkPick {
+		
+		private final String id;
+		private final Map<String, Object> additionalProperties = new TreeMap<>();
+		
+		// don't throw exception in constructor. Bypasses custom error handler.
+		@JsonCreator
+		public LinkPick(@JsonProperty("id") final String id) {
+			this.id = id;
+		}
+		
+		public Optional<UUID> getID() throws IllegalParameterException {
+			if (id == null || id.trim().isEmpty()) {
+				return Optional.absent();
+			}
+			try {
+				return Optional.of(UUID.fromString(id));
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException("Illegal identity UUID: " + id);
+			}
+		}
+		
+		@JsonAnyGetter
+		public Map<String, Object> getAdditionalProperties() {
+			return this.additionalProperties;
+		}
+
+		@JsonAnySetter
+		public void setAdditionalProperties(String name, Object value) {
+			this.additionalProperties.put(name, value);
+		}
+		
+		public void exceptOnAdditionalProperties() throws IllegalParameterException {
+			if (!additionalProperties.isEmpty()) {
+				throw new IllegalParameterException("Unexpected parameters in request: " + 
+						String.join(", ", additionalProperties.keySet()));
+			}
+		}
+	}
+	
 	// for AJAX pages that can decide for themselves where to go next
-	@PUT
+	// if identityID is not provided, links all
+	@POST // non-idempotent, so has to be post
+	@Consumes(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LINK_PICK)
-	public Response pickAccountPUT(
+	public Response pickAccountJSON(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
-			@QueryParam("id") final UUID identityID)
+			final LinkPick linkpick)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException, DisabledUserException {
+			AuthStorageException, LinkFailedException, DisabledUserException,
+			IllegalParameterException {
 		
-		pickAccount(headers, linktoken, identityID);
+		linkpick.exceptOnAdditionalProperties();
+		pickAccount(headers, linktoken, linkpick.getID());
 		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
 	}
 
 	private void pickAccount(
 			final HttpHeaders headers,
 			final String linktoken,
-			final UUID identityID)
+			final Optional<UUID> id)
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
 			LinkFailedException, DisabledUserException {
 		if (linktoken == null || linktoken.trim().isEmpty()) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
 		}
-		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				getLinkInProcessToken(linktoken), identityID);
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
+		if (id.isPresent()) {
+			auth.link(token, linkInProcessToken, id.get());
+		} else {
+			auth.linkAll(token, linkInProcessToken);
+		}
 	}
 	
 	//Assumes valid URI in URL form

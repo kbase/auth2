@@ -1521,7 +1521,7 @@ public class Authentication {
 		return new LinkIdentities(u, ids);
 	}
 
-	/** Complete the OAuth2 account linking process.
+	/** Complete the OAuth2 account linking process by linking one identity to the current user.
 	 * 
 	 * This method is expected to be called after
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
@@ -1542,7 +1542,7 @@ public class Authentication {
 			final UUID identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 			InvalidTokenException {
-		final AuthUser au = getUser(token);
+		final AuthUser au = getUser(token); // checks user isn't disabled
 		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(linktoken, identityID);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
@@ -1553,6 +1553,36 @@ public class Authentication {
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
 					au.getUserName().getName());
+		}
+	}
+	
+	/** Complete the OAuth2 account linking process by linking all available identities to the
+	 * current user.
+	 * 
+	 * This method is expected to be called after
+	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
+	 * 
+	 * @param token the user's token.
+	 * @param linktoken a temporary token associated with the link process state.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws LinkFailedException if the identity is already linked, the id is not included in
+	 * the link state associated with the temporary token, or the user is a local user.
+	 * @throws DisabledUserException if the user is disabled.
+	 * @throws InvalidTokenException if either token is invalid.
+	 */
+	public void linkAll(final IncomingToken token, final IncomingToken linkToken)
+			throws InvalidTokenException, AuthStorageException, DisabledUserException,
+			LinkFailedException {
+		final AuthUser au = getUser(token); // checks user isn't disabled
+		final Set<RemoteIdentityWithLocalID> identities = getTemporaryIdentities(linkToken);
+		for (final RemoteIdentityWithLocalID ri: identities) {
+			// could make a bulk op, but probably not necessary. Wait for now.
+			try {
+				storage.link(au.getUserName(), ri);
+			} catch (NoSuchUserException e) {
+				throw new AuthStorageException("User magically disappeared from database: " +
+						au.getUserName().getName());
+			}
 		}
 	}
 
