@@ -1290,16 +1290,21 @@ public class Authentication {
 	 * @param identityID the id of the identity associated with the user account that is the login
 	 * target. This identity must be included in the login state associated with the temporary
 	 * token. 
+	 * @param linkAll link all other available identities associated with the temporary token to
+	 * this account.
 	 * @return a new login token.
 	 * @throws AuthenticationException if the id is not included in the login state associated with
 	 * the token or there is no user associated with the remote identity.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an administrator and non-admin login
 	 * is not allowed or the user account is disabled.
+	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
-	public NewToken login(final IncomingToken token, final UUID identityID)
-			throws AuthenticationException, AuthStorageException, UnauthorizedException {
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(token, identityID);
+	public NewToken login(final IncomingToken token, final UUID identityID, final boolean linkAll)
+			throws AuthenticationException, AuthStorageException, UnauthorizedException,
+			LinkFailedException {
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(token, identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to login to user with remote identity %s", identityID));
@@ -1318,6 +1323,10 @@ public class Authentication {
 		if (u.get().isDisabled()) {
 			throw new DisabledUserException("This account is disabled");
 		}
+		if (linkAll) {
+			ids.remove(ri);
+			link(u.get().getUserName(), ids);
+		}
 		return login(u.get().getUserName());
 	}
 	
@@ -1325,11 +1334,20 @@ public class Authentication {
 			final IncomingToken token,
 			final UUID identityID)
 			throws AuthStorageException, InvalidTokenException {
+		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		return getIdentity(token, identityID, ids);
+	}
+	
+	private Optional<RemoteIdentityWithLocalID> getIdentity(
+			final IncomingToken token,
+			final UUID identityID,
+			final Set<RemoteIdentityWithLocalID> identities)
+			throws AuthStorageException, InvalidTokenException {
+	
 		if (identityID == null) {
 			throw new NullPointerException("identityID");
 		}
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		for (final RemoteIdentityWithLocalID ri: ids) {
+		for (final RemoteIdentityWithLocalID ri: identities) {
 			if (ri.getID().equals(identityID)) {
 				return Optional.of(ri);
 			}
@@ -1548,12 +1566,7 @@ public class Authentication {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
 					identityID));
 		}
-		try {
-			storage.link(au.getUserName(), ri.get());
-		} catch (NoSuchUserException e) {
-			throw new AuthStorageException("User magically disappeared from database: " +
-					au.getUserName().getName());
-		}
+		link(au.getUserName(), new HashSet<>(Arrays.asList(ri.get())));
 	}
 	
 	/** Complete the OAuth2 account linking process by linking all available identities to the
@@ -1575,13 +1588,18 @@ public class Authentication {
 			LinkFailedException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
 		final Set<RemoteIdentityWithLocalID> identities = getTemporaryIdentities(linkToken);
+		link(au.getUserName(), identities);
+	}
+
+	private void link(final UserName userName, final Set<RemoteIdentityWithLocalID> identities)
+			throws AuthStorageException, LinkFailedException {
 		for (final RemoteIdentityWithLocalID ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
-				storage.link(au.getUserName(), ri);
+				storage.link(userName, ri);
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
-						au.getUserName().getName());
+						userName.getName());
 			}
 		}
 	}

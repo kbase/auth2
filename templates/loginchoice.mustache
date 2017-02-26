@@ -14,6 +14,7 @@ Provider usernames: {{prov_usernames}}<br/>
 {{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked"/><br/>
 	<input type="submit" value="Login"/>
 </form>
 {{/loginallowed}}
