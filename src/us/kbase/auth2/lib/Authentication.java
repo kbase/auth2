@@ -1591,6 +1591,7 @@ public class Authentication {
 			LinkFailedException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
 		final Set<RemoteIdentityWithLocalID> identities = getTemporaryIdentities(linkToken);
+		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
 	}
 
