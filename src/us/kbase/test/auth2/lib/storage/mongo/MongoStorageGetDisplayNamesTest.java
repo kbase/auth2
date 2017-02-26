@@ -113,7 +113,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("wugga"), new DisplayName("wonk"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("w").withSearchOnUserName(true).build(), -1, false),
+				.withSearchPrefix("w").withSearchOnUserName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -131,7 +131,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("wugga"), new DisplayName("wonk"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("w").withSearchOnDisplayName(true).build(), -1, false),
+				.withSearchPrefix("w").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -153,7 +153,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
 				.withSearchPrefix("w").withSearchOnUserName(true)
-				.withSearchOnDisplayName(true).build(), -1, false), is(expected));
+				.withSearchOnDisplayName(true).build(), -1), is(expected));
 	}
 	
 	@Test
@@ -173,7 +173,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("wugga"), new DisplayName("wonk"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("w").build(), -1, false), is(expected));
+				.withSearchPrefix("w").build(), -1), is(expected));
 	}
 	
 	@Test
@@ -190,7 +190,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("e").build(), -1, false), is(expected));
+				.withSearchPrefix("e").build(), -1), is(expected));
 	}
 	
 	@Test
@@ -211,7 +211,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(
-				UserSearchSpec.getBuilder().build(), -1, false), is(expected));
+				UserSearchSpec.getBuilder().build(), -1), is(expected));
 	}
 	
 	@Test
@@ -228,13 +228,13 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("whoo"), new DisplayName("bar"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("^.+oo$").withSearchOnUserName(true).build(), -1, true),
+				.withSearchRegex("^.+oo$").withSearchOnUserName(true).build(), -1),
 				is(expected));
 	}
 	
 	
 	@Test
-	public void searchWithIgnoredRegex() throws Exception {
+	public void searchWithRegexInPrefix() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("baz"), REMOTE1, null));
 		storage.createUser(new NewUser(new UserName("whoo"), new EmailAddress("f@g.com"),
@@ -245,7 +245,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("^.+oo$").withSearchOnUserName(true).build(), -1, false),
+				.withSearchPrefix("^.+oo$").withSearchOnUserName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -265,7 +265,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("whee"), new DisplayName("bar"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("w").withSearchOnUserName(true).build(), 2, false), is(expected));
+				.withSearchPrefix("w").withSearchOnUserName(true).build(), 2), is(expected));
 	}
 	
 	@Test
@@ -284,7 +284,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("whee"), new DisplayName("wbar"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("w").withSearchOnDisplayName(true).build(), 2, false),
+				.withSearchPrefix("w").withSearchOnDisplayName(true).build(), 2),
 				is(expected));
 	}
 	
@@ -314,7 +314,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchOnRole(Role.DEV_TOKEN).build(), -1, false), is(expected));
+				.withSearchOnRole(Role.DEV_TOKEN).build(), -1), is(expected));
 	}
 	
 	@Test
@@ -337,7 +337,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("whee"), new DisplayName("wbar"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchOnRole(Role.DEV_TOKEN).withSearchOnRole(Role.ADMIN).build(), 2, false),
+				.withSearchOnRole(Role.DEV_TOKEN).withSearchOnRole(Role.ADMIN).build(), 2),
 				is(expected));
 	}
 	
@@ -370,7 +370,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("thewrock"), new DisplayName("smellywcooking"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchOnCustomRole("baz").build(), -1, false), is(expected));
+				.withSearchOnCustomRole("baz").build(), -1), is(expected));
 	}
 	
 	@Test
@@ -396,7 +396,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("whee"), new DisplayName("wbar"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchOnCustomRole("baz").withSearchOnCustomRole("bat").build(), 2, false),
+				.withSearchOnCustomRole("baz").withSearchOnCustomRole("bat").build(), 2),
 				is(expected));
 	}
 	
@@ -404,7 +404,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	public void searchFail() throws Exception {
 		//only one way to actually cause an exception
 		try {
-			storage.getUserDisplayNames(null, -1, false);
+			storage.getUserDisplayNames(null, -1);
 			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("incorrect execption message", e.getMessage(), is("spec"));
@@ -445,7 +445,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				.withSearchOnCustomRole("baz")
 				.withSearchOnRole(Role.DEV_TOKEN)
 				.withSearchPrefix("w")
-				.withSearchOnUserName(true).build(), -1, false),
+				.withSearchOnUserName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -484,7 +484,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				.withSearchOnCustomRole("baz")
 				.withSearchOnRole(Role.DEV_TOKEN)
 				.withSearchPrefix("w")
-				.withSearchOnDisplayName(true).build(), 1, false),
+				.withSearchOnDisplayName(true).build(), 1),
 				is(expected));
 	}
 	
@@ -499,7 +499,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("u3"), new DisplayName("al douglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("Doug").withSearchOnDisplayName(true).build(), -1, false),
+				.withSearchPrefix("Doug").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -512,7 +512,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("u3"), new DisplayName("al douglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("Douglas").withSearchOnDisplayName(true).build(), -1, false),
+				.withSearchPrefix("Douglas").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -525,7 +525,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("Al").withSearchOnDisplayName(true).build(), -1, false),
+				.withSearchPrefix("Al").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -537,7 +537,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("Alb").withSearchOnDisplayName(true).build(), -1, false),
+				.withSearchPrefix("Alb").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 

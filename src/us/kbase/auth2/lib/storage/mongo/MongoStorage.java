@@ -727,8 +727,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(
 			final UserSearchSpec spec,
-			final int limit,
-			final boolean isRegex)
+			final int limit)
 			throws AuthStorageException {
 		if (spec == null) {
 			throw new NullPointerException("spec");
@@ -737,7 +736,7 @@ public class MongoStorage implements AuthStorage {
 		if (spec.getSearchPrefix().isPresent()) {
 			final String prefix = spec.getSearchPrefix().get();
 			final List<Document> queries = new LinkedList<>();
-			final Document regex = new Document("$regex", isRegex ? prefix :
+			final Document regex = new Document("$regex", spec.isRegex() ? prefix :
 				"^" + Pattern.quote(prefix.toLowerCase()));
 			if (spec.isDisplayNameSearch()) {
 				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));

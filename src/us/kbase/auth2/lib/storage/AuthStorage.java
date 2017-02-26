@@ -144,17 +144,13 @@ public interface AuthStorage {
 	/** Search for users based on a prefix of the user and display names and the user's roles.
 	 * @param spec the specification for the search.
 	 * @param maxReturnedUsers the maximum number of users to return.
-	 * @param isRegex true if the search prefix in the spec should be treated as a regex. If the
-	 * prefix is sourced from user provided information, be very careful when setting this flag to
-	 * true.
 	 * @return a mapping of user name to display name for the discovered users.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	Map<UserName, DisplayName> getUserDisplayNames(
 			UserSearchSpec spec,
-			int maxReturnedUsers,
-			boolean isRegex)
+			int maxReturnedUsers)
 			throws AuthStorageException;
 
 	/** Get a local user.

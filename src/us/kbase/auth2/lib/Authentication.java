@@ -703,7 +703,11 @@ public class Authentication {
 						"Only admins may search without a prefix");
 			}
 		}
-		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS, false);
+		if (spec.isRegex()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Regex search is currently for internal use only");
+		}
+		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS);
 	}
 	
 	/** Revoke a token.
@@ -1388,9 +1392,9 @@ public class Authentication {
 		 */
 		final UserSearchSpec spec = UserSearchSpec.getBuilder()
 				// checked that this does indeed use an index for the mongo implementation
-				.withSearchPrefix("^" + Pattern.quote(sugStrip) + "\\d*$")
+				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
 				.withSearchOnUserName(true).build();
-		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1, true);
+		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
 		boolean match = false;
 		long largest = 0;
 		for (final UserName d: users.keySet()) {
