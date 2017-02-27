@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -36,8 +35,6 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -390,12 +387,10 @@ public class Login {
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
-	// TODO CODE make parent class for json input with the add props code and helpers for getting various types
-	private static class PickChoice {
+	private static class PickChoice extends IncomingJSON {
 		
 		private final String id;
 		private final Object linkAll;
-		private final Map<String, Object> additionalProperties = new TreeMap<>();
 
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
@@ -407,40 +402,12 @@ public class Login {
 		}
 		
 		public UUID getID() throws IllegalParameterException, MissingParameterException {
-			if (id == null) {
-				throw new MissingParameterException("id field is required");
-			}
-			try {
-				return UUID.fromString(id);
-			} catch (IllegalArgumentException e) {
-				throw new IllegalParameterException("id is not a valid UUID: " + id);
-			}
+			return getUUID(id, "id");
 		}
 		
 		public boolean isLinkAll() throws IllegalParameterException {
-			if (!(linkAll instanceof Boolean)) {
-				throw new IllegalParameterException("linkall must be a boolean");
-			}
-			return Boolean.TRUE.equals(linkAll) ? true : false;
+			return getBoolean(linkAll, "linkall");
 		}
-		
-		@JsonAnyGetter
-		public Map<String, Object> getAdditionalProperties() {
-			return this.additionalProperties;
-		}
-
-		@JsonAnySetter
-		public void setAdditionalProperties(String name, Object value) {
-			this.additionalProperties.put(name, value);
-		}
-		
-		public void exceptOnAdditionalProperties() throws IllegalParameterException {
-			if (!additionalProperties.isEmpty()) {
-				throw new IllegalParameterException("Unexpected parameters in request: " + 
-						String.join(", ", additionalProperties.keySet()));
-			}
-		}
-		
 	}
 	
 	@POST // non-idempotent

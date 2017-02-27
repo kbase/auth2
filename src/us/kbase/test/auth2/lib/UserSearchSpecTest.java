@@ -6,12 +6,15 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Collections;
 
 import org.junit.Test;
 
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserSearchSpec;
+import us.kbase.auth2.lib.UserSearchSpec.Builder;
 import us.kbase.auth2.lib.UserSearchSpec.SearchField;
 import us.kbase.test.auth2.TestCommon;
 
@@ -158,9 +161,34 @@ public class UserSearchSpecTest {
 	}
 	
 	@Test
-	public void regex() {
-		final UserSearchSpec uss = UserSearchSpec.getBuilder()
-				.withSearchRegex("\\Qfoo.bar\\E").build();
+	public void regex() throws Exception {
+		final Builder b = UserSearchSpec.getBuilder();
+		setRegex(b, "\\Qfoo.bar\\E");
+		final UserSearchSpec uss = b.build();
+		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("\\Qfoo.bar\\E"));
+		assertThat("incorrect isRegex()", uss.isRegex(), is(true));
+		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
+		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
+		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
+		assertThat("incorrect custom role search", uss.isCustomRoleSearch(), is(false));
+		assertThat("incorrect search roles", uss.getSearchRoles(), is(Collections.emptySet()));
+		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
+				is(Collections.emptySet()));
+		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+	}
+
+	private void setRegex(final Builder b, final String regex) throws Exception {
+		final Method m = UserSearchSpec.Builder.class
+				.getDeclaredMethod("withSearchRegex", String.class);
+		m.setAccessible(true);
+		m.invoke(b, regex);
+	}
+	
+	@Test
+	public void prefixToRegex() throws Exception {
+		final Builder b = UserSearchSpec.getBuilder().withSearchPrefix("foo");
+		setRegex(b, "\\Qfoo.bar\\E");
+		final UserSearchSpec uss = b.build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("\\Qfoo.bar\\E"));
 		assertThat("incorrect isRegex()", uss.isRegex(), is(true));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
@@ -174,25 +202,10 @@ public class UserSearchSpecTest {
 	}
 	
 	@Test
-	public void prefixToRegex() {
-		final UserSearchSpec uss = UserSearchSpec.getBuilder().withSearchPrefix("foo")
-				.withSearchRegex("\\Qfoo.bar\\E").build();
-		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("\\Qfoo.bar\\E"));
-		assertThat("incorrect isRegex()", uss.isRegex(), is(true));
-		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
-		assertThat("incorrect display name search", uss.isDisplayNameSearch(), is(true));
-		assertThat("incorrect role search", uss.isRoleSearch(), is(false));
-		assertThat("incorrect custom role search", uss.isCustomRoleSearch(), is(false));
-		assertThat("incorrect search roles", uss.getSearchRoles(), is(Collections.emptySet()));
-		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
-				is(Collections.emptySet()));
-		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
-	}
-	
-	@Test
-	public void regexToPrefix() {
-		final UserSearchSpec uss = UserSearchSpec.getBuilder()
-				.withSearchRegex("\\Qfoo.bar\\E").withSearchPrefix("foo").build();
+	public void regexToPrefix() throws Exception {
+		final Builder b = UserSearchSpec.getBuilder();
+		setRegex(b, "\\Qfoo.bar\\E");
+		final UserSearchSpec uss = b.withSearchPrefix("foo").build();
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
 		assertThat("incorrect isRegex()", uss.isRegex(), is(false));
 		assertThat("incorrect user search", uss.isUserNameSearch(), is(true));
@@ -247,19 +260,19 @@ public class UserSearchSpecTest {
 	}
 	
 	@Test
-	public void addRegexFail() {
+	public void addRegexFail() throws Exception {
 		failAddRegex(null, new IllegalArgumentException(
 				"Regex cannot be null or the empty string"));
 		failAddRegex("   \t   \n  ", new IllegalArgumentException(
 				"Regex cannot be null or the empty string"));
 	}
 	
-	private void failAddRegex(final String regex, final Exception e) {
+	private void failAddRegex(final String regex, final Exception e) throws Exception {
 		try {
-			UserSearchSpec.getBuilder().withSearchRegex(regex);
+			setRegex(UserSearchSpec.getBuilder(), regex);
 			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
+		} catch (InvocationTargetException got) {
+			TestCommon.assertExceptionCorrect((Exception) got.getCause(), e);
 		}
 	}
 	

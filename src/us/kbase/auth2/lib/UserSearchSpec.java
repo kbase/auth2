@@ -11,10 +11,14 @@ import com.google.common.base.Optional;
  * If a search prefix or regex is supplied and neither withSearchOnUserName() nor
  * withSearchOnDisplayName() are called with a true argument then both fields are treated as search
  * targets.
+ * 
+ * A regex can only be set by code in the same package as this class.
  * @author gaprice@lbl.gov
  *
  */
 public class UserSearchSpec {
+	
+	//TODO CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
 	private Optional<String> prefix = Optional.absent();
 	private boolean searchUser = false;
@@ -167,7 +171,7 @@ public class UserSearchSpec {
 				throw new IllegalArgumentException("Prefix cannot be null or the empty string");
 			}
 			uss.prefix = Optional.of(prefix.toLowerCase());
-			uss.isRegex = false; //TODO TEST test switching regex on and off
+			uss.isRegex = false;
 			return this;
 		}
 		
@@ -180,7 +184,7 @@ public class UserSearchSpec {
 		 * @param regex the regex.
 		 * @return this builder.
 		 */
-		public Builder withSearchRegex(final String regex) {
+		Builder withSearchRegex(final String regex) {
 			if (regex == null || regex.trim().isEmpty()) {
 				throw new IllegalArgumentException("Regex cannot be null or the empty string");
 			}

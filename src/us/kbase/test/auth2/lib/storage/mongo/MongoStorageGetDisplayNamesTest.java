@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.lang.reflect.Method;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -21,6 +22,7 @@ import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
+import us.kbase.auth2.lib.UserSearchSpec.Builder;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
@@ -227,8 +229,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("foo"), new DisplayName("baz"));
 		expected.put(new UserName("whoo"), new DisplayName("bar"));
 		
-		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchRegex("^.+oo$").withSearchOnUserName(true).build(), -1),
+		final Builder builder = UserSearchSpec.getBuilder();
+		final Method m = Builder.class.getDeclaredMethod("withSearchRegex", String.class);
+		m.setAccessible(true);
+		m.invoke(builder, "^.+oo$");
+		builder.withSearchOnUserName(true);
+		assertThat("incorrect users found", storage.getUserDisplayNames(builder.build(), -1),
 				is(expected));
 	}
 	
