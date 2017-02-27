@@ -63,24 +63,24 @@ public class LinkTokenTest {
 		assertThat("incorrect provider", lt.getLinkIdentities().getProvider(), is("foobar"));
 		
 		//check the user is correct
-			assertThat("incorrect username", lt.getLinkIdentities().getUser().getUserName(),
-					is(new UserName("foo")));
-			assertThat("incorrect email", lt.getLinkIdentities().getUser().getEmail(),
-					is(new EmailAddress("f@g.com")));
-			assertThat("incorrect displayname", lt.getLinkIdentities().getUser().getDisplayName(),
-					is(new DisplayName("bar")));
-			assertThat("incorrect user id number",
-					lt.getLinkIdentities().getUser().getIdentities().size(), is(1));
-			assertThat("incorrect user identity",
-					lt.getLinkIdentities().getUser().getIdentities().iterator().next(), is(
-					new RemoteIdentityWithLocalID(
-							UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
-							new RemoteIdentityID("foo", "bar"),
-							new RemoteIdentityDetails("user", "full", "email"))));
-			assertThat("incorrect creation date", lt.getLinkIdentities().getUser().getCreated(),
-					is(AUTH_USER.getCreated()));
-			assertThat("incorrect login date", lt.getLinkIdentities().getUser().getLastLogin(),
-					is((Date) null));
+		assertThat("incorrect username", lt.getLinkIdentities().getUser().getUserName(),
+				is(new UserName("foo")));
+		assertThat("incorrect email", lt.getLinkIdentities().getUser().getEmail(),
+				is(new EmailAddress("f@g.com")));
+		assertThat("incorrect displayname", lt.getLinkIdentities().getUser().getDisplayName(),
+				is(new DisplayName("bar")));
+		assertThat("incorrect user id number",
+				lt.getLinkIdentities().getUser().getIdentities().size(), is(1));
+		assertThat("incorrect user identity",
+				lt.getLinkIdentities().getUser().getIdentities().iterator().next(), is(
+				new RemoteIdentityWithLocalID(
+						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+						new RemoteIdentityID("foo", "bar"),
+						new RemoteIdentityDetails("user", "full", "email"))));
+		assertThat("incorrect creation date", lt.getLinkIdentities().getUser().getCreated(),
+				is(AUTH_USER.getCreated()));
+		assertThat("incorrect login date", lt.getLinkIdentities().getUser().getLastLogin(),
+				is((Date) null));
 	}
 	
 	@Test
