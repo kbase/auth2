@@ -1104,7 +1104,7 @@ public class Authentication {
 	 * state of the login request. This token can be used to retrieve the login state via
 	 * {@link #getLoginState(IncomingToken)}.
 	 * 
-	 * The login state is not returned directly here because in most cases, this method will have
+	 * The login state is not returned directly here because in some cases, this method will have
 	 * been called after a redirect from a 3rd party identity provider, and as such, the login
 	 * flow is not under the control of any UI elements at that point. Hence, if the login cannot
 	 * proceed immediately, the state is stored so the user can be redirected to the appropriate
@@ -1128,27 +1128,17 @@ public class Authentication {
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
-		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, false);
-		AuthUser lastUser = null;
-		// check for uniqueness using names rather than the AuthUser class since it's possible
-		// a role could be added or something between two retrievals
-		final Set<UserName> names = new HashSet<>();
-		final Set<RemoteIdentity> noUser = new HashSet<>();
-		final Set<RemoteIdentityWithLocalID> hasUser = new HashSet<>();
-		for (final RemoteIdentity id: ids) {
-			final Optional<AuthUser> u = storage.getUser(id);
-			if (u.isPresent()) {
-				lastUser = u.get();
-				hasUser.add(lastUser.getIdentity(id));
-				names.add(lastUser.getUserName()); 
-			} else {
-				noUser.add(id);
-			}
-		}
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
+		//might be wasting uuids here *shrug*
+		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
+				.collect(Collectors.toSet());
+		final LoginState ls = getLoginState(ids);
 		final LoginToken lr;
-		if (names.size() == 1 && noUser.isEmpty()) {
-			/* Don't throw an error here since an auth UI is not controlling the call in most
-			 * cases - this call is almost certainly the result of a redirect from a 3rd party
+		if (ls.getUsers().size() == 1 && ls.getIdentities().isEmpty()) {
+			final UserName user = ls.getUsers().iterator().next();
+			final AuthUser lastUser = ls.getUser(user);
+			/* Don't throw an error here since an auth UI may not be controlling the call -
+			 * this call may be the result of a redirect from a 3rd party
 			 * provider. Any controllable error should be thrown when the process flow is back
 			 * under the control of the primary auth UI.
 			 * 
@@ -1158,31 +1148,27 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(lastUser.getRoles())) {
-				lr = storeIdentitiesTemporarily(noUser, hasUser);
+				lr = storeIdentitiesTemporarily(ls);
 			} else if (lastUser.isDisabled()) {
-				lr = storeIdentitiesTemporarily(noUser, hasUser);
+				lr = storeIdentitiesTemporarily(ls);
 			} else {
-				lr = new LoginToken(login(lastUser.getUserName()));
+				lr = new LoginToken(login(lastUser.getUserName()), ls);
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			lr = storeIdentitiesTemporarily(noUser, hasUser);
+			lr = storeIdentitiesTemporarily(ls);
 		}
 		return lr;
 	}
 
-	private LoginToken storeIdentitiesTemporarily(
-			final Set<RemoteIdentity> noUser,
-			final Set<RemoteIdentityWithLocalID> hasUser)
+	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
 			throws AuthStorageException {
-		final Set<RemoteIdentityWithLocalID> store = noUser.stream()
-				.map(id -> id.withID()).collect(Collectors.toSet());
-		hasUser.stream().forEach(id -> store.add(id));
-
+		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
+		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
 		final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
-		return new LoginToken(tt);
+		return new LoginToken(tt, ls);
 	}
 
 
@@ -1203,6 +1189,11 @@ public class Authentication {
 			throw new RuntimeException(
 					"Programming error: temporary login token stored with no identities");
 		}
+		return getLoginState(ids);
+	}
+
+	private LoginState getLoginState(final Set<RemoteIdentityWithLocalID> ids)
+			throws AuthStorageException {
 		final String provider = ids.iterator().next().getRemoteID().getProvider();
 		final LoginState.Builder builder = new LoginState.Builder(provider,
 				cfg.getAppConfig().isLoginAllowed());

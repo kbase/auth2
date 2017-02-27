@@ -94,7 +94,12 @@ public class LoginState {
 		}
 	}
 	
-	/** Get the remote identities associated with a given user account.
+	/** Get the remote identities associated with a given user account that granted access to said
+	 * account.
+	 * 
+	 * Note this may be a subset of the identities associated with the account in general, and the
+	 * identities in this set may have different UUIDs than the corresponding identities in
+	 * the user class.
 	 * @param name the user name of the user account.
 	 * @return the set of remote identities.
 	 */
