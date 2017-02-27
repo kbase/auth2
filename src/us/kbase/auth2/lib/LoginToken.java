@@ -23,6 +23,7 @@ public class LoginToken {
 	/** Create a LoginToken with a temporary token, indicating that the login process is
 	 * incomplete.
 	 * @param token the temporary token.
+	 * @param the current login state.
 	 */
 	public LoginToken(final TemporaryToken token, final LoginState loginState) {
 		if (token == null) {
@@ -38,6 +39,7 @@ public class LoginToken {
 	
 	/** Create a LoginToken with a new token, indicating the login process is complete.
 	 * @param token
+	 * @param the current login state.
 	 */
 	public LoginToken(final NewToken token, final LoginState loginState) {
 		if (token == null) {

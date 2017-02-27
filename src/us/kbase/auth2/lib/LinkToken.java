@@ -8,30 +8,37 @@ import us.kbase.auth2.lib.token.TemporaryToken;
  * the token will be null.
  * 
  * If there are still more steps to be completed in the linking process, isLinked() will be false
- * and a temporary token supplied which can be used ot continue the linking process.
+ * and a temporary token supplied which can be used to continue the linking process.
  * @author gaprice@lbl.gov
  *
  */
 public class LinkToken {
 	
 	private final TemporaryToken token;
+	private final LinkIdentities idents;
 	
 	/** Create a LinkToken for the case where the linking process is concluded and no further
 	 * actions are required.
 	 */
 	public LinkToken() {
 		this.token = null;
+		this.idents = null;
 	}
 	
 	/** Create a LinkToken for the case where more actions are required, and thus a token is
 	 * provided to allow continuing with the linking process.
 	 * @param token a temporary token associated with the state of the linking process in the auth
 	 * storage system.
+	 * @param linkIdentities the identities available for linking.
 	 */
-	public LinkToken(final TemporaryToken token) {
+	public LinkToken(final TemporaryToken token, final LinkIdentities linkIdentities) {
 		if (token == null) {
 			throw new NullPointerException("token");
 		}
+		if (linkIdentities == null) {
+			throw new NullPointerException("linkIdentities");
+		}
+		this.idents = linkIdentities;
 		this.token = token;
 	}
 
@@ -47,6 +54,13 @@ public class LinkToken {
 	 */
 	public TemporaryToken getTemporaryToken() {
 		return token;
+	}
+	
+	/** Get the identities available for linking.
+	 * @return the identities available for linking, or null if linking process is complete.
+	 */
+	public LinkIdentities getLinkIdentities() {
+		return idents;
 	}
 
 }

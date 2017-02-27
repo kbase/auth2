@@ -246,6 +246,8 @@ public class Login {
 			throws AuthenticationException, MissingParameterException, AuthStorageException,
 			IllegalParameterException {
 		
+		provider = upperCase(provider);
+		
 		input.exceptOnAdditionalProperties();
 		if (state == null || state.trim().isEmpty()) {
 			throw new MissingParameterException("Couldn't retrieve state value from cookie");

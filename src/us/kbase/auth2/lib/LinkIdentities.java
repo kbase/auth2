@@ -15,6 +15,7 @@ public class LinkIdentities {
 	
 	private final AuthUser user;
 	private final Set<RemoteIdentityWithLocalID> idents;
+	private final String provider;
 
 	/** Create a set of identities that are linkable to a user account.
 	 * @param user the user to which the identities may be linked.
@@ -32,6 +33,26 @@ public class LinkIdentities {
 		Utils.noNulls(ids, "null item in ids");
 		this.user = user;
 		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
+		this.provider = ids.iterator().next().getRemoteID().getProvider();
+	}
+	
+	/** Create an empty identity set, implying that no identities were available for linking
+	 * from this provider.
+	 * @param user the user on which the link was attempted.
+	 * @param provider the provider from which the identities were retrieved.
+	 */
+	public LinkIdentities(
+			final AuthUser user,
+			final String provider) {
+		if (user == null) {
+			throw new NullPointerException("user");
+		}
+		if (provider == null || provider.trim().isEmpty()) {
+			throw new IllegalArgumentException("provider cannot be null or empty");
+		}
+		this.user = user;
+		this.idents = Collections.unmodifiableSet(Collections.emptySet());
+		this.provider = provider;
 	}
 
 	/** Get the user associated with the remote identities.
@@ -42,10 +63,17 @@ public class LinkIdentities {
 	}
 
 	/** Get the remote identities.
-	 * @return the remote identities.
+	 * @return the remote identities. May be empty if no linkable identities are available.
 	 */
 	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return idents;
+	}
+	
+	/** Get the provider of the identities.
+	 * @return the provider name.
+	 */
+	public String getProvider() {
+		return provider;
 	}
 
 }
