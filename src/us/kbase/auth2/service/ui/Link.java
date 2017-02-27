@@ -13,7 +13,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.TreeMap;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -36,8 +35,6 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
-import com.fasterxml.jackson.annotation.JsonAnyGetter;
-import com.fasterxml.jackson.annotation.JsonAnySetter;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
@@ -296,10 +293,9 @@ public class Link {
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
-	private static class LinkPick {
+	private static class LinkPick extends IncomingJSON {
 		
 		private final String id;
-		private final Map<String, Object> additionalProperties = new TreeMap<>();
 		
 		// don't throw exception in constructor. Bypasses custom error handler.
 		@JsonCreator
@@ -308,31 +304,7 @@ public class Link {
 		}
 		
 		public Optional<UUID> getID() throws IllegalParameterException {
-			if (id == null || id.trim().isEmpty()) {
-				return Optional.absent();
-			}
-			try {
-				return Optional.of(UUID.fromString(id));
-			} catch (IllegalArgumentException e) {
-				throw new IllegalParameterException("Illegal identity UUID: " + id);
-			}
-		}
-		
-		@JsonAnyGetter
-		public Map<String, Object> getAdditionalProperties() {
-			return this.additionalProperties;
-		}
-
-		@JsonAnySetter
-		public void setAdditionalProperties(String name, Object value) {
-			this.additionalProperties.put(name, value);
-		}
-		
-		public void exceptOnAdditionalProperties() throws IllegalParameterException {
-			if (!additionalProperties.isEmpty()) {
-				throw new IllegalParameterException("Unexpected parameters in request: " + 
-						String.join(", ", additionalProperties.keySet()));
-			}
+			return getOptionalUUID(id, "id");
 		}
 	}
 	

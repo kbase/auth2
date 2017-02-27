@@ -16,6 +16,8 @@ import com.google.common.base.Optional;
  */
 public class UserSearchSpec {
 	
+	//TODO CODE don't expose regex externally. Probably best way to handle this is with a wrapper class.
+	
 	private Optional<String> prefix = Optional.absent();
 	private boolean searchUser = false;
 	private boolean searchDisplayName = false;
