@@ -31,6 +31,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
@@ -164,6 +165,57 @@ public class Link {
 		return r;
 	}
 	
+	//TODO CODE same as Login.LoginInput. Make a shared class.
+	private static class LinkInput extends IncomingJSON {
+		
+		public final String authCode;
+		public final String state;
+	
+		@JsonCreator
+		public LinkInput(
+				@JsonProperty("authcode") final String authCode,
+				@JsonProperty("state") final String state) {
+			this.authCode = authCode;
+			this.state = state;
+		}
+	}
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
+	public Response linkJSON(
+			@Context final HttpHeaders headers,
+			@PathParam("provider") String provider,
+			@CookieParam(LINK_STATE_COOKIE) final String state,
+			@Context final UriInfo uriInfo,
+			final LinkInput input)
+			throws MissingParameterException, AuthenticationException,
+				DisabledUserException, LinkFailedException, NoTokenProvidedException,
+				AuthStorageException {
+		provider = upperCase(provider);
+		if (state == null || state.trim().isEmpty()) {
+			throw new MissingParameterException("Couldn't retrieve state value from cookie");
+		}
+		if (!state.equals(input.state)) {
+			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+					"State values do not match, this may be a CXRF attack");
+		}
+		final LinkToken lt = auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				provider, input.authCode);
+		final Map<String, Object> linkChoice = new HashMap<>();
+		final ResponseBuilder r = Response.ok(linkChoice).cookie(getStateCookie(null));
+		if (lt.isLinked()) {
+			linkChoice.put("linked", true);
+		} else {
+			linkChoice.putAll(buildLinkChoice(uriInfo, lt.getLinkIdentities()));
+			linkChoice.put("linked", false);
+			r.cookie(getLinkInProcessCookie(lt.getTemporaryToken()));
+		}
+		return r.build();
+	}
+	
+	
 	// the two methods below are very similar and there's another similar method in Login
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
 		final URL url;
@@ -243,6 +295,10 @@ public class Link {
 		final LinkIdentities ids = auth.getLinkState(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				getLinkInProcessToken(linktoken));
+		return buildLinkChoice(uriInfo, ids);
+	}
+
+	private Map<String, Object> buildLinkChoice(final UriInfo uriInfo, final LinkIdentities ids) {
 		/* there's a possibility here that between the redirects the number
 		 * of identities that aren't already linked was reduced to 1. The
 		 * probability is so low that it's not worth special casing it,
@@ -251,8 +307,7 @@ public class Link {
 		 */ 
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("user", ids.getUser().getUserName().getName());
-		ret.put("provider", ids.getIdentities()
-				.iterator().next().getRemoteID().getProvider());
+		ret.put("provider", ids.getProvider());
 		final List<Map<String, String>> ris = new LinkedList<>();
 		ret.put("ids", ris);
 		for (final RemoteIdentityWithLocalID ri: ids.getIdentities()) {

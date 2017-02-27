@@ -46,7 +46,7 @@ public class LinkIdentitiesTest {
 	}
 	
 	@Test
-	public void constructSuccess() throws Exception {
+	public void constructWithIDsSuccess() throws Exception {
 		final Set<RemoteIdentityWithLocalID> ids = new HashSet<>();
 		ids.add(REMOTE2);
 		
@@ -67,6 +67,9 @@ public class LinkIdentitiesTest {
 				is(AUTH_USER.getCreated()));
 		assertThat("incorrect login date", li.getUser().getLastLogin(), is((Date) null));
 		
+		// check provider is correct
+		assertThat("incorrect provider", li.getProvider(), is("foo1"));
+		
 		//check the identity is correct
 		assertThat("incorrect identity number", li.getIdentities().size(), is(1));
 		assertThat("incorrect identity", li.getIdentities().iterator().next(), is(
@@ -74,6 +77,32 @@ public class LinkIdentitiesTest {
 						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b8"),
 						new RemoteIdentityID("foo1", "bar1"),
 						new RemoteIdentityDetails("user1", "full1", "email1"))));
+	}
+	
+	@Test
+	public void constructWithoutIDsSuccess() throws Exception {
+		final LinkIdentities li = new LinkIdentities(AUTH_USER, "foobar");
+		
+		//check the user is correct
+		assertThat("incorrect username", li.getUser().getUserName(), is(new UserName("foo")));
+		assertThat("incorrect email", li.getUser().getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect displayname", li.getUser().getDisplayName(),
+				is(new DisplayName("bar")));
+		assertThat("incorrect user id number", li.getUser().getIdentities().size(), is(1));
+		assertThat("incorrect user identity", li.getUser().getIdentities().iterator().next(), is(
+				new RemoteIdentityWithLocalID(
+						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+						new RemoteIdentityID("foo", "bar"),
+						new RemoteIdentityDetails("user", "full", "email"))));
+		assertThat("incorrect creation date", li.getUser().getCreated(),
+				is(AUTH_USER.getCreated()));
+		assertThat("incorrect login date", li.getUser().getLastLogin(), is((Date) null));
+		
+		// check provider is correct
+		assertThat("incorrect provider", li.getProvider(), is("foobar"));
+		
+		//check the identity is correct
+		assertThat("incorrect identity number", li.getIdentities().size(), is(0));
 	}
 	
 	@Test
@@ -96,11 +125,18 @@ public class LinkIdentitiesTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new HashSet<>(Arrays.asList(REMOTE1)),
 				new NullPointerException("user"));
-		failConstruct(AUTH_USER, null, new IllegalArgumentException("No remote IDs provided"));
+		failConstruct(AUTH_USER, (Set<RemoteIdentityWithLocalID>) null,
+				new IllegalArgumentException("No remote IDs provided"));
 		failConstruct(AUTH_USER, new HashSet<>(),
 				new IllegalArgumentException("No remote IDs provided"));
 		failConstruct(AUTH_USER, TestCommon.set(REMOTE1, null),
 				new NullPointerException("null item in ids"));
+		
+		failConstruct(null, "foo", new NullPointerException("user"));
+		failConstruct(AUTH_USER, (String) null,
+				new IllegalArgumentException("provider cannot be null or empty"));
+		failConstruct(AUTH_USER, "    \t \n   ",
+				new IllegalArgumentException("provider cannot be null or empty"));
 	}
 	
 	private void failConstruct(
@@ -109,6 +145,18 @@ public class LinkIdentitiesTest {
 			final Exception e) {
 		try {
 			new LinkIdentities(au, ids);
+			fail("created bad LinkIdentities");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failConstruct(
+			final AuthUser au,
+			final String provider,
+			final Exception e) {
+		try {
+			new LinkIdentities(au, provider);
 			fail("created bad LinkIdentities");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

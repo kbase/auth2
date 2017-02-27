@@ -1104,7 +1104,7 @@ public class Authentication {
 	 * state of the login request. This token can be used to retrieve the login state via
 	 * {@link #getLoginState(IncomingToken)}.
 	 * 
-	 * The login state is not returned directly here because in some cases, this method will have
+	 * In some cases, this method will have
 	 * been called after a redirect from a 3rd party identity provider, and as such, the login
 	 * flow is not under the control of any UI elements at that point. Hence, if the login cannot
 	 * proceed immediately, the state is stored so the user can be redirected to the appropriate
@@ -1426,7 +1426,7 @@ public class Authentication {
 	 * state of the link request. This token can be used to retrieve the link state via
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
 	 * 
-	 * The link state is not returned directly here because in most cases, this method will have
+	 * In some cases, this method will have
 	 * been called after a redirect from a 3rd party identity provider, and as such, the link
 	 * flow is not under the control of any UI elements at that point. Hence, if the link cannot
 	 * proceed immediately, the state is stored so the user can be redirected to the appropriate
@@ -1463,34 +1463,37 @@ public class Authentication {
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
-		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true);
-		filterLinkCandidates(ids);
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
+		filterLinkCandidates(ris);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
-		 * most cases - this call is almost certainly the result of a redirect from a 3rd party
+		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
 		 * under the control of the primary auth UI.
 		 */
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
-		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
+		if (ris.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
 				/* throws link failed exception if u is a local user or the id is already linked
 				 * Since we already checked those, only a rare race condition can cause a link
 				 * failed exception, and the consequence is trivial so don't worry about it
 				 */
-				storage.link(u.getUserName(), ids.iterator().next().withID());
+				storage.link(u.getUserName(), ris.iterator().next().withID());
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException(
 						"User unexpectedly disappeared from the database", e);
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(randGen.getToken(),
-					10 * 60 * 1000);
-			storage.storeIdentitiesTemporarily(tt.getHashedToken(),
-					ids.stream().map(r -> r.withID())
-					.collect(Collectors.toSet()));
-			lt = new LinkToken(tt);
+			final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 10 * 60 * 1000);
+			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
+					.collect(Collectors.toSet());
+			storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
+			if (ids.isEmpty()) {
+				lt = new LinkToken(tt, new LinkIdentities(u, provider));
+			} else {
+				lt = new LinkToken(tt, new LinkIdentities(u, ids));
+			}
 		}
 		return lt;
 	}
