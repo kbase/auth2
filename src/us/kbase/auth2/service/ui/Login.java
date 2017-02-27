@@ -106,7 +106,9 @@ public class Login {
 		return ret;
 	}
 	
+	//TODO UI JSON version. Should redirect immediately or return url (eric)? Should be POST since potenially non-idempotent.
 	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_START)
 	public Response loginStart(
 			@FormParam("provider") final String provider,
@@ -213,6 +215,63 @@ public class Login {
 		}
 		return r;
 	}
+	
+	private static class LoginInput extends IncomingJSON {
+		
+		public final String authCode;
+		public final String state;
+	
+		@JsonCreator
+		public LoginInput(
+				@JsonProperty("authcode") final String authCode,
+				@JsonProperty("state") final String state) {
+			this.authCode = authCode;
+			this.state = state;
+		}
+	}
+	
+	//TODO CODE recheck how state var is supposed to work.
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
+	public Response loginJSON(
+			@PathParam("provider") String provider,
+			@Context final UriInfo uriInfo,
+			@CookieParam(LOGIN_STATE_COOKIE) final String state,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			final LoginInput input)
+			throws AuthenticationException, MissingParameterException, AuthStorageException,
+			IllegalParameterException {
+		
+		input.exceptOnAdditionalProperties();
+		if (state == null || state.trim().isEmpty()) {
+			throw new MissingParameterException("Couldn't retrieve state value from cookie");
+		}
+		if (!state.equals(input.state)) {
+			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+					"State values do not match, this may be a CXRF attack");
+		}
+		final LoginToken lr = auth.login(provider, input.authCode);
+		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState());
+		if (lr.isLoggedIn()) {
+			choice.put("token", new UINewToken(lr.getToken()));
+			choice.put("logged_in", true);
+			choice.put("redirect", getRedirectURL(redirect));
+			final ResponseBuilder b = Response.ok(choice);
+			setLoginCookies(b, lr.getToken(), TRUE.equals(session));
+			return b.build();
+		} else {
+			choice.put("logged_in", false);
+			return Response.ok(choice)
+					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
+					.cookie(getStateCookie(null))
+					.build();
+		}
+	}
+			
 
 	private Response createLoginResponse(
 			final String redirect,
@@ -242,6 +301,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException {
 		
 		return setLoginCookies(Response.ok().entity(ImmutableMap.of(
+				//TODO CODE this is wrong. For JSON never return /me.
 				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
 				newtoken, session).build();
 	}
@@ -253,6 +313,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException {
 		
 		return setLoginCookies(Response.status(Response.Status.CREATED).entity(ImmutableMap.of(
+				//TODO CODE this is wrong. For JSON never return /me.
 				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
 				newtoken, session).build();
 	}
@@ -317,6 +378,13 @@ public class Login {
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
+		return buildLoginChoice(uriInfo, loginState);
+	}
+
+	private Map<String, Object> buildLoginChoice(
+			final UriInfo uriInfo,
+			final LoginState loginState)
+			throws AuthStorageException {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));

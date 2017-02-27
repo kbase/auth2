@@ -9,35 +9,50 @@ import us.kbase.auth2.lib.token.TemporaryToken;
  * 2) A temporary token, indicating that there are more steps to be completed in the login process.
  * The temporary token is associated with the state of the login process in the authorization
  * storage system.
+ * 
+ * The state of the login process is also included.
  * @author gaprice@lbl.gov
  *
  */
 public class LoginToken {
-
+	
 	private final NewToken token;
 	private final TemporaryToken temporaryToken;
+	private final LoginState ls;
 	
 	/** Create a LoginToken with a temporary token, indicating that the login process is
 	 * incomplete.
 	 * @param token the temporary token.
 	 */
-	public LoginToken(final TemporaryToken token) {
+	public LoginToken(final TemporaryToken token, final LoginState loginState) {
 		if (token == null) {
 			throw new NullPointerException("token");
 		}
+		if (loginState == null) {
+			throw new NullPointerException("loginState");
+		}
 		this.temporaryToken = token;
 		this.token = null;
+		this.ls = loginState;
 	}
 	
 	/** Create a LoginToken with a new token, indicating the login process is complete.
 	 * @param token
 	 */
-	public LoginToken(final NewToken token) {
+	public LoginToken(final NewToken token, final LoginState loginState) {
 		if (token == null) {
 			throw new NullPointerException("token");
 		}
+		if (loginState == null) {
+			throw new NullPointerException("loginState");
+		}
 		this.temporaryToken = null;
 		this.token = token;
+		this.ls = loginState;
+		if (loginState.getUsers().size() != 1 || !loginState.getIdentities().isEmpty()) {
+			throw new IllegalStateException(
+					"Login process is complete but user count != 1 or unlinked identities > 0");
+		}
 	}
 
 	/** Returns true if the login process is complete, false otherwise.
@@ -59,5 +74,13 @@ public class LoginToken {
 	 */
 	public TemporaryToken getTemporaryToken() {
 		return temporaryToken;
+	}
+	
+	/** Gets the state of the login process. If the login is complete, the login state will
+	 * contain one user and no unlinked identities.
+	 * @return
+	 */
+	public LoginState getLoginState() {
+		return ls;
 	}
 }
