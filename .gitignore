@@ -1,0 +1,9 @@
+deploy.cfg
+test.cfg
+*.class
+/docs
+/jettybase
+*.jar
+*.war
+*.log
+manage_auth
