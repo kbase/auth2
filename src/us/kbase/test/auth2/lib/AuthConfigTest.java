@@ -27,6 +27,8 @@ public class AuthConfigTest {
 		assertThat("incorrect login default", AuthConfig.DEFAULT_LOGIN_ALLOWED, is(false));
 		assertThat("incorrect provider enabled default",
 				AuthConfig.DEFAULT_PROVIDER_CONFIG.isEnabled(), is(false));
+		assertThat("incorrect provider force login default",
+				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLoginChoice(), is(false));
 		assertThat("incorrect provider force link default",
 				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLinkChoice(), is(false));
 		final Map<TokenLifetimeType, Long> defaultLifeTimes = new HashMap<>();
@@ -40,17 +42,19 @@ public class AuthConfigTest {
 	
 	@Test
 	public void providerConfig() throws Exception {
-		final ProviderConfig pc = new ProviderConfig(false, true);
+		final ProviderConfig pc = new ProviderConfig(false, true, false);
 		assertThat("incorrect enabled", pc.isEnabled(), is(false));
-		assertThat("incorrect force link", pc.isForceLinkChoice(), is(true));
-		assertThat("incorrect to string", pc.toString(),
-				is("ProviderConfig [enabled=false, forceLinkChoice=true]"));
+		assertThat("incorrect force login", pc.isForceLoginChoice(), is(true));
+		assertThat("incorrect force link", pc.isForceLinkChoice(), is(false));
+		assertThat("incorrect to string", pc.toString(), is(
+				"ProviderConfig [enabled=false, forceLoginChoice=true, forceLinkChoice=false]"));
 		
-		final ProviderConfig pc2 = new ProviderConfig(null, null);
+		final ProviderConfig pc2 = new ProviderConfig(null, null, null);
 		assertThat("incorrect enabled", pc2.isEnabled(), is((Boolean) null));
+		assertThat("incorrect force login", pc2.isForceLoginChoice(), is((Boolean) null));
 		assertThat("incorrect force link", pc2.isForceLinkChoice(), is((Boolean) null));
 		assertThat("incorrect to string", pc2.toString(),
-				is("ProviderConfig [enabled=null, forceLinkChoice=null]"));
+				is("ProviderConfig [enabled=null, forceLoginChoice=null, forceLinkChoice=null]"));
 	}
 	
 	@Test
@@ -66,8 +70,8 @@ public class AuthConfigTest {
 	@Test
 	public void constructAndGettersSuccess() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
-		pc.put("pc1", new ProviderConfig(null, true));
-		pc.put("pc2", new ProviderConfig(false, false));
+		pc.put("pc1", new ProviderConfig(null, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, null));
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		lts.put(TokenLifetimeType.DEV, 500000L);
 		lts.put(TokenLifetimeType.LOGIN, 70000000L);
@@ -85,12 +89,16 @@ public class AuthConfigTest {
 		assertThat("incorrect lifetimes", ac.getTokenLifetimeMS(), is(ltscopy));
 		assertThat("incorrect provider enabled", ac.getProviderConfig("pc1").isEnabled(),
 				is((Boolean) null));
+		assertThat("incorrect provider force login",
+				ac.getProviderConfig("pc1").isForceLoginChoice(), is(true));
 		assertThat("incorrect provider force link",
-				ac.getProviderConfig("pc1").isForceLinkChoice(), is(true));
+				ac.getProviderConfig("pc1").isForceLinkChoice(), is(false));
 		assertThat("incorrect provider enabled", ac.getProviderConfig("pc2").isEnabled(),
 				is(false));
+		assertThat("incorrect provider force login",
+				ac.getProviderConfig("pc2").isForceLoginChoice(), is(false));
 		assertThat("incorrect provider force link",
-				ac.getProviderConfig("pc2").isForceLinkChoice(), is(false));
+				ac.getProviderConfig("pc2").isForceLinkChoice(), is((Boolean) null));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE),
 				is(5 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.LOGIN),
@@ -100,9 +108,11 @@ public class AuthConfigTest {
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.SERV),
 				is(8639999999913600000L));
 		assertThat("incorrect to string", ac.toString(), is(
-				"AuthConfig [loginAllowed=false, providers={pc1=ProviderConfig [enabled=null, " +
-				"forceLinkChoice=true], pc2=ProviderConfig [enabled=false, " +
-				"forceLinkChoice=false]}, tokenLifetimeMS={LOGIN=70000000, DEV=500000}]"));
+				"AuthConfig [loginAllowed=false, providers={" +
+				"pc1=ProviderConfig [enabled=null, forceLoginChoice=true, " +
+						"forceLinkChoice=false], " +
+				"pc2=ProviderConfig [enabled=false, forceLoginChoice=false, " +
+				"forceLinkChoice=null]}, tokenLifetimeMS={LOGIN=70000000, DEV=500000}]"));
 	}
 	
 	@Test
@@ -114,7 +124,7 @@ public class AuthConfigTest {
 		final Map<TokenLifetimeType, Long> ltscopy = new HashMap<>(lts);
 		final Map<String, ProviderConfig> pccopy = new HashMap<>(pc);
 		// modify input maps to ensure does not modify config instance
-		pc.put("foo", new ProviderConfig(null, null));
+		pc.put("foo", new ProviderConfig(null, null, null));
 		lts.put(TokenLifetimeType.EXT_CACHE, 6000000L);
 		
 		assertThat("incorrect login allowed", ac.isLoginAllowed(), is((Boolean) null));
@@ -135,7 +145,7 @@ public class AuthConfigTest {
 	@Test
 	public void getProviderFail() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
-		pc.put("pc1", new ProviderConfig(null, true));
+		pc.put("pc1", new ProviderConfig(null, true, false));
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		
 		final AuthConfig ac = new AuthConfig(null, pc, lts);
@@ -156,12 +166,12 @@ public class AuthConfigTest {
 	@Test
 	public void constructFailOnProvider() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
-		pc.put(null, new ProviderConfig(false, false));
+		pc.put(null, new ProviderConfig(false, false, false));
 		failConstructAuthConfig(pc, null, new IllegalArgumentException(
 				"provider names cannot be null or empty"));
 		
 		pc.clear();
-		pc.put("  \t  ", new ProviderConfig(null, null));
+		pc.put("  \t  ", new ProviderConfig(null, null, null));
 		failConstructAuthConfig(pc, null, new IllegalArgumentException(
 				"provider names cannot be null or empty"));
 		
