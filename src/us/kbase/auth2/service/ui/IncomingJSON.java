@@ -47,6 +47,9 @@ public class IncomingJSON {
 
 	protected boolean getBoolean(final Object b, final String fieldName)
 			throws IllegalParameterException {
+		if (b == null) {
+			return false;
+		}
 		if (!(b instanceof Boolean)) {
 			throw new IllegalParameterException(fieldName + " must be a boolean");
 		}

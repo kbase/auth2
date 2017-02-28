@@ -38,7 +38,6 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
@@ -106,7 +105,6 @@ public class Login {
 		return ret;
 	}
 	
-	//TODO UI JSON version. Should redirect immediately or return url (eric)? Should be POST since potenially non-idempotent.
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_START)
@@ -117,7 +115,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
-		getRedirectURL(redirect);
+		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 
@@ -125,6 +123,49 @@ public class Login {
 				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect));
+		}
+		return r.build();
+	}
+	
+	private static class LoginStart extends IncomingJSON {
+		
+		public String provider;
+		public String redirect;
+		private Object stayLoggedIn;
+		
+		@JsonCreator
+		public LoginStart(
+				@JsonProperty("provider") final String provider,
+				@JsonProperty("redirect") final String redirect,
+				@JsonProperty("stay_logged_in") final Object stayLoggedIn) {
+			super();
+			this.provider = provider;
+			this.redirect = redirect;
+			this.stayLoggedIn = stayLoggedIn;
+		}
+		
+		public boolean isStayLoggedIn() throws IllegalParameterException {
+			return getBoolean(stayLoggedIn, "stay_logged_in");
+		}
+	}
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LOGIN_START)
+	public Response loginStartJSON(final LoginStart login)
+			throws IllegalParameterException, AuthStorageException,
+			NoSuchIdentityProviderException {
+		
+		//TODO CODE consult with Erik if should redirect or just pass back redirect url. If not, make common loginStart method.
+		
+		getRedirectURL(login.redirect); // check redirect url is ok
+		final String state = auth.getBareToken();
+		final URI target = toURI(auth.getIdentityProviderURL(login.provider, state, false));
+
+		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
+				.cookie(getSessionChoiceCookie(!login.isStayLoggedIn()));
+		if (login.redirect != null && !login.redirect.trim().isEmpty()) {
+			r.cookie(getRedirectCookie(login.redirect));
 		}
 		return r.build();
 	}
@@ -273,7 +314,6 @@ public class Login {
 					.build();
 		}
 	}
-			
 
 	private Response createLoginResponse(
 			final String redirect,
@@ -289,35 +329,27 @@ public class Login {
 			final ResponseBuilder resp,
 			final NewToken newtoken,
 			final boolean session) {
-		return resp.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session))
-				.cookie(getSessionChoiceCookie(null))
+		return removeLoginProcessCookies(resp)
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), newtoken, session));
+	}
+	
+	private ResponseBuilder removeLoginProcessCookies(final ResponseBuilder resp) {
+		return resp.cookie(getSessionChoiceCookie(null))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getStateCookie(null))
 				.cookie(getRedirectCookie(null));
 	}
 	
-	private Response createLoginResponseJSONOK(
+	private Response createLoginResponseJSON(
+			final Response.Status status,
 			final String redirect,
-			final NewToken newtoken,
-			final boolean session)
+			final NewToken newtoken)
 			throws IllegalParameterException, AuthStorageException {
 		
-		return setLoginCookies(Response.ok().entity(ImmutableMap.of(
-				//TODO CODE this is wrong. For JSON never return /me.
-				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
-				newtoken, session).build();
-	}
-	
-	private Response createLoginResponseJSONCreated(
-			final String redirect,
-			final NewToken newtoken,
-			final boolean session)
-			throws IllegalParameterException, AuthStorageException {
-		
-		return setLoginCookies(Response.status(Response.Status.CREATED).entity(ImmutableMap.of(
-				//TODO CODE this is wrong. For JSON never return /me.
-				"redirect_url", getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT))),
-				newtoken, session).build();
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("redirect_url", getRedirectURL(redirect));
+		ret.put("token", new UINewToken(newtoken));
+		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	
 	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
@@ -429,7 +461,8 @@ public class Login {
 		return ret;
 	}
 
-	private IncomingToken getLoginInProcessToken(final String token) throws NoTokenProvidedException {
+	private IncomingToken getLoginInProcessToken(final String token)
+			throws NoTokenProvidedException {
 		final IncomingToken incToken;
 		try {
 			incToken = new IncomingToken(token);
@@ -487,7 +520,6 @@ public class Login {
 	public Response pickAccountJSON(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
-			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, IllegalParameterException, MissingParameterException,
@@ -495,7 +527,7 @@ public class Login {
 		pick.exceptOnAdditionalProperties();
 		final NewToken newtoken = auth.login(
 				getLoginInProcessToken(token), pick.getID(), pick.isLinkAll());
-		return createLoginResponseJSONOK(redirect, newtoken, !FALSE.equals(session));
+		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
 	}
 
 	@POST
@@ -556,7 +588,6 @@ public class Login {
 	public Response createUserJSON(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
-			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			final CreateChoice create)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
@@ -572,7 +603,7 @@ public class Login {
 				new DisplayName(create.displayName),
 				new EmailAddress(create.email),
 				create.isLinkAll());
-		return createLoginResponseJSONCreated(redirect, newtoken, !FALSE.equals(session));
+		return createLoginResponseJSON(Response.Status.CREATED, redirect, newtoken);
 	}
 	
 	//Assumes valid URI in URL form
