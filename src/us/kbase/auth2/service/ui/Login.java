@@ -157,7 +157,7 @@ public class Login {
 			NoSuchIdentityProviderException {
 		
 		//TODO CODE consult with Erik if should redirect or just pass back redirect url. If not, make common loginStart method.
-		
+		login.exceptOnAdditionalProperties();
 		getRedirectURL(login.redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(login.provider, state, false));
