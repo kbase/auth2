@@ -2,6 +2,8 @@ package us.kbase.auth2.service;
 
 import java.util.Set;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 
 public interface AuthStartupConfig {
@@ -12,7 +14,8 @@ public interface AuthStartupConfig {
 	Set<IdentityProviderConfig> getIdentityProviderConfigs();
 	String getMongoHost();
 	String getMongoDatabase();
-	String getMongoUser();
-	char[] getMongoPwd();
+	// note both or neither for user & pwd
+	Optional<String> getMongoUser();
+	Optional<char[]> getMongoPwd();
 	String getTokenCookieName();
 }

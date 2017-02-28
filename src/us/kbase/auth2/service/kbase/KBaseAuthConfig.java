@@ -14,6 +14,8 @@ import java.util.Set;
 import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.service.AuthStartupConfig;
@@ -55,8 +57,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final SLF4JAutoLogger logger;
 	private final String mongoHost;
 	private final String mongoDB;
-	private final String mongoUser;
-	private final char[] mongoPwd;
+	private final Optional<String> mongoUser;
+	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
 
@@ -80,18 +82,19 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		try {
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
-			mongoUser = getString(KEY_MONGO_USER, cfg);
-			String mongop = getString(KEY_MONGO_PWD, cfg);
-			if (mongoUser != null ^ mongop != null) {
-				mongop = null; //gc
+			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
+			Optional<String> mongop = Optional.fromNullable(getString(KEY_MONGO_PWD, cfg));
+			if (mongoUser.isPresent() ^ mongop.isPresent()) {
+				mongop = null; //GC
 				throw new AuthConfigurationException(String.format(
 						"Must provide both %s and %s params in config file " +
 						"%s section %s if MongoDB authentication is to be used",
 						KEY_MONGO_USER, KEY_MONGO_PWD, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 			}
-			mongoPwd = mongop == null ? null : mongop.toCharArray();
+			mongoPwd = mongop.isPresent() ?
+					Optional.of(mongop.get().toCharArray()) : Optional.absent();
+			mongop = null; //GC
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
-			mongop = null; //gc
 			providers = getProviders(cfg);
 		} catch (AuthConfigurationException e) {
 			if (!nullLogger) {
@@ -267,12 +270,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	}
 
 	@Override
-	public String getMongoUser() {
+	public Optional<String> getMongoUser() {
 		return mongoUser;
 	}
 
 	@Override
-	public char[] getMongoPwd() {
+	public Optional<char[]> getMongoPwd() {
 		return mongoPwd;
 	}
 	
