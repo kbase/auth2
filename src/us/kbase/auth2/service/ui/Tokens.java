@@ -77,7 +77,7 @@ public class Tokens {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getTokensJSON(
 			@Context final HttpHeaders headers,
-			@HeaderParam("authentication") final String headerToken)
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, InvalidTokenException,
 			NoTokenProvidedException, DisabledUserException {
 		final IncomingToken cookieToken = getTokenFromCookie(
@@ -106,7 +106,7 @@ public class Tokens {
 	@Produces(MediaType.APPLICATION_JSON)
 	public UINewToken createTokenJSON(
 			@Context final HttpHeaders headers,
-			@HeaderParam("authentication") final String headerToken,
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, NoTokenProvidedException,
@@ -133,7 +133,7 @@ public class Tokens {
 	public void revokeTokenDELETE(
 			@PathParam("tokenid") final UUID tokenId,
 			@Context final HttpHeaders headers,
-			@HeaderParam("authentication") final String headerToken)
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
 			InvalidTokenException {
@@ -155,7 +155,7 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public void revokeAll(
 			@Context final HttpHeaders headers,
-			@HeaderParam("authentication") final String headerToken)
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException {
 		final IncomingToken cookieToken = getTokenFromCookie(
