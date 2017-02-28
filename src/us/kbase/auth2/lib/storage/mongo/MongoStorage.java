@@ -1369,6 +1369,10 @@ public class MongoStorage implements AuthStorage {
 			final AuthConfigSet<T> cfgSet,
 			final boolean overwrite)
 			throws AuthStorageException {
+
+		if (cfgSet == null) {
+			throw new NullPointerException("cfgSet");
+		}
 		
 		updateConfig(COL_CONFIG_APPLICATION,
 				Fields.CONFIG_APP_ALLOW_LOGIN, cfgSet.getCfg().isLoginAllowed(), overwrite);
@@ -1380,6 +1384,8 @@ public class MongoStorage implements AuthStorage {
 		for (final Entry<String, ProviderConfig> e: cfgSet.getCfg().getProviders().entrySet()) {
 			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_ENABLED,
 					e.getValue().isEnabled(), overwrite);
+			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LOGIN_CHOICE,
+					e.getValue().isForceLoginChoice(), overwrite);
 			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE,
 					e.getValue().isForceLinkChoice(), overwrite);
 		}
@@ -1414,6 +1420,8 @@ public class MongoStorage implements AuthStorage {
 			final ProviderConfig pc = new ProviderConfig(
 					d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
 							.getBoolean(Fields.CONFIG_VALUE),
+					d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LOGIN_CHOICE)
+							.getBoolean(Fields.CONFIG_VALUE),
 					d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
 							.getBoolean(Fields.CONFIG_VALUE));
 			provs.put(d.getKey(), pc);
@@ -1425,6 +1433,10 @@ public class MongoStorage implements AuthStorage {
 	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
+		
+		if (mapper == null) {
+			throw new NullPointerException("mapper");
+		}
 		try {
 			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
 			final Map<String, String> ext = new HashMap<>();

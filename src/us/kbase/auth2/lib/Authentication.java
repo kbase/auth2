@@ -1133,8 +1133,11 @@ public class Authentication {
 		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 				.collect(Collectors.toSet());
 		final LoginState ls = getLoginState(ids);
+		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
 		final LoginToken lr;
-		if (ls.getUsers().size() == 1 && ls.getIdentities().isEmpty()) {
+		if (ls.getUsers().size() == 1 &&
+				ls.getIdentities().isEmpty() &&
+				!pc.isForceLoginChoice()) {
 			final UserName user = ls.getUsers().iterator().next();
 			final AuthUser lastUser = ls.getUser(user);
 			/* Don't throw an error here since an auth UI may not be controlling the call -

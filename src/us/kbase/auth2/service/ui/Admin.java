@@ -605,12 +605,13 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@FormParam("provname") final String provname,
 			@FormParam("enabled") final String enabled,
+			@FormParam("forceloginchoice") final String forceLogin,
 			@FormParam("forcelinkchoice") final String forcelink)
 			throws MissingParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, NoSuchIdentityProviderException {
 		final ProviderConfig pc = new ProviderConfig(
-				!nullOrEmpty(enabled), !nullOrEmpty(forcelink));
+				!nullOrEmpty(enabled), !nullOrEmpty(forceLogin), !nullOrEmpty(forcelink));
 		if (provname == null || provname.isEmpty()) {
 			throw new MissingParameterException("provname");
 		}

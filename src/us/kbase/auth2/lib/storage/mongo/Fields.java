@@ -159,6 +159,8 @@ public class Fields {
 	public static final String CONFIG_PROVIDER = "prov";
 	/** Whether a provider is enabled. */
 	public static final String CONFIG_PROVIDER_ENABLED = "enabled";
+	/** Whether a user should always have to choose to login, even if there's only one choice. */
+	public static final String CONFIG_PROVIDER_FORCE_LOGIN_CHOICE = "loginchoice";
 	/** Whether a user should always have to choose to link a remote identity to their account,
 	 * even if there's only one choice.
 	 */

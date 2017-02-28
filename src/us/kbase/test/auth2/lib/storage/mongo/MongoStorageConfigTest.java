@@ -16,6 +16,7 @@ import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.TestExternalConfig;
 import us.kbase.test.auth2.lib.TestExternalConfig.TestExternalConfigMapper;
 
@@ -34,8 +35,8 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true),
-								"prov2", new ProviderConfig(true, false)),
+								"prov1", new ProviderConfig(false, true, false),
+								"prov2", new ProviderConfig(true, false, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
@@ -44,8 +45,8 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
-						"prov1", new ProviderConfig(false, true),
-						"prov2", new ProviderConfig(true, false)),
+						"prov1", new ProviderConfig(false, true, false),
+						"prov2", new ProviderConfig(true, false, true)),
 				ImmutableMap.of(
 						TokenLifetimeType.DEV, 200000L,
 						TokenLifetimeType.LOGIN, 300000L));
@@ -60,8 +61,8 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true),
-								"prov2", new ProviderConfig(true, false)),
+								"prov1", new ProviderConfig(false, true, false),
+								"prov2", new ProviderConfig(true, false, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
@@ -71,9 +72,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(false,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true),
-								"prov2", new ProviderConfig(true, true),
-								"prov3", new ProviderConfig(true, true)),
+								"prov1", new ProviderConfig(true, true, true),
+								"prov2", new ProviderConfig(true, true, true),
+								"prov3", new ProviderConfig(true, true, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.LOGIN, 600000L,
@@ -83,9 +84,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
-						"prov1", new ProviderConfig(false, true),
-						"prov2", new ProviderConfig(true, false),
-						"prov3", new ProviderConfig(true, true)),
+						"prov1", new ProviderConfig(false, true, false),
+						"prov2", new ProviderConfig(true, false, true),
+						"prov3", new ProviderConfig(true, true, true)),
 				ImmutableMap.of(
 						TokenLifetimeType.DEV, 200000L,
 						TokenLifetimeType.LOGIN, 300000L,
@@ -101,8 +102,8 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true),
-								"prov2", new ProviderConfig(true, false)),
+								"prov1", new ProviderConfig(false, true, false),
+								"prov2", new ProviderConfig(true, false, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
@@ -112,9 +113,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(false,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true),
-								"prov2", new ProviderConfig(true, true),
-								"prov3", new ProviderConfig(true, true)),
+								"prov1", new ProviderConfig(true, true, true),
+								"prov2", new ProviderConfig(true, true, true),
+								"prov3", new ProviderConfig(true, true, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.LOGIN, 600000L,
@@ -124,9 +125,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		
 		final AuthConfig expected = new AuthConfig(false,
 				ImmutableMap.of(
-						"prov1", new ProviderConfig(true, true),
-						"prov2", new ProviderConfig(true, true),
-						"prov3", new ProviderConfig(true, true)),
+						"prov1", new ProviderConfig(true, true, true),
+						"prov2", new ProviderConfig(true, true, true),
+						"prov3", new ProviderConfig(true, true, true)),
 				ImmutableMap.of(
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 600000L,
@@ -144,8 +145,8 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true),
-								"prov2", new ProviderConfig(true, false)),
+								"prov1", new ProviderConfig(false, true, false),
+								"prov2", new ProviderConfig(true, false, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
@@ -155,9 +156,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(null,
 						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true),
-								"prov2", new ProviderConfig(null, null),
-								"prov3", new ProviderConfig(true, true)),
+								"prov1", new ProviderConfig(true, true, true),
+								"prov2", new ProviderConfig(null, null, null),
+								"prov3", new ProviderConfig(true, true, true)),
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.SERV, 800000L)),
@@ -166,9 +167,9 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
-						"prov1", new ProviderConfig(true, true),
-						"prov2", new ProviderConfig(true, false),
-						"prov3", new ProviderConfig(true, true)),
+						"prov1", new ProviderConfig(true, true, true),
+						"prov2", new ProviderConfig(true, false, true),
+						"prov3", new ProviderConfig(true, true, true)),
 				ImmutableMap.of(
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 300000L,
@@ -195,6 +196,26 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 			fail("expected exception");
 		} catch (ExternalConfigMappingException e) {
 			assertThat("correct exception message", e.getMessage(), is("borkborkbork"));
+		}
+	}
+	
+	@Test
+	public void getConfigFail() throws Exception {
+		try {
+			storage.getConfig(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("mapper"));
+		}
+	}
+	
+	@Test
+	public void updateConfigFail() throws Exception {
+		try {
+			storage.updateConfig(null, true);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("cfgSet"));
 		}
 	}
 }

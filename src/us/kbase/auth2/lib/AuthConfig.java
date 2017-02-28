@@ -20,7 +20,7 @@ public class AuthConfig {
 	
 	/** Default configuration for a identity provider. */
 	public static final ProviderConfig DEFAULT_PROVIDER_CONFIG =
-			new ProviderConfig(false, false);
+			new ProviderConfig(false, false, false);
 	
 	/** Default for whether non-admin logins are allowed. */
 	public static final boolean DEFAULT_LOGIN_ALLOWED = false;
@@ -60,22 +60,31 @@ public class AuthConfig {
 	public static class ProviderConfig {
 		
 		private final Boolean enabled;
+		private final Boolean forceLoginChoice;
 		private final Boolean forceLinkChoice;
 		
 		/** Create a provider config.
 		 * @param enabled whether the provider is enabled. True if so, false if not, null if no
 		 * change should be applied.
-		 * @param forceLinkChoice if false, an account link will proceed immediately if the
-		 * provider only returns a single account. If true, the authentication will return a list
-		 * of choices for linking populated with all the accounts returned from the provider,
+		 * @param forceLoginChoice if false, an account link will proceed immediately if the
+		 * provider only returns a single remote identity and that identity is already linked
+		 * to a user account. If true, the Authentication class will return a list of choices for
+		 * login or account creation populated with all the accounts returned from the provider,
 		 * regardless of the number of accounts. Null indicates no change should be applied.
+		 * @param forceLinkChoice if false, an account link will proceed immediately if the
+		 * provider only returns a single remote identity. If true, the Authentication class will
+		 * return a list of choices for linking populated with all the accounts returned from the
+		 * provider, regardless of the number of accounts. Null indicates no change should be
+		 * applied.
 		 */
 		public ProviderConfig(
 				final Boolean enabled,
+				final Boolean forceLoginChoice,
 				final Boolean forceLinkChoice) {
 			super();
 			this.enabled = enabled;
 			this.forceLinkChoice = forceLinkChoice;
+			this.forceLoginChoice = forceLoginChoice;
 		}
 
 		/** Returns whether this provider is enabled.
@@ -83,6 +92,15 @@ public class AuthConfig {
 		 */
 		public Boolean isEnabled() {
 			return enabled;
+		}
+		
+		/** Returns whether the authorization instance will always return a list of account choices
+		 * when logging in, regardless of the size of the list.
+		 * @return true if a list is always returned, false if the login proceeds immediately if
+		 * only one account is available for login, null for no change.
+		 */
+		public Boolean isForceLoginChoice() {
+			return forceLoginChoice;
 		}
 
 		/** Returns whether the authorization instance will always return a list of account choices
@@ -100,6 +118,7 @@ public class AuthConfig {
 			int result = 1;
 			result = prime * result + ((enabled == null) ? 0 : enabled.hashCode());
 			result = prime * result + ((forceLinkChoice == null) ? 0 : forceLinkChoice.hashCode());
+			result = prime * result + ((forceLoginChoice == null) ? 0 : forceLoginChoice.hashCode());
 			return result;
 		}
 
@@ -129,6 +148,13 @@ public class AuthConfig {
 			} else if (!forceLinkChoice.equals(other.forceLinkChoice)) {
 				return false;
 			}
+			if (forceLoginChoice == null) {
+				if (other.forceLoginChoice != null) {
+					return false;
+				}
+			} else if (!forceLoginChoice.equals(other.forceLoginChoice)) {
+				return false;
+			}
 			return true;
 		}
 
@@ -137,6 +163,8 @@ public class AuthConfig {
 			StringBuilder builder = new StringBuilder();
 			builder.append("ProviderConfig [enabled=");
 			builder.append(enabled);
+			builder.append(", forceLoginChoice=");
+			builder.append(forceLoginChoice);
 			builder.append(", forceLinkChoice=");
 			builder.append(forceLinkChoice);
 			builder.append("]");
