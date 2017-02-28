@@ -156,7 +156,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
-		//TODO CODE consult with Erik if should redirect or just pass back redirect url. If not, make common loginStart method.
+		//TODO CODE make common loginStart method.
 		login.exceptOnAdditionalProperties();
 		getRedirectURL(login.redirect); // check redirect url is ok
 		final String state = auth.getBareToken();

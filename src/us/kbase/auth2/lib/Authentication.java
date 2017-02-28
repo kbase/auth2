@@ -91,12 +91,14 @@ public class Authentication {
 	//TODO TEST test logging on calls
 	//TODO ZZLATER validate email address by sending an email
 	//TODO AUTH server root should return server version (and urls for endpoints?)
-	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token
+	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
 	//TODO SCOPES configure scopes via ui
 	//TODO SCOPES configure scope on login via ui
 	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
 	//TODO USER_PROFILE_SERVICE email & username change propagation
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
+	//TODO SECURITY keep track of logins over last X seconds, lock account for Y seconds after Z failures
+	//TODO USER_INPUT check for obscene/offensive content and reject
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
