@@ -29,10 +29,14 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -42,6 +46,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
@@ -100,6 +105,21 @@ public class Tokens {
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 	}
 	
+	private static class CreateTokenParams extends IncomingJSON {
+
+		public final String name;
+		public final String type;
+		
+		@JsonCreator
+		private CreateTokenParams(
+				@JsonProperty("name") final String name,
+				@JsonProperty("type") final String type)
+				throws MissingParameterException {
+			this.name = name;
+			this.type = type;
+		}
+	}
+	
 	@POST
 	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -110,10 +130,11 @@ public class Tokens {
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, NoTokenProvidedException,
-			UnauthorizedException {
+			UnauthorizedException, IllegalParameterException {
+		input.exceptOnAdditionalProperties();
 		final IncomingToken cookieToken = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);
-		return createtoken(input.getName(), input.getType(),
+		return createtoken(input.name, input.type,
 				cookieToken == null ? getToken(headerToken) : cookieToken);
 	}
 	

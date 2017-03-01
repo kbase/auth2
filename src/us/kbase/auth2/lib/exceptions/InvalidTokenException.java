@@ -10,4 +10,8 @@ public class InvalidTokenException extends AuthenticationException {
 	public InvalidTokenException() {
 		super(ErrorType.INVALID_TOKEN, null);
 	}
+	
+	public InvalidTokenException(final String message) {
+		super(ErrorType.INVALID_TOKEN, message);
+	}
 }

@@ -1,4 +1,4 @@
-package us.kbase.auth2.service.ui;
+package us.kbase.auth2.service.common;
 
 import java.util.Map;
 import java.util.TreeMap;
