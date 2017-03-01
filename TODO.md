@@ -33,6 +33,9 @@ Auth service work
 * 200 TODOs in the codebase on average
 * Read through all prototype code and convert to production worthy
 * A code review by Steve Chan wouldn't be a bad idea
+* Code analysis:
+  * https://www.codacy.com/
+  * https://find-sec-bugs.github.io/
 * Tests
   * With mock services for globus and google
 * Documentation

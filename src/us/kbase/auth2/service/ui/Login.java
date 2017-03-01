@@ -47,7 +47,6 @@ import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -66,6 +65,8 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.IdentityProviderInput;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LOGIN_ROOT)
 public class Login {
@@ -163,9 +164,12 @@ public class Login {
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_START)
-	public Response loginStartJSON(final LoginStart login)
+	public Response loginStart(final LoginStart login)
 			throws IllegalParameterException, AuthStorageException,
-			NoSuchIdentityProviderException {
+			NoSuchIdentityProviderException, MissingParameterException {
+		if (login == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		
 		login.exceptOnAdditionalProperties();
 		return loginStart(login.provider, login.redirect, !login.isStayLoggedIn());
@@ -230,18 +234,12 @@ public class Login {
 			throws MissingParameterException, AuthStorageException,
 			IllegalParameterException, AuthenticationException {
 		//TODO INPUT handle error in params (provider, state)
-		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
-		if (state == null || state.trim().isEmpty()) {
-			throw new MissingParameterException("Couldn't retrieve state value from cookie");
-		}
-		if (!state.equals(retstate)) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"State values do not match, this may be a CXRF attack");
-		}
+		IdentityProviderInput.checkState(state, retstate);
+		provider = upperCase(provider);
 		final LoginToken lr = auth.login(provider, authcode);
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
@@ -258,47 +256,30 @@ public class Login {
 		return r;
 	}
 	
-	private static class LoginInput extends IncomingJSON {
-		
-		public final String authCode;
-		public final String state;
-	
-		@JsonCreator
-		public LoginInput(
-				@JsonProperty("authcode") final String authCode,
-				@JsonProperty("state") final String state) {
-			this.authCode = authCode;
-			this.state = state;
-		}
-	}
-	
 	//TODO CODE recheck how state var is supposed to work.
 	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
-	public Response loginJSON(
+	public Response login(
 			@PathParam("provider") String provider,
 			@Context final UriInfo uriInfo,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			final LoginInput input)
+			final IdentityProviderInput input)
 			throws AuthenticationException, MissingParameterException, AuthStorageException,
 			IllegalParameterException {
-		
+		if (input == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		//TODO INPUT handle error in provider
+		input.exceptOnAdditionalProperties();
+		input.checkState(state);
 		provider = upperCase(provider);
 		
-		input.exceptOnAdditionalProperties();
-		if (state == null || state.trim().isEmpty()) {
-			throw new MissingParameterException("Couldn't retrieve state value from cookie");
-		}
-		if (!state.equals(input.state)) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"State values do not match, this may be a CXRF attack");
-		}
-		final LoginToken lr = auth.login(provider, input.authCode);
+		final LoginToken lr = auth.login(provider, input.getAuthCode());
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
 			choice.put("token", new UINewToken(lr.getToken()));
@@ -528,13 +509,17 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_PICK)
-	public Response pickAccountJSON(
+	public Response pickAccount(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, IllegalParameterException, MissingParameterException,
 			LinkFailedException {
+		if (pick == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		
 		pick.exceptOnAdditionalProperties();
 		final NewToken newtoken = auth.login(
 				getLoginInProcessToken(token), pick.getID(), pick.isLinkAll());
@@ -596,7 +581,7 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_CREATE)
-	public Response createUserJSON(
+	public Response createUser(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final CreateChoice create)
@@ -604,6 +589,9 @@ public class Login {
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException, IdentityLinkedException, LinkFailedException {
+		if (create == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		
 		create.exceptOnAdditionalProperties();
 		

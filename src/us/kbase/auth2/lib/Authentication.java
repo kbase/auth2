@@ -99,6 +99,8 @@ public class Authentication {
 	//TODO DEPLOY jetty should start app immediately & fail if app fails
 	//TODO SECURITY keep track of logins over last X seconds, lock account for Y seconds after Z failures
 	//TODO USER_INPUT check for obscene/offensive content and reject
+	//TODO CODE code analysis https://www.codacy.com/
+	//TODO CODE code analysis https://find-sec-bugs.github.io/
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
@@ -1229,7 +1231,7 @@ public class Authentication {
 		try {
 			return storage.getTemporaryIdentities(token.getHashedToken());
 		} catch (NoSuchTokenException e) {
-			throw new InvalidTokenException();
+			throw new InvalidTokenException("Temporary token");
 		}
 	}
 
