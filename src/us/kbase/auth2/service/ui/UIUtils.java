@@ -115,6 +115,7 @@ public class UIUtils {
 		return getTokenFromCookie(headers, tokenCookieName, true);
 	}
 	
+	//TODO CODE use optional
 	public static IncomingToken getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName,
