@@ -1,0 +1,39 @@
+# need to switch to travis trusty (ubuntu 14) images to use openjdk8
+dist: trusty
+sudo: false
+
+language: java
+
+jdk:
+    - openjdk8
+    - oraclejdk8
+
+env:
+  global:
+    - MONGODB_VERSION=2.6.12
+
+before_install:
+    # get and install mongodb, set MONGOD to the mongod executable
+    - wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-$MONGODB_VERSION.tgz
+    - tar xfz mongodb-linux-x86_64-$MONGODB_VERSION.tgz
+    - export MONGOD=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
+    - echo $MONGOD
+
+install:
+    - cd ..
+    - git clone https://github.com/kbase/jars
+    - cd -
+
+script:
+    - cp -n test.cfg.example test.cfg
+    # Note: using # as delimiter instead of / since / is in the mongod path
+    # If there are # in the mongod path, this will fail.
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
+    - mkdir temp_test_dir
+    - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+    - cat test.cfg
+    - ant test
+
+#after_success:
+#  - mv test/.coverage .
+#  - coveralls

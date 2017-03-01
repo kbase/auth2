@@ -3,6 +3,10 @@ KBase authentication server
 
 This repo contains the second iteration of the KBase authentication server.
 
+Build status (master):
+[![Build Status](https://travis-ci.org/kbase/auth2.svg?branch=master)](https://travis-ci.org/kbase/auth2)
+
+
 Current endpoints
 -----------------
 
