@@ -77,6 +77,8 @@ public class Login {
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";
+	
+	private static final String REDIRECT_URL = "redirecturl";
 
 	private static final String TRUE = "true";
 	private static final String FALSE = "false";
@@ -298,7 +300,7 @@ public class Login {
 					"State values do not match, this may be a CXRF attack");
 		}
 		final LoginToken lr = auth.login(provider, input.authCode);
-		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState());
+		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
 			choice.put("token", new UINewToken(lr.getToken()));
 			choice.put("logged_in", true);
@@ -347,7 +349,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException {
 		
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("redirect_url", getRedirectURL(redirect));
+		ret.put(REDIRECT_URL, getRedirectURL(redirect));
 		ret.put("token", new UINewToken(newtoken));
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
@@ -392,9 +394,11 @@ public class Login {
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> loginChoiceHTML(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
-		return loginChoice(token, uriInfo);
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+			IllegalParameterException {
+		return loginChoice(token, uriInfo, redirect);
 	}
 
 	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
@@ -403,26 +407,34 @@ public class Login {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> loginChoiceJSON(
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
-		return loginChoice(token, uriInfo);
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+			IllegalParameterException {
+		return loginChoice(token, uriInfo, redirect);
 	}
 	
-	private Map<String, Object> loginChoice(final String token, final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException {
+	private Map<String, Object> loginChoice(
+			final String token,
+			final UriInfo uriInfo,
+			final String redirect)
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+			IllegalParameterException {
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
-		return buildLoginChoice(uriInfo, loginState);
+		return buildLoginChoice(uriInfo, loginState, redirect);
 	}
 
 	private Map<String, Object> buildLoginChoice(
 			final UriInfo uriInfo,
-			final LoginState loginState)
-			throws AuthStorageException {
+			final LoginState loginState,
+			final String redirect)
+			throws AuthStorageException, IllegalParameterException {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put("provider", loginState.getProvider());
+		ret.put(REDIRECT_URL, getRedirectURL(redirect));
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		
 		final List<Map<String, String>> create = new LinkedList<>();

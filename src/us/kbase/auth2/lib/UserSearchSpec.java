@@ -42,7 +42,7 @@ public class UserSearchSpec {
 	
 	/** Returns true if a search prefix is set and that prefix should be treated as a regular
 	 * expression rather than just a prefix, false otherwise.
-	 * @return
+	 * @return true if the search prefix is a regex
 	 */
 	public boolean isRegex() {
 		return isRegex;

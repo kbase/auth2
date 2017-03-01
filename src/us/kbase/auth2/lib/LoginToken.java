@@ -23,7 +23,7 @@ public class LoginToken {
 	/** Create a LoginToken with a temporary token, indicating that the login process is
 	 * incomplete.
 	 * @param token the temporary token.
-	 * @param the current login state.
+	 * @param loginState the current login state.
 	 */
 	public LoginToken(final TemporaryToken token, final LoginState loginState) {
 		if (token == null) {
@@ -38,8 +38,8 @@ public class LoginToken {
 	}
 	
 	/** Create a LoginToken with a new token, indicating the login process is complete.
-	 * @param token
-	 * @param the current login state.
+	 * @param token the new token
+	 * @param loginState the current login state.
 	 */
 	public LoginToken(final NewToken token, final LoginState loginState) {
 		if (token == null) {
@@ -80,7 +80,7 @@ public class LoginToken {
 	
 	/** Gets the state of the login process. If the login is complete, the login state will
 	 * contain one user and no unlinked identities.
-	 * @return
+	 * @return the login state.
 	 */
 	public LoginState getLoginState() {
 		return ls;
