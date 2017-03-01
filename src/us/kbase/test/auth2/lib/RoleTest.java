@@ -51,6 +51,18 @@ public class RoleTest {
 		assertThat("incorrect role", Role.getRole("DevToken"), is(Role.DEV_TOKEN));
 	}
 	
+	@Test
+	public void isRole() throws Exception {
+		assertThat("incorrect isRole()", Role.isRole(null), is(false));
+		assertThat("incorrect isRole()", Role.isRole(""), is(false));
+		assertThat("incorrect isRole()", Role.isRole("foo"), is(false));
+		assertThat("incorrect role", Role.isRole("Root"), is(true));
+		assertThat("incorrect role", Role.isRole("CreateAdmin"), is(true));
+		assertThat("incorrect role", Role.isRole("Admin"), is(true));
+		assertThat("incorrect role", Role.isRole("ServToken"), is(true));
+		assertThat("incorrect role", Role.isRole("DevToken"), is(true));
+	}
+	
 	private Set<Role> set(Role...roles) {
 		return Arrays.stream(roles).collect(Collectors.toSet());
 	}

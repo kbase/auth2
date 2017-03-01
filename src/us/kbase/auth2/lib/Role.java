@@ -54,6 +54,14 @@ public enum Role {
 	public String getDescription() {
 		return description;
 	}
+
+	/** Check if a role ID is a valid role ID.
+	 * @param id the role ID.
+	 * @return true if the role ID corresponds to a role, false otherwise.
+	 */
+	public static boolean isRole(final String id) {
+		return ROLE_MAP.containsKey(id);
+	}
 	
 	/** Get a role from the role ID.
 	 * @param id the role ID.

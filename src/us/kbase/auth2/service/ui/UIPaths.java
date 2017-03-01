@@ -4,6 +4,8 @@ public class UIPaths {
 
 	//TODO JAVADOC
 	
+	//TODO UI if using ROOT strings and relativizing leaves a trailing slash, otherwise does not. Do the same thing.
+	
 	/* general strings */
 	
 	public static final String SEP = "/";
@@ -16,6 +18,7 @@ public class UIPaths {
 	private static final String REVOKE = "revoke";
 	private static final String REVOKE_ALL = "revokeall";
 	private static final String TOKEN_ID = "{tokenid}";
+	private static final String ID = "{id}";
 	private static final String LOGIN = "login";
 	private static final String LOCAL = "localaccount";
 	private static final String RESET = "reset";
@@ -137,7 +140,11 @@ public class UIPaths {
 	
 	public static final String ME_ROOT = "/me/";
 	
-	public static final String ME_PARAM_ID = "{id}";
+	public static final String ME_UNLINK = "unlink";
+	public static final String ME_UNLINK_ID = ME_UNLINK + SEP + ID;
+	
+	public static final String ME_ROOT_UNLINK = ME_ROOT + ME_UNLINK;
+	
 	public static final String ME_ROLES = ROLES;
 	public static final String ME_ROOT_ROLES = ME_ROOT + ME_ROLES;
 	
