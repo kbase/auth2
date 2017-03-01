@@ -19,12 +19,12 @@ before_install:
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_24.tgz
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_26.tgz
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
-    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_24.tgz
-    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_26.tgz
-    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_34.tgz
-    - export MONGOD24=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
-    - export MONGOD26=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
-    - export MONGOD34=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
+    - tar xfz $MONGODB_VER_24.tgz
+    - tar xfz $MONGODB_VER_26.tgz
+    - tar xfz $MONGODB_VER_34.tgz
+    - export MONGOD24=`pwd`/$MONGODB_VERSION/bin/mongod
+    - export MONGOD26=`pwd`/$MONGODB_VERSION/bin/mongod
+    - export MONGOD34=`pwd`/$MONGODB_VERSION/bin/mongod
 
 install:
     - cd ..
