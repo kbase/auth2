@@ -10,14 +10,23 @@ jdk:
 
 env:
   global:
-    - MONGODB_VERSION=2.6.12
+    - MONGODB_VER_24=mongodb-linux-x86_64-2.4.14
+    - MONGODB_VER_26=mongodb-linux-x86_64-2.6.12
+    - MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
+
+    https://fastdl.mongodb.org/linux/mongodb-linux-x86_64-ubuntu1404-3.4.2.tgz
 
 before_install:
-    # get and install mongodb, set MONGOD to the mongod executable
-    - wget http://fastdl.mongodb.org/linux/mongodb-linux-x86_64-$MONGODB_VERSION.tgz
-    - tar xfz mongodb-linux-x86_64-$MONGODB_VERSION.tgz
-    - export MONGOD=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
-    - echo $MONGOD
+    # get and install various mongodb versions
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_24.tgz
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_26.tgz
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
+    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_24.tgz
+    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_26.tgz
+    - tar xfz mongodb-linux-x86_64-$MONGODB_VER_34.tgz
+    - export MONGOD24=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
+    - export MONGOD26=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
+    - export MONGOD34=`pwd`/mongodb-linux-x86_64-$MONGODB_VERSION/bin/mongod
 
 install:
     - cd ..
@@ -26,14 +35,23 @@ install:
 
 script:
     - cp -n test.cfg.example test.cfg
+    - mkdir temp_test_dir
     # Note: using # as delimiter instead of / since / is in the mongod path
     # If there are # in the mongod path, this will fail.
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
-    - mkdir temp_test_dir
     - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+    
+    # Test against MONGO 2.4
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD24#" test.cfg
     - cat test.cfg
     - ant test
 
-#after_success:
-#  - mv test/.coverage .
-#  - coveralls
+    # Test against MONGO 2.6
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD26#" test.cfg
+    - cat test.cfg
+    - ant test
+
+    # Test against MONGO 3.4
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD34#" test.cfg
+    - cat test.cfg
+    - ant test
+
