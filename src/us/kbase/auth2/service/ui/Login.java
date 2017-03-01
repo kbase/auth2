@@ -117,12 +117,21 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
+		return loginStart(provider, redirect, stayLoggedIn == null);
+	}
+
+	private Response loginStart(
+			final String provider,
+			final String redirect,
+			final boolean session)
+			throws AuthStorageException, IllegalParameterException,
+			NoSuchIdentityProviderException {
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 
 		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
+				.cookie(getSessionChoiceCookie(session));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect));
 		}
@@ -158,18 +167,8 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
-		//TODO CODE make common loginStart method.
 		login.exceptOnAdditionalProperties();
-		getRedirectURL(login.redirect); // check redirect url is ok
-		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(login.provider, state, false));
-
-		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(!login.isStayLoggedIn()));
-		if (login.redirect != null && !login.redirect.trim().isEmpty()) {
-			r.cookie(getRedirectCookie(login.redirect));
-		}
-		return r.build();
+		return loginStart(login.provider, login.redirect, !login.isStayLoggedIn());
 	}
 
 	private URL getRedirectURL(final String redirect)
