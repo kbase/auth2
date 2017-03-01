@@ -1180,8 +1180,8 @@ public class Authentication {
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after {@link #login(String, String)}.
 	 * After user interaction is completed, a new user can be created via
-	 * {@link #createUser(IncomingToken, UUID, UserName, DisplayName, EmailAddress)} or the login
-	 * can complete via {@link #login(IncomingToken, UUID)}.
+	 * {@link #createUser(IncomingToken, UUID, UserName, DisplayName, EmailAddress, boolean)} or
+	 * the login can complete via {@link #login(IncomingToken, UUID, boolean)}.
 	 * @param token the temporary token.
 	 * @return the state of the login process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -1582,7 +1582,7 @@ public class Authentication {
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
 	 * 
 	 * @param token the user's token.
-	 * @param linktoken a temporary token associated with the link process state.
+	 * @param linkToken a temporary token associated with the link process state.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws LinkFailedException if the identity is already linked, the id is not included in
 	 * the link state associated with the temporary token, or the user is a local user.
