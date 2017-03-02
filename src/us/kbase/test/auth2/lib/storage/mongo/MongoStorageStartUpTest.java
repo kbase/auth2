@@ -14,6 +14,7 @@ import java.util.function.Consumer;
 import org.bson.Document;
 import org.junit.Test;
 
+import com.github.zafarkhaja.semver.Version;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -67,12 +68,17 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				// need to create a new document to create a new mongo _id
 				new Document(m)));
 		
-		failMongoStart(db, new StorageInitException(
-				"Failed to create index: Write failed with error code 11000 and error message " +
-				"'E11000 duplicate key error index: startUpWith2ConfigDocs.config.$schema_1  " +
-				"dup key: { : \"schema\" }'"));
+		String error =
+				"Failed to create index: Write failed with error code 11000 and error " +
+				"message 'E11000 duplicate key error collection: " +
+				"startUpWith2ConfigDocs.config index: schema_1 dup key: { : \"schema\" }'";
+		if (mongoDBVer.lessThan(Version.forIntegers(3))) {
+			error = "Failed to create index: Write failed with error code 11000 and error " +
+					"message 'E11000 duplicate key error index: " +
+					"startUpWith2ConfigDocs.config.$schema_1  dup key: { : \"schema\" }'";
+		}
 		
-		
+		failMongoStart(db, new StorageInitException(error));
 	}
 	
 	@Test
@@ -123,19 +129,22 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	@Test
 	public void checkCollectionNames() throws Exception {
 		final Set<String> names = new HashSet<>();
-		// this is annoying. MongoIterator has two forEach methods with different signatures
-		// and so which one to call is ambiguous for lambda expressions.
-		db.listCollectionNames().forEach((Consumer<String>) names::add);
-		assertThat("incorrect collection names", names, is(set(
+		final Set<String> expected = set(
 				"config",
 				"config_app",
 				"config_ext",
 				"config_prov",
 				"cust_roles",
-				"system.indexes",
 				"temptokens",
 				"tokens",
-				"users")));
+				"users");
+		if (mongoDBVer.lessThan(Version.forIntegers(3))) {
+			expected.add("system.indexes");
+		}
+		// this is annoying. MongoIterator has two forEach methods with different signatures
+		// and so which one to call is ambiguous for lambda expressions.
+		db.listCollectionNames().forEach((Consumer<String>) names::add);
+		assertThat("incorrect collection names", names, is(expected));
 	}
 	
 	@Test

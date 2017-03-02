@@ -1,9 +1,11 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
+import org.bson.Document;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 
+import com.github.zafarkhaja.semver.Version;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
@@ -17,6 +19,7 @@ public class MongoStorageTester {
 	static MongoClient mc;
 	static MongoDatabase db;
 	static MongoStorage storage;
+	static Version mongoDBVer;
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
@@ -24,9 +27,15 @@ public class MongoStorageTester {
 		mongo = new MongoController(TestCommon.getMongoExe().toString(),
 				TestCommon.getTempDir(),
 				TestCommon.useWiredTigerEngine());
+		System.out.println(String.format("Testing against mongo excutable %s on port %s",
+				TestCommon.getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());
 		db = mc.getDatabase("test_mongostorage");
 		storage = new MongoStorage(db);
+		
+		final Document bi = db.runCommand(new Document("buildinfo", 1));
+		final String version = bi.getString("version");
+		mongoDBVer = Version.valueOf(version);
 	}
 	
 	@AfterClass
