@@ -243,4 +243,14 @@ public class AuthenticationCreateRootTest {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("pwd"));
 		}
 	}
+	
+	@Test
+	public void validPwd() throws Exception {
+		try {
+			initTestAuth().auth.createRoot(new Password("12345".toCharArray()));
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionMessageContains(got, "Password is not strong enough.");
+		}
+	}
 }
