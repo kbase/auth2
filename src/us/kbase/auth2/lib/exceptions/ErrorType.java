@@ -26,6 +26,8 @@ public enum ErrorType {
 	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
 	/** The provided email address was not legal. */
 	ILLEGAL_EMAIL_ADDRESS	(30020, "Illegal email address"),
+	/** The provided email address was not legal. */
+	ILLEGAL_PASSWORD		(30030, "Illegal password"),
 	/** The user could not be created because it already exists. */
 	USER_ALREADY_EXISTS		(40000, "User already exists"),
 	/** The identity is already linked to a different user */

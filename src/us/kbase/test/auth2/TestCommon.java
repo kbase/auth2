@@ -76,13 +76,6 @@ public class TestCommon {
 				got.getMessage(), containsString(expectedMessagePart));
 	}
 	
-	public static void assertExceptionMessageIs(
-			final Exception got,
-			final Class<Exception> expected) {
-		assertThat("incorrect exception type. trace:\n" + ExceptionUtils.getStackTrace(got),
-				got, instanceOf(expected));
-	}
-	
 	/** See https://gist.github.com/vorburger/3429822
 	 * Returns a free port number on localhost.
 	 *

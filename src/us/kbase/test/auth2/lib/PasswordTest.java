@@ -7,11 +7,10 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.test.auth2.TestCommon;
 
 public class PasswordTest {
-	
-	//TODO TEST these will need to change once the strength checker is in place
 	
 	@Test
 	public void constructor() throws Exception {
@@ -43,5 +42,38 @@ public class PasswordTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
-
+	
+	@Test
+	public void passwordTooLong() throws Exception {
+		char [] longpwd = new char [300];
+		for(int k=0; k<longpwd.length; k++) {
+			longpwd[k] = 'p';
+		}
+		Password password = new Password(longpwd);
+		try {
+			password.checkValidity();
+			fail("created a password that was too long");
+		} catch (IllegalPasswordException e) {
+			TestCommon.assertExceptionMessageContains(e, "Password exceeds max length");
+		}
+	}
+	
+	@Test
+	public void passwordStrengthCheck() throws Exception {
+		testPasswordStrenghtFail("");
+		testPasswordStrenghtFail("12345");
+		testPasswordStrenghtFail("password");
+		testPasswordStrenghtFail("open");
+		
+	}
+	
+	private void testPasswordStrenghtFail(String pwd) {
+		Password password = new Password(pwd.toCharArray());
+		try {
+			password.checkValidity();
+			fail("created a password ("+pwd+") that was not strong enough");
+		} catch (IllegalPasswordException e) {
+			TestCommon.assertExceptionMessageContains(e, "Password is not strong enough");
+		}
+	}
 }
