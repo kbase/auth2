@@ -20,6 +20,7 @@ public class MongoStorageTester {
 	static MongoDatabase db;
 	static MongoStorage storage;
 	static Version mongoDBVer;
+	static int indexVer;
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
@@ -36,6 +37,7 @@ public class MongoStorageTester {
 		final Document bi = db.runCommand(new Document("buildinfo", 1));
 		final String version = bi.getString("version");
 		mongoDBVer = Version.valueOf(version);
+		indexVer = mongoDBVer.greaterThanOrEqualTo(Version.forIntegers(3, 4)) ? 2 : 1;
 	}
 	
 	@AfterClass
