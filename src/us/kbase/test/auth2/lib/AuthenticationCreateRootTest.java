@@ -53,7 +53,7 @@ public class AuthenticationCreateRootTest {
 	 */
 	
 	/* The pwd hash is checked by regenerating from the provided salt.
-	 * The created date is checked to be within 200 ms of the current time.
+	 * The created date is checked to be within 500 ms of the current time.
 	 */
 	private class RootUserAnswerMatcher implements Answer<Void> {
 
@@ -86,8 +86,8 @@ public class AuthenticationCreateRootTest {
 			f.set(exp, user.getCreated().getTime());
 			assertThat("local user does not match. Created date was not checked.", user, is(exp));
 			// may want to consider mocking date generation
-			assertThat("creation date not within 200ms",
-					TestCommon.dateWithin(user.getCreated(), 200), is(true));
+			assertThat("creation date not within 500ms",
+					TestCommon.dateWithin(user.getCreated(), 500), is(true));
 			return null;
 		}
 		
