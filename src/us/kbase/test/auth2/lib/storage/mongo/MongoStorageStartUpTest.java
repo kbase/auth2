@@ -10,6 +10,8 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bson.Document;
 import org.junit.Test;
@@ -68,17 +70,18 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				// need to create a new document to create a new mongo _id
 				new Document(m)));
 		
-		String error =
-				"Failed to create index: Write failed with error code 11000 and error " +
-				"message 'E11000 duplicate key error collection: " +
-				"startUpWith2ConfigDocs.config index: schema_1 dup key: { : \"schema\" }'";
-		if (mongoDBVer.lessThan(Version.forIntegers(3))) {
-			error = "Failed to create index: Write failed with error code 11000 and error " +
-					"message 'E11000 duplicate key error index: " +
-					"startUpWith2ConfigDocs.config.$schema_1  dup key: { : \"schema\" }'";
+		final Pattern errorPattern = Pattern.compile(
+				"Failed to create index: Write failed with error code 11000 and error message " +
+				"'(exception: )?E11000 duplicate key error (index|collection): " +
+				"startUpWith2ConfigDocs.config( index: |\\.\\$)schema_1\\s+dup key: " +
+				"\\{ : \"schema\" \\}'");
+		try {
+			new MongoStorage(db);
+			fail("started mongo with bad config");
+		} catch (StorageInitException e) {
+			final Matcher match = errorPattern.matcher(e.getMessage());
+			assertThat("exception did not match: \n" + e.getMessage(), match.matches(), is(true));
 		}
-		
-		failMongoStart(db, new StorageInitException(error));
 	}
 	
 	@Test
@@ -138,7 +141,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				"temptokens",
 				"tokens",
 				"users");
-		if (mongoDBVer.lessThan(Version.forIntegers(3))) {
+		if (mongoDBVer.lessThan(Version.forIntegers(3, 2))) {
 			expected.add("system.indexes");
 		}
 		// this is annoying. MongoIterator has two forEach methods with different signatures
