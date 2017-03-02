@@ -12,16 +12,27 @@ env:
   global:
     - MONGODB_VER_26=mongodb-linux-x86_64-2.6.12
     - MONGODB_VER_30=mongodb-linux-x86_64-3.0.14
-    #- MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
+    - MONGODB_VER_32=mongodb-linux-x86_64-3.2.12
+    - MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
 
 before_install:
     # get and install various mongodb versions
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_26.tgz
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
     - tar xfz $MONGODB_VER_26.tgz
-    - tar xfz $MONGODB_VER_30.tgz
     - export MONGOD26=`pwd`/$MONGODB_VER_26/bin/mongod
-    - export MONGOD34=`pwd`/$MONGODB_VER_30/bin/mongod
+
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
+    - tar xfz $MONGODB_VER_30.tgz
+    - export MONGOD30=`pwd`/$MONGODB_VER_30/bin/mongod
+
+    #- wget http://fastdl.mongodb.org/linux/$MONGODB_VER_32.tgz
+    #- tar xfz $MONGODB_VER_32.tgz
+    #- export MONGOD32=`pwd`/$MONGODB_VER_32/bin/mongod
+
+    #- wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
+    #- tar xfz $MONGODB_VER_34.tgz
+    #- export MONGOD34=`pwd`/$MONGODB_VER_34/bin/mongod
+
 
 install:
     - cd ..
@@ -30,6 +41,7 @@ install:
 
 script:
     - cp -n test.cfg.example test.cfg
+    
     - mkdir temp_test_dir
     # Note: using # as delimiter instead of / since / is in the mongod path
     # If there are # in the mongod path, this will fail.
