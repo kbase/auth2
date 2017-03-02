@@ -41,6 +41,7 @@ import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProviderSet;
@@ -108,7 +109,7 @@ public class AuthCLI {
 			final Password p = new Password(pwd);
 			try {
 				auth.createRoot(p);
-			} catch (AuthStorageException e) {
+			} catch (AuthStorageException | IllegalPasswordException e) {
 				p.clear(); //hardly necessary
 				error(e, a);
 			}

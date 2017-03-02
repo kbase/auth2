@@ -29,6 +29,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -245,10 +246,11 @@ public class Authentication {
 	 * @param pwd the new password for the root account.
 	 * @throws AuthStorageException if updating the root account fails.
 	 */
-	public void createRoot(final Password pwd) throws AuthStorageException {
+	public void createRoot(final Password pwd) throws AuthStorageException, IllegalPasswordException {
 		if (pwd == null) {
 			throw new NullPointerException("pwd");
 		}
+		pwd.checkValidity();
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		pwd.clear();
@@ -383,11 +385,14 @@ public class Authentication {
 			final UserName userName,
 			final Password pwdold,
 			final Password pwdnew)
-			throws AuthenticationException, UnauthorizedException, AuthStorageException {
+			throws AuthenticationException, UnauthorizedException, AuthStorageException, IllegalPasswordException {
 		if (pwdnew == null) {
 			throw new NullPointerException("pwdnew");
 		}
-		//TODO PWD do any cross pwd checks like checking they're not the same
+		if(pwdnew.equals(pwdold)) {
+			throw new IllegalPasswordException("Old and new passwords are identical.");
+		}
+		pwdnew.checkValidity();
 		getLocalUser(userName, pwdold); //checks pwd validity and nulls
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);

@@ -2,9 +2,12 @@ package us.kbase.auth2.lib;
 
 import com.nulabinc.zxcvbn.Zxcvbn;
 
-import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
+import org.bouncycastle.util.Arrays;
 
 import com.nulabinc.zxcvbn.Strength;
+
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
+
 
 /** A password.
  * 
@@ -76,5 +79,20 @@ public class Password {
 			String warning = strength.getFeedback().getWarning();
 			throw new IllegalPasswordException("Password is not strong enough. " + warning);
 		}
+	}
+	
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		final Password other = (Password) obj;
+		return Arrays.areEqual(password, other.getPassword());
 	}
 }
