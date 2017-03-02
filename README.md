@@ -137,7 +137,7 @@ Requirements
 ------------
 Java 8 (OpenJDK OK)  
 Apache Ant (http://ant.apache.org/)  
-MongoDB 2.4+ (https://www.mongodb.com/)  
+MongoDB 2.6+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  
 This repo (git clone https://github.com/kbase/auth2)  
