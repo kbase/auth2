@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.lib.exceptions;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -55,7 +56,7 @@ public class ExceptionTest {
 				new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et2));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et2, "foo2")));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 	}
 
 	private String format(final ErrorType et, final String msg) {
@@ -77,7 +78,7 @@ public class ExceptionTest {
 		final AuthException ae2 = new AuthException(et2, null, new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et2));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et2, null)));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 		
 		final AuthException ae3 = new AuthException(et2, "\t");
 		assertThat("incorrect error code", ae3.getErr(), is(et2));
@@ -137,7 +138,7 @@ public class ExceptionTest {
 				new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et, "foo2")));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 		
 		final ErrorType et3 = ErrorType.NO_SUCH_USER;
 		final IllegalParameterException ae3 = new IllegalParameterException(et3, "");
