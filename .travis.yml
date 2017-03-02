@@ -41,16 +41,16 @@ install:
 
 script:
     - cp -n test.cfg.example test.cfg
-    
+
     - mkdir temp_test_dir
     # Note: using # as delimiter instead of / since / is in the mongod path
     # If there are # in the mongod path, this will fail.
     - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
 
     # Test against MONGO 2.6
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD26#" test.cfg
-    - cat test.cfg
-    - ant test
+    #- sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD26#" test.cfg
+    #- cat test.cfg
+    #- ant test
 
     # Test against MONGO 3.0
     - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD30#" test.cfg
