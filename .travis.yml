@@ -11,16 +11,17 @@ jdk:
 env:
   global:
     - MONGODB_VER_26=mongodb-linux-x86_64-2.6.12
-    - MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
+    - MONGODB_VER_30=mongodb-linux-x86_64-3.0.14
+    #- MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
 
 before_install:
     # get and install various mongodb versions
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_26.tgz
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
     - tar xfz $MONGODB_VER_26.tgz
-    - tar xfz $MONGODB_VER_34.tgz
+    - tar xfz $MONGODB_VER_30.tgz
     - export MONGOD26=`pwd`/$MONGODB_VER_26/bin/mongod
-    - export MONGOD34=`pwd`/$MONGODB_VER_34/bin/mongod
+    - export MONGOD34=`pwd`/$MONGODB_VER_30/bin/mongod
 
 install:
     - cd ..
@@ -39,8 +40,8 @@ script:
     - cat test.cfg
     - ant test
 
-    # Test against MONGO 3.4
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD34#" test.cfg
+    # Test against MONGO 3.0
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD30#" test.cfg
     - cat test.cfg
     - ant test
 
