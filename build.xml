@@ -27,6 +27,7 @@
     <include name="jcommander/jcommander-1.48.jar"/>
     <include name="mongo/mongo-java-driver-3.3.0.jar"/>
     <include name="mustache/compiler-0.9.3.jar"/>
+    <include name="nulab-inc/zxcvbn-1.2.2.jar"/>
   </fileset>
 
   <fileset dir="${jardir}" id="logging">
