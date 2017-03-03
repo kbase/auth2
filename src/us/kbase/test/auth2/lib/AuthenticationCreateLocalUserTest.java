@@ -43,10 +43,8 @@ import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
 
-public class AuthenticationLocalUserTest {
+public class AuthenticationCreateLocalUserTest {
 
-	/* Tests local user creation, login, retrieval, password reset */
-	
 	/* Some of these tests are time sensitive and verify() won't work because the object is
 	 * changed after the mocked method is called. Instead use an Answer:
 	 * 
