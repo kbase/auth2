@@ -6,6 +6,10 @@ package us.kbase.auth2.lib.exceptions;
 @SuppressWarnings("serial")
 public class DisabledUserException extends UnauthorizedException {
 	
+	public DisabledUserException() {
+		super(ErrorType.DISABLED);
+	}
+	
 	public DisabledUserException(final String message) {
 		super(ErrorType.DISABLED, message);
 	}

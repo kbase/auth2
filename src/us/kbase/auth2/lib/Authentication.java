@@ -297,7 +297,6 @@ public class Authentication {
 			final EmailAddress email)
 			throws AuthStorageException, UserExistsException, UnauthorizedException,
 			InvalidTokenException {
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		if (userName == null) {
 			throw new NullPointerException("userName");
 		}
@@ -311,6 +310,7 @@ public class Authentication {
 		if (email == null) {
 			throw new NullPointerException("email");
 		}
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
@@ -614,7 +614,7 @@ public class Authentication {
 		if (u.isDisabled()) {
 			// apparently this disabled user still has some tokens, so kill 'em all
 			storage.deleteTokens(ht.getUserName());
-			throw new DisabledUserException("This account is disabled");
+			throw new DisabledUserException();
 		}
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())

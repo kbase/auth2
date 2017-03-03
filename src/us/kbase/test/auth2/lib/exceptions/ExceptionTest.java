@@ -95,10 +95,15 @@ public class ExceptionTest {
 	@Test
 	public void disabledUser() throws Exception {
 		final ErrorType et = ErrorType.DISABLED;
-		final DisabledUserException ae = new DisabledUserException("foo");
+		final DisabledUserException ae = new DisabledUserException();
 		assertThat("incorrect error code", ae.getErr(), is(et));
-		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect message", ae.getMessage(), is(format(et, null)));
 		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
+		
+		final DisabledUserException ae2 = new DisabledUserException("foo");
+		assertThat("incorrect error code", ae2.getErr(), is(et));
+		assertThat("incorrect message", ae2.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ae2.getCause(), is((Throwable) null));
 	}
 	
 	@Test
