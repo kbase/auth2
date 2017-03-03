@@ -10,10 +10,13 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.bson.Document;
 import org.junit.Test;
 
+import com.github.zafarkhaja.semver.Version;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -67,12 +70,18 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				// need to create a new document to create a new mongo _id
 				new Document(m)));
 		
-		failMongoStart(db, new StorageInitException(
+		final Pattern errorPattern = Pattern.compile(
 				"Failed to create index: Write failed with error code 11000 and error message " +
-				"'E11000 duplicate key error index: startUpWith2ConfigDocs.config.$schema_1  " +
-				"dup key: { : \"schema\" }'"));
-		
-		
+				"'(exception: )?E11000 duplicate key error (index|collection): " +
+				"startUpWith2ConfigDocs.config( index: |\\.\\$)schema_1\\s+dup key: " +
+				"\\{ : \"schema\" \\}'");
+		try {
+			new MongoStorage(db);
+			fail("started mongo with bad config");
+		} catch (StorageInitException e) {
+			final Matcher match = errorPattern.matcher(e.getMessage());
+			assertThat("exception did not match: \n" + e.getMessage(), match.matches(), is(true));
+		}
 	}
 	
 	@Test
@@ -123,19 +132,22 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	@Test
 	public void checkCollectionNames() throws Exception {
 		final Set<String> names = new HashSet<>();
-		// this is annoying. MongoIterator has two forEach methods with different signatures
-		// and so which one to call is ambiguous for lambda expressions.
-		db.listCollectionNames().forEach((Consumer<String>) names::add);
-		assertThat("incorrect collection names", names, is(set(
+		final Set<String> expected = set(
 				"config",
 				"config_app",
 				"config_ext",
 				"config_prov",
 				"cust_roles",
-				"system.indexes",
 				"temptokens",
 				"tokens",
-				"users")));
+				"users");
+		if (mongoDBVer.lessThan(Version.forIntegers(3, 2))) {
+			expected.add("system.indexes");
+		}
+		// this is annoying. MongoIterator has two forEach methods with different signatures
+		// and so which one to call is ambiguous for lambda expressions.
+		db.listCollectionNames().forEach((Consumer<String>) names::add);
+		assertThat("incorrect collection names", names, is(expected));
 	}
 	
 	@Test
@@ -143,12 +155,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("schema", 1))
 						.append("name", "schema_1")
 						.append("ns", "test_mongostorage.config"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.config")
@@ -160,12 +172,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
 						.append("name", "key_1")
 						.append("ns", "test_mongostorage.config_app"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.config_app")
@@ -177,12 +189,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_ext").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
 						.append("name", "key_1")
 						.append("ns", "test_mongostorage.config_ext"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.config_ext")
@@ -194,12 +206,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_prov").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("prov", 1).append("key", 1))
 						.append("name", "prov_1_key_1")
 						.append("ns", "test_mongostorage.config_prov"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.config_prov")
@@ -211,12 +223,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("cust_roles").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
 						.append("ns", "test_mongostorage.cust_roles"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.cust_roles")
@@ -228,21 +240,21 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("temptokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
 						.append("name", "token_1")
 						.append("ns", "test_mongostorage.temptokens"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
 						.append("ns", "test_mongostorage.temptokens")
 						.append("expireAfterSeconds", 0L),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.temptokens"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
@@ -255,25 +267,25 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("tokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
 						.append("name", "token_1")
 						.append("ns", "test_mongostorage.tokens"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
 						.append("ns", "test_mongostorage.tokens")
 						.append("expireAfterSeconds", 0L),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.tokens"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("user", 1))
 						.append("name", "user_1")
 						.append("ns", "test_mongostorage.tokens"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
@@ -286,37 +298,37 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("users").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
 						.append("name", "custrls_1")
 						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("dispcan", 1))
 						.append("name", "dispcan_1")
 						.append("ns", "test_mongostorage.users"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.users"),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)	
 						.append("key", new Document("idents.id", 1))
 						.append("name", "idents.id_1")
 						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("key", new Document("roles", 1))
 						.append("name", "roles_1")
 						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("idents.prov", 1).append("idents.prov_id", 1))
 						.append("name", "idents.prov_1_idents.prov_id_1")
 						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
-				new Document("v", 1)
+				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("user", 1))
 						.append("name", "user_1")

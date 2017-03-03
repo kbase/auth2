@@ -21,17 +21,17 @@ before_install:
     - tar xfz $MONGODB_VER_26.tgz
     - export MONGOD26=`pwd`/$MONGODB_VER_26/bin/mongod
 
-    #- wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
-    #- tar xfz $MONGODB_VER_30.tgz
-    #- export MONGOD30=`pwd`/$MONGODB_VER_30/bin/mongod
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
+    - tar xfz $MONGODB_VER_30.tgz
+    - export MONGOD30=`pwd`/$MONGODB_VER_30/bin/mongod
 
-    #- wget http://fastdl.mongodb.org/linux/$MONGODB_VER_32.tgz
-    #- tar xfz $MONGODB_VER_32.tgz
-    #- export MONGOD32=`pwd`/$MONGODB_VER_32/bin/mongod
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_32.tgz
+    - tar xfz $MONGODB_VER_32.tgz
+    - export MONGOD32=`pwd`/$MONGODB_VER_32/bin/mongod
 
-    #- wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
-    #- tar xfz $MONGODB_VER_34.tgz
-    #- export MONGOD34=`pwd`/$MONGODB_VER_34/bin/mongod
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
+    - tar xfz $MONGODB_VER_34.tgz
+    - export MONGOD34=`pwd`/$MONGODB_VER_34/bin/mongod
 
 
 install:
@@ -53,7 +53,17 @@ script:
     - ant test
 
     # Test against MONGO 3.0
-    #- sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD30#" test.cfg
-    #- cat test.cfg
-    #- ant test
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD30#" test.cfg
+    - cat test.cfg
+    - ant test
+    
+    # Test against MONGO 3.2
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD32#" test.cfg
+    - cat test.cfg
+    - ant test
+    
+    # Test against MONGO 3.4
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD34#" test.cfg
+    - cat test.cfg
+    - ant test
 
