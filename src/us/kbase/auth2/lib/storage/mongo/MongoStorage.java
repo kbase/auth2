@@ -13,6 +13,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -229,7 +230,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			col.insertOne(cfg);
 		} catch (MongoWriteException dk) {
-			if (!isDuplicateKeyException(dk)) {
+			if (!DuplicateKeyExceptionChecker.isDuplicate(dk)) {
 				throw new StorageInitException("There was a problem communicating with the " +
 						"database: " + dk.getMessage(), dk);
 			}
@@ -321,7 +322,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
-			if (isDuplicateKeyException(mwe)) {
+			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
 				throw new UserExistsException(local.getUserName().getName());
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
@@ -469,12 +470,12 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
-			if (isDuplicateKeyException(mwe)) {
-				final String msg = mwe.getError().getMessage();
-				// not happy about this, but getDetails() returns an empty map
-				if (msg.contains(COL_USERS + ".$" + Fields.USER_NAME)) {
+			// not happy about this, but getDetails() returns an empty map
+			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
+			if (dk.isDuplicate() && COL_USERS.equals(dk.getCollection().get())) {
+				if ((Fields.USER_NAME + "_1").equals(dk.getIndex().get())) {
 					throw new UserExistsException(user.getUserName().getName());
-				} else if (msg.contains(COL_USERS + ".$" + Fields.USER_IDENTITIES)) {
+				} else if (dk.getIndex().get().startsWith(Fields.USER_IDENTITIES + ".")) {
 					// either the provider / prov id combo or the local identity uuid are already
 					// in the db
 					final RemoteIdentityID ri = user.getIdentity().getRemoteID();
@@ -505,10 +506,6 @@ public class MongoStorage implements AuthStorage {
 		return user;
 	}
 
-	private boolean isDuplicateKeyException(final MongoWriteException mwe) {
-		return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
-	}
-	
 	@Override
 	public void disableAccount(final UserName user, final UserName admin, final String reason)
 			throws NoSuchUserException, AuthStorageException {
@@ -551,13 +548,13 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
-			if (isDuplicateKeyException(mwe)) {
-				final String msg = mwe.getError().getMessage();
-				// not happy about this, but getDetails() returns an empty map
-				if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_ID)) {
+			// not happy about this, but getDetails() returns an empty map
+			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
+			if (dk.isDuplicate() && COL_TOKEN.equals(dk.getCollection().get())) {
+				if ((Fields.TOKEN_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token ID %s already exists in the database", token.getId()));
-				} else if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_TOKEN)) {
+				} else if ((Fields.TOKEN_TOKEN + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token hash for token ID %s already exists in the database",
 							token.getId()));
@@ -1051,6 +1048,88 @@ public class MongoStorage implements AuthStorage {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
+	
+	private static class DuplicateKeyExceptionChecker {
+		// super hacky and fragile, but doesn't seem another way to do this.
+		
+		private final Pattern keyPattern = Pattern.compile("dup key:\\s+\\{ : \"(.*)\" \\}");
+		private final Pattern indexPattern = Pattern.compile(
+				"duplicate key error (index|collection): " +
+				"\\w+\\.(\\w+)( index: |\\.\\$)([\\.\\w]+)\\s+");
+				
+		
+		//TODO TEST this class
+		
+		private final boolean isDuplicate;
+		private final Optional<String> collection;
+		private final Optional<String> index;
+		private final Optional<String> key;
+		
+		public DuplicateKeyExceptionChecker(final MongoWriteException mwe)
+				throws AuthStorageException {
+			// split up indexes better at some point - e.g. in a Document
+			isDuplicate = isDuplicate(mwe);
+			if (isDuplicate) {
+				final Matcher indexMatcher = indexPattern.matcher(mwe.getMessage());
+				if (indexMatcher.find()) {
+					collection = Optional.of(indexMatcher.group(2));
+					index = Optional.of(indexMatcher.group(4));
+				} else {
+					throw new AuthStorageException("Unable to parse duplicate key error: " +
+							// could include a token hash as the key, so split it out if it's there
+							mwe.getMessage().split("dup key")[0], mwe);
+				}
+				final Matcher keyMatcher = keyPattern.matcher(mwe.getMessage());
+				if (keyMatcher.find()) {
+					key = Optional.of(keyMatcher.group(1));
+				} else { // some errors include the dup key, some don't
+					key = Optional.absent();
+				}
+			} else {
+				collection = Optional.absent();
+				index = Optional.absent();
+				key = Optional.absent();
+			}
+			
+		}
+		
+		public static boolean isDuplicate(final MongoWriteException mwe) {
+			return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
+		}
+
+		public boolean isDuplicate() {
+			return isDuplicate;
+		}
+
+		public Optional<String> getCollection() {
+			return collection;
+		}
+
+		public Optional<String> getIndex() {
+			return index;
+		}
+
+		@SuppressWarnings("unused") // may need later
+		public Optional<String> getKey() {
+			return key;
+		}
+
+		@Override
+		public String toString() {
+			StringBuilder builder = new StringBuilder();
+			builder.append("DuplicateKeyExceptionChecker [isDuplicate=");
+			builder.append(isDuplicate);
+			builder.append(", collection=");
+			builder.append(collection);
+			builder.append(", index=");
+			builder.append(index);
+			builder.append(", key=");
+			builder.append(key);
+			builder.append("]");
+			return builder.toString();
+		}
+		
+	}
 
 	@Override
 	public void storeIdentitiesTemporarily(
@@ -1075,19 +1154,19 @@ public class MongoStorage implements AuthStorage {
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
-			if (isDuplicateKeyException(mwe)) {
-				final String msg = mwe.getError().getMessage();
-				// not happy about this, but getDetails() returns an empty map
-				if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_ID)) {
+			// not happy about this, but getDetails() returns an empty map
+			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
+			if (dk.isDuplicate() && COL_TEMP_TOKEN.equals(dk.getCollection().get())) {
+				if ((Fields.TOKEN_TEMP_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Temporary token ID %s already exists in the database",
 							token.getId()));
-				} else if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_TOKEN)) {
+				} else if ((Fields.TOKEN_TEMP_TOKEN + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token hash for temporary token ID %s already exists in the database",
 							token.getId()));
-				} // otherwise throw next exception
-			}
+				}
+			} // otherwise throw next exception
 			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
@@ -1226,7 +1305,7 @@ public class MongoStorage implements AuthStorage {
 			// method again)
 			return r.getModifiedCount() == 1;
 		} catch (MongoWriteException mwe) {
-			if (isDuplicateKeyException(mwe)) {
+			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
 				// another user already is linked to this ID, fail permanently, no retry
 				throw new LinkFailedException("Provider identity is already linked");
 			} else {

@@ -265,7 +265,7 @@ public class AuthCLI {
 		final String name = (String) id.get("name");
 		final String email = (String) id.get("email");
 		final RemoteIdentity rid = new RemoteIdentity(
-				new RemoteIdentityID(NAME, uid),
+				new RemoteIdentityID(GLOBUS, uid),
 				new RemoteIdentityDetails(glusername, name == null ? nexusFullname : name,
 						email == null ? nexusEmail : email));
 		return rid;

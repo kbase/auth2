@@ -81,17 +81,15 @@ public class Tokens {
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getTokensJSON(
-			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, InvalidTokenException,
 			NoTokenProvidedException, DisabledUserException {
-		final IncomingToken cookieToken = getTokenFromCookie(
-				headers, cfg.getTokenCookieName(), false);
-		return getTokens(cookieToken == null ? getToken(headerToken) : cookieToken);
+		return getTokens(getToken(headerToken));
 	}
 	
 	@POST
 	@Path(UIPaths.TOKENS_CREATE)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
 	public UINewToken createTokenHTML(
@@ -125,17 +123,13 @@ public class Tokens {
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public UINewToken createTokenJSON(
-			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, NoTokenProvidedException,
 			UnauthorizedException, IllegalParameterException {
 		input.exceptOnAdditionalProperties();
-		final IncomingToken cookieToken = getTokenFromCookie(
-				headers, cfg.getTokenCookieName(), false);
-		return createtoken(input.name, input.type,
-				cookieToken == null ? getToken(headerToken) : cookieToken);
+		return createtoken(input.name, input.type, getToken(headerToken));
 	}
 	
 	@POST
@@ -153,14 +147,11 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenDELETE(
 			@PathParam("tokenid") final UUID tokenId,
-			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
 			InvalidTokenException {
-		final IncomingToken cookieToken = getTokenFromCookie(
-				headers, cfg.getTokenCookieName(), false);
-		auth.revokeToken(cookieToken == null ? getToken(headerToken) : cookieToken, tokenId);
+		auth.revokeToken(getToken(headerToken), tokenId);
 	}
 	
 	@POST
@@ -175,13 +166,10 @@ public class Tokens {
 	@DELETE
 	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public void revokeAll(
-			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException {
-		final IncomingToken cookieToken = getTokenFromCookie(
-				headers, cfg.getTokenCookieName(), false);
-		auth.revokeTokens(cookieToken == null ? getToken(headerToken) : cookieToken);
+		auth.revokeTokens(getToken(headerToken));
 	}
 			
 
