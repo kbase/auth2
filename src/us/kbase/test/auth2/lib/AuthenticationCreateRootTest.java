@@ -45,6 +45,8 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
 
 public class AuthenticationCreateRootTest {
 	
+	//TODO TEST improve readability
+	
 	/* Some of these tests are time sensitive and verify() won't work because the object is
 	 * changed after the mocked method is called. Instead use an Answer:
 	 * 
@@ -57,6 +59,8 @@ public class AuthenticationCreateRootTest {
 	 */
 	private class RootUserAnswerMatcher implements Answer<Void> {
 
+		//TODO TEST make this a generic <LocalUser>, use for root & local users
+		
 		private final Password pwd;
 		private final byte[] salt;
 		public byte[] savedSalt;
