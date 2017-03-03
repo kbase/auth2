@@ -56,9 +56,7 @@ public class AuthenticationLocalUserTest {
 	 * 
 	 */
 	
-	/* The pwd hash is checked by regenerating from the provided salt.
-	 * The created date is checked to be within 500 ms of the current time.
-	 */
+	/* The created date is checked to be within 500 ms of the current time. */
 	private class LocalUserAnswerMatcher implements Answer<Void> {
 
 		private final LocalUser user;

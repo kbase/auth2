@@ -73,6 +73,7 @@ public class AuthenticationCreateRootTest {
 			final NewRootUser user = inv.getArgument(0);
 			savedSalt = user.getSalt();
 			savedHash = user.getPasswordHash();
+			//TODO TEST move this into the test method. Just pass in the expected user.
 			/* sort of bogus to use the same pwd gen code from the method under test in the test
 			 * but the pwd gen code is tested elsewhere and trying to do this manually
 			 * would be a major pain.
