@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
@@ -16,15 +17,15 @@ import java.util.Map;
 import java.util.UUID;
 
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
-import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
@@ -32,29 +33,36 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
-import org.glassfish.jersey.server.mvc.Viewable;
+
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.IdentityProviderInput;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LINK_ROOT)
 public class Link {
@@ -73,45 +81,77 @@ public class Link {
 	private AuthAPIStaticConfig cfg;
 	
 	@GET
-	public Response linkStart(
+	@Template(name = "/linkstart")
+	public Map<String, Object> linkStartDisplay(
 			@Context final HttpHeaders headers,
-			@QueryParam("provider") final String provider,
-			@Context UriInfo uriInfo)
+			@Context final UriInfo uriInfo)
 			throws NoSuchIdentityProviderException, NoTokenProvidedException,
-			InvalidTokenException, AuthStorageException {
+			InvalidTokenException, AuthStorageException, DisabledUserException {
 
 		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		
-		if (provider != null && !provider.trim().isEmpty()) {
-			final String state = auth.getBareToken();
-			final URI target = toURI(
-					auth.getIdentityProviderURL(provider, state, true));
-			return Response.seeOther(target)
-					.cookie(getStateCookie(state))
-					.build();
-		} else {
-			final AuthUser u = auth.getUser(incToken);
-			final Map<String, Object> ret = new HashMap<>();
-			ret.put("user", u.getUserName().getName());
-			ret.put("local", u.isLocal());
-			final List<Map<String, String>> provs = new LinkedList<>();
-			ret.put("providers", provs);
-			for (final String prov: auth.getIdentityProviders()) {
-				final Map<String, String> rep = new HashMap<>();
-				rep.put("name", prov);
-				final URI i = auth.getIdentityProviderImageURI(prov);
-				if (i.isAbsolute()) {
-					rep.put("img", i.toString());
-				} else {
-					rep.put("img", relativize(uriInfo, i));
-				}
-				provs.add(rep);
-			}
-			ret.put("hasprov", !provs.isEmpty());
-			ret.put("urlpre", "?provider=");
-			return Response.ok().entity(new Viewable("/linkstart", ret))
-					.build();
+		final AuthUser u = auth.getUser(incToken);
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("user", u.getUserName().getName());
+		ret.put("local", u.isLocal());
+		final List<Map<String, String>> provs = new LinkedList<>();
+		ret.put("providers", provs);
+		for (final String prov: auth.getIdentityProviders()) {
+			final Map<String, String> rep = new HashMap<>();
+			rep.put("name", prov);
+			provs.add(rep);
 		}
+		ret.put("starturl", relativize(uriInfo, UIPaths.LINK_ROOT_START));
+		ret.put("hasprov", !provs.isEmpty());
+		return ret;
+	}
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Path(UIPaths.LINK_START)
+	public Response linkStart(
+			@Context final HttpHeaders headers,
+			@FormParam("provider") final String provider)
+			throws NoTokenProvidedException, NoSuchIdentityProviderException,
+			AuthStorageException, InvalidTokenException, DisabledUserException {
+		
+		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		return linkStart(provider, incToken);
+	}
+
+	private Response linkStart(final String provider, final IncomingToken incToken)
+			throws InvalidTokenException, AuthStorageException, DisabledUserException,
+			NoSuchIdentityProviderException {
+		auth.getUser(incToken); // ensures the token is valid
+		
+		final String state = auth.getBareToken();
+		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
+		return Response.seeOther(target).cookie(getStateCookie(state)).build();
+	}
+	
+	private static class LinkStart extends IncomingJSON {
+		
+		public final String provider;
+
+		@JsonCreator
+		public LinkStart(@JsonProperty("provider") final String provider) {
+			this.provider = provider;
+		}
+	}
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LINK_START)
+	public Response linkStart(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
+			final LinkStart start)
+			throws NoTokenProvidedException, InvalidTokenException, DisabledUserException,
+				NoSuchIdentityProviderException, AuthStorageException, IllegalParameterException,
+				MissingParameterException {
+		if (start == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		start.exceptOnAdditionalProperties();
+		return linkStart(start.provider, getToken(token));
 	}
 	
 	private NewCookie getStateCookie(final String state) {
@@ -129,20 +169,14 @@ public class Link {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
-			NoTokenProvidedException, LinkFailedException {
+			NoTokenProvidedException, LinkFailedException, DisabledUserException {
 		//TODO INPUT handle error in params (provider, state)
-		provider = upperCase(provider);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
-		if (state == null || state.trim().isEmpty()) {
-			throw new MissingParameterException("Couldn't retrieve state value from cookie");
-		}
-		if (!state.equals(retstate)) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"State values do not match, this may be a CXRF attack");
-		}
+		IdentityProviderInput.checkState(state, retstate);
+		provider = upperCase(provider);
 		final LinkToken lt = auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				provider, authcode);
 		final Response r;
@@ -160,6 +194,40 @@ public class Link {
 		}
 		return r;
 	}
+	
+	@POST
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
+	public Response link(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
+			@PathParam("provider") String provider,
+			@CookieParam(LINK_STATE_COOKIE) final String state,
+			@Context final UriInfo uriInfo,
+			final IdentityProviderInput input)
+			throws MissingParameterException, AuthenticationException,
+				DisabledUserException, LinkFailedException, NoTokenProvidedException,
+				AuthStorageException, IllegalParameterException {
+		if (input == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		//TODO INPUT handle error in provider
+		input.exceptOnAdditionalProperties();
+		input.checkState(state);
+		provider = upperCase(provider);
+		final LinkToken lt = auth.link(getToken(token), provider, input.getAuthCode());
+		final Map<String, Object> linkChoice = new HashMap<>();
+		final ResponseBuilder r = Response.ok(linkChoice).cookie(getStateCookie(null));
+		if (lt.isLinked()) {
+			linkChoice.put("linked", true);
+		} else {
+			linkChoice.putAll(buildLinkChoice(uriInfo, lt.getLinkIdentities()));
+			linkChoice.put("linked", false);
+			r.cookie(getLinkInProcessCookie(lt.getTemporaryToken()));
+		}
+		return r.build();
+	}
+	
 	
 	// the two methods below are very similar and there's another similar method in Login
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
@@ -209,53 +277,53 @@ public class Link {
 	@Path(UIPaths.LINK_CHOICE)
 	@Template(name = "/linkchoice")
 	@Produces(MediaType.TEXT_HTML)
-	public Map<String, Object> linkChoiceHTML(
+	public Map<String, Object> linkChoice(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException {
-		return linkChoice(headers, linktoken, uriInfo);
+			InvalidTokenException, LinkFailedException, DisabledUserException {
+		return linkChoice(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				linktoken, uriInfo);
 	}
 	
 	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
 	@GET
 	@Path(UIPaths.LINK_CHOICE)
 	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> linkChoiceJSON(
-			@Context final HttpHeaders headers,
+	public Map<String, Object> linkChoice(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException {
-		return linkChoice(headers, linktoken, uriInfo);
+			InvalidTokenException, LinkFailedException, DisabledUserException {
+		return linkChoice(getToken(token), linktoken, uriInfo);
 	}
 
 	private Map<String, Object> linkChoice(
-			final HttpHeaders headers,
+			final IncomingToken incomingToken,
 			final String linktoken,
 			final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			LinkFailedException {
-		if (linktoken == null || linktoken.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
-		}
-		final LinkIdentities ids = auth.getLinkState(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new IncomingToken(linktoken.trim()));
+			LinkFailedException, DisabledUserException {
+		final LinkIdentities ids = auth.getLinkState(incomingToken,
+				getLinkInProcessToken(linktoken));
+		return buildLinkChoice(uriInfo, ids);
+	}
+
+	private Map<String, Object> buildLinkChoice(final UriInfo uriInfo, final LinkIdentities ids) {
 		/* there's a possibility here that between the redirects the number
-		 * of identities that aren't already linked was reduced 1. The
+		 * of identities that aren't already linked was reduced to 1. The
 		 * probability is so low that it's not worth special casing it,
 		 * especially since the effect is simply that the user only has one
 		 * choice for link targets.
 		 */ 
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("user", ids.getUser().getUserName().getName());
-		ret.put("provider", ids.getIdentities()
-				.iterator().next().getRemoteID().getProvider());
+		ret.put("provider", ids.getProvider());
 		final List<Map<String, String>> ris = new LinkedList<>();
 		ret.put("ids", ris);
-		for (final RemoteIdentityWithID ri: ids.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: ids.getIdentities()) {
 			final Map<String, String> s = new HashMap<>();
 			s.put("id", ri.getID().toString());
 			s.put("prov_username", ri.getDetails().getUsername());
@@ -264,47 +332,83 @@ public class Link {
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
 		return ret;
 	}
+
+	private IncomingToken getLinkInProcessToken(final String linktoken)
+			throws NoTokenProvidedException {
+		final IncomingToken incToken;
+		try {
+			incToken = new IncomingToken(linktoken);
+		} catch (MissingParameterException e) {
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE); 
+		}
+		return incToken;
+	}
 	
 	// for dumb HTML pages that use forms
+	// if identityID is not provided, links all
 	@POST
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_PICK)
-	public Response pickAccountPOST(
+	public Response pickAccount(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") final UUID identityID)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException {
+			AuthStorageException, LinkFailedException, DisabledUserException {
 		
-		pickAccount(headers, linktoken, identityID);
+		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		pickAccount(token, linktoken, Optional.fromNullable(identityID));
 		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
-	// for AJAX pages that can decide for themselves where to go next
-	@PUT
-	@Path(UIPaths.LINK_PICK)
-	public Response pickAccountPUT(
-			@Context final HttpHeaders headers,
-			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
-			@QueryParam("id") final UUID identityID)
-			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException {
+	private static class LinkPick extends IncomingJSON {
 		
-		pickAccount(headers, linktoken, identityID);
+		private final String id;
+		
+		// don't throw exception in constructor. Bypasses custom error handler.
+		@JsonCreator
+		public LinkPick(@JsonProperty("id") final String id) {
+			this.id = id;
+		}
+		
+		public Optional<UUID> getID() throws IllegalParameterException {
+			return getOptionalUUID(id, "id");
+		}
+	}
+	
+	// for AJAX pages that can decide for themselves where to go next
+	// if identityID is not provided, links all
+	@POST // non-idempotent, so has to be post
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path(UIPaths.LINK_PICK)
+	public Response pickAccount(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
+			final LinkPick linkpick)
+			throws NoTokenProvidedException, AuthenticationException,
+			AuthStorageException, LinkFailedException, DisabledUserException,
+			IllegalParameterException, MissingParameterException {
+		if (linkpick == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		linkpick.exceptOnAdditionalProperties();
+		pickAccount(getToken(token), linktoken, linkpick.getID());
 		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
 	}
 
 	private void pickAccount(
-			final HttpHeaders headers,
+			final IncomingToken token,
 			final String linktoken,
-			final UUID identityID)
+			final Optional<UUID> id)
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
-			LinkFailedException {
-		if (linktoken == null || linktoken.trim().isEmpty()) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE);
+			LinkFailedException, DisabledUserException {
+		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
+		if (id.isPresent()) {
+			auth.link(token, linkInProcessToken, id.get());
+		} else {
+			auth.linkAll(token, linkInProcessToken);
 		}
-		auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new IncomingToken(linktoken), identityID);
 	}
 	
 	//Assumes valid URI in URL form

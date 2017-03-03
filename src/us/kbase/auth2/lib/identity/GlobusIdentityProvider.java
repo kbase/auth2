@@ -1,15 +1,20 @@
 package us.kbase.auth2.lib.identity;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.ArrayList;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import javax.ws.rs.ProcessingException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
@@ -20,21 +25,22 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 
+/** An identity provider for the <a href="https://globus.org" target="_blank">Globus</a> service.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GlobusIdentityProvider implements IdentityProvider {
 
-	
-	//TODO TEST
-	//TODO JAVADOC
-	
-	/* Docs: https://docs.globus.org/api/auth/ 
-	 */
+	/* Docs: https://docs.globus.org/api/auth/ */
 	
 	private static final String NAME = "Globus";
 	private static final String SCOPE =
-			"urn:globus:auth:scope:auth.globus.org:view_identities " + 
-			"email";
+			"urn:globus:auth:scope:auth.globus.org:view_identities email";
 	private static final String LOGIN_PATH = "/v2/oauth2/authorize";
 	private static final String TOKEN_PATH = "/v2/oauth2/token";
 	private static final String INTROSPECT_PATH = TOKEN_PATH + "/introspect";
@@ -43,8 +49,13 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	//thread safe
 	private static final Client CLI = ClientBuilder.newClient();
 	
+	private static final ObjectMapper MAPPER = new ObjectMapper();
+	
 	private final IdentityProviderConfig cfg;
 	
+	/** Create a new identity provider for the Globus service.
+	 * @param idc the configuration for the provider.
+	 */
 	public GlobusIdentityProvider(final IdentityProviderConfig idc) {
 		if (idc == null) {
 			throw new NullPointerException("idc");
@@ -61,11 +72,6 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return NAME;
 	}
 	
-	@Override
-	public URI getImageURI() {
-		return cfg.getImageURI();
-	}
-
 	// state will be url encoded.
 	@Override
 	public URL getLoginURL(final String state, final boolean link) {
@@ -73,7 +79,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				.path(LOGIN_PATH)
 				.queryParam("scope", SCOPE)
 				.queryParam("state", state)
-				.queryParam("redirect_uri", link? cfg.getLinkRedirectURL() :
+				.queryParam("redirect_uri", link ? cfg.getLinkRedirectURL() :
 					cfg.getLoginRedirectURL())
 				.queryParam("response_type", "code")
 				.queryParam("client_id", cfg.getClientID())
@@ -111,14 +117,15 @@ public class GlobusIdentityProvider implements IdentityProvider {
 	}
 	
 	@Override
-	public Set<RemoteIdentity> getIdentities(
-			final String authCode,
-			final boolean link)
+	public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
 			throws IdentityRetrievalException {
 		/* Note authcode only works once. After that globus returns
 		 * {error=invalid_grant}
 		 */
-		final String accessToken = getAccessToken(authCode, link);
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new IllegalArgumentException("authcode cannot be null or empty");
+		}
+		final String accessToken = getAccessToken(authcode, link);
 		final Idents idents = getPrimaryIdentity(accessToken);
 		final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 				accessToken, idents.secondaryIDs);
@@ -138,39 +145,63 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				.queryParam("ids", String.join(",", secondaryIDs))
 				.build();
 		
-		final Map<String, Object> ids = globusGetRequest(
-				accessToken, idtarget);
+		final Map<String, Object> ids; 
+		try {
+			ids = globusGetRequest(accessToken, idtarget);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Secondary identity retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
 		@SuppressWarnings("unchecked")
-		final List<Map<String, String>> sids =
-				(List<Map<String, String>>) ids.get("identities");
-		//TODO CODE check that all identities are in returned list
-		final Set<RemoteIdentity> secondaries = makeIdentities(sids);
-		return secondaries;
+		final List<Map<String, String>> sids = (List<Map<String, String>>) ids.get("identities");
+		final Set<RemoteIdentity> idents = makeIdentities(sids);
+		final Set<String> got = idents.stream().map(i -> i.getRemoteID().getId())
+				.collect(Collectors.toSet());
+		if (!secondaryIDs.equals(got)) {
+			
+			throw new IdentityRetrievalException(String.format(
+					"Requested secondary identities do not match recieved: %s vs %s",
+					sort(secondaryIDs), sort(got)));
+		}
+		return idents;
 	}
 
-	private Idents getPrimaryIdentity(final String accessToken)
-			throws IdentityRetrievalException {
+	private List<String> sort(final Set<String> s) {
+		final List<String> l = new ArrayList<>(s);
+		Collections.sort(l);
+		return l;
+	}
+
+	private Idents getPrimaryIdentity(final String accessToken) throws IdentityRetrievalException {
 		
 		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
 				.path(INTROSPECT_PATH).build();
 		
-		final MultivaluedMap<String, String> formParameters =
-				new MultivaluedHashMap<>();
+		final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 		formParameters.add("token", accessToken);
 		formParameters.add("include", "identities_set");
 		
-		final Map<String, Object> m = globusPostRequest(
-				formParameters, target);
+		final Map<String, Object> m;
+		try {
+			// if the token is invalid or not included globus returns a 401 with {"active": false}
+			m = globusPostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Primary identity retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
 		// per Globus spec, check that the audience for the requests includes
 		// our client
 		@SuppressWarnings("unchecked")
 		final List<String> audience = (List<String>) m.get("aud");
 		if (!audience.contains(cfg.getClientID())) {
-			throw new IdentityRetrievalException(
-					"The audience for the Globus request does not include " +
-					"this client");
+			throw new IdentityRetrievalException("The audience for the Globus request does not " +
+					"include this client");
 		}
-		final String id = (String) m.get("sub");
+		final String id = ((String) m.get("sub")).trim();
 		final String username = (String) m.get("username");
 		final String name = (String) m.get("name");
 		final String email = (String) m.get("email");
@@ -179,9 +210,16 @@ public class GlobusIdentityProvider implements IdentityProvider {
 				new RemoteIdentityDetails(username, name, email));
 		@SuppressWarnings("unchecked")
 		final List<String> secids = (List<String>) m.get("identities_set");
-		secids.remove(id);
+		trim(secids);
+		secids.remove(id); // avoids another call to globus if no other ids
 		
 		return new Idents(primary, new HashSet<>(secids));
+	}
+
+	private void trim(final List<String> s) {
+		for (int i = 0; i < s.size(); i++) {
+			s.set(i, s.get(i).trim());
+		}
 	}
 
 	private Set<RemoteIdentity> makeIdentities(
@@ -200,6 +238,55 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		return ret;
 	}
 
+	private String getAccessToken(final String authcode, final boolean link)
+			throws IdentityRetrievalException {
+		
+		final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
+		formParameters.add("code", authcode);
+		formParameters.add("redirect_uri", link ?
+				cfg.getLinkRedirectURL().toString() :
+				cfg.getLoginRedirectURL().toString());
+		formParameters.add("grant_type", "authorization_code");
+		
+		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();
+		
+		final Map<String, Object> m;
+		try {
+			m = globusPostRequest(formParameters, target);
+		} catch (IdentityRetrievalException e) {
+			//hacky. switch to internal exception later
+			final String[] msg = e.getMessage().split(":", 2);
+			throw new IdentityRetrievalException("Authtoken retrieval failed: " +
+					msg[msg.length - 1].trim());
+		}
+		final String token = (String) m.get("access_token");
+		if (token == null || token.trim().isEmpty()) {
+			throw new IdentityRetrievalException("No access token was returned by " + NAME);
+		}
+		return token;
+	}
+
+	private Map<String, Object> globusPostRequest(
+			final MultivaluedMap<String, String> formParameters,
+			final URI target)
+			throws IdentityRetrievalException {
+		final String bauth = "Basic " + Base64.getEncoder().encodeToString(
+				(cfg.getClientID() + ":" + cfg.getClientSecret()).getBytes());
+		final WebTarget wt = CLI.target(target);
+		Response r = null;
+		try {
+			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
+					.header("Authorization", bauth)
+					.post(Entity.form(formParameters));
+			return processResponse(r, 200);
+		} finally {
+			if (r != null) {
+				r.close();
+			}
+		}
+	}
+	
+
 	private Map<String, Object> globusGetRequest(
 			final String accessToken,
 			final URI idtarget)
@@ -210,62 +297,7 @@ public class GlobusIdentityProvider implements IdentityProvider {
 			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
 					.header("Authorization", "Bearer " + accessToken)
 					.get();
-			//TODO TEST with 500s with HTML
-			@SuppressWarnings("unchecked")
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code - partial implementation below
-			if (mtemp.containsKey("errors")) {
-				@SuppressWarnings("unchecked")
-				final List<Map<String, String>> errors =
-						(List<Map<String, String>>) mtemp.get("errors");
-				// just deal with the first error for now, change later if necc
-				final Map<String, String> err = errors.get(0);
-				throw new IdentityRetrievalException(String.format(
-						"Identity provider returned an error: %s: %s; id: %s",
-						err.get("code"), err.get("detail"), err.get("id")));
-			}
-			return mtemp;
-		} finally {
-			if (r != null) {
-				r.close();
-			}
-		}
-	}
-
-	private String getAccessToken(final String authcode, final boolean link) {
-		
-		final MultivaluedMap<String, String> formParameters =
-				new MultivaluedHashMap<>();
-		formParameters.add("code", authcode);
-		formParameters.add("redirect_uri", link ?
-				cfg.getLinkRedirectURL().toString() :
-				cfg.getLoginRedirectURL().toString());
-		formParameters.add("grant_type", "authorization_code");
-		
-		final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-				.path(TOKEN_PATH).build();
-		
-		final Map<String, Object> m = globusPostRequest(
-				formParameters, target);
-		return (String) m.get("access_token");
-	}
-
-	private Map<String, Object> globusPostRequest(
-			final MultivaluedMap<String, String> formParameters,
-			final URI target) {
-		final String bauth = "Basic " + Base64.getEncoder().encodeToString(
-				(cfg.getClientID() + ":" + cfg.getClientSecrect()).getBytes());
-		final WebTarget wt = CLI.target(target);
-		Response r = null;
-		try {
-			r = wt.request(MediaType.APPLICATION_JSON_TYPE)
-					.header("Authorization", bauth)
-					.post(Entity.form(formParameters));
-			@SuppressWarnings("unchecked")
-			//TODO TEST with 500s with HTML
-			final Map<String, Object> mtemp = r.readEntity(Map.class);
-			//TODO IDPROVERR handle {error=?} in object and check response code
-			return mtemp;
+			return processResponse(r, 200);
 		} finally {
 			if (r != null) {
 				r.close();
@@ -273,6 +305,75 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		}
 	}
 	
+	private Map<String, Object> processResponse(final Response r, final int expectedCode)
+			throws IdentityRetrievalException {
+		if (r.getStatus() == expectedCode) {
+			try { // could check content-type but same result, so...
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> m = r.readEntity(Map.class);
+				return m;
+			} catch (ProcessingException e) { // not json
+				// can't get the entity at this point because readEntity closes the stream
+				// this should never happen in practice so don't worry about it for now
+				throw new IdentityRetrievalException(String.format(
+						"Unable to parse response from %s service.", NAME));
+			}
+		}
+		if (r.hasEntity()) {
+			final String res = r.readEntity(String.class); // we'll assume here that this is small
+			final Map<String, Object> m;
+			try {  // could check content-type but same result, so...
+				m = MAPPER.readValue(res, new TypeReference<Map<String, Object>>() {});
+			} catch (IOException e) { // bad JSON
+				throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code and unparseable response from %s service: %s.",
+						NAME, r.getStatus()) + getTruncatedEntityBody(res));
+			}
+			if (m.containsKey("error")) { // authtoken & primary ID
+				throw new IdentityRetrievalException(String.format(
+						"%s service returned an error. HTTP code: %s. Error: %s.",
+						NAME, r.getStatus(), m.get("error")));
+			} else if (m.containsKey("errors")) { // secondary ID
+				// all kinds of type checking could be done here; let's just assume Globus doesn't
+				// alter their API willy nilly and not do it
+				@SuppressWarnings("unchecked")
+				final List<Map<String, String>> errors =
+						(List<Map<String, String>>) m.get("errors");
+				// just deal with the first error for now, change later if necc
+				if (errors == null || errors.isEmpty()) {
+					throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code with null error in the response body from %s " +
+						"service: %s.", NAME, r.getStatus()));
+				}
+				final Map<String, String> err = errors.get(0);
+				// could check the keys exist, but then what? null isn't much worse than reporting
+				// a missing key. leave as is for now
+				throw new IdentityRetrievalException(String.format(
+						"%s service returned an error. HTTP code: %s. Error %s: %s; id: %s",
+						NAME, r.getStatus(), err.get("code"), err.get("detail"), err.get("id")));
+			} else {
+				throw new IdentityRetrievalException(String.format(
+						"Got unexpected HTTP code with no error in the response body from %s " +
+						"service: %s.", NAME, r.getStatus()));
+			}
+		}
+		throw new IdentityRetrievalException(String.format(
+				"Got unexpected HTTP code with no response body from %s service: %s.",
+				NAME, r.getStatus()));
+	}
+
+	private String getTruncatedEntityBody(final String r) {
+		if (r.length() > 1000) {
+			return " Truncated response: " + r.substring(0, 1000);
+		} else {
+			return " Response: " + r;
+		}
+	}
+	
+	/** A configurator for a Globus identity provider.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class GlobusIdentityProviderConfigurator implements
 			IdentityProviderConfigurator {
 

@@ -2,11 +2,19 @@ package us.kbase.auth2.lib;
 
 import java.util.Map;
 
-//keys defined in the external config may be missing from the incoming map if they're not set in the storage engine
+/** A configuration external to the Authentication instance. As a convenience, the Authorization
+ * instance allows storing arbitrary configurations as key value pairs in Authorization
+ * storage.
+ * 
+ * @author gaprice@lbl.gov
+ *
+ */
 public interface ExternalConfig {
 
-	//TODO JAVADOC
-	
+	/** Generate a set of key value pairs from the configuration; these pairs will be stored in
+	 * the authorization storage system.
+	 * @return a map of configuration key value pairs.
+	 */
 	Map<String, String> toMap();
 	
 }

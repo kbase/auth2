@@ -12,6 +12,7 @@ accounts and tests if any, allow setting auth service url
 * Perl auth & server stubs - Keith
 * Handle service & manager - Keith
 * Narrative (Login UI and Lua) - Bill R. (external to auth team)
+  * Token cleanup - remove backup token, make simple token format
 * kb_sdk
   * Tests support token vs uid/pwd & setting auth url
   * Recompile & test all SDK modules
@@ -32,26 +33,19 @@ Auth service work
 * 200 TODOs in the codebase on average
 * Read through all prototype code and convert to production worthy
 * A code review by Steve Chan wouldn't be a bad idea
+* Code analysis:
+  * https://www.codacy.com/
+  * https://find-sec-bugs.github.io/
 * Tests
   * With mock services for globus and google
 * Documentation
   * Code documentation
   * User documentation and education (probably need doc team help here)
   * Login & signup very different
-* API
-  * /me - view auth profile & update display name & email
-  * /user
-    * Add search on name, display name, or both, with prefix or substring search
-* Admin functionality
-  * Find users
-    * By name (regex)
-    * By role (custom or std)
-    * By display name (regex) (combine with name?)
-  * revoke single / user's / all tokens
-  * Disable account (revoke all tokens & prevent logins), record admin and reason
-  * Force pwd reset for local accounts (per user and all)
-  * Reset local account pwd to new random pwd
-  * Delete custom role
+* General
+  * Password strength checker, check passwords != on reset
+  * Lock local account for X m after Y failed logins
+  * Check user input for obscene or offensive content and reject, find 3rd party code (?)
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
@@ -59,9 +53,6 @@ Auth service work
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
-
-### Potential work
-* Support user lookup by identity provider & id for bulk upload (permitted role)
 
 External dependencies
 ---------------------

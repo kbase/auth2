@@ -3,26 +3,25 @@
   <description>
       Build file for the second KBase Authentication Service 
   </description>
+	
+  <!-- TODO BUILD switch to gradle or at least ivy -->
 
   <!-- set global properties for this build -->
   <property name="package" value="KBase authentication service"/>
   <property name="src" location="src"/>
   <property name="lib" location="lib"/>
   <property name="dist" location="dist"/>
-  <property name="test" location="test"/>
   <property name="jardir" location="../jars/lib/jars/"/>
-  <property name="doc_server_doc_loc" location="/server_docs"/>
   <property name="classes" location="classes"/>
   <property name="doc" location="docs/javadoc"/>
-  <property name="tempunpack" location="unpackedjars"/>
+  <property name="testjar.file" value="KBaseAuth2Test.jar"/>
   <property name="jar.file" value="KBaseAuth2.jar"/>
   <property name="war.file" value="KBaseAuth2.war"/>
-  <property name="clientjar.file" value="UserAndJobStateClient.jar"/>
   <property name="war.dir" value="war"/>
 
   <fileset dir="${jardir}" id="lib">
-    <!-- don't compile with the jetty jar, just use for test code -->
     <include name="apache_commons/commons-codec-1.8.jar"/>
+    <include name="apache_commons/commons-validator-1.5.1.jar"/>
     <include name="google/guava-18.0.jar"/>
     <include name="ini4j/ini4j-0.5.2.jar"/>
     <include name="jcommander/jcommander-1.48.jar"/>
@@ -83,7 +82,19 @@
     <include name="hk2/osgi-resource-locator-1.0.1.jar"/>
   </fileset>
 	
-  <union id="serverside">
+  <fileset dir="${jardir}" id="testlibs">
+    <include name="junit/junit-4.9.jar"/>
+    <include name="apache_commons/commons-lang3-3.1.jar"/>
+    <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
+    <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
+    <!-- mockito dependencies -->
+    <include name="mockito/mockito-core-2.7.10.jar"/>
+    <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
+    <include name="bytebuddy/byte-buddy-agent-1.6.8.jar"/>
+    <include name="objenesis/objenesis-2.5.1.jar"/>
+  </fileset>
+	
+  <union id="applicationjars">
     <fileset refid="jerseydeps"/>
     <fileset refid="jerseydep_hk2"/>
     <fileset refid="jackson"/>
@@ -93,15 +104,17 @@
   </union>
 
   <path id="compile.classpath">
-    <union refid="serverside"/>
+    <union refid="applicationjars"/>
+    <fileset refid="testlibs"/>
   </path>
 
   <path id="test.classpath">
     <path refid="compile.classpath"/>
     <fileset file="${dist}/${jar.file}"/>
+    <fileset file="${dist}/${testjar.file}"/>
   </path>
 	
-  <target name="build" depends="compile,buildwar,script"
+  <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
 
   <target name="init" description="make directories">
@@ -114,35 +127,34 @@
     <!-- Compile class files-->
     <javac srcdir="${src}"
            destdir="${classes}"
-           excludes="helloserver/**, us/kbase/test/auth2/**"
+           excludes="**/StartAuthServer.java"
            includeantruntime="false"
            debug="true"
            classpathref="compile.classpath"
            target="1.8"
            source="1.8">
+      <compilerarg line="-encoding utf-8"/>
     </javac>
-    <!-- Copy resource files-->
-      <copy todir="${classes}">
-        <fileset dir="${src}">
-          <patternset>
-            <include name="**/*.cfg"/>
-            <include name="**/*.py"/>
-            <include name="**/*.html"/>
-          </patternset>
-        </fileset>
-      </copy>
     <!-- Make main jar file-->
-    <jar destfile="${dist}/${jar.file}" basedir="${classes}"/>
+    <jar destfile="${dist}/${jar.file}"
+         basedir="${classes}"
+         includes="us/kbase/auth2/**"
+    />
+    <!-- Make test jar file-->
+    <jar destfile="${dist}/${testjar.file}"
+         basedir="${classes}"
+         includes="us/kbase/test/**"
+    />
   </target>
 
-  <target name="buildwar" description="build the WAR file. Assumes compile has been run">
+  <target name="buildwar" depends="compile" description="build the WAR file">
     <!-- make the war file for the server-->
     <mkdir dir="${war.dir}/lib"/>
     <copy todir="${war.dir}/lib/" flatten="true">
-      <union refid="serverside"/>
+      <union refid="applicationjars"/>
     </copy>
     <war destfile="${dist}/${war.file}" webxml="${war.dir}/web.xml">
-      <classes dir="${classes}"/>
+      <classes dir="${classes}" includes="us/kbase/auth2/**"/>
       <lib dir="${war.dir}/lib/"/>
     </war>
     <!-- Remove uncompressed class files and libs-->
@@ -150,11 +162,6 @@
     <!-- copy war to jettybase -->
     <copy tofile="./jettybase/webapps/ROOT.war" file="${dist}/${war.file}" />
     <!-- probably a better way to do this -->
-    <delete dir="./jettybase/webapps/assets"/>
-    <mkdir dir="./jettybase/webapps/assets"/>
-    <copy todir="./jettybase/webapps/assets">
-      <fileset dir="./webapps/assets" includes="**"/>  
-    </copy>
     <delete dir="./jettybase/templates"/>
     <mkdir dir="./jettybase/templates"/>
     <copy todir="./jettybase/templates">
@@ -163,47 +170,84 @@
   </target>
 
   <target name="javadoc" description="build javadocs">
-    <javadoc access="protected" author="false" classpathref="compile.classpath"
-      destdir="${doc}" nodeprecated="false" nodeprecatedlist="false"
-      noindex="false" nonavbar="false" notree="false"
-      source="1.8" splitindex="true" use="true" version="true">
-      <link href="http://download.oracle.com/javase/7/docs/api/"/>
-      <link href="http://fasterxml.github.io/jackson-core/javadoc/2.2.0/"/>
-      <link href="http://fasterxml.github.io/jackson-databind/javadoc/2.2.0/"/>
-      <fileset refid="client-jdoc-files"/>
-      <fileset refid="sources-jdoc-files"/>
+    <javadoc access="protected"
+             author="false"
+             classpathref="compile.classpath"
+             destdir="${doc}"
+             sourcepath="${src}"
+             excludepackagenames="us.kbase.test.*"
+             nodeprecated="false"
+             nodeprecatedlist="false"
+             noindex="false"
+             nonavbar="false"
+             notree="false"
+             source="1.8"
+             splitindex="true"
+             use="true"
+             version="true">
+      <link href="http://docs.oracle.com/javase/8/docs/api/"/>
+      <link href="http://api.mongodb.com/java/3.3/"/>
+      <link href="https://google.github.io/guava/releases/18.0/api/docs/"/>
     </javadoc>
-    <delete dir="${tempunpack}"/>
   </target>
-
+	
   <target name="test" depends="compile" description="run tests">
-    <fail unless="test.globus.url" message="property test.globus.url not set."/>
-    <fail unless="test.mongo.exe" message="property test.mongo.exe not set."/>
-    <fail unless="test.temp.dir" message="property test.temp.dir not set."/>
     <echo message="starting ${package} tests"/>
     <junit failureproperty="test.failed" fork="yes">
       <classpath refid="test.classpath"/>
       <formatter type="plain" usefile="false" />
-      <sysproperty key="test.globus.url" value="${test.globus.url}" />
-      <sysproperty key="test.mongo.exe" value="${test.mongo.exe}"/>
-      <sysproperty key="test.temp.dir" value="${test.temp.dir}"/>
-      <sysproperty key="test.temp.dir.keep" value="${test.temp.dir.keep}"/>
-      <test name="us.kbase.userandjobstate.test.jobstate.JobStateTests"/>
-      <test name="us.kbase.userandjobstate.test.jobstate.JobResultsTest"/>
-      <test name="us.kbase.userandjobstate.test.userstate.UserStateTests"/>
-      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCLayerTest"/>
-      <test name="us.kbase.userandjobstate.test.kbase.JSONRPCWithWSAuth"/>
-      <test name="us.kbase.userandjobstate.test.kbase.WorkspaceAuthTest"/>
-      <test name="us.kbase.userandjobstate.test.kbase.PullWSJobWithoutWSTest"/>
-      <test name="us.kbase.userandjobstate.test.authorization.AuthorizationTest"/>
-      <test name="us.kbase.userandjobstate.test.docserver.DocServerTest"/>
-      <test name="us.kbase.common.test.schemamanager.SchemaManagerTest"/>
+      <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
+      <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
+      <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthUserTest"/>
+      <test name="us.kbase.test.auth2.lib.CollectingExternalConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
+      <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
+      <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
+      <test name="us.kbase.test.auth2.lib.LinkIdentitiesTest"/>
+      <test name="us.kbase.test.auth2.lib.LinkTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalLoginResultTest"/>
+      <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
+      <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
+      <test name="us.kbase.test.auth2.lib.NewUserTest"/>
+      <test name="us.kbase.test.auth2.lib.PasswordTest"/>
+      <test name="us.kbase.test.auth2.lib.RoleTest"/>
+      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
+      <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
+      <test name="us.kbase.test.auth2.lib.UserNameTest"/>
+      <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>
+      <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
+      <test name="us.kbase.test.auth2.lib.UtilsTest"/>
+      <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
+      <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
+      <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageCustomRoleTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageGetDisplayNamesTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageInvalidDBDataTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageLinkTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRolesTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempIdentitiesTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
+      <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
 	
   <target name="script" depends="compile" description="create cli script">
-    <pathconvert targetos="unix" property="lib.classpath" refid="compile.classpath"/>
+    <pathconvert targetos="unix" property="lib.classpath" refid="applicationjars"/>
     <echo file="./manage_auth">#!/bin/sh
 java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     </echo>
@@ -214,7 +258,6 @@ java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     <!-- Clean up internal temporary files and folders-->
     <delete dir="${classes}"/>
     <delete dir="${dist}"/>
-    <!--<delete dir="${test}"/>-->
   </target>
 </project>
 

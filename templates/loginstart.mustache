@@ -3,15 +3,17 @@
 
 {{#hasprov}}
 <h3>Login with:</h3>
-{{/hasprov}}
 
+<form action="{{starturl}}" method="post">
 {{#providers}}
-<p><a href="{{urlpre}}{{name}}{{#redirect}}&redirect={{.}}{{/redirect}}">
-	<img src="{{img}}" alt="{{name}}"/></a>
-</p> 
+	<input type="radio" name="provider" value="{{name}}"/>{{name}}<br/>
 {{/providers}}
+	<input type="checkbox" name="stayLoggedIn"/> Keep me logged in<br/>
+	Redirect after login: <input type="text" name="redirect"/><br/>
+	<input type="submit" value="Submit"/>
+</form>
 
-{{#hasprov}}
+
 You will be redirected to the identity provider website where you will be asked
 to allow us to view your account information - your account ID, email
 address, and name.<br/>

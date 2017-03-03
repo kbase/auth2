@@ -1,0 +1,33 @@
+<html>
+<body>
+<form action="{{reseturl}}" method="post">
+	<input type="submit" value="Force password reset for all local users"/>
+</form>
+<form action="{{revokeurl}}" method="post">
+	<input type="submit" value="Revoke all tokens for all users and log out"/>
+</form>
+
+<form action="{{tokenurl}}" method="post">
+	View token: <input type="text" name="token" /><br/>
+	<input type="submit" value="Submit" />
+</form>
+
+<h3>Search for users</h3>
+<form action="{{searchurl}}" method="post">
+	User name or display name prefix: <input type="text" name="prefix" /><br/>
+	<input type="checkbox" name="username" /> Search on user name<br/>
+	<input type="checkbox" name="displayname" /> Search on display name<br/>
+	<br/>
+	Search on roles:<br/>
+	<input type="checkbox" name="DevToken" /> Create developer token<br/>
+	<input type="checkbox" name="ServToken" /> Create server token<br/>
+	<input type="checkbox" name="Admin" /> Admin<br/>
+	<input type="checkbox" name="CreateAdmin" /> Create admin<br/>
+	<br/>
+	Search on custom roles:<br/>
+	{{#croles}}
+	<input type="checkbox" name="crole_{{ID}}" /> {{ID}}<br/>
+	{{/croles}}
+	<input type="submit" value="Search"/>
+</body>
+</html>

@@ -4,12 +4,17 @@ import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Date;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
+import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -110,6 +115,7 @@ public class UIUtils {
 		return getTokenFromCookie(headers, tokenCookieName, true);
 	}
 	
+	//TODO CODE use optional
 	public static IncomingToken getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName,
@@ -130,14 +136,20 @@ public class UIUtils {
 			}
 			return null;
 		}
-		return new IncomingToken(val.trim());
+		try {
+			return new IncomingToken(val.trim());
+		} catch (MissingParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 	
-	public static IncomingToken getToken(final String token)
-			throws NoTokenProvidedException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException("No user token provided");
+	public static Set<Role> getRolesFromForm(final MultivaluedMap<String, String> form) {
+		final Set<Role> roles = new HashSet<>();
+		for (final Role r: Role.values()) {
+			if (form.get(r.getID()) != null) {
+				roles.add(r);
+			}
 		}
-		return new IncomingToken(token.trim());
+		return roles;
 	}
 }

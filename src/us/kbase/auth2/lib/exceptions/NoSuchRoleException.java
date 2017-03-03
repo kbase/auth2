@@ -10,9 +10,4 @@ public class NoSuchRoleException extends AuthException {
 	public NoSuchRoleException(final String message) {
 		super(ErrorType.NO_SUCH_ROLE, message);
 	}
-
-	public NoSuchRoleException(final String message, final Throwable e) {
-		super(ErrorType.NO_SUCH_ROLE, message, e);
-	}
-	
 }

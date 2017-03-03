@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.api;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -15,7 +17,6 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
-import us.kbase.auth2.lib.token.IncomingToken;
 
 @Path(APIPaths.API_V2_TOKEN)
 public class Token {
@@ -28,22 +29,18 @@ public class Token {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> getToken(
-			@HeaderParam("authorization") final String token)
+	public Map<String, Object> viewToken(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new NoTokenProvidedException();
-		}
-		final HashedToken ht = auth.getToken(new IncomingToken(token));
+		final HashedToken ht = auth.getToken(getToken(token));
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("cachefor", auth.getSuggestedTokenCacheTime());
 		ret.put("user", ht.getUserName().getName());
 		ret.put("type", ht.getTokenType().getID());
-		ret.put("created", ht.getCreationDate().getTime() / 1000);
-		ret.put("expires", ht.getExpirationDate().getTime() / 1000);
+		ret.put("created", ht.getCreationDate().getTime());
+		ret.put("expires", ht.getExpirationDate().getTime());
 		ret.put("name", ht.getTokenName());
 		ret.put("id", ht.getId().toString());
 		return ret;
 	}
-			
 }

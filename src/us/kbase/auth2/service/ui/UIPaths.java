@@ -4,6 +4,8 @@ public class UIPaths {
 
 	//TODO JAVADOC
 	
+	//TODO UI if using ROOT strings and relativizing leaves a trailing slash, otherwise does not. Do the same thing.
+	
 	/* general strings */
 	
 	public static final String SEP = "/";
@@ -13,9 +15,18 @@ public class UIPaths {
 	private static final String PICK = "pick";
 	private static final String CREATE = "create";
 	private static final String RESULT = "result";
+	private static final String REVOKE = "revoke";
+	private static final String REVOKE_ALL = "revokeall";
+	private static final String TOKEN_ID = "{tokenid}";
+	private static final String ID = "{id}";
 	private static final String LOGIN = "login";
 	private static final String LOCAL = "localaccount";
+	private static final String RESET = "reset";
 	private static final String USER = "user";
+	private static final String ROLES = "roles";
+	private static final String START = "start";
+	private static final String TOKEN = "token";
+	private static final String TOKENS = "tokens";
 	private static final String CUSTOM_ROLES = "customroles";
 	
 	/* Admin endpoint */
@@ -29,8 +40,34 @@ public class UIPaths {
 	public static final String ADMIN_ROOT_USER = ADMIN_ROOT + USER;
 	public static final String ADMIN_USER_PARAM = USER + SEP + "{user}";
 
-	public static final String ADMIN_ROLES = "roles";
+	public static final String ADMIN_DISABLE = "disable";
+	public static final String ADMIN_USER_DISABLE = ADMIN_USER_PARAM + SEP + ADMIN_DISABLE;
+
+	public static final String ADMIN_ROLES = ROLES;
 	public static final String ADMIN_USER_ROLES = ADMIN_USER_PARAM + SEP + ADMIN_ROLES;
+	
+	public static final String ADMIN_FORCE_RESET_PWD = "force" + RESET;
+	public static final String ADMIN_ROOT_FORCE_RESET_PWD = ADMIN_ROOT + ADMIN_FORCE_RESET_PWD;
+	public static final String ADMIN_USER_FORCE_RESET_PWD = ADMIN_USER_PARAM + SEP +
+			ADMIN_FORCE_RESET_PWD;
+	
+	public static final String ADMIN_RESET_PWD = RESET;
+	public static final String ADMIN_USER_RESET_PWD = ADMIN_USER_PARAM + SEP + ADMIN_RESET_PWD;
+	
+	public static final String ADMIN_REVOKE_ALL = REVOKE_ALL;
+	public static final String ADMIN_ROOT_REVOKE_ALL = ADMIN_ROOT + ADMIN_REVOKE_ALL;
+	
+	public static final String ADMIN_SEARCH = "search";
+	public static final String ADMIN_ROOT_SEARCH = ADMIN_ROOT + ADMIN_SEARCH;
+	
+	public static final String ADMIN_TOKEN = TOKEN;
+	public static final String ADMIN_ROOT_TOKEN = ADMIN_ROOT + TOKEN;
+	public static final String ADMIN_TOKENS = TOKENS;
+	public static final String ADMIN_USER_TOKENS = ADMIN_USER_PARAM + SEP + ADMIN_TOKENS;
+	public static final String ADMIN_USER_TOKENS_REVOKE_ALL = ADMIN_USER_TOKENS + SEP + REVOKE_ALL;
+	public static final String ADMIN_USER_TOKENS_REVOKE = REVOKE;
+	public static final String ADMIN_USER_TOKENS_REVOKE_ID = ADMIN_USER_TOKENS + SEP + 
+			ADMIN_USER_TOKENS_REVOKE + SEP + TOKEN_ID;
 	
 	public static final String ADMIN_CUSTOM_ROLES = CUSTOM_ROLES;
 	public static final String ADMIN_USER_CUSTOM_ROLES = ADMIN_USER_PARAM + SEP +
@@ -39,11 +76,14 @@ public class UIPaths {
 	public static final String ADMIN_CUSTOM_ROLES_SET = ADMIN_CUSTOM_ROLES + SEP +  "set";
 	public static final String ADMIN_ROOT_CUSTOM_ROLES_SET = ADMIN_ROOT + ADMIN_CUSTOM_ROLES_SET;
 	
+	public static final String ADMIN_CUSTOM_ROLES_DELETE = ADMIN_CUSTOM_ROLES + SEP +  "delete";
+	public static final String ADMIN_ROOT_CUSTOM_ROLES_DELETE = ADMIN_ROOT +
+			ADMIN_CUSTOM_ROLES_DELETE;
 	
 	public static final String ADMIN_CONFIG = "config";
 	public static final String ADMIN_CONFIG_BASIC = ADMIN_CONFIG + SEP + "basic";
 	public static final String ADMIN_CONFIG_PROVIDER = ADMIN_CONFIG + SEP + "provider";
-	public static final String ADMIN_CONFIG_TOKEN = ADMIN_CONFIG + SEP + "token";
+	public static final String ADMIN_CONFIG_TOKEN = ADMIN_CONFIG + SEP + TOKEN;
 	public static final String ADMIN_ROOT_CONFIG_BASIC = ADMIN_ROOT + ADMIN_CONFIG_BASIC;
 	public static final String ADMIN_ROOT_CONFIG_PROVIDER = ADMIN_ROOT + ADMIN_CONFIG_PROVIDER;
 	public static final String ADMIN_ROOT_CONFIG_TOKEN = ADMIN_ROOT + ADMIN_CONFIG_TOKEN;
@@ -66,6 +106,8 @@ public class UIPaths {
 	
 	public static final String LOGIN_ROOT = SEP + LOGIN + SEP;
 	
+	public static final String LOGIN_START = START;
+	public static final String LOGIN_ROOT_START = LOGIN_ROOT + START;
 	public static final String LOGIN_ROOT_COMPLETE = LOGIN_ROOT + COMPLETE;
 	public static final String LOGIN_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
 	public static final String LOGIN_CHOICE = CHOICE;
@@ -79,6 +121,8 @@ public class UIPaths {
 	
 	public static final String LINK_ROOT = "/link/";
 	
+	public static final String LINK_START = START;
+	public static final String LINK_ROOT_START = LINK_ROOT + START;
 	public static final String LINK_ROOT_COMPLETE = LINK_ROOT + COMPLETE;
 	public static final String LINK_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
 	public static final String LINK_CHOICE = CHOICE;
@@ -96,16 +140,24 @@ public class UIPaths {
 	
 	public static final String ME_ROOT = "/me/";
 	
-	public static final String ME_PARAM_ID = "{id}";
+	public static final String ME_UNLINK = "unlink";
+	public static final String ME_UNLINK_ID = ME_UNLINK + SEP + ID;
+	
+	public static final String ME_ROOT_UNLINK = ME_ROOT + ME_UNLINK;
+	
+	public static final String ME_ROLES = ROLES;
+	public static final String ME_ROOT_ROLES = ME_ROOT + ME_ROLES;
 	
 	/* tokens endpoint */
 	
-	public static final String TOKENS_ROOT = "/tokens/";
+	public static final String TOKENS_ROOT = SEP + TOKENS + SEP;
 	
 	public static final String TOKENS_CREATE = CREATE;
 	public static final String TOKENS_ROOT_CREATE = TOKENS_ROOT + TOKENS_CREATE;
-	public static final String TOKENS_ID = "{tokenid}";
-	public static final String TOKENS_REVOKE_ALL = "revokeall";
+	public static final String TOKENS_REVOKE = REVOKE;
+	public static final String TOKENS_ROOT_REVOKE = TOKENS_ROOT + TOKENS_REVOKE;
+	public static final String TOKENS_REVOKE_ID = TOKENS_REVOKE + SEP + TOKEN_ID;
+	public static final String TOKENS_REVOKE_ALL = REVOKE_ALL;
 	public static final String TOKENS_ROOT_REVOKE_ALL = TOKENS_ROOT + TOKENS_REVOKE_ALL;
 	
 	/* customroles endpoint */

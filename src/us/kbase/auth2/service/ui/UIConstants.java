@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.ui;
 
+import us.kbase.auth2.service.api.APIConstants;
+
 public class UIConstants {
 
 	//TODO JAVADOC
@@ -8,4 +10,6 @@ public class UIConstants {
 	// strategy needs to be implemented
 	/** Whether to only allow sending cookies over https */
 	public static final boolean SECURE_COOKIES = false;
+	
+	public static final String HEADER_TOKEN = APIConstants.HEADER_TOKEN;
 }

@@ -1,0 +1,12 @@
+<html>
+<body>
+<p>Note that in a proper UI, the display name should be HTML-escaped.</p>
+
+{{^hasusers}}
+No users found.
+{{/hasusers}}
+{{#users}}
+<a href="{{url}}">{{user}} ({{display}})</a><br/>
+{{/users}}
+</body>
+</html>

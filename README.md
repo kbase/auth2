@@ -3,14 +3,28 @@ KBase authentication server
 
 This repo contains the second iteration of the KBase authentication server.
 
+Build status (master):
+[![Build Status](https://travis-ci.org/kbase/auth2.svg?branch=master)](https://travis-ci.org/kbase/auth2)
+
+
 Current endpoints
 -----------------
 
 ### UI
 
+UI endpoints are not versioned and not necessarily stable - behavior may change as needed to
+support the auth UI.
+
+Note that the HTML UI supplied in this repo is a minimal implementation for the purposes of
+testing. In many cases a manual refresh of the page will be required to see
+changes. Further, once a checkbox is manually checked or unchecked that state
+will not change, even with a refresh - to see changes reset the form.
+
+/admin  
+Global admin tasks - force reset all passwords, revoke all tokens, view a token, search for users.
 
 /admin/customroles  
-Add and view custom roles.
+View, add, and delete custom roles.
 
 /admin/config  
 View and edit the server configuration.
@@ -19,7 +33,10 @@ View and edit the server configuration.
 Create a local account.
 
 /admin/user/&lt;user name&gt;  
-View user and modify user roles.
+View user, disable user, reset password, force password reset, and modify user roles.
+
+/admin/user/&lt;user name&gt;/tokens  
+View and revoke tokens for a specific user.
 
 /customroles  
 View custom roles. This page is publicly viewable to any user with a valid token.
@@ -40,24 +57,37 @@ Reset the password for a local account.
 Self explanatory.
 
 /me  
-User page.
+User page. Update name and email address, remove roles.
 
 /tokens  
-List and create tokens.
-
-Note that the current UI is a minimal implementation for the purposes of
-testing. In many cases a manual refresh of the page will be required to see
-changes. Further, once a checkbox is manually checked or unchecked, that state
-will not change, even with a refresh - to see changes reset the form.
+List, create, and revoke tokens.
 
 ### API
 
+API endpoints are versioned and behavior should not change in a backwards incompatible manner
+without a change in version.
+
 All API calls require a valid token in the `Authorization` header except legacy API endpoints,
-which continue to use their original protocol.
+which continue to use their original protocol. All endpoints produce JSON data unless otherwise
+noted.
+
+GET /api/V2/me  
+See the current user's profile.
+
+PUT /api/V2/me  
+Update the current user's email address and display name. Takes form or JSON encoded data with the
+keys `display` and `email`. Use the `Content-Type` header to specify input type.
 
 GET /api/V2/users/?list=&lt;comma separated user names&gt;  
 Validate a set of user names and get the users' display names. Returns a map of username ->
 display name. Any usernames that do not correspond to accounts will not be included in the map.
+
+GET /api/V2/users/search/&lt;prefix&gt;/?fields=&lt;comma separated fields&gt;  
+Find users based on a prefix of the username or any parts of the display name, where parts are
+delimited by whitespace. By default the search occurs on all fields; setting the fields query
+parameter can restrict the search fields and thus possibly speed up the search. Current field names
+are `username` and `displayname`; any other field names are ignored. Returns a map of
+username -> display name. At most 10,000 names are returned.
 
 GET /api/V2/token  
 Introspect a token.
@@ -94,10 +124,20 @@ Admin notes
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
 
+UI developer notes
+------------------
+* Some fields are arbitrary text entered by a user. These fields should be HTML-escaped prior to
+  display. The fields are noted where they occur in the test UI. Currently the fields include:
+  * Custom role descriptions
+  * The reason for why a user account was enabled and disabled.
+  * User display names and email addresses.
+  * Token names
+
 Requirements
 ------------
 Java 8 (OpenJDK OK)  
-MongoDB 2.4+ (https://www.mongodb.com/)  
+Apache Ant (http://ant.apache.org/)  
+MongoDB 2.6+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  
 This repo (git clone https://github.com/kbase/auth2)  
@@ -109,7 +149,7 @@ To start server
 start mongodb  
 cd into the auth2 repo  
 `ant build`  
-copy deploy.cfg.example to deploy.cfg and fill in appropriately  
+copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
 `export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
@@ -127,7 +167,7 @@ Set a root password:
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
-needing to login as root.
+needing to login as root. The root account can then be disabled.
 
 Start & stop server w/o a pid
 -----------------------------
@@ -135,6 +175,12 @@ Start & stop server w/o a pid
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
 
 Omit the stop key to have jetty generate one for you.
+
+Running tests
+-------------
+* Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
+  * If it works as is start buying lottery tickets immediately.
+* `ant test`
 
 Ancient history
 ---------------

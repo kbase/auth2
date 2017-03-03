@@ -1,5 +1,6 @@
 <html>
 <body>
+<p>Note that in a proper UI, the provider username, the display name and email should be HTML-escaped.</p>
 
 <h2>User: {{user}}</h2>
 Created: {{created}}<br/>
@@ -8,9 +9,15 @@ Last login: {{lastlogin}}<br/>
 Local account<br/>
 {{/local}}
 <h3>Roles:</h3>
+{{#hasRoles}}
+<form action="{{rolesurl}}" method="post">
 {{#roles}}
-{{.}}<br/>
+	<input type="checkbox" name="{{id}}"/> {{desc}}<br/>
 {{/roles}}
+	<input type="reset" value="Reset" />
+	<input type="submit" value="Remove roles"/>
+</form>
+{{/hasRoles}}
 <h3>Custom roles:</h3>
 {{#customroles}}
 {{.}}<br/>
@@ -31,7 +38,7 @@ Email is only visible to you, software acting on your behalf, and system adminis
 Provider: {{provider}}<br/>
 User id: {{username}}<br/>
 {{#unlink}}
-<form action="{{unlinkprefixurl}}{{id}}" method="post">
+<form action="{{unlinkurl}}/{{id}}" method="post">
 	<input type="submit" value="Unlink"/>
 </form>
 {{/unlink}}

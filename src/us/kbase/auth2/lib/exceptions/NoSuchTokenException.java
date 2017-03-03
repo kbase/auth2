@@ -9,8 +9,4 @@ public class NoSuchTokenException extends NoDataException {
 	public NoSuchTokenException(final String message) {
 		super(ErrorType.NO_SUCH_TOKEN, message);
 	}
-	
-	public NoSuchTokenException(final String message, final Throwable cause) {
-		super(ErrorType.NO_SUCH_TOKEN, message, cause);
-	}
 }

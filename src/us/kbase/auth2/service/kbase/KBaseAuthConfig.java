@@ -3,8 +3,6 @@ package us.kbase.auth2.service.kbase;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -16,7 +14,10 @@ import java.util.Set;
 import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -27,6 +28,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	
 	//TODO JAVADOC
 	//TODO TEST unittests
+	
+	//TODO DOCs document deploy.cfg.example
 	
 	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
@@ -41,7 +44,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
-	private static final String KEY_SUFFIX_ID_PROVS_IMG = "-image-uri";
 	private static final String KEY_SUFFIX_ID_PROVS_LOGIN_URL = "-login-url";
 	private static final String KEY_SUFFIX_ID_PROVS_API_URL = "-api-url";
 	private static final String KEY_SUFFIX_ID_PROVS_CLIENT_ID = "-client-id";
@@ -55,8 +57,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final SLF4JAutoLogger logger;
 	private final String mongoHost;
 	private final String mongoDB;
-	private final String mongoUser;
-	private final char[] mongoPwd;
+	private final Optional<String> mongoUser;
+	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
 
@@ -80,20 +82,19 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		try {
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
-			mongoUser = getString(KEY_MONGO_USER, cfg);
-			String mongop = getString(KEY_MONGO_PWD, cfg);
-			if (mongoUser != null ^ mongop != null) {
-				mongop = null; //gc
+			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
+			Optional<String> mongop = Optional.fromNullable(getString(KEY_MONGO_PWD, cfg));
+			if (mongoUser.isPresent() ^ mongop.isPresent()) {
+				mongop = null; //GC
 				throw new AuthConfigurationException(String.format(
 						"Must provide both %s and %s params in config file " +
-						"%s section %s if MongoDB authentication is to be " +
-						"used",
-						KEY_MONGO_USER, KEY_MONGO_PWD,
-						cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
+						"%s section %s if MongoDB authentication is to be used",
+						KEY_MONGO_USER, KEY_MONGO_PWD, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 			}
-			mongoPwd = mongop == null ? null : mongop.toCharArray();
+			mongoPwd = mongop.isPresent() ?
+					Optional.of(mongop.get().toCharArray()) : Optional.absent();
+			mongop = null; //GC
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
-			mongop = null; //gc
 			providers = getProviders(cfg);
 		} catch (AuthConfigurationException e) {
 			if (!nullLogger) {
@@ -118,26 +119,20 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				continue;
 			}
 			final String pre = KEY_PREFIX_ID_PROVS + p;
-			final URI imgURL = getURI( // relative url
-					pre + KEY_SUFFIX_ID_PROVS_IMG, cfg);
-			final String cliid = getString(
-					pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
-			final String clisec = getString(
-					pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
+			final String cliid = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
+			final String clisec = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
 			final URL login = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_URL, cfg);
 			final URL api = getURL(pre + KEY_SUFFIX_ID_PROVS_API_URL, cfg);
-			final URL loginRedirect = getURL(
-					pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
-			final URL linkRedirect = getURL(
-					pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
+			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
+			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
 			try {
-				ips.add(new IdentityProviderConfig(p, login, api,
-						cliid, clisec, imgURL, loginRedirect, linkRedirect));
-			} catch (IllegalArgumentException e) {
+				ips.add(new IdentityProviderConfig(
+						p, login, api, cliid, clisec, loginRedirect, linkRedirect));
+			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
 						"Error building configuration for provider %s in " +
-						"section %s or config file %s: %s",
+						"section %s of config file %s: %s",
 						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
 			}
 		}
@@ -153,19 +148,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			throw new AuthConfigurationException(String.format(
 					"Value %s of parameter %s in section %s of config " +
 					"file %s is not a valid URL",
-					url, key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
-		}
-	}
-	
-	private URI getURI(final String key, final Map<String, String> cfg)
-			throws AuthConfigurationException {
-		final String url = getString(key, cfg, true);
-		try {
-			return new URI(url);
-		} catch (URISyntaxException e) {
-			throw new AuthConfigurationException(String.format(
-					"Value %s of parameter %s in section %s of config " +
-					"file %s is not a valid URI",
 					url, key, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
 		}
 	}
@@ -288,12 +270,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	}
 
 	@Override
-	public String getMongoUser() {
+	public Optional<String> getMongoUser() {
 		return mongoUser;
 	}
 
 	@Override
-	public char[] getMongoPwd() {
+	public Optional<char[]> getMongoPwd() {
 		return mongoPwd;
 	}
 	

@@ -1,23 +1,48 @@
 <html>
 <body>
+<p>Note that in a proper UI, the display name, email, role descriptions, and disable reason should be HTML-escaped.</p>
+
+
 <h3>User info</h3>
 User name: {{user}}<br/>
+{{#disabled}}
+<p>
+DISABLED by {{enabledtoggledby}} on {{enabletoggledate}}. Reason given:<br/>
+{{disabledreason}}
+{{/disabled}}</p>
+{{^disabled}}{{#enabletoggledate}}
+Account re-enabled on {{enabletoggledate}} {{#enabledtoggledby}} by {{enabledtoggledby}}{{/enabledtoggledby}}<br/>
+{{/enabletoggledate}}{{/disabled}}
 Display name: {{display}}<br/>
 Email: {{email}}<br/>
 Created: {{created}}<br/>
 Last login: {{lastlogin}}<br/>
-Local: {{local}}<br/>
+Local: {{local}}
+{{#local}}
+<br/>
+<form action="{{forcereseturl}}" method="post">
+	<input type="hidden" name="user" value="{{user}}"/>
+	<input type="submit" value="Force password reset"/>
+</form>
+<br/>
+<form action="{{reseturl}}" method="post">
+	<input type="hidden" name="user" value="{{user}}"/>
+	<input type="submit" value="Reset and display password"/>
+</form>
+{{/local}}
+<p/>
 <h3>Roles:</h3>
 <form action="{{roleurl}}" method="post">
-	Create developer token: <input type="checkbox" name="dev" {{#dev}}checked{{/dev}}/><br/>
-	Create server token: <input type="checkbox" name="serv" {{#serv}}checked{{/serv}}/><br/>
-	Admin: <input type="checkbox" name="admin" {{#admin}}checked{{/admin}}/><br/>
-	Create admin: <input type="checkbox" name="createadmin" {{#createadmin}}checked{{/createadmin}}/><br/>
+	Create developer token: <input type="checkbox" name="DevToken" {{#DevToken}}checked{{/DevToken}} /><br/>
+	Create server token: <input type="checkbox" name="ServToken" {{#ServToken}}checked{{/ServToken}} /><br/>
+	Admin: <input type="checkbox" name="Admin" {{#Admin}}checked{{/Admin}} /><br/>
+	Create admin: <input type="checkbox" name="CreateAdmin" {{#CreateAdmin}}checked{{/CreateAdmin}} /><br/>
 <input type="reset" value="Reset"/>
 <input type="submit" value="Update"/>
 </form>
 
 <h3>Custom roles:</h3>
+<p>Note that in a proper UI, the role descriptions should be HTML-escaped.</p>
 {{#hascustom}}
 <form action="{{customroleurl}}" method="post">
 {{/hascustom}}
@@ -34,5 +59,14 @@ Description:<br/>
 </form>
 {{/hascustom}}
 
+<p><a href="{{tokenurl}}">Manage user's tokens</a></p>
+
+Note that if all admins are disabled you can reenable the root account from the manage_auth script.
+<form action="{{disableurl}}" method="post" id="disableform">
+	Disabled: <input type="checkbox" name="disable" {{#disabled}}checked{{/disabled}} /><br/>
+	Reason: <textarea name="reason" form="disableform" cols="40" rows="5"></textarea><br/>
+	<input type="reset" value="Reset"/>
+	<input type="submit" value="Update"/>
+</form>
 </body>
 </html>

@@ -9,6 +9,11 @@
 <h4>ID: {{ID}}</h4>
 Description:<br/>
 {{desc}}
+<br/>
+<form action="{{delroleurl}}" method="post">
+	<input type="hidden" name="id" value="{{ID}}"/>
+	<input type="submit" value="Delete"/>
+</form>
 </p>
 {{/roles}}
 

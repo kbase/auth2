@@ -1,7 +1,5 @@
 package us.kbase.auth2.lib.storage.mongo;
 
-import static us.kbase.auth2.lib.Utils.clear;
-
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -15,19 +13,23 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import com.google.common.base.Optional;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
+import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.IndexOptions;
+import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
@@ -43,13 +45,19 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -58,7 +66,7 @@ import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithID;
+import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -67,6 +75,12 @@ import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 
+/** A MongoDB based implementation of the authentication storage system.
+ * 
+ * @see AuthStorage
+ * @author gaprice@lbl.gov
+ *
+ */
 public class MongoStorage implements AuthStorage {
 
 	/* Don't use mongo built in object mapping to create the returned objects
@@ -75,8 +89,14 @@ public class MongoStorage implements AuthStorage {
 	 * mapping purposes that produce the returned classes.
 	 */
 	
-	//TODO TEST unit tests
-	//TODO JAVADOC
+	/* Testing the (many) catch blocks for the general mongo exception is pretty hard, since it
+	 * appears as though the mongo clients have a heartbeat, so just stopping mongo might trigger
+	 * the heartbeat exception rather than the exception you're going for.
+	 * 
+	 * Mocking the mongo client is probably not the answer:
+	 * http://stackoverflow.com/questions/7413985/unit-testing-with-mongodb
+	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
+	 */
 	
 	private static final int SCHEMA_VERSION = 1;
 	
@@ -101,8 +121,8 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	private static final Map<String, Map<List<String>, IndexOptions>> INDEXES;
-	private static final IndexOptions IDX_UNIQ =
-			new IndexOptions().unique(true);
+	private static final IndexOptions IDX_UNIQ = new IndexOptions().unique(true);
+	private static final IndexOptions IDX_SPARSE = new IndexOptions().sparse(true);
 	private static final IndexOptions IDX_UNIQ_SPARSE =
 			new IndexOptions().unique(true).sparse(true);
 	static {
@@ -116,17 +136,21 @@ public class MongoStorage implements AuthStorage {
 		//find user by identity provider and identity id and ensure identities
 		//are 1:1 with users
 		users.put(Arrays.asList(
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP +
-					Fields.IDENTITIES_PROVIDER,
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP +
-					Fields.IDENTITIES_PROV_ID),
+				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROVIDER,
+				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROV_ID),
 				IDX_UNIQ_SPARSE);
 		//find user by local identity id and ensure unique ids
 		users.put(Arrays.asList(Fields.USER_IDENTITIES + Fields.FIELD_SEP +
 				Fields.IDENTITIES_ID), IDX_UNIQ_SPARSE);
+		//find users by display name
+		users.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
+		//find users by roles
+		users.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
+		//find users by custom roles
+		users.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
 		INDEXES.put(COL_USERS, users);
 		
-		//roles indexes
+		//custom roles indexes
 		final Map<List<String>, IndexOptions> roles = new HashMap<>();
 		roles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
 		INDEXES.put(COL_CUST_ROLES, roles);
@@ -137,24 +161,30 @@ public class MongoStorage implements AuthStorage {
 		token.put(Arrays.asList(Fields.TOKEN_TOKEN), IDX_UNIQ);
 		token.put(Arrays.asList(Fields.TOKEN_ID), IDX_UNIQ);
 		token.put(Arrays.asList(Fields.TOKEN_EXPIRY),
-				// this causes the tokens to expire at their expiration date
-				//TODO TEST that tokens expire appropriately
+				/* this causes the tokens to be deleted at their expiration date
+				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
+				 * way to trigger a run, so tested manually
+				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TOKEN, token);
 		
 		//temporary token indexes
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
-		temptoken.put(Arrays.asList(Fields.TEMP_TOKEN_TOKEN), IDX_UNIQ);
-		temptoken.put(Arrays.asList(Fields.TEMP_TOKEN_EXPIRY),
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_ID), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
 				// this causes the tokens to expire at their expiration date
-				//TODO TEST that tokens expire appropriately
+				/* this causes the tokens to be deleted at their expiration date
+				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
+				 * way to trigger a run, so tested manually
+				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEMP_TOKEN, temptoken);
 		
 		//config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
 		//ensure only one config object
-		cfg.put(Arrays.asList(Fields.DB_CONFIG_KEY), IDX_UNIQ);
+		cfg.put(Arrays.asList(Fields.DB_SCHEMA_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG, cfg);
 		
 		// application config indexes
@@ -172,64 +202,63 @@ public class MongoStorage implements AuthStorage {
 		final Map<List<String>, IndexOptions> extcfg = new HashMap<>();
 		extcfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
-
-
 	}
 	
 	private MongoDatabase db;
 	
+	/** Create a new MongoDB authentication storage system.
+	 * @param db the MongoDB database to use for storage.
+	 * @throws StorageInitException if the storage system could not be initialized.
+	 */
 	public MongoStorage(final MongoDatabase db) throws StorageInitException {
 		if (db == null) {
 			throw new NullPointerException("db");
 		}
 		this.db = db;
 		
-		//TODO MISC check workspace startup for stuff to port over
+		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver)
+		ensureIndexes(); // MUST come before checkConfig();
 		checkConfig();
-		ensureIndexes();
 	}
 	
 	private void checkConfig() throws StorageInitException  {
 		final MongoCollection<Document> col = db.getCollection(COL_CONFIG);
-		final Document cfg = new Document(
-				Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE);
-		cfg.put(Fields.DB_CONFIG_UPDATE, false);
-		cfg.put(Fields.DB_CONFIG_SCHEMA_VERSION, SCHEMA_VERSION);
+		final Document cfg = new Document(Fields.DB_SCHEMA_KEY, Fields.DB_SCHEMA_VALUE);
+		cfg.put(Fields.DB_SCHEMA_UPDATE, false);
+		cfg.put(Fields.DB_SCHEMA_VERSION, SCHEMA_VERSION);
 		try {
 			col.insertOne(cfg);
 		} catch (MongoWriteException dk) {
 			if (!isDuplicateKeyException(dk)) {
-				throw new StorageInitException(
-						"There was a problem communicating with the " +
+				throw new StorageInitException("There was a problem communicating with the " +
 						"database: " + dk.getMessage(), dk);
 			}
-			//ok, the version doc is already there, this isn't the first
-			//startup
+			// ok, duplicate key means the version doc is already there, this isn't the first
+			// startup
 			if (col.count() != 1) {
+				// if this occurs the indexes are broken, so there's no way to test without
+				// altering ensureIndexes()
 				throw new StorageInitException(
 						"Multiple config objects found in the database. " +
 						"This should not happen, something is very wrong.");
 			}
 			final FindIterable<Document> cur = db.getCollection(COL_CONFIG)
-					.find(Filters.eq(Fields.DB_CONFIG_KEY, Fields.DB_CONFIG_VALUE));
+					.find(Filters.eq(Fields.DB_SCHEMA_KEY, Fields.DB_SCHEMA_VALUE));
 			final Document doc = cur.first();
-			if ((Integer) doc.get(Fields.DB_CONFIG_SCHEMA_VERSION) !=
-					SCHEMA_VERSION) {
+			if ((Integer) doc.get(Fields.DB_SCHEMA_VERSION) != SCHEMA_VERSION) {
 				throw new StorageInitException(String.format(
-						"Incompatible database schema. Server is v%s, " +
-						"DB is v%s", SCHEMA_VERSION,
-						doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
+						"Incompatible database schema. Server is v%s, DB is v%s",
+						SCHEMA_VERSION, doc.get(Fields.DB_SCHEMA_VERSION)));
 			}
-			if ((Boolean) doc.get(Fields.DB_CONFIG_UPDATE)) {
+			if ((Boolean) doc.get(Fields.DB_SCHEMA_UPDATE)) {
 				throw new StorageInitException(String.format(
 						"The database is in the middle of an update from " +
 								"v%s of the schema. Aborting startup.", 
-								doc.get(Fields.DB_CONFIG_SCHEMA_VERSION)));
+								doc.get(Fields.DB_SCHEMA_VERSION)));
 			}
 		} catch (MongoException me) {
 			throw new StorageInitException(
-					"There was a problem communicating with the database: " +
-					me.getMessage(), me);
+					"There was a problem communicating with the database: " + me.getMessage(), me);
 		}
 	}
 
@@ -255,64 +284,36 @@ public class MongoStorage implements AuthStorage {
 			}
 		}
 	}
-	
 
-	@Override
-	public void createRoot(
-			final UserName root,
-			final DisplayName displayName,
-			final EmailAddress email,
-			final Set<Role> roles,
-			final Date created,
-			final byte[] passwordHash,
-			final byte[] salt) throws AuthStorageException {
-		
-		final String encpwd = Base64.getEncoder().encodeToString(passwordHash);
-		clear(passwordHash);
-		final String encsalt = Base64.getEncoder().encodeToString(salt);
-		clear(salt);
-		final Document q = new Document(Fields.USER_NAME, root.getName());
-		final List<String> rolestr = roles.stream().map(r -> r.getID())
-				.collect(Collectors.toList());
-		final Document set = new Document(
-				Fields.USER_LOCAL, true)
-				.append(Fields.USER_ROLES, rolestr)
-				.append(Fields.USER_RESET_PWD, false)
-				.append(Fields.USER_PWD_HSH, encpwd)
-				.append(Fields.USER_SALT, encsalt);
-		final Document setIfMissing = new Document(
-				Fields.USER_EMAIL, email.getAddress())
-				.append(Fields.USER_DISPLAY_NAME, displayName.getName())
-				.append(Fields.USER_CUSTOM_ROLES, Collections.emptyList())
-				.append(Fields.USER_CREATED, created)
-				.append(Fields.USER_LAST_LOGIN, null)
-				.append(Fields.USER_RESET_PWD_LAST, null);
-		final Document u = new Document("$set", set)
-				.append("$setOnInsert", setIfMissing);
-		try {
-			db.getCollection(COL_USERS).updateOne(q, u,
-					new UpdateOptions().upsert(true));
-		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
-		}
-	}
-	
 	@Override
 	public void createLocalUser(final LocalUser local)
 			throws UserExistsException, AuthStorageException {
+		if (local == null) {
+			throw new NullPointerException("local");
+		}
 		final String pwdhsh = Base64.getEncoder().encodeToString(
 				local.getPasswordHash());
 		final String salt = Base64.getEncoder().encodeToString(
 				local.getSalt());
+		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		final UserName admin = local.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
 				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
-				.append(Fields.USER_ROLES, new LinkedList<String>())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, local.getDisplayName()
+						.getCanonicalDisplayName())
+				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
+				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
 				.append(Fields.USER_CREATED, local.getCreated())
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
+				// admin is always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
+				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -341,21 +342,40 @@ public class MongoStorage implements AuthStorage {
 				.collect(Collectors.toList());
 		@SuppressWarnings("unchecked")
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
-		return new MongoLocalUser(
+		
+		return new LocalUser(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
+				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
-				user.getDate(Fields.USER_RESET_PWD_LAST),
-				this);
+				user.getDate(Fields.USER_RESET_PWD_LAST));
 	}
-	
+
+	private UserDisabledState getUserDisabledState(final Document user)
+			throws AuthStorageException {
+		try {
+			return UserDisabledState.create(
+					user.getString(Fields.USER_DISABLED_REASON),
+					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
+					user.getDate(Fields.USER_DISABLED_DATE));
+		} catch (IllegalParameterException | MissingParameterException | IllegalStateException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
+		}
+	}
+
+	private UserName getUserNameAllowNull(final String namestr) throws AuthStorageException {
+		if (namestr == null) {
+			return null;
+		}
+		return getUserName(namestr);
+	}
 
 	private UserName getUserName(String namestr) throws AuthStorageException {
 		try {
@@ -384,12 +404,22 @@ public class MongoStorage implements AuthStorage {
 		}
 	}	
 	@Override
-	public void changePassword(final UserName name, final byte[] pwdHash, final byte[] salt)
+	public void changePassword(
+			final UserName name,
+			final byte[] pwdHash,
+			final byte[] salt,
+			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
+		if (pwdHash == null || pwdHash.length == 0) {
+			throw new IllegalArgumentException("pwdHash cannot be null or empty");
+		}
+		if (salt == null || salt.length == 0) {
+			throw new IllegalArgumentException("salt cannot be null or empty");
+		}
 		getUserDoc(name, true); //check the user actually is local
 		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
-		final Document set = new Document(Fields.USER_RESET_PWD, false)
+		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
 				.append(Fields.USER_RESET_PWD_LAST, new Date())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, encsalt);
@@ -397,37 +427,61 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createUser(final AuthUser user)
-			throws UserExistsException, AuthStorageException {
-		if (user.isLocal()) {
-			throw new IllegalArgumentException("cannot create a local user");
+	public void forcePasswordReset(final UserName name)
+			throws NoSuchUserException, AuthStorageException {
+		getUserDoc(name, true); //check user is local. Could do this in one step but meh
+		updateUser(name, new Document(Fields.USER_RESET_PWD, true));
+	}
+	
+	@Override
+	public void forcePasswordReset() throws AuthStorageException {
+		try {
+			db.getCollection(COL_USERS).updateMany(new Document(Fields.USER_LOCAL, true),
+					new Document("$set", new Document(Fields.USER_RESET_PWD, true)));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
-		if (user.getIdentities().size() > 1) {
-			throw new IllegalArgumentException(
-					"user can only have one identity");
+	}
+	
+	@Override
+	public void createUser(final NewUser user)
+			throws UserExistsException, AuthStorageException, IdentityLinkedException {
+		if (user == null) {
+			throw new NullPointerException("user");
 		}
-		final RemoteIdentityWithID ri = user.getIdentities().iterator().next();
-		final Document id = toDocument(ri);
-				
+		final UserName admin = user.getAdminThatToggledEnabledState();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, user.getDisplayName()
+						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
-				.append(Fields.USER_IDENTITIES, Arrays.asList(id))
+				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
 				.append(Fields.USER_CREATED, user.getCreated())
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin());
+				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				// admin is always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
+				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
+				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
 			if (isDuplicateKeyException(mwe)) {
-				//TODO ERRHANDLE handle case where duplicate is a remote id, not the username
-				throw new UserExistsException(user.getUserName().getName());
-			} else {
-				throw new AuthStorageException("Database write failed", mwe);
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_USERS + ".$" + Fields.USER_NAME)) {
+					throw new UserExistsException(user.getUserName().getName());
+				} else if (msg.contains(COL_USERS + ".$" + Fields.USER_IDENTITIES)) {
+					// either the provider / prov id combo or the local identity uuid are already
+					// in the db
+					final RemoteIdentityID ri = user.getIdentity().getRemoteID();
+					throw new IdentityLinkedException(ri.getProvider() + " : " + ri.getId());
+				} // otherwise throw next exception
 			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -435,38 +489,81 @@ public class MongoStorage implements AuthStorage {
 
 	private Document getUserDoc(final UserName userName, final boolean local)
 			throws AuthStorageException, NoSuchUserException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
 		final Document projection = local ? null : new Document(
 				Fields.USER_PWD_HSH, 0).append(Fields.USER_SALT, 0);
 		final Document user = findOne(COL_USERS,
-				new Document(Fields.USER_NAME, userName.getName()),
-				projection);
-		if (user == null || (local && !user.getBoolean(Fields.USER_LOCAL))) {
+				new Document(Fields.USER_NAME, userName.getName()), projection);
+		if (user == null) {
 			throw new NoSuchUserException(userName.getName());
+		}
+		if (local && !user.getBoolean(Fields.USER_LOCAL)) {
+			throw new NoSuchLocalUserException(userName.getName());
 		}
 		return user;
 	}
 
 	private boolean isDuplicateKeyException(final MongoWriteException mwe) {
-		return mwe.getError().getCategory().equals(
-				ErrorCategory.DUPLICATE_KEY);
+		return mwe.getError().getCategory().equals(ErrorCategory.DUPLICATE_KEY);
+	}
+	
+	@Override
+	public void disableAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		if (reason == null || reason.trim().isEmpty()) {
+			throw new IllegalArgumentException("reason cannot be null or empty");
+		}
+		toggleAccount(user, admin, reason);
+	}
+
+	private void toggleAccount(final UserName user, final UserName admin, final String reason)
+			throws NoSuchUserException, AuthStorageException {
+		if (admin == null) {
+			throw new NullPointerException("admin");
+		}
+		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
+				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
+				.append(Fields.USER_DISABLED_DATE, new Date());
+		updateUser(user, update);
+	}
+	
+	@Override
+	public void enableAccount(final UserName user, final UserName admin)
+			throws NoSuchUserException, AuthStorageException {
+		toggleAccount(user, admin, null);
 	}
 
 	@Override
-	public void storeToken(final HashedToken t) throws AuthStorageException {
+	public void storeToken(final HashedToken token) throws AuthStorageException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document td = new Document(
-				Fields.TOKEN_TYPE, t.getTokenType().getID())
-				.append(Fields.TOKEN_USER_NAME, t.getUserName().getName())
-				.append(Fields.TOKEN_ID, t.getId().toString())
-				.append(Fields.TOKEN_NAME, t.getTokenName())
-				.append(Fields.TOKEN_TOKEN, t.getTokenHash())
-				.append(Fields.TOKEN_EXPIRY, t.getExpirationDate())
-				.append(Fields.TOKEN_CREATION, t.getCreationDate());
+				Fields.TOKEN_TYPE, token.getTokenType().getID())
+				.append(Fields.TOKEN_USER_NAME, token.getUserName().getName())
+				.append(Fields.TOKEN_ID, token.getId().toString())
+				.append(Fields.TOKEN_NAME, token.getTokenName())
+				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_EXPIRY, token.getExpirationDate())
+				.append(Fields.TOKEN_CREATION, token.getCreationDate());
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
-			/* could catch a duplicate key exception here but that indicates
-			 * a programming error - should never try to insert a duplicate
-			 *  token
-			 */
+		} catch (MongoWriteException mwe) {
+			if (isDuplicateKeyException(mwe)) {
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_ID)) {
+					throw new IllegalArgumentException(String.format(
+							"Token ID %s already exists in the database", token.getId()));
+				} else if (msg.contains(COL_TOKEN + ".$" + Fields.TOKEN_TOKEN)) {
+					throw new IllegalArgumentException(String.format(
+							"Token hash for token ID %s already exists in the database",
+							token.getId()));
+				} // otherwise throw next exception
+			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -491,8 +588,7 @@ public class MongoStorage implements AuthStorage {
 			final Document projection)
 			throws AuthStorageException {
 		try {
-			return db.getCollection(collection).find(query)
-					.projection(projection).first();
+			return db.getCollection(collection).find(query).projection(projection).first();
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -501,17 +597,25 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public HashedToken getToken(final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document t = findOne(COL_TOKEN, new Document(
 				Fields.TOKEN_TOKEN, token.getTokenHash()));
 		if (t == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		//TODO TOKEN if token expired, throw error
-		return getToken(t);
+		final HashedToken htoken = getToken(t);
+		/* although expired tokens are automatically deleted from the DB by mongo, the thread
+		 * only runs ~1/min, so check here
+		 */
+		if (new Date().after(htoken.getExpirationDate())) {
+			throw new NoSuchTokenException("Token not found");
+		}
+		return htoken;
 	}
 	
-	private HashedToken getToken(final Document t)
-			throws AuthStorageException {
+	private HashedToken getToken(final Document t) throws AuthStorageException {
 		return new HashedToken(
 				TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
 				t.getString(Fields.TOKEN_NAME),
@@ -544,11 +648,10 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public AuthUser getUser(final UserName userName)
 			throws AuthStorageException, NoSuchUserException {
-		final Document user = getUserDoc(userName, false);
-		return toUser(user);
+		return toUser(getUserDoc(userName, false));
 	}
 
-	private MongoUser toUser(final Document user) throws AuthStorageException {
+	private AuthUser toUser(final Document user) throws AuthStorageException {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
@@ -557,52 +660,122 @@ public class MongoStorage implements AuthStorage {
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
-		return new MongoUser(
-				getUserName(user.getString(Fields.USER_NAME)),
+		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
+		
+		return new AuthUser(
+				userName,
 				getEmail(user.getString(Fields.USER_EMAIL)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				toIdentities(ids),
 				new HashSet<>(roles),
-				new HashSet<>(custroles),
+				getCustomRoles(userName, new HashSet<>(custroles)),
 				user.getDate(Fields.USER_CREATED),
 				user.getDate(Fields.USER_LAST_LOGIN),
-				this);
+				getUserDisabledState(user));
 	}
 	
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
 			throws AuthStorageException {
-		final Map<UserName, DisplayName> ret = new HashMap<>();
+		if (users == null) {
+			throw new NullPointerException("users");
+		}
+		Utils.noNulls(users, "Null username in users set");
 		if (users.isEmpty()) {
-			return ret;
+			return new HashMap<>();
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
+		return getDisplayNames(query, Fields.USER_NAME, -1);
+	}
+
+	private Map<UserName, DisplayName> getDisplayNames(
+			final Document query,
+			final String sortField,
+			final int limit)
+			throws AuthStorageException {
 		final Document projection = new Document(Fields.USER_NAME, 1)
 				.append(Fields.USER_DISPLAY_NAME, 1);
 		try {
 			final FindIterable<Document> docs = db.getCollection(COL_USERS)
 					.find(query).projection(projection);
+			if (limit > 0) {
+				docs.sort(new Document(sortField, 1)).limit(limit);
+			}
+			final Map<UserName, DisplayName> ret = new HashMap<>();
 			for (final Document d: docs) {
 				ret.put(getUserName(d.getString(Fields.USER_NAME)),
 						getDisplayName(d.getString(Fields.USER_DISPLAY_NAME)));
 			}
+			return ret;
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
-		return ret;
+	}
+	
+	private static final Map<UserSearchSpec.SearchField, String> SEARCHFIELD_TO_FIELD;
+	static {
+		final Map<UserSearchSpec.SearchField, String> m = new HashMap<>();
+		m.put(UserSearchSpec.SearchField.USERNAME, Fields.USER_NAME);
+		m.put(UserSearchSpec.SearchField.DISPLAYNAME, Fields.USER_DISPLAY_NAME_CANONICAL);
+		m.put(UserSearchSpec.SearchField.ROLE, Fields.USER_ROLES);
+		m.put(UserSearchSpec.SearchField.CUSTOMROLE, Fields.USER_CUSTOM_ROLES);
+		SEARCHFIELD_TO_FIELD = m;
 	}
 
 	@Override
-	public void deleteToken(
-			final UserName userName,
-			final UUID tokenId)
+	public Map<UserName, DisplayName> getUserDisplayNames(
+			final UserSearchSpec spec,
+			final int limit)
+			throws AuthStorageException {
+		if (spec == null) {
+			throw new NullPointerException("spec");
+		}
+		final Document query = new Document();
+		if (spec.getSearchPrefix().isPresent()) {
+			final String prefix = spec.getSearchPrefix().get();
+			final List<Document> queries = new LinkedList<>();
+			final Document regex = new Document("$regex", spec.isRegex() ? prefix :
+				"^" + Pattern.quote(prefix.toLowerCase()));
+			if (spec.isDisplayNameSearch()) {
+				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
+			}
+			if (spec.isUserNameSearch()) {
+				queries.add(new Document(Fields.USER_NAME, regex));
+			}
+			if (queries.size() == 1) {
+				query.putAll(queries.get(0));
+			} else {
+				query.put("$or", queries);
+			}
+			
+		}
+		if (spec.isRoleSearch()) {
+			query.put(Fields.USER_ROLES, new Document("$all", spec.getSearchRoles()
+					.stream().map(r -> r.getID()).collect(Collectors.toSet())));
+		}
+		if (spec.isCustomRoleSearch()) {
+			final Set<Document> crs = getCustomRoles(new Document(Fields.ROLES_ID,
+					new Document("$in", spec.getSearchCustomRoles())));
+			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
+					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
+		}
+		return getDisplayNames(query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
+	}
+
+	@Override
+	public void deleteToken(final UserName userName, final UUID tokenId)
 			throws AuthStorageException, NoSuchTokenException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		if (tokenId == null) {
+			throw new NullPointerException("tokenId");
+		}
 		try {
 			final DeleteResult dr = db.getCollection(COL_TOKEN)
-					.deleteOne(new Document(
-							Fields.TOKEN_USER_NAME, userName.getName())
+					.deleteOne(new Document(Fields.TOKEN_USER_NAME, userName.getName())
 							.append(Fields.TOKEN_ID, tokenId.toString()));
 			if (dr.getDeletedCount() != 1L) {
 				throw new NoSuchTokenException(String.format(
@@ -617,48 +790,114 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void deleteTokens(final UserName userName)
 			throws AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		deleteTokens(new Document(Fields.TOKEN_USER_NAME, userName.getName()));
+	}
+
+	private void deleteTokens(final Document document) throws AuthStorageException {
 		try {
-			db.getCollection(COL_TOKEN).deleteMany(new Document(
-					Fields.TOKEN_USER_NAME, userName.getName()));
+			db.getCollection(COL_TOKEN).deleteMany(document);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed", e);
 		}
 	}
+	
+	@Override
+	public void deleteTokens() throws AuthStorageException {
+		deleteTokens(new Document());
+	}
 
 	@Override
-	public void setRoles(final UserName userName, final Set<Role> roles)
+	public void updateRoles(
+			final UserName userName,
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles)
 			throws AuthStorageException, NoSuchUserException {
-		final Set<Object> strrl = roles.stream().map(r -> r.getID())
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
+		}
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
+		}
+		if (addRoles.contains(Role.ROOT) || removeRoles.contains(Role.ROOT)) {
+			// I don't like this at all. The whole way the root user is managed needs a rethink.
+			// note that the Authorization code shouldn't allow this either, but to be safe...
+			throw new IllegalArgumentException("Cannot change root role");
+		}
+		Utils.noNulls(addRoles, "Null role in addRoles");
+		Utils.noNulls(removeRoles, "Null role in removeRoles");
+		final Set<Object> stradd = addRoles.stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		setRoles(userName, strrl, Fields.USER_ROLES);
+		final Set<Object> strremove = removeRoles.stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		setRoles(userName, stradd, strremove, Fields.USER_ROLES);
 	}
 
 	private void setRoles(
 			final UserName userName,
-			final Set<Object> roles,
+			final Set<Object> addRoles,
+			final Set<Object> removeRoles,
 			final String field)
 			throws NoSuchUserException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		if (addRoles.isEmpty() && removeRoles.isEmpty()) {
+			return;
+		}
+		final Document query = new Document(Fields.USER_NAME, userName.getName());
 		try {
-			final UpdateResult ret = db.getCollection(COL_USERS).updateOne(
-					new Document(Fields.USER_NAME, userName.getName()),
-					new Document("$set", new Document(field, roles)));
-			// might not modify the roles if they're the same as input
-			if (ret.getMatchedCount() != 1) {
+			// ordered is true by default
+			// http://api.mongodb.com/java/3.3/com/mongodb/client/model/BulkWriteOptions.html
+			final BulkWriteResult res = db.getCollection(COL_USERS).bulkWrite(Arrays.asList(
+					new UpdateOneModel<>(query, new Document("$addToSet",
+							new Document(field, new Document("$each", addRoles)))),
+					new UpdateOneModel<>(query, new Document("$pull",
+							new Document(field, new Document("$in", removeRoles))))));
+			// might not modify the roles if they're the same as input so don't check modified
+			if (res.getMatchedCount() != 2) {
 				throw new NoSuchUserException(userName.getName());
 			}
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
-
+	
 	@Override
 	public void setCustomRole(final CustomRole role)
 			throws AuthStorageException {
+		if (role == null) {
+			throw new NullPointerException("role");
+		}
 		try {
 			db.getCollection(COL_CUST_ROLES).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
 					new Document("$set", new Document(Fields.ROLES_DESC, role.getDesc())),
 					new UpdateOptions().upsert(true));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
+	public void deleteCustomRole(final String roleId)
+			throws NoSuchRoleException, AuthStorageException,
+			MissingParameterException, IllegalParameterException {
+		CustomRole.checkValidRoleID(roleId);
+		try {
+			final Document role = db.getCollection(COL_CUST_ROLES).findOneAndDelete(
+					new Document(Fields.ROLES_ID, roleId));
+			if (role == null) {
+				throw new NoSuchRoleException(roleId);
+			}
+			/* note that in the getCustomRoles() method the user's roles are checked against the
+			 * db and removed if they don't exist, which protects against race conditions and
+			 * mongo / server downs.
+			 */
+			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull",
+					new Document(Fields.USER_CUSTOM_ROLES, role.getObjectId(Fields.MONGO_ID))));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -690,15 +929,15 @@ public class MongoStorage implements AuthStorage {
 			try {
 				ret.add(new CustomRole(d.getString(Fields.ROLES_ID),
 						d.getString(Fields.ROLES_DESC)));
-			} catch (MissingParameterException e) { // should be impossible
+			} catch (MissingParameterException | IllegalParameterException e) {
 				throw new AuthStorageException(
-						"Error in roles colletion - role with missing field", e);
+						"Error in roles collection - role with illegal or missing field", e);
 			}
 		}
 		return ret;
 	}
 
-	Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
+	private Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
 			throws AuthStorageException {
 		final Set<Document> roledocs = getCustomRoles(new Document(
 				Fields.MONGO_ID, new Document("$in", roleIds)));
@@ -706,56 +945,57 @@ public class MongoStorage implements AuthStorage {
 				.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet());
 		for (final ObjectId role: roleIds) {
 			if (!extantRoleIds.contains(role)) {
-				//TODO TEST need to exercise this race condition, generally shouldn't happen
-				removeCustomRole(user, role);
+				// should very rarely happen, if at all, so don't worry about optimization
+				final Document query = new Document(Fields.USER_NAME, user.getName());
+				final Document mod = new Document("$pull",
+						new Document(Fields.USER_CUSTOM_ROLES, role));
+				try {
+					// don't care if no changes are made, just means the role is already gone
+					db.getCollection(COL_USERS).updateOne(query, mod);
+				} catch (MongoException e) {
+					throw new AuthStorageException("Connection to database failed: " +
+							e.getMessage(), e);
+				}
 			}
 		}
 		return roledocs.stream().map(d -> d.getString(Fields.ROLES_ID))
 				.collect(Collectors.toSet());
 	}
 
-	private void removeCustomRole(final UserName user, final ObjectId role)
-			throws AuthStorageException {
-		final Document query = new Document(Fields.USER_NAME, user.getName());
-		final Document mod = new Document("$pull", new Document(Fields.USER_CUSTOM_ROLES, role));
-		try {
-			// don't care if no changes are made, just means the role is already gone
-			db.getCollection(COL_USERS).updateOne(query, mod);
-		} catch (MongoException e) {
-			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
-		}
-	}
-
 	@Override
-	public void setCustomRoles(
+	public void updateCustomRoles(
 			final UserName userName,
-			final Set<String> roles)
+			final Set<String> addRoles,
+			final Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
-		final Set<Document> docroles;
-		try {
-			docroles = getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", roles)));
-		} catch (MongoException me) {
-			throw new AuthStorageException("Connection to database failed", me);
+		if (addRoles == null) {
+			throw new NullPointerException("addRoles");
 		}
-		if (roles.size() != docroles.size()) {
-			final Set<String> rolenames = docroles.stream().map(d -> d.getString(Fields.ROLES_ID))
-					.collect(Collectors.toSet());
-			for (final String role: roles) {
-				if (!rolenames.contains(role)) {
-					throw new NoSuchRoleException(role);
-				}
-			}
-			throw new RuntimeException("Hole in reality matrix detected, please try turning " +
-					"reality off and then on again");
+		if (removeRoles == null) {
+			throw new NullPointerException("removeRoles");
 		}
-		final Set<Object> roleIDs = docroles.stream().map(d -> d.getObjectId(Fields.MONGO_ID))
+		Utils.noNulls(addRoles, "Null role in addRoles");
+		Utils.noNulls(removeRoles, "Null role in removeRoles");
+		final Set<String> allRoles = new HashSet<>(addRoles);
+		allRoles.addAll(removeRoles);
+		final Map<String, ObjectId> roleIDs =
+				getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", allRoles)))
+						.stream().collect(Collectors.toMap(
+								d -> d.getString(Fields.ROLES_ID),
+								d -> d.getObjectId(Fields.MONGO_ID)));
+		if (allRoles.size() != roleIDs.size()) {
+			allRoles.removeAll(roleIDs.keySet());
+			throw new NoSuchRoleException(allRoles.iterator().next());
+		}
+		final Set<Object> addRoleIDs = addRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
-		setRoles(userName, roleIDs, Fields.USER_CUSTOM_ROLES);
+		final Set<Object> removeRoleIDs = removeRoles.stream().map(r -> roleIDs.get(r))
+				.collect(Collectors.toSet());
+		setRoles(userName, addRoleIDs, removeRoleIDs, Fields.USER_CUSTOM_ROLES);
 	}
 
 	@Override
-	public AuthUser getUser(final RemoteIdentity remoteID)
-			throws AuthStorageException {
+	public Optional<AuthUser> getUser(final RemoteIdentity remoteID) throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
 		//note a user with identities should never have these fields, but
 		//doesn't hurt to be safe
@@ -763,48 +1003,44 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_SALT, 0);
 		final Document u = findOne(COL_USERS, query, projection);
 		if (u == null) {
-			return null;
+			return Optional.absent();
 		}
-		MongoUser user = toUser(u);
+		AuthUser user = toUser(u);
 		/* could do a findAndModify to set the fields on the first query, but
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
 		 */
-		RemoteIdentityWithID update = null;
-		for (final RemoteIdentityWithID ri: user.getIdentities()) {
+		RemoteIdentityWithLocalID update = null;
+		for (final RemoteIdentityWithLocalID ri: user.getIdentities()) {
 			if (ri.getRemoteID().equals(remoteID.getRemoteID()) &&
 					!ri.getDetails().equals(remoteID.getDetails())) {
 				update = ri;
 			}
 		}
 		if (update != null) {
-			final Set<RemoteIdentityWithID> newIDs = new HashSet<>(user.getIdentities());
+			final Set<RemoteIdentityWithLocalID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new MongoUser(user, newIDs);
+			user = new AuthUser(user, newIDs);
 			updateIdentity(remoteID);
 		}
-		return user;
+		return Optional.of(user);
 	}
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {
-		final Document query = new Document(Fields.USER_IDENTITIES,
-				new Document("$elemMatch", new Document(Fields.IDENTITIES_PROVIDER,
-								remoteID.getRemoteID().getProvider())
-						.append(Fields.IDENTITIES_PROV_ID,
-								remoteID.getRemoteID().getId())));
-		return query;
+		return new Document(Fields.USER_IDENTITIES, new Document("$elemMatch",
+				new Document(Fields.IDENTITIES_PROVIDER, remoteID.getRemoteID().getProvider())
+				.append(Fields.IDENTITIES_PROV_ID, remoteID.getRemoteID().getId())));
 	}
 	
-	//TODO TEST exercise this function with tests
 	private void updateIdentity(final RemoteIdentity remoteID)
 			throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
 		
 		final String pre = Fields.USER_IDENTITIES + ".$.";
 		final RemoteIdentityDetails rid = remoteID.getDetails();
-		final Document update = new Document("$set", new Document(
-				pre + Fields.IDENTITIES_USER, rid.getUsername())
+		final Document update = new Document("$set",
+				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
 				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname()));
 		try {
@@ -818,28 +1054,47 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public void storeIdentitiesTemporarily(
-			final TemporaryHashedToken t,
-			final Set<RemoteIdentityWithID> identitySet)
+			final TemporaryHashedToken token,
+			final Set<RemoteIdentityWithLocalID> identitySet)
 			throws AuthStorageException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
+		if (identitySet == null) {
+			throw new NullPointerException("identitySet");
+		}
+		// ok for the set to be empty
+		Utils.noNulls(identitySet, "Null value in identitySet");
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
-				Fields.TEMP_TOKEN_ID, t.getId().toString())
-				.append(Fields.TEMP_TOKEN_TOKEN, t.getTokenHash())
-				.append(Fields.TEMP_TOKEN_EXPIRY, t.getExpirationDate())
-				.append(Fields.TEMP_TOKEN_CREATION, t.getCreationDate())
-				.append(Fields.TEMP_TOKEN_IDENTITIES, ids);
+				Fields.TOKEN_TEMP_ID, token.getId().toString())
+				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_TEMP_EXPIRY, token.getExpirationDate())
+				.append(Fields.TOKEN_TEMP_CREATION, token.getCreationDate())
+				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
-			/* could catch a duplicate key exception here but that indicates
-			 * a programming error - should never try to insert a duplicate
-			 *  token
-			 */
+		} catch (MongoWriteException mwe) {
+			if (isDuplicateKeyException(mwe)) {
+				final String msg = mwe.getError().getMessage();
+				// not happy about this, but getDetails() returns an empty map
+				if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_ID)) {
+					throw new IllegalArgumentException(String.format(
+							"Temporary token ID %s already exists in the database",
+							token.getId()));
+				} else if (msg.contains(COL_TEMP_TOKEN + ".$" + Fields.TOKEN_TEMP_TOKEN)) {
+					throw new IllegalArgumentException(String.format(
+							"Token hash for temporary token ID %s already exists in the database",
+							token.getId()));
+				} // otherwise throw next exception
+			}
+			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
 
-	private Document toDocument(final RemoteIdentityWithID id) {
+	private Document toDocument(final RemoteIdentityWithLocalID id) {
 		final RemoteIdentityDetails rid = id.getDetails();
 		return new Document(Fields.IDENTITIES_ID, id.getID().toString())
 				.append(Fields.IDENTITIES_PROVIDER, id.getRemoteID().getProvider())
@@ -850,31 +1105,33 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public Set<RemoteIdentityWithID> getTemporaryIdentities(
+	public Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
+		if (token == null) {
+			throw new NullPointerException("token");
+		}
 		final Document d = findOne(COL_TEMP_TOKEN,
-				new Document(Fields.TEMP_TOKEN_TOKEN, token.getTokenHash()));
+				new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
 		if (d == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		@SuppressWarnings("unchecked")
-		final List<Document> ids =
-				(List<Document>) d.get(Fields.TEMP_TOKEN_IDENTITIES);
-		if (ids == null || ids.isEmpty()) {
-			final String tid = d.getString(Fields.TEMP_TOKEN_ID);
-			throw new AuthStorageException(String.format(
-					"Temporary token %s has no associated IDs", tid));
+		// if we do this anywhere else should make a method to go from doc -> temptoken class
+		if (new Date().after(d.getDate(Fields.TOKEN_TEMP_EXPIRY))) {
+			throw new NoSuchTokenException("Token not found");
 		}
-		final Set<RemoteIdentityWithID> ret = toIdentities(ids);
-		return ret;
+		@SuppressWarnings("unchecked")
+		final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
+		if (ids == null) {
+			final String tid = d.getString(Fields.TOKEN_TEMP_ID);
+			throw new AuthStorageException(String.format(
+					"Temporary token %s has no associated IDs field", tid));
+		}
+		return toIdentities(ids);
 	}
 
-	private Set<RemoteIdentityWithID> toIdentities(final List<Document> ids) {
-		final Set<RemoteIdentityWithID> ret = new HashSet<>();
-		if (ids == null) {
-			return ret;
-		}
+	private Set<RemoteIdentityWithLocalID> toIdentities(final List<Document> ids) {
+		final Set<RemoteIdentityWithLocalID> ret = new HashSet<>();
 		for (final Document i: ids) {
 			final RemoteIdentityID rid = new RemoteIdentityID(
 					i.getString(Fields.IDENTITIES_PROVIDER),
@@ -883,35 +1140,42 @@ public class MongoStorage implements AuthStorage {
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL));
-			ret.add(new RemoteIdentityWithID(
+			ret.add(new RemoteIdentityWithLocalID(
 					UUID.fromString(i.getString(Fields.IDENTITIES_ID)),
 					rid, det));
 		}
 		return ret;
 	}
 	
+	/* See notes for this method between this method and the next. These two methods are tightly
+	 * coupled.
+	 */
 	@Override
-	public void link(final UserName user, final RemoteIdentityWithID remoteID)
+	public void link(final UserName user, final RemoteIdentityWithLocalID remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException {
 		int count = 0;
 		boolean complete = false;
-		// could just put addIdentity into the while loop but this is more readable IMO
 		while (!complete) {
 			count++;
 			if (count > 5) {
-				throw new LinkFailedException("Attempted link update 5 times without success. " +
+				// there's not really any way to test this without some crazy timing stuff
+				throw new RuntimeException("Attempted link update 5 times without success. " +
 						"There's probably a programming error here.");
 			}
-			complete = addIdentity(user, remoteID);
+			complete = addIdentity(getUser(user), remoteID);
 		}
 	}
 	
+	/* The method above and below are split for two reasons: 1) readability, and 2) so that
+	 * tests can use reflection to exercise the method below with the case where the user 
+	 * identities change between getting the user and updating the identities.
+	 */
+	
 	private boolean addIdentity(
-			final UserName userName,
-			final RemoteIdentityWithID remoteID)
-			throws NoSuchUserException, AuthStorageException,
-			LinkFailedException {
+			final AuthUser user,
+			final RemoteIdentityWithLocalID remoteID)
+			throws NoSuchUserException, AuthStorageException, LinkFailedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
 		 * documents, adding the same provider ID to a single document twice is possible without
@@ -922,14 +1186,15 @@ public class MongoStorage implements AuthStorage {
 		 * Splitting the user doc from the provider docs has a whole host of other issues, mostly
 		 * wrt deletion
 		 */
-		
-		final AuthUser user = getUser(userName);
+		if (remoteID == null) {
+			throw new NullPointerException("remoteID");
+		}
 		if (user.isLocal()) {
-			throw new LinkFailedException("Cannot link accounts to a local user");
+			throw new LinkFailedException("Cannot link identities to a local user");
 		}
 		// firstly check to see if the ID is already linked. If so, just update the associated
 		// user info.
-		for (final RemoteIdentityWithID ri: user.getIdentities()) {
+		for (final RemoteIdentityWithLocalID ri: user.getIdentities()) {
 			if (ri.getRemoteID().equals(remoteID.getRemoteID())) {
 				// if the details are the same, there's nothing to do, user is already linked and
 				// user info is the same
@@ -951,7 +1216,8 @@ public class MongoStorage implements AuthStorage {
 		final List<Document> idQuery = oldIDs.stream().map(d -> new Document("$elemMatch", d))
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, user.getUserName().getName())
-				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery));
+				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery))
+				.append(Fields.USER_IDENTITIES, new Document("$size", idQuery.size()));
 		
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query,
@@ -973,10 +1239,17 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void unlink(
-			final UserName username,
+			final UserName userName,
 			final UUID id)
-			throws AuthStorageException, UnLinkFailedException {
-		final Document q = new Document(Fields.USER_NAME, username.getName())
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException {
+		if (id == null) {
+			throw new NullPointerException("id");
+		}
+		final AuthUser u = getUser(userName);
+		if (u.isLocal()) {
+			throw new UnLinkFailedException("Local users have no identities");
+		}
+		final Document q = new Document(Fields.USER_NAME, userName.getName())
 				/* this a neat trick to ensure that there's at least 2
 				 * identities for the user. See http://stackoverflow.com/a/15224544/643675
 				 * Normal users must always have at least one identity.
@@ -987,9 +1260,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(q, a);
 			if (r.getMatchedCount() != 1) {
-				// could pull the user here to ensure it exists, but meh
-				throw new UnLinkFailedException("Either the user doesn't " +
-						"exist or only has one associated identity");
+				throw new UnLinkFailedException("The user has only one associated identity");
 			}
 			if (r.getModifiedCount() != 1) {
 				throw new UnLinkFailedException("The user is not linked to the provided identity");
@@ -999,19 +1270,24 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private Set<Document> toDocument(final Set<RemoteIdentityWithID> rids) {
+	private Set<Document> toDocument(final Set<RemoteIdentityWithLocalID> rids) {
 		return rids.stream().map(ri -> toDocument(ri)).collect(Collectors.toSet());
 	}
 
 	@Override
 	public void updateUser(final UserName userName, final UserUpdate update)
-			throws NoSuchUserException, AuthStorageException{
+			throws NoSuchUserException, AuthStorageException {
+		if (update == null) {
+			throw new NullPointerException("update");
+		}
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
 		final Document d = new Document();
 		if (update.getDisplayName() != null) {
-			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName());
+			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, 
+						update.getDisplayName().getCanonicalDisplayName());
 		}
 		if (update.getEmail() != null) {
 			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());
@@ -1023,6 +1299,10 @@ public class MongoStorage implements AuthStorage {
 			final UserName userName,
 			final Document update)
 			throws NoSuchUserException, AuthStorageException {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		// assume coders are not stupid enough to pass in a null document
 		final Document q = new Document(Fields.USER_NAME, userName.getName());
 		final Document u = new Document("$set", update);
 		try {
@@ -1039,8 +1319,10 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setLastLogin(final UserName user, final Date lastLogin) 
 			throws NoSuchUserException, AuthStorageException {
-		final Document d = new Document(Fields.USER_LAST_LOGIN, lastLogin);
-		updateUser(user, d);
+		if (lastLogin == null) {
+			throw new NullPointerException("lastLogin");
+		}
+		updateUser(user, new Document(Fields.USER_LAST_LOGIN, lastLogin));
 	}
 
 	private void updateConfig(
@@ -1057,17 +1339,15 @@ public class MongoStorage implements AuthStorage {
 			final String collection,
 			final Document query,
 			final Object value,
-			final boolean overwrite)
+			final boolean overwrite) // may want to have an action type to allow remove?
 			throws AuthStorageException {
 		if (value == null) {
 			return;
 		}
 		final String op = overwrite ? "$set" : "$setOnInsert";
-		final Document u = new Document(op,
-				new Document(Fields.CONFIG_VALUE, value));
+		final Document u = new Document(op, new Document(Fields.CONFIG_VALUE, value));
 		try {
-			db.getCollection(collection).updateOne(query, u,
-					new UpdateOptions().upsert(true));
+			db.getCollection(collection).updateOne(query, u, new UpdateOptions().upsert(true));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
@@ -1089,35 +1369,34 @@ public class MongoStorage implements AuthStorage {
 			final AuthConfigSet<T> cfgSet,
 			final boolean overwrite)
 			throws AuthStorageException {
+
+		if (cfgSet == null) {
+			throw new NullPointerException("cfgSet");
+		}
 		
-		updateConfig(COL_CONFIG_APPLICATION, Fields.CONFIG_APP_ALLOW_LOGIN,
-				cfgSet.getCfg().isLoginAllowed(), overwrite);
+		updateConfig(COL_CONFIG_APPLICATION,
+				Fields.CONFIG_APP_ALLOW_LOGIN, cfgSet.getCfg().isLoginAllowed(), overwrite);
 		for (final Entry<TokenLifetimeType, Long> e:
 				cfgSet.getCfg().getTokenLifetimeMS().entrySet()) {
 			updateConfig(COL_CONFIG_APPLICATION,
-					TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()),
-					e.getValue(), overwrite);
+					TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()), e.getValue(), overwrite);
 		}
-		for (final Entry<String, ProviderConfig> e:
-				cfgSet.getCfg().getProviders().entrySet()) {
-			updateProviderConfig(e.getKey(),
-					Fields.CONFIG_PROVIDER_ENABLED,
+		for (final Entry<String, ProviderConfig> e: cfgSet.getCfg().getProviders().entrySet()) {
+			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_ENABLED,
 					e.getValue().isEnabled(), overwrite);
-			updateProviderConfig(e.getKey(),
-					Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE,
+			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LOGIN_CHOICE,
+					e.getValue().isForceLoginChoice(), overwrite);
+			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE,
 					e.getValue().isForceLinkChoice(), overwrite);
 		}
 		
-		for (final Entry<String, String> e:
-				cfgSet.getExtcfg().toMap().entrySet()) {
-			updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue(),
-					overwrite);
+		for (final Entry<String, String> e: cfgSet.getExtcfg().toMap().entrySet()) {
+			updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue(), overwrite);
 		}
 	}
 	
 	private Map<String, Document> getAppConfig() {
-		final FindIterable<Document> i =
-				db.getCollection(COL_CONFIG_APPLICATION).find();
+		final FindIterable<Document> i = db.getCollection(COL_CONFIG_APPLICATION).find();
 		final Map<String, Document> ret = new HashMap<>();
 		for (final Document d: i) {
 			ret.put(d.getString(Fields.CONFIG_KEY), d);
@@ -1125,47 +1404,59 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 	
-	private Map<String, Map<String, Document>> getProviderConfig() {
-		final FindIterable<Document> proviter =
-				db.getCollection(COL_CONFIG_PROVIDERS).find();
-		final Map<String, Map<String, Document>> ret = new HashMap<>();
+	private Map<String, ProviderConfig> getProviderConfig() {
+		final FindIterable<Document> proviter = db.getCollection(COL_CONFIG_PROVIDERS).find();
+		final Map<String, Map<String, Document>> provdocs = new HashMap<>();
 		for (final Document d: proviter) {
 			final String p = d.getString(Fields.CONFIG_PROVIDER);
 			final String key = d.getString(Fields.CONFIG_KEY);
-			if (!ret.containsKey(p)) {
-				ret.put(p, new HashMap<>());
+			if (!provdocs.containsKey(p)) {
+				provdocs.put(p, new HashMap<>());
 			}
-			ret.get(p).put(key, d);
+			provdocs.get(p).put(key, d);
 		}
-		return ret;
+		final Map<String, ProviderConfig> provs = new HashMap<>();
+		for (final Entry<String, Map<String, Document>> d: provdocs.entrySet()) {
+			final ProviderConfig pc = new ProviderConfig(
+					d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
+							.getBoolean(Fields.CONFIG_VALUE),
+					d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LOGIN_CHOICE)
+							.getBoolean(Fields.CONFIG_VALUE),
+					d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
+							.getBoolean(Fields.CONFIG_VALUE));
+			provs.put(d.getKey(), pc);
+		}
+		return provs;
 	}
 			
 	@Override
 	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
+		
+		if (mapper == null) {
+			throw new NullPointerException("mapper");
+		}
 		try {
 			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
 			final Map<String, String> ext = new HashMap<>();
 			for (final Document d: extiter) {
 				ext.put(d.getString(Fields.CONFIG_KEY), d.getString(Fields.CONFIG_VALUE));
 			}
-			final Map<String, Map<String, Document>> provcfg = getProviderConfig();
-			final Map<String, ProviderConfig> provs = new HashMap<>();
-			for (final Entry<String, Map<String, Document>> d: provcfg.entrySet()) {
-				final ProviderConfig pc = new ProviderConfig(
-						d.getValue().get(Fields.CONFIG_PROVIDER_ENABLED)
-								.getBoolean(Fields.CONFIG_VALUE),
-						d.getValue().get(Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE)
-								.getBoolean(Fields.CONFIG_VALUE));
-				provs.put(d.getKey(), pc);
-			}
+			final Map<String, ProviderConfig> provs = getProviderConfig();
 			final Map<String, Document> appcfg = getAppConfig();
-			final Boolean allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
-					.getBoolean(Fields.CONFIG_VALUE);
+			final Boolean allowLogin;
+			if (appcfg.containsKey(Fields.CONFIG_APP_ALLOW_LOGIN)) {
+				allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
+						.getBoolean(Fields.CONFIG_VALUE);
+			} else {
+				allowLogin = null;
+			}
 			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
 			for (final Entry<TokenLifetimeType, String> e: TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
-				tokens.put(e.getKey(), appcfg.get(e.getValue()).getLong(Fields.CONFIG_VALUE));
+				if (appcfg.get(e.getValue()) != null) {
+					tokens.put(e.getKey(), appcfg.get(e.getValue()).getLong(Fields.CONFIG_VALUE));
+				}
 			}
 			return new AuthConfigSet<T>(new AuthConfig(allowLogin, provs, tokens),
 					mapper.fromMap(ext));

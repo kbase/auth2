@@ -1,55 +1,56 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkString;
-
 import java.util.Date;
 import java.util.UUID;
 
+/** An hashed temporary token.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class TemporaryHashedToken {
 	
-	//TODO TEST
-	//TODO JAVADOC
-
 	private final String tokenHash;
-	private final Date created;
-	private final Date expiry;
+	private final long created;
+	private final long expiry;
 	private final UUID id;
 
-	public TemporaryHashedToken(
+	TemporaryHashedToken(
 			final String tokenHash,
 			final UUID id,
-			final Date created,
-			final Date expiry) {
-		super();
-		checkString(tokenHash, "tokenHash", true);
-		if (created == null) {
-			throw new NullPointerException("created");
-		}
-		if (expiry == null) {
-			throw new NullPointerException("expiry");
-		}
-		if (id == null) {
-			throw new NullPointerException("id");
-		}
+			final long creationDate,
+			final long expirationDate) {
+		// since this method is only called by TemporaryToken, we assume the inputs are ok
 		this.tokenHash = tokenHash;
 		this.id = id;
-		this.created = created;
-		this.expiry = expiry;
+		this.created = creationDate;
+		this.expiry = expirationDate;
 	}
 
+	/** Get the token hash string.
+	 * @return the hash string.
+	 */
 	public String getTokenHash() {
 		return tokenHash;
 	}
 
+	/** Get the token's ID.
+	 * @return the ID.
+	 */
 	public UUID getId() {
 		return id;
 	}
 
+	/** Get the date the token was created.
+	 * @return the creation date.
+	 */
 	public Date getCreationDate() {
-		return created;
+		return new Date(created);
 	}
 
+	/** Get the date the token expires.
+	 * @return the expiration date.
+	 */
 	public Date getExpirationDate() {
-		return expiry;
+		return new Date(expiry);
 	}
 }

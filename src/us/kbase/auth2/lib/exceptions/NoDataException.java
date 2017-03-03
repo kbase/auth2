@@ -10,11 +10,4 @@ public class NoDataException extends AuthException {
 	public NoDataException(final ErrorType err, final String message) {
 		super(err, message);
 	}
-	
-	public NoDataException(
-			final ErrorType err,
-			final String message,
-			final Throwable cause) {
-		super(err, message, cause);
-	}
 }
