@@ -5,16 +5,11 @@ package us.kbase.auth2.lib.identity;
  * @author gaprice@lbl.gov
  *
  */
-public interface IdentityProviderConfigurator {
+public interface IdentityProviderFactory {
 	
 	/** Given a configuration, creates an identity provider.
 	 * @param cfg the identity provider configuration.
 	 * @return the new identity provider.
 	 */
 	IdentityProvider configure(IdentityProviderConfig cfg);
-	
-	/** Get the name of the identity provider this configurator is able to configure.
-	 * @return the identity provider name.
-	 */
-	String getProviderName();
 }

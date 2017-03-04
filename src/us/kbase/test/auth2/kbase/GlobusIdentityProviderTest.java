@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib.identity;
+package us.kbase.test.auth2.kbase;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -31,9 +31,9 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.kbase.GlobusIdentityProviderFactory;
+import us.kbase.auth2.kbase.GlobusIdentityProviderFactory.GlobusIdentityProvider;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
@@ -86,7 +86,7 @@ public class GlobusIdentityProviderTest {
 	static {
 		try {
 			CFG = new IdentityProviderConfig(
-					"Globus",
+					GlobusIdentityProviderFactory.class.getName(),
 					new URL("https://login.com"),
 					new URL("https://setapiurl.com"),
 					"foo",
@@ -100,8 +100,7 @@ public class GlobusIdentityProviderTest {
 
 	@Test
 	public void simpleOperationsWithConfigurator() throws Exception {
-		final GlobusIdentityProviderConfigurator gc = new GlobusIdentityProviderConfigurator();
-		assertThat("incorrect provider name", gc.getProviderName(), is("Globus"));
+		final GlobusIdentityProviderFactory gc = new GlobusIdentityProviderFactory();
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
@@ -147,7 +146,8 @@ public class GlobusIdentityProviderTest {
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
-				new IllegalArgumentException("Bad config name: foo"));
+				new IllegalArgumentException(
+						"Configuration class name doesn't match factory class name: foo"));
 	}
 	
 	private void failCreate(final IdentityProviderConfig cfg, final Exception exception) {
@@ -469,7 +469,7 @@ public class GlobusIdentityProviderTest {
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
 		return new IdentityProviderConfig(
-				"Globus",
+				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
@@ -603,7 +603,7 @@ public class GlobusIdentityProviderTest {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
-				"Globus",
+				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,

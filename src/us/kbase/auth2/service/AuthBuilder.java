@@ -1,7 +1,9 @@
 package us.kbase.auth2.service;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.LoggerFactory;
 
@@ -13,8 +15,9 @@ import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
+import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
@@ -29,7 +32,6 @@ public class AuthBuilder {
 	private Authentication auth;
 	
 	public AuthBuilder(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
@@ -40,11 +42,10 @@ public class AuthBuilder {
 			throw new NullPointerException("defaultExternalConfig");
 		}
 		mc = buildMongo(cfg);
-		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
 	public AuthBuilder(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig,
 			final MongoClient mc)
@@ -59,7 +60,7 @@ public class AuthBuilder {
 			throw new NullPointerException("defaultExternalConfig");
 		}
 		this.mc = mc;
-		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
@@ -81,7 +82,6 @@ public class AuthBuilder {
 	}
 	
 	private Authentication buildAuth(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig c,
 			final MongoClient mc,
 			final ExternalConfig defaultExternalConfig)
@@ -97,23 +97,47 @@ public class AuthBuilder {
 		}
 		//TODO TEST authenticate to db, write actual test with authentication
 		final AuthStorage s = new MongoStorage(db);
-		configureIdentityProviders(identities, c);
-		return new Authentication(s, identities, defaultExternalConfig);
+		final Set<IdentityProvider> provs = configureIdentityProviders(c);
+		return new Authentication(s, provs, defaultExternalConfig);
 	}
 	
-	private void configureIdentityProviders(
-			final IdentityProviderSet identities,
-			final AuthStartupConfig c)
+	private Set<IdentityProvider> configureIdentityProviders(final AuthStartupConfig c)
 			throws AuthConfigurationException {
+		final Set<IdentityProvider> providers = new HashSet<>();
 		for (final IdentityProviderConfig idc: c.getIdentityProviderConfigs()) {
 			try {
-				identities.configure(idc);
+				final Class<?> fac;
+				try {
+					fac = Class.forName(idc.getIdentityProviderFactoryClassName());
+				} catch (ClassNotFoundException e) {
+					throw new AuthConfigurationException(String.format(
+							"Cannot load identity provider factory %s: %s",
+							idc.getIdentityProviderFactoryClassName(),
+							e.getMessage(), e));
+				}
+				final Set<Class<?>> interfaces = new HashSet<>(Arrays.asList(fac.getInterfaces()));
+				if (!interfaces.contains(IdentityProviderFactory.class)) {
+					throw new AuthConfigurationException(String.format(
+							"Module %s must implement %s interface",
+							idc.getIdentityProviderFactoryClassName(),
+							IdentityProviderFactory.class.getName()));
+				}
+				final IdentityProviderFactory cfgr;
+				try {
+					cfgr = (IdentityProviderFactory) fac.newInstance();
+				} catch (IllegalAccessException | InstantiationException e) {
+					throw new AuthConfigurationException(String.format(
+							"Module %s could not be instantiated: %s",
+							idc.getIdentityProviderFactoryClassName(), e.getMessage()), e);
+				}
+				providers.add(cfgr.configure(idc));
 			} catch (IllegalArgumentException e) {
 				throw new AuthConfigurationException(String.format(
 						"Error registering identity provider %s: %s",
-						idc.getIdentityProviderName(),  e.getMessage()), e);
+						idc.getIdentityProviderFactoryClassName(),  e.getMessage()), e);
 			}
 		}
+		return providers;
 	}
 
 	public MongoClient getMongoClient() {
