@@ -34,6 +34,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
+import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.UserName;
@@ -53,7 +54,6 @@ import us.kbase.auth2.service.AuthBuilder;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
-import us.kbase.auth2.service.kbase.KBaseAuthConfig;
 
 public class AuthCLI {
 	

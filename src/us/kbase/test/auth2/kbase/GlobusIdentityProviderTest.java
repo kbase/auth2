@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib.identity;
+package us.kbase.test.auth2.kbase;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -31,9 +31,9 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.kbase.GlobusIdentityProvider;
+import us.kbase.auth2.kbase.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;

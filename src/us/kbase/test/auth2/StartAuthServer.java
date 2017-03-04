@@ -5,8 +5,8 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 
+import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.service.AuthenticationService;
-import us.kbase.auth2.service.kbase.KBaseAuthConfig;
 
 public class StartAuthServer {
 

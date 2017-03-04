@@ -1,4 +1,4 @@
-package us.kbase.auth2.service.kbase;
+package us.kbase.auth2.kbase;
 
 import java.io.File;
 import java.io.IOException;

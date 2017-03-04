@@ -3,8 +3,8 @@ package us.kbase.auth2.service;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
+import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
-import us.kbase.auth2.service.kbase.KBaseAuthConfig;
 
 public class AppEventListener implements ServletContextListener {
 	

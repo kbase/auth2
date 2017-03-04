@@ -1,4 +1,4 @@
-package us.kbase.auth2.lib.identity;
+package us.kbase.auth2.kbase;
 
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -29,6 +29,12 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfigurator;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 
 /** An identity provider for the <a href="https://globus.org" target="_blank">Globus</a> service.
  * @author gaprice@lbl.gov

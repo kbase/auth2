@@ -200,6 +200,8 @@
       <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
+      <test name="us.kbase.test.auth2.kbase.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.kbase.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
@@ -226,8 +228,6 @@
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
       <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
