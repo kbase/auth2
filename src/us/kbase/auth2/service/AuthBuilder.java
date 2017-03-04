@@ -17,7 +17,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderConfigurator;
+import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
@@ -116,15 +116,15 @@ public class AuthBuilder {
 							e.getMessage(), e));
 				}
 				final Set<Class<?>> interfaces = new HashSet<>(Arrays.asList(fac.getInterfaces()));
-				if (!interfaces.contains(IdentityProviderConfigurator.class)) {
+				if (!interfaces.contains(IdentityProviderFactory.class)) {
 					throw new AuthConfigurationException(String.format(
 							"Module %s must implement %s interface",
 							idc.getIdentityProviderFactoryClassName(),
-							IdentityProviderConfigurator.class.getName()));
+							IdentityProviderFactory.class.getName()));
 				}
-				final IdentityProviderConfigurator cfgr;
+				final IdentityProviderFactory cfgr;
 				try {
-					cfgr = (IdentityProviderConfigurator) fac.newInstance();
+					cfgr = (IdentityProviderFactory) fac.newInstance();
 				} catch (IllegalAccessException | InstantiationException e) {
 					throw new AuthConfigurationException(String.format(
 							"Module %s could not be instantiated: %s",

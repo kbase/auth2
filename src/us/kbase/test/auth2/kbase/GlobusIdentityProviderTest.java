@@ -31,8 +31,8 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.auth2.kbase.GlobusIdentityProvider;
-import us.kbase.auth2.kbase.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
+import us.kbase.auth2.kbase.GlobusIdentityProviderFactory;
+import us.kbase.auth2.kbase.GlobusIdentityProviderFactory.GlobusIdentityProvider;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -86,7 +86,7 @@ public class GlobusIdentityProviderTest {
 	static {
 		try {
 			CFG = new IdentityProviderConfig(
-					GlobusIdentityProviderConfigurator.class.getName(),
+					GlobusIdentityProviderFactory.class.getName(),
 					new URL("https://login.com"),
 					new URL("https://setapiurl.com"),
 					"foo",
@@ -100,8 +100,7 @@ public class GlobusIdentityProviderTest {
 
 	@Test
 	public void simpleOperationsWithConfigurator() throws Exception {
-		final GlobusIdentityProviderConfigurator gc = new GlobusIdentityProviderConfigurator();
-		assertThat("incorrect provider name", gc.getProviderName(), is("Globus"));
+		final GlobusIdentityProviderFactory gc = new GlobusIdentityProviderFactory();
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
@@ -470,7 +469,7 @@ public class GlobusIdentityProviderTest {
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
 		return new IdentityProviderConfig(
-				GlobusIdentityProviderConfigurator.class.getName(),
+				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
@@ -604,7 +603,7 @@ public class GlobusIdentityProviderTest {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
-				GlobusIdentityProviderConfigurator.class.getName(),
+				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,

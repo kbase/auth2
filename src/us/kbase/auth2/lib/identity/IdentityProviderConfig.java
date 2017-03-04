@@ -7,8 +7,7 @@ import java.net.URL;
  * @author gaprice@lbl.gov
  *
  * @see IdentityProvider
- * @see IdentityProviderConfigurator
- * @see IdentityProviderSet
+ * @see IdentityProviderFactory
  */
 public class IdentityProviderConfig {
 	
