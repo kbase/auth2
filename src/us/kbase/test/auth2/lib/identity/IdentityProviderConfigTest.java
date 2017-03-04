@@ -26,7 +26,7 @@ public class IdentityProviderConfigTest {
 		assertThat("incorrect api URL", c.getApiURL(), is(new URL("http://api.com")));
 		assertThat("incorrect client id", c.getClientID(), is("foo"));
 		assertThat("incorrect client secret", c.getClientSecret(), is("bar"));
-		assertThat("incorrect provider name", c.getIdentityProviderName(), is("MyProv"));
+		assertThat("incorrect provider name", c.getIdentityProviderFactoryClassName(), is("MyProv"));
 		assertThat("incorrect link redirect URL", c.getLinkRedirectURL(),
 				is(new URL("https://linkredirect.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL(),

@@ -60,9 +60,11 @@ public class GlobusIdentityProvider implements IdentityProvider {
 		if (idc == null) {
 			throw new NullPointerException("idc");
 		}
-		if (!NAME.equals(idc.getIdentityProviderName())) {
-			throw new IllegalArgumentException("Bad config name: " +
-					idc.getIdentityProviderName());
+		if (!GlobusIdentityProviderConfigurator.class.getName().equals(
+				idc.getIdentityProviderFactoryClassName())) {
+			throw new IllegalArgumentException(
+					"Configuration class name doesn't match factory class name: " +
+					idc.getIdentityProviderFactoryClassName());
 		}
 		this.cfg = idc;
 	}

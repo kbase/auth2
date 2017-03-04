@@ -14,7 +14,6 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -31,7 +30,6 @@ public class AuthenticationService extends ResourceConfig {
 	
 	private static AuthStartupConfig cfg = null;
 	private static MongoClient mc;
-	private static IdentityProviderSet identities = new IdentityProviderSet();
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
@@ -40,10 +38,6 @@ public class AuthenticationService extends ResourceConfig {
 			throw new NullPointerException("cfg");
 		}
 		cfg = config;
-	}
-	
-	public static IdentityProviderSet getIdentitySet() {
-		return identities;
 	}
 	
 	public AuthenticationService()
@@ -80,10 +74,10 @@ public class AuthenticationService extends ResourceConfig {
 		final AuthBuilder ab;
 		synchronized(this) {
 			if (mc == null) {
-				ab = new AuthBuilder(identities, c, defaultExternalConfig);
+				ab = new AuthBuilder(c, defaultExternalConfig);
 				mc = ab.getMongoClient();
 			} else {
-				ab = new AuthBuilder(identities, c, defaultExternalConfig, mc);
+				ab = new AuthBuilder(c, defaultExternalConfig, mc);
 			}
 		}
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");

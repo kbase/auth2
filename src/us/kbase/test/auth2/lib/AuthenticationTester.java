@@ -9,6 +9,8 @@ import static org.mockito.Mockito.when;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.util.Base64;
+import java.util.Collections;
+import java.util.Set;
 
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -24,7 +26,6 @@ import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
 
@@ -55,10 +56,10 @@ public class AuthenticationTester {
 						new CollectingExternalConfig(ImmutableMap.of("thing", "foo"))));
 		
 		final Constructor<Authentication> c = Authentication.class.getDeclaredConstructor(
-				AuthStorage.class, IdentityProviderSet.class, ExternalConfig.class,
+				AuthStorage.class, Set.class, ExternalConfig.class,
 				RandomDataGenerator.class);
 		c.setAccessible(true);
-		final Authentication instance = c.newInstance(storage, new IdentityProviderSet(),
+		final Authentication instance = c.newInstance(storage, Collections.emptySet(),
 				new TestExternalConfig("foo"), randGen);
 		return new TestAuth(storage, randGen, instance);
 	}

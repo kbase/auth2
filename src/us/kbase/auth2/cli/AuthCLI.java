@@ -43,12 +43,9 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.GlobusIdentityProvider.GlobusIdentityProviderConfigurator;
-import us.kbase.auth2.lib.identity.GoogleIdentityProvider.GoogleIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -76,10 +73,6 @@ public class AuthCLI {
 	public static void main(String[] args) {
 		quietLogger();
 		
-		final IdentityProviderSet ids = new IdentityProviderSet();
-		ids.register(new GlobusIdentityProviderConfigurator());
-		ids.register(new GoogleIdentityProviderConfigurator());
-		
 		final Args a = new Args();
 		JCommander jc = new JCommander(a);
 		jc.setProgramName(NAME);
@@ -97,7 +90,7 @@ public class AuthCLI {
 		final AuthStartupConfig cfg;
 		try {
 			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
-			auth = new AuthBuilder(ids, cfg, AuthExternalConfig.DEFAULT).getAuth();
+			auth = new AuthBuilder(cfg, AuthExternalConfig.DEFAULT).getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			error(e, a);
 			throw new RuntimeException(); // error() stops execution
@@ -119,7 +112,7 @@ public class AuthCLI {
 		if (a.globus_users != null && !a.globus_users.trim().isEmpty()) {
 			URL globusAPIURL = null;
 			for (final IdentityProviderConfig idc: cfg.getIdentityProviderConfigs()) {
-				if (idc.getIdentityProviderName().equals(GLOBUS)) {
+				if (idc.getIdentityProviderFactoryClassName().equals(GLOBUS)) {
 					globusAPIURL = idc.getApiURL();
 				}
 			}
@@ -448,7 +441,8 @@ public class AuthCLI {
 				"separated Globus user names in the Nexus format " +
 				"(for example, kbasetest). A Nexus Globus token for " +
 				"an admin of the kbase_users group must be provided in the " +
-				"-t option, and a OAuth2 Globus token in the -g option.")
+				"-t option, and a OAuth2 Globus token in the -g option. " +
+				"Globus must be configured as an identity provider in the deploy.cfg file.")
 		private String globus_users;
 	}
 }

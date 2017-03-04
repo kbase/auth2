@@ -14,6 +14,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -44,7 +45,6 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -117,7 +117,8 @@ public class Authentication {
 	}
 
 	private final AuthStorage storage;
-	private final IdentityProviderSet idProviderSet;
+	// DO NOT modify this after construction, not thread safe
+	private final TreeMap<String, IdentityProvider> idProviderSet = new TreeMap<>();
 	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
@@ -133,7 +134,7 @@ public class Authentication {
 	 */
 	public Authentication(
 			final AuthStorage storage,
-			final IdentityProviderSet identityProviderSet,
+			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
 		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator());
@@ -150,7 +151,7 @@ public class Authentication {
 	/* This constructor is for testing purposes only. */
 	private Authentication(
 			final AuthStorage storage,
-			final IdentityProviderSet identityProviderSet,
+			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
 			final RandomDataGenerator randGen)
 			throws StorageInitException {
@@ -167,14 +168,14 @@ public class Authentication {
 		if (identityProviderSet == null) {
 			throw new NullPointerException("identityProviderSet");
 		}
+		Utils.noNulls(identityProviderSet, "Null identity provider in set");
 		if (defaultExternalConfig == null) {
 			throw new NullPointerException("defaultExternalConfig");
 		}
 		this.storage = storage;
-		this.idProviderSet = identityProviderSet;
-		idProviderSet.lock();
+		identityProviderSet.stream().forEach(i -> idProviderSet.put(i.getProviderName(), i));
 		final Map<String, ProviderConfig> provs = new HashMap<>();
-		for (final String provname: idProviderSet.getProviders()) {
+		for (final String provname: idProviderSet.keySet()) {
 			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		}
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
@@ -1062,18 +1063,17 @@ public class Authentication {
 	 */
 	public List<String> getIdentityProviders() throws AuthStorageException {
 		final AuthConfig ac = cfg.getAppConfig();
-		return idProviderSet.getProviders().stream()
+		return idProviderSet.navigableKeySet().stream()
 				.filter(p -> ac.getProviderConfig(p).isEnabled())
 				.collect(Collectors.toList());
 	}
 	
 	private IdentityProvider getIdentityProvider(final String provider)
 			throws NoSuchIdentityProviderException, AuthStorageException {
-		final IdentityProvider ip = idProviderSet.getProvider(provider);
 		if (!cfg.getAppConfig().getProviderConfig(provider).isEnabled()) {
 			throw new NoSuchIdentityProviderException(provider);
 		}
-		return ip;
+		return idProviderSet.get(provider);
 	}
 	
 	/** Get a redirection url for an identity provider.
@@ -1739,7 +1739,12 @@ public class Authentication {
 		getUser(token, Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
 			//throws an exception if no provider by given name
-			idProviderSet.getProvider(provider);
+			if (provider == null) {
+				throw new NoSuchIdentityProviderException("Provider name cannot be null");
+			}
+			if (!idProviderSet.containsKey(provider)) {
+				throw new NoSuchIdentityProviderException(provider);
+			}
 		}
 		storage.updateConfig(acs, true);
 		cfg.updateConfig();

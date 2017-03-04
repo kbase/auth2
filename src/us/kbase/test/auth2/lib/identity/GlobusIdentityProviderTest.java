@@ -86,7 +86,7 @@ public class GlobusIdentityProviderTest {
 	static {
 		try {
 			CFG = new IdentityProviderConfig(
-					"Globus",
+					GlobusIdentityProviderConfigurator.class.getName(),
 					new URL("https://login.com"),
 					new URL("https://setapiurl.com"),
 					"foo",
@@ -147,7 +147,8 @@ public class GlobusIdentityProviderTest {
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
-				new IllegalArgumentException("Bad config name: foo"));
+				new IllegalArgumentException(
+						"Configuration class name doesn't match factory class name: foo"));
 	}
 	
 	private void failCreate(final IdentityProviderConfig cfg, final Exception exception) {
@@ -469,7 +470,7 @@ public class GlobusIdentityProviderTest {
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
 		return new IdentityProviderConfig(
-				"Globus",
+				GlobusIdentityProviderConfigurator.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
@@ -603,7 +604,7 @@ public class GlobusIdentityProviderTest {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
-				"Globus",
+				GlobusIdentityProviderConfigurator.class.getName(),
 				new URL("https://login2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,

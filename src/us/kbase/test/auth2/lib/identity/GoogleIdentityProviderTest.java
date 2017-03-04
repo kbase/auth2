@@ -84,7 +84,7 @@ public class GoogleIdentityProviderTest {
 	static {
 		try {
 			CFG = new IdentityProviderConfig(
-					"Google",
+					GoogleIdentityProviderConfigurator.class.getName(),
 					new URL("https://glogin.com"),
 					new URL("https://gsetapiurl.com"),
 					"gfoo",
@@ -144,7 +144,8 @@ public class GoogleIdentityProviderTest {
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
-				new IllegalArgumentException("Bad config name: foo"));
+				new IllegalArgumentException(
+						"Configuration class name doesn't match factory class name: foo"));
 	}
 	
 	private void failCreate(final IdentityProviderConfig cfg, final Exception exception) {
@@ -182,7 +183,7 @@ public class GoogleIdentityProviderTest {
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
 		return new IdentityProviderConfig(
-				"Google",
+				GoogleIdentityProviderConfigurator.class.getName(),
 				new URL("https://glogin.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"gfoo",
@@ -377,7 +378,7 @@ public class GoogleIdentityProviderTest {
 	public void getIdentityWithLinkURL() throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
-				"Google",
+				GoogleIdentityProviderConfigurator.class.getName(),
 				new URL("https://glogin2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",

@@ -12,7 +12,7 @@ import java.net.URL;
  */
 public class IdentityProviderConfig {
 	
-	private final String identityProviderName;
+	private final String identityProviderFactoryClass;
 	private final String clientID;
 	private final String clientSecret;
 	private final URL loginURL;
@@ -21,7 +21,8 @@ public class IdentityProviderConfig {
 	private final URL linkRedirectURL;
 	
 	/** Create a configuration for an identity provider.
-	 * @param identityProviderName the name of the identity provider, e.g. Google or Globus.
+	 * @param identityProviderFactoryClass the class name of the identity provider factory for this
+	 * configuration.
 	 * @param loginURL the login url for the identity provider; where users should be redirected.
 	 * @param apiURL the api url for the identity provider; where server to server requests should
 	 * be directed.
@@ -34,7 +35,7 @@ public class IdentityProviderConfig {
 	 * @throws IdentityProviderConfigurationException if any of the inputs were unacceptable.
 	 */
 	public IdentityProviderConfig(
-			final String identityProviderName,
+			final String identityProviderFactoryClass,
 			final URL loginURL,
 			final URL apiURL,
 			final String clientID,
@@ -42,11 +43,12 @@ public class IdentityProviderConfig {
 			final URL loginRedirectURL,
 			final URL linkRedirectURL)
 			throws IdentityProviderConfigurationException {
-		notNullOrEmpty(identityProviderName, "Identity provider name");
-		notNullOrEmpty(clientID, "Client ID for " + identityProviderName + " identity provider");
-		notNullOrEmpty(clientSecret, "Client secret for " + identityProviderName + 
+		notNullOrEmpty(identityProviderFactoryClass, "Identity provider name");
+		notNullOrEmpty(clientID, "Client ID for " + identityProviderFactoryClass +
 				" identity provider");
-		this.identityProviderName = identityProviderName.trim();
+		notNullOrEmpty(clientSecret, "Client secret for " + identityProviderFactoryClass + 
+				" identity provider");
+		this.identityProviderFactoryClass = identityProviderFactoryClass.trim();
 		this.clientID = clientID.trim();
 		this.clientSecret = clientSecret.trim();
 		this.loginURL = loginURL;
@@ -64,14 +66,15 @@ public class IdentityProviderConfig {
 			throws IdentityProviderConfigurationException {
 		if (url == null) {
 			throw new IdentityProviderConfigurationException(String.format(
-					"%s for %s identity provider cannot be null", name, identityProviderName));
+					"%s for %s identity provider cannot be null", name,
+					identityProviderFactoryClass));
 		}
 		try {
 			url.toURI();
 		} catch (URISyntaxException e) {
 			throw new IdentityProviderConfigurationException(String.format(
 					"%s %s for %s identity provider is not a valid URI: %s",
-					name, url, identityProviderName, e.getMessage()), e);
+					name, url, identityProviderFactoryClass, e.getMessage()), e);
 		}
 	}
 	
@@ -82,11 +85,11 @@ public class IdentityProviderConfig {
 		}
 	}
 
-	/** Get the name of the identity provider for this configuration.
+	/** Get the class name of the identity provider factory for this configuration.
 	 * @return the identity provider name.
 	 */
-	public String getIdentityProviderName() {
-		return identityProviderName;
+	public String getIdentityProviderFactoryClassName() {
+		return identityProviderFactoryClass;
 	}
 
 	/** Get the login url to which users should be redirected.
