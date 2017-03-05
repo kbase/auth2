@@ -17,6 +17,7 @@ public class CollectingExternalConfig implements ExternalConfig {
 	 * @param map the map defining the configuration.
 	 */
 	public CollectingExternalConfig(final Map<String, String> map) {
+		//TODO CODE should probably check for null here
 		cfg = map;
 	}
 	

@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import us.kbase.auth2.lib.token.NewToken;
 
 /** Represents the result of a successful local login, which can result of one of two states.
@@ -19,9 +21,7 @@ public class LocalLoginResult {
 	 * @param userName the username of the user that logged in.
 	 */
 	public LocalLoginResult(final UserName userName) {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		this.userName = userName;
 		token = null;
 	}
@@ -30,9 +30,7 @@ public class LocalLoginResult {
 	 * @param token the user's new token.
 	 */
 	public LocalLoginResult(final NewToken token) {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
+		nonNull(token, "token");
 		userName = null;
 		this.token = token;
 	}

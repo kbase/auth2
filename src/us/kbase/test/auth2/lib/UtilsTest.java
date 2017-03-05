@@ -132,4 +132,19 @@ public class UtilsTest {
 		}
 	}
 	
+	@Test
+	public void nonNull() {
+		Utils.nonNull(new Object(), "foo"); // should work
+	}
+	
+	@Test
+	public void failNonNull() {
+		try {
+			Utils.nonNull(null, "foo");
+			fail("expected exception");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is("foo"));
+		}
+	}
+	
 }

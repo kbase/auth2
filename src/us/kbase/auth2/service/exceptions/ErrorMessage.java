@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.exceptions;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.util.Arrays;
@@ -43,9 +45,7 @@ public class ErrorMessage {
 			final Throwable ex,
 			final String callID,
 			final boolean includeTrace) {
-		if (ex == null) {
-			throw new NullPointerException("ex");
-		}
+		nonNull(ex, "ex");
 		this.callID = callID; // null ok
 		if (includeTrace) {
 			final StringWriter st = new StringWriter();

@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import us.kbase.auth2.lib.token.TemporaryToken;
 
 /** Provides a token for continuing the account linking process if needed.
@@ -32,12 +34,8 @@ public class LinkToken {
 	 * @param linkIdentities the identities available for linking.
 	 */
 	public LinkToken(final TemporaryToken token, final LinkIdentities linkIdentities) {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
-		if (linkIdentities == null) {
-			throw new NullPointerException("linkIdentities");
-		}
+		nonNull(token, "token");
+		nonNull(linkIdentities, "linkIdentities");
 		this.idents = linkIdentities;
 		this.token = token;
 	}

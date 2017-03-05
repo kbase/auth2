@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -229,9 +231,7 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		public Builder withSearchOnRole(final Role role) {
-			if (role == null) {
-				throw new NullPointerException("role");
-			}
+			nonNull(role, "role");
 			uss.searchRoles.add(role);
 			return this;
 		}

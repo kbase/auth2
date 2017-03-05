@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -86,9 +88,7 @@ public class LoginState {
 	}
 
 	private void checkUser(final UserName name) {
-		if (name == null) {
-			throw new NullPointerException("name");
-		}
+		nonNull(name, "name");
 		if (!users.containsKey(name)) {
 			throw new IllegalArgumentException("No such user: " + name.getName());
 		}
@@ -136,9 +136,7 @@ public class LoginState {
 		public Builder withIdentity(final RemoteIdentityWithLocalID remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
-			if (remoteID == null) {
-				throw new NullPointerException("remoteID");
-			}
+			nonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
 			ls.noUser.add(remoteID);
 			return this;
@@ -159,12 +157,8 @@ public class LoginState {
 		public Builder withUser(final AuthUser user, final RemoteIdentityWithLocalID remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
-			if (user == null) {
-				throw new NullPointerException("user");
-			}
-			if (remoteID == null) {
-				throw new NullPointerException("remoteID");
-			}
+			nonNull(user, "user");
+			nonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
 			if (user.getIdentity(remoteID) == null) {
 				throw new IllegalArgumentException("user does not contain remote ID");

@@ -256,8 +256,6 @@ public class Login {
 		return r;
 	}
 	
-	//TODO CODE recheck how state var is supposed to work.
-	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)

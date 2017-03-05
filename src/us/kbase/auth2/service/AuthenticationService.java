@@ -1,5 +1,7 @@
 package us.kbase.auth2.service;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.nio.file.Paths;
 
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
@@ -34,9 +36,7 @@ public class AuthenticationService extends ResourceConfig {
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
 	public static void setConfig(final AuthStartupConfig config) {
-		if (config == null) {
-			throw new NullPointerException("cfg");
-		}
+		nonNull(config, "config");
 		cfg = config;
 	}
 	
