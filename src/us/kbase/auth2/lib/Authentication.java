@@ -103,6 +103,7 @@ public class Authentication {
 	//TODO USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
+	//TODO NOW ID have separate display name for providers to allow using the same provider class with different provider accounts. Still hard code db name & returned name. Then talk to bill & eric re special page
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
