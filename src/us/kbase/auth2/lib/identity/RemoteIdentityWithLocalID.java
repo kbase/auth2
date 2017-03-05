@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib.identity;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.UUID;
 
 /** An identity provided by a 3rd party identity provider such as Google, Globus, etc., with an
@@ -21,9 +23,7 @@ public class RemoteIdentityWithLocalID extends RemoteIdentity {
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
 		super(remoteID, details);
-		if (id == null) {
-			throw new NullPointerException("id");
-		}
+		nonNull(id, "id");
 		this.id = id;
 	}
 	

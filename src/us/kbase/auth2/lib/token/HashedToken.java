@@ -1,6 +1,7 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -44,23 +45,13 @@ public class HashedToken {
 			final Date creationDate,
 			final Date expirationDate) {
 		checkStringNoCheckedException(tokenHash, "tokenHash");
-		if (type == null) {
-			throw new NullPointerException("type");
-		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (expirationDate == null) {
-			throw new NullPointerException("expirationDate");
-		}
-		if (creationDate == null) {
-			throw new NullPointerException("creationDate");
-		}
+		nonNull(type, "type");
+		nonNull(userName, "userName");
+		nonNull(creationDate, "creationDate");
+		nonNull(expirationDate, "expirationDate");
+		nonNull(id, "id");
 		if (creationDate.after(expirationDate)) {
 			throw new IllegalArgumentException("expirationDate must be > creationDate");
-		}
-		if (id == null) {
-			throw new NullPointerException("id");
 		}
 		this.type = type;
 		this.tokenName = tokenName; // null ok

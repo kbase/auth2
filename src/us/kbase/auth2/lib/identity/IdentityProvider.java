@@ -13,7 +13,10 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
  */
 public interface IdentityProvider {
 
-	/** Get the name of the identity provider.
+	/** Get the name and storage key of the identity provider.
+	 * This value is used as the unique identity provider ID in the authentication storage system.
+	 * Changing the value for a provider will prevent users from accessing their accounts if the
+	 * database is not also updated.
 	 * @return the identity provider's name.
 	 */
 	String getProviderName();

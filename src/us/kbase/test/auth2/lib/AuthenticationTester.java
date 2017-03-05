@@ -68,7 +68,7 @@ public class AuthenticationTester {
 	 * The references to the user's password hash and salt are saved so that tests can check
 	 * the data is cleared in the creation method.
 	 * The created date in the provided user is ignored.
-	 * The created date on the new user is checked to be within 500 ms of the current time.
+	 * The created date on the new user is checked to be within 1 s of the current time.
 	 */
 	public static class LocalUserAnswerMatcher<T extends LocalUser> implements Answer<Void> {
 
@@ -93,9 +93,9 @@ public class AuthenticationTester {
 			f.set(user, this.user.getCreated().getTime());
 			assertThat("local user does not match. Created date was not checked.", user,
 					is(this.user));
-			// may want to consider mocking date generation
-			assertThat("creation date not within 500ms",
-					TestCommon.dateWithin(user.getCreated(), 500), is(true));
+			// TODO TEST mock date generation
+			assertThat("creation date not within 1000ms",
+					TestCommon.dateWithin(user.getCreated(), 1000), is(true));
 			return null;
 		}
 		

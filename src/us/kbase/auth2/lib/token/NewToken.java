@@ -1,7 +1,8 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.addNoOverflow;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.Date;
 import java.util.UUID;
@@ -34,12 +35,8 @@ public class NewToken {
 			final UserName userName,
 			final long lifetimeInMS) {
 		checkStringNoCheckedException(token, "token");
-		if (type == null) {
-			throw new NullPointerException("type");
-		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(type, "type");
+		nonNull(userName, "userName");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
@@ -65,12 +62,8 @@ public class NewToken {
 			final long lifetimeInMS) {
 		checkStringNoCheckedException(token, "token");
 		checkStringNoCheckedException(tokenName, "tokenName");
-		if (type == null) {
-			throw new NullPointerException("type");
-		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(type, "type");
+		nonNull(userName, "userName");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}

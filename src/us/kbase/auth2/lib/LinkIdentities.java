@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
@@ -24,9 +26,7 @@ public class LinkIdentities {
 	public LinkIdentities(
 			final AuthUser user,
 			Set<RemoteIdentityWithLocalID> ids) {
-		if (user == null) {
-			throw new NullPointerException("user");
-		}
+		nonNull(user, "user");
 		if (ids == null || ids.isEmpty()) {
 			throw new IllegalArgumentException("No remote IDs provided");
 		}
@@ -44,9 +44,7 @@ public class LinkIdentities {
 	public LinkIdentities(
 			final AuthUser user,
 			final String provider) {
-		if (user == null) {
-			throw new NullPointerException("user");
-		}
+		nonNull(user, "user");
 		if (provider == null || provider.trim().isEmpty()) {
 			throw new IllegalArgumentException("provider cannot be null or empty");
 		}

@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 
@@ -26,12 +28,8 @@ public class LoginToken {
 	 * @param loginState the current login state.
 	 */
 	public LoginToken(final TemporaryToken token, final LoginState loginState) {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
-		if (loginState == null) {
-			throw new NullPointerException("loginState");
-		}
+		nonNull(token, "token");
+		nonNull(loginState, "loginState");
 		this.temporaryToken = token;
 		this.token = null;
 		this.ls = loginState;
@@ -42,12 +40,8 @@ public class LoginToken {
 	 * @param loginState the current login state.
 	 */
 	public LoginToken(final NewToken token, final LoginState loginState) {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
-		if (loginState == null) {
-			throw new NullPointerException("loginState");
-		}
+		nonNull(token, "token");
+		nonNull(loginState, "loginState");
 		this.temporaryToken = null;
 		this.token = token;
 		this.ls = loginState;

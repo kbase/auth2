@@ -2,6 +2,8 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
+import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
@@ -101,6 +103,7 @@ public class Authentication {
 	//TODO USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
+	//TODO NOW ID have separate display name for providers to allow using the same provider class with different provider accounts. Still hard code db name & returned name. Then talk to bill & eric re special page
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
@@ -162,16 +165,10 @@ public class Authentication {
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
-		if (storage == null) {
-			throw new NullPointerException("storage");
-		}
-		if (identityProviderSet == null) {
-			throw new NullPointerException("identityProviderSet");
-		}
-		Utils.noNulls(identityProviderSet, "Null identity provider in set");
-		if (defaultExternalConfig == null) {
-			throw new NullPointerException("defaultExternalConfig");
-		}
+		nonNull(storage, "storage");
+		nonNull(identityProviderSet, "identityProviderSet");
+		noNulls(identityProviderSet, "Null identity provider in set");
+		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.storage = storage;
 		identityProviderSet.stream().forEach(i -> idProviderSet.put(i.getProviderName(), i));
 		final Map<String, ProviderConfig> provs = new HashMap<>();
@@ -247,9 +244,7 @@ public class Authentication {
 	 * @throws AuthStorageException if updating the root account fails.
 	 */
 	public void createRoot(final Password pwd) throws AuthStorageException {
-		if (pwd == null) {
-			throw new NullPointerException("pwd");
-		}
+		nonNull(pwd, "pwd");
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
 		pwd.clear();
@@ -298,18 +293,12 @@ public class Authentication {
 			final EmailAddress email)
 			throws AuthStorageException, UserExistsException, UnauthorizedException,
 			InvalidTokenException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
+		nonNull(displayName, "displayName");
+		nonNull(email, "email");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot create ROOT user");
-		}
-		if (displayName == null) {
-			throw new NullPointerException("displayName");
-		}
-		if (email == null) {
-			throw new NullPointerException("email");
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
@@ -343,12 +332,8 @@ public class Authentication {
 
 	private LocalUser getLocalUser(final UserName userName, final Password pwd)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (pwd == null) {
-			throw new NullPointerException("pwd");
-		}
+		nonNull(userName, "userName");
+		nonNull(pwd, "pwd");
 		final LocalUser u;
 		try {
 			u = storage.getLocalUser(userName);
@@ -385,9 +370,7 @@ public class Authentication {
 			final Password pwdold,
 			final Password pwdnew)
 			throws AuthenticationException, UnauthorizedException, AuthStorageException {
-		if (pwdnew == null) {
-			throw new NullPointerException("pwdnew");
-		}
+		nonNull(pwdnew, "pwdnew");
 		//TODO PWD do any cross pwd checks like checking they're not the same
 		getLocalUser(userName, pwdold); //checks pwd validity and nulls
 		final byte[] salt = randGen.generateSalt();
@@ -417,9 +400,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		//TODO RESET to reset and get admin password must be that admin
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // force admin
 		
 		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
@@ -443,9 +424,7 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // force admin
 		storage.forcePasswordReset(userName);
 	}
@@ -507,9 +486,7 @@ public class Authentication {
 	 */
 	public Set<HashedToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // force admin
 		return storage.getTokens(userName);
 	}
@@ -523,9 +500,7 @@ public class Authentication {
 	 */
 	public HashedToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
+		nonNull(token, "token");
 		try {
 			return storage.getToken(token.getHashedToken());
 		} catch (NoSuchTokenException e) {
@@ -692,9 +667,7 @@ public class Authentication {
 			final IncomingToken token,
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		if (spec == null) {
-			throw new NullPointerException("spec");
-		}
+		nonNull(spec, "spec");
 		//TODO SEARCH only include root user if admin and requested (add to search spec)
 		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
 		final AuthUser user = getUser(token);
@@ -727,9 +700,7 @@ public class Authentication {
 			final UUID tokenID)
 			throws AuthStorageException,
 			NoSuchTokenException, InvalidTokenException {
-		if (tokenID == null){
-			throw new NullPointerException("tokenID");
-		}
+		nonNull(tokenID, "tokenID");
 		final HashedToken ht = getToken(token);
 		storage.deleteToken(ht.getUserName(), tokenID);
 	}
@@ -754,13 +725,9 @@ public class Authentication {
 			final UUID tokenID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchTokenException {
+		nonNull(userName, "userName");
+		nonNull(tokenID, "tokenID");
 		getUser(token, Role.ADMIN); // ensure admin
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (tokenID == null) {
-			throw new NullPointerException("tokenID");
-		}
 		storage.deleteToken(userName, tokenID);
 		
 	}
@@ -773,9 +740,7 @@ public class Authentication {
 	 */
 	public Optional<HashedToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
+		nonNull(token, "token");
 		HashedToken ht = null;
 		try {
 			ht = storage.getToken(token.getHashedToken());
@@ -822,9 +787,7 @@ public class Authentication {
 	 */
 	public void revokeAllTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // ensure admin
 		storage.deleteTokens(userName);
 	}
@@ -845,9 +808,7 @@ public class Authentication {
 			final UserName userName)
 			throws AuthStorageException, NoSuchUserException,
 			InvalidTokenException, UnauthorizedException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		return storage.getUser(userName);
 	}
@@ -897,17 +858,11 @@ public class Authentication {
 			final Set<Role> removeRoles)
 			throws NoSuchUserException, AuthStorageException,
 			UnauthorizedException, InvalidTokenException, IllegalParameterException {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (addRoles == null) {
-			throw new NullPointerException("addRoles");
-		}
-		if (removeRoles == null) {
-			throw new NullPointerException("removeRoles");
-		}
-		Utils.noNulls(addRoles, "Null role in addRoles");
-		Utils.noNulls(removeRoles, "Null role in removeRoles");
+		nonNull(userName, "userName");
+		nonNull(addRoles, "addRoles");
+		nonNull(removeRoles, "removeRoles");
+		noNulls(addRoles, "Null role in addRoles");
+		noNulls(removeRoles, "Null role in removeRoles");
 		
 		final Set<Role> intersect = new HashSet<>(addRoles);
 		intersect.retainAll(removeRoles);
@@ -959,9 +914,7 @@ public class Authentication {
 			final IncomingToken token,
 			final CustomRole role)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		if (role == null) {
-			throw new NullPointerException("role");
-		}
+		nonNull(role, "role");
 		getUser(token, Role.ADMIN);
 		storage.setCustomRole(role);
 	}
@@ -1030,17 +983,11 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException, NoSuchRoleException,
 			InvalidTokenException, UnauthorizedException, IllegalParameterException {
 		// some of this code is similar to the updateRoles function, refactor?
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (addRoles == null) {
-			throw new NullPointerException("addRoles");
-		}
-		if (removeRoles == null) {
-			throw new NullPointerException("removeRoles");
-		}
-		Utils.noNulls(addRoles, "Null role in addRoles");
-		Utils.noNulls(removeRoles, "Null role in removeRoles");
+		nonNull(userName, "userName");
+		nonNull(addRoles, "addRoles");
+		nonNull(removeRoles, "removeRoles");
+		noNulls(addRoles, "Null role in addRoles");
+		noNulls(removeRoles, "Null role in removeRoles");
 		
 		final Set<String> intersect = new HashSet<>(addRoles);
 		intersect.retainAll(removeRoles);
@@ -1225,9 +1172,7 @@ public class Authentication {
 	private Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		if (token == null) {
-			throw new NullPointerException("token");
-		}
+		nonNull(token, "token");
 		try {
 			return storage.getTemporaryIdentities(token.getHashedToken());
 		} catch (NoSuchTokenException e) {
@@ -1268,17 +1213,11 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
 		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
+		nonNull(displayName, "displayName");
+		nonNull(email, "email");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
-		}
-		if (displayName == null) {
-			throw new NullPointerException("displayName");
-		}
-		if (email == null) {
-			throw new NullPointerException("email");
 		}
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentityWithLocalID> match = getIdentity(identityID, ids);
@@ -1347,10 +1286,7 @@ public class Authentication {
 			final UUID identityID,
 			final Set<RemoteIdentityWithLocalID> identities)
 			throws AuthStorageException, InvalidTokenException {
-	
-		if (identityID == null) {
-			throw new NullPointerException("identityID");
-		}
+		nonNull(identityID, "identityID");
 		for (final RemoteIdentityWithLocalID ri: identities) {
 			if (ri.getID().equals(identityID)) {
 				return Optional.of(ri);
@@ -1367,9 +1303,7 @@ public class Authentication {
 	 */
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
-		if (suggestedUserName == null) {
-			throw new NullPointerException("suggestedUserName");
-		}
+		nonNull(suggestedUserName, "suggestedUserName");
 		final UserName un = UserName.sanitizeName(suggestedUserName);
 		if (un == null) {
 			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
@@ -1627,9 +1561,7 @@ public class Authentication {
 			final UUID id)
 			throws InvalidTokenException, AuthStorageException,
 			UnLinkFailedException, DisabledUserException {
-		if (id == null) {
-			throw new NullPointerException("id");
-		}
+		nonNull(id, "id");
 		final AuthUser au = getUser(token);
 		try {
 			storage.unlink(au.getUserName(), id);
@@ -1650,9 +1582,7 @@ public class Authentication {
 			final IncomingToken token,
 			final UserUpdate update)
 			throws InvalidTokenException, AuthStorageException {
-		if (update == null) {
-			throw new NullPointerException("update");
-		}
+		nonNull(update, "update");
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
@@ -1687,9 +1617,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			IllegalParameterException, NoSuchUserException {
 		final AuthUser admin = getUser(token, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		if (user == null) {
-			throw new NullPointerException("user");
-		}
+		nonNull(user, "user");
 		if (disable) {
 			if (user.isRoot() && !admin.isRoot()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -1733,9 +1661,7 @@ public class Authentication {
 			final AuthConfigSet<T> acs)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		if (acs == null) {
-			throw new NullPointerException("acs");
-		}
+		nonNull(acs, "acs");
 		getUser(token, Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
 			//throws an exception if no provider by given name
@@ -1766,10 +1692,8 @@ public class Authentication {
 			final ExternalConfigMapper<T> mapper)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
+		nonNull(mapper, "mapper");
 		getUser(token, Role.ADMIN);
-		if (mapper == null) {
-			throw new NullPointerException("mapper");
-		}
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().toMap()));
@@ -1796,9 +1720,7 @@ public class Authentication {
 	public <T extends ExternalConfig> T getExternalConfig(
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
-		if (mapper == null) {
-			throw new NullPointerException("mapper");
-		}
+		nonNull(mapper, "mapper");
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return mapper.fromMap(acs.getExtcfg().toMap());
 	}
@@ -1815,12 +1737,8 @@ public class Authentication {
 	 */
 	public void importUser(final UserName userName, final RemoteIdentity ri)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
-		if (ri == null) {
-			throw new NullPointerException("ri");
-		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
+		nonNull(ri, "ri");
 		DisplayName dn;
 		try { // hacky, but eh. Python guys will like it though
 			dn = new DisplayName(ri.getDetails().getFullname());

@@ -1,5 +1,7 @@
 package us.kbase.auth2.kbase;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -78,9 +80,7 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		 * @param idc the configuration for this provider.
 		 */
 		public GoogleIdentityProvider(final IdentityProviderConfig idc) {
-			if (idc == null) {
-				throw new NullPointerException("idc");
-			}
+			nonNull(idc, "idc");
 			if (!GoogleIdentityProviderFactory.class.getName().equals(
 					idc.getIdentityProviderFactoryClassName())) {
 				throw new IllegalArgumentException(

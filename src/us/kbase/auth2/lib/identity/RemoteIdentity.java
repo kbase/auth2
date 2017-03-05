@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib.identity;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.UUID;
 
 /** An identity provided by a 3rd party identity provider such as Google, Globus, etc.
@@ -20,12 +22,8 @@ public class RemoteIdentity {
 	public RemoteIdentity(
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
-		if (remoteID == null) {
-			throw new NullPointerException("remoteID");
-		}
-		if (details == null) {
-			throw new NullPointerException("details");
-		}
+		nonNull(remoteID, "remoteID");
+		nonNull(details, "details");
 		this.remoteID = remoteID;
 		this.details = details;
 	}

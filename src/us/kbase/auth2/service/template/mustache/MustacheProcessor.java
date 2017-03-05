@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.template.mustache;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.io.StringWriter;
 import java.nio.file.Path;
 
@@ -23,9 +25,7 @@ public class MustacheProcessor implements TemplateProcessor {
 	private final Path templates;
 	
 	public MustacheProcessor(final Path templateDir) {
-		if (templateDir == null) {
-			throw new NullPointerException("templateDir");
-		}
+		nonNull(templateDir, "templateDir");
 		templates = templateDir;
 	}
 	

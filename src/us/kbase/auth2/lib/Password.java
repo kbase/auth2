@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 /** A password.
  * 
  * This class wraps a character array containing a password. Note that it wraps the passed-in
@@ -23,9 +25,7 @@ public class Password {
 		//TODO PWD max length
 		// https://github.com/nulab/zxcvbn4j
 		// may need to have a non-checking constructor, only need to check on creation
-		if (password == null) {
-			throw new NullPointerException("password");
-		}
+		nonNull(password, "password");
 		this.password = password;
 	}
 	

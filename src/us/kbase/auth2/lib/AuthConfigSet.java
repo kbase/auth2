@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 /** A configuration set for the authentication instance. Contains the configuration of the
  * authentication instance and a user-definable external configuration that is stored as key-value
  * configuration values in the authentication storage.
@@ -17,12 +19,8 @@ public class AuthConfigSet<T extends ExternalConfig> {
 	 * @param extcfg the external configuration.
 	 */
 	public AuthConfigSet(final AuthConfig cfg, final T extcfg) {
-		if (cfg == null) {
-			throw new NullPointerException("cfg");
-		}
-		if (extcfg == null) {
-			throw new NullPointerException("extcfg");
-		}
+		nonNull(cfg, "cfg");
+		nonNull(extcfg, "extcfg");
 		this.cfg = cfg;
 		this.extcfg = extcfg;
 	}

@@ -66,8 +66,7 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 					"An error occurred in the error handler when attempting " +
 					"to get the server configuration", e); 
 		}
-		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(),
-				includeStack);
+		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(), includeStack);
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {
 			final Map<String, Object> err = new HashMap<>();
