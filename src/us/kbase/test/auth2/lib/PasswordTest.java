@@ -67,7 +67,7 @@ public class PasswordTest {
 		
 	}
 	
-	private void testPasswordStrenghtFail(String pwd) {
+	private void testPasswordStrengthFail(String pwd) {
 		Password password = new Password(pwd.toCharArray());
 		try {
 			password.checkValidity();
