@@ -9,7 +9,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -70,7 +69,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whee"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
 				is(Optional.absent()));
 		assertThat("incorrect creation", lu.getCreated(), is(NOW));
@@ -110,7 +109,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whoo"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(true));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
 				is(Optional.absent()));
 		assertThat("incorrect creation", lu.getCreated(), is(create));
@@ -148,7 +147,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whoo"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
 				is(Optional.absent()));
 		assertThat("incorrect creation", lu.getCreated(), is(create));

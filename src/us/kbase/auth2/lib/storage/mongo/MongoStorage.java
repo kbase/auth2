@@ -2,6 +2,7 @@ package us.kbase.auth2.lib.storage.mongo;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
@@ -210,15 +211,21 @@ public class MongoStorage implements AuthStorage {
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
 	}
 	
-	private MongoDatabase db;
+	private final MongoDatabase db;
+	private final Clock clock;
 	
 	/** Create a new MongoDB authentication storage system.
 	 * @param db the MongoDB database to use for storage.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
 	public MongoStorage(final MongoDatabase db) throws StorageInitException {
+		this(db, Clock.systemDefaultZone()); //don't use timezone
+	}
+	
+	private MongoStorage(final MongoDatabase db, final Clock clock) throws StorageInitException {
 		nonNull(db, "db");
 		this.db = db;
+		this.clock = clock;
 		
 		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver)
 		ensureIndexes(); // MUST come before checkConfig();
@@ -302,6 +309,7 @@ public class MongoStorage implements AuthStorage {
 		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = local.getEnableToggleDate();
 		final Optional<String> reason = local.getReasonForDisabled();
+		final Optional<Instant> reset = local.getLastPwdReset();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
@@ -322,7 +330,7 @@ public class MongoStorage implements AuthStorage {
 						time.isPresent() ? Date.from(time.get()) : null)
 				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null)
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
-				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
+				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ? reset.get() : null)
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, salt);
 		try {
@@ -362,7 +370,7 @@ public class MongoStorage implements AuthStorage {
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
-				user.getDate(Fields.USER_RESET_PWD_LAST));
+				getOptionalDate(user, Fields.USER_RESET_PWD_LAST));
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
@@ -428,7 +436,7 @@ public class MongoStorage implements AuthStorage {
 		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
 		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
-				.append(Fields.USER_RESET_PWD_LAST, new Date())
+				.append(Fields.USER_RESET_PWD_LAST, Date.from(clock.instant()))
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, encsalt);
 		updateUser(name, set);

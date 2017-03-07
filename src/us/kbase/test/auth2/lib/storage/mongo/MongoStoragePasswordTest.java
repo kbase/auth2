@@ -3,15 +3,16 @@ package us.kbase.test.auth2.lib.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Date;
 import java.util.UUID;
 
 import org.bson.Document;
 import org.junit.Test;
 
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -98,10 +99,14 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		storage.createLocalUser(new NewLocalUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), NOW, passwordHash, salt, false));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect last reset date", user.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
 		
 		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);
+		final Instant i = Instant.ofEpochMilli(8000);
+		
+		when(mockClock.instant()).thenReturn(i);
+		
 		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, false);
 		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
@@ -109,7 +114,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
 				is("wo2"));
 		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(false));
-		TestCommon.assertDateNoOlderThan(updated.getLastPwdReset(), 200);
+		assertThat("inccorect reset time", updated.getLastPwdReset(), is(Optional.of(i)));
 	}
 	
 	@Test
@@ -119,10 +124,14 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		storage.createLocalUser(new NewLocalUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), NOW, passwordHash, salt, false));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect last reset date", user.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
 		
 		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);
+		final Instant i = Instant.ofEpochMilli(8000);
+		
+		when(mockClock.instant()).thenReturn(i);
+		
 		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, true);
 		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
@@ -130,7 +139,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
 				is("wo2"));
 		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(true));
-		TestCommon.assertDateNoOlderThan(updated.getLastPwdReset(), 200);
+		assertThat("inccorect reset time", updated.getLastPwdReset(), is(Optional.of(i)));
 	}
 	
 	@Test

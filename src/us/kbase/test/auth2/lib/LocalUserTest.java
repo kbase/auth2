@@ -9,7 +9,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Set;
 
 import org.junit.Test;
@@ -33,7 +32,6 @@ public class LocalUserTest {
 	public void equals() {
 		EqualsVerifier.forClass(LocalUser.class).usingGetClass()
 				.withIgnoredFields("canGrantRoles").verify();
-
 	}
 	
 	@Test
@@ -57,7 +55,7 @@ public class LocalUserTest {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("wh"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
@@ -88,7 +86,7 @@ public class LocalUserTest {
 		final Set<Role> r = Collections.emptySet();
 		final Set<String> cr = Collections.emptySet();
 		final Instant create = Instant.now();
-		final Date dis = new Date();
+		final Optional<Instant> dis = Optional.of(Instant.ofEpochMilli(40000));
 		final UserDisabledState uds = new UserDisabledState();
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "we".getBytes(StandardCharsets.UTF_8);
@@ -145,7 +143,7 @@ public class LocalUserTest {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("wo"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
@@ -181,7 +179,7 @@ public class LocalUserTest {
 		assertThat("incorrect password salt",
 				new String(lu.getSalt(), StandardCharsets.UTF_8), is("wo"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
 				is(Optional.absent()));
@@ -214,7 +212,7 @@ public class LocalUserTest {
 		final Instant d = Instant.ofEpochMilli(1000);
 		final Optional<Instant> ll = Optional.of(Instant.ofEpochMilli(2000));
 		final Instant dis = Instant.ofEpochMilli(3000);
-		final Date lastReset = new Date(3000);
+		final Optional<Instant> lastReset = Optional.of(Instant.ofEpochMilli(4000));
 		final UserDisabledState uds = new UserDisabledState(new UserName("who"), dis);
 		final byte[] pwd = "foobarbazb".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wh".getBytes(StandardCharsets.UTF_8);
@@ -224,7 +222,8 @@ public class LocalUserTest {
 		
 		assertThat("incorrect toString", lu.toString(), is(
 				"LocalUser [passwordHash=[102, 111, 111, 98, 97, 114, 98, 97, 122, 98], " +
-				"salt=[119, 104], forceReset=false, lastReset=3000, " +
+				"salt=[119, 104], forceReset=false, " +
+				"lastReset=Optional.of(1970-01-01T00:00:04Z), " +
 				"getDisplayName()=DisplayName [name=bar], " +
 				"getEmail()=EmailAddress [email=f@g.com], getUserName()=UserName [name=foo], " +
 				"getRoles()=[CREATE_ADMIN], getCustomRoles()=[foobar], " +
