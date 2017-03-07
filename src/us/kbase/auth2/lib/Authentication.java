@@ -371,20 +371,12 @@ public class Authentication {
 			final UserName userName,
 			final Password pwdold,
 			final Password pwdnew)
-<<<<<<< HEAD
 			throws AuthenticationException, UnauthorizedException, AuthStorageException, IllegalPasswordException {
-		if (pwdnew == null) {
-			throw new NullPointerException("pwdnew");
-		}
+		nonNull(pwdnew, "pwdnew");
 		if(pwdnew.equals(pwdold)) {
 			throw new IllegalPasswordException("Old and new passwords are identical.");
 		}
 		pwdnew.checkValidity();
-=======
-			throws AuthenticationException, UnauthorizedException, AuthStorageException {
-		nonNull(pwdnew, "pwdnew");
-		//TODO PWD do any cross pwd checks like checking they're not the same
->>>>>>> master
 		getLocalUser(userName, pwdold); //checks pwd validity and nulls
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
