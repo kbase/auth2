@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 /** A minimal view of a user. The view always includes the user and display names, and may or may
  * not include the email address (in most cases, the email address should only be included when
  * the user themself is requesting an instance of this class).
@@ -18,9 +20,7 @@ public class ViewableUser {
 	 * @param viewEmail whether the view should include the user's email address.
 	 */
 	public ViewableUser(final AuthUser user, final boolean viewEmail) {
-		if (user == null) {
-			throw new NullPointerException("user");
-		}
+		nonNull(user, "user");
 		this.userName = user.getUserName();
 		this.displayName = user.getDisplayName();
 		if (viewEmail) {

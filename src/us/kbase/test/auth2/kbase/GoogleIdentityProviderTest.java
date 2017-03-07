@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib.identity;
+package us.kbase.test.auth2.kbase;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -27,14 +27,14 @@ import org.mockserver.model.ParameterBody;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import us.kbase.auth2.kbase.GoogleIdentityProviderFactory;
+import us.kbase.auth2.kbase.GoogleIdentityProviderFactory.GoogleIdentityProvider;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
-import us.kbase.auth2.lib.identity.GoogleIdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.GoogleIdentityProvider.GoogleIdentityProviderConfigurator;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.test.auth2.TestCommon;
 
@@ -84,7 +84,7 @@ public class GoogleIdentityProviderTest {
 	static {
 		try {
 			CFG = new IdentityProviderConfig(
-					"Google",
+					GoogleIdentityProviderFactory.class.getName(),
 					new URL("https://glogin.com"),
 					new URL("https://gsetapiurl.com"),
 					"gfoo",
@@ -98,8 +98,7 @@ public class GoogleIdentityProviderTest {
 	
 	@Test
 	public void simpleOperationsWithConfigurator() throws Exception {
-		final GoogleIdentityProviderConfigurator gc = new GoogleIdentityProviderConfigurator();
-		assertThat("incorrect provider name", gc.getProviderName(), is("Google"));
+		final GoogleIdentityProviderFactory gc = new GoogleIdentityProviderFactory();
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
@@ -144,7 +143,8 @@ public class GoogleIdentityProviderTest {
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
 				CFG.getLinkRedirectURL()),
-				new IllegalArgumentException("Bad config name: foo"));
+				new IllegalArgumentException(
+						"Configuration class name doesn't match factory class name: foo"));
 	}
 	
 	private void failCreate(final IdentityProviderConfig cfg, final Exception exception) {
@@ -182,7 +182,7 @@ public class GoogleIdentityProviderTest {
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
 		return new IdentityProviderConfig(
-				"Google",
+				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"gfoo",
@@ -377,7 +377,7 @@ public class GoogleIdentityProviderTest {
 	public void getIdentityWithLinkURL() throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
-				"Google",
+				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",

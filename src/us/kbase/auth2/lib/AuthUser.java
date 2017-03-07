@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
@@ -54,18 +56,14 @@ public class AuthUser {
 			final Date created,
 			final Date lastLogin,
 			final UserDisabledState disabledState) {
-		super();
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		//TODO CODE use optionals vs. nulls
+		nonNull(userName, "userName");
+		nonNull(email, "email");
+		nonNull(displayName, "displayName");
+		nonNull(created, "created");
+		nonNull(disabledState, "disabledState");
 		this.userName = userName;
-		if (email == null) {
-			throw new NullPointerException("email");
-		}
 		this.email = email;
-		if (displayName == null) {
-			throw new NullPointerException("displayName");
-		}
 		this.displayName = displayName;
 		if (identities == null) {
 			identities = new HashSet<>();
@@ -98,15 +96,9 @@ public class AuthUser {
 		}
 		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
 				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
-		if (created == null) {
-			throw new NullPointerException("created");
-		}
-		this.created = created.getTime(); // will throw npe
+		this.created = created.getTime();
 		this.lastLogin = lastLogin == null ? null :
 			(lastLogin.before(created) ? created.getTime() : lastLogin.getTime());
-		if (disabledState == null) {
-			throw new NullPointerException("disabledState");
-		}
 		this.disabledState = disabledState;
 	}
 	

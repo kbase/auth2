@@ -1,13 +1,14 @@
 package us.kbase.auth2.lib;
 
+
 import com.nulabinc.zxcvbn.Zxcvbn;
+import com.nulabinc.zxcvbn.Strength;
 
 import org.bouncycastle.util.Arrays;
 
-import com.nulabinc.zxcvbn.Strength;
-
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 /** A password.
  * 
@@ -43,9 +44,7 @@ public class Password {
 	 * @param password the password to wrap.
 	 */
 	public Password(final char[] password) {
-		if (password == null) {
-			throw new NullPointerException("password");
-		}
+		nonNull(password, "password");
 		this.password = password;
 	}
 	

@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Date;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -30,14 +32,9 @@ public class UserDisabledState {
 			final UserName byAdmin,
 			final Date time)
 			throws IllegalParameterException, MissingParameterException {
-		super();
 		Utils.checkString(disabledReason, "Disabled reason", MAX_DISABLED_REASON_LENGTH);
-		if (byAdmin == null) {
-			throw new NullPointerException("byAdmin");
-		}
-		if (time == null) {
-			throw new NullPointerException("time");
-		}
+		nonNull(byAdmin, "byAdmin");
+		nonNull(time, "time");
 		this.disabledReason = disabledReason.trim();
 		this.byAdmin = byAdmin;
 		this.time = time.getTime();
@@ -49,12 +46,8 @@ public class UserDisabledState {
 	 * @param time the time at which the user was enabled.
 	 */
 	public UserDisabledState(final UserName byAdmin, final Date time) {
-		if (byAdmin == null) {
-			throw new NullPointerException("byAdmin");
-		}
-		if (time == null) {
-			throw new NullPointerException("time");
-		}
+		nonNull(byAdmin, "byAdmin");
+		nonNull(time, "time");
 		this.disabledReason = null;
 		this.byAdmin = byAdmin;
 		this.time = time.getTime();

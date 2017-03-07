@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashSet;
@@ -34,9 +36,7 @@ public class NewUser extends AuthUser {
 	}
 
 	private static Set<RemoteIdentityWithLocalID> set(final RemoteIdentityWithLocalID id) {
-		if (id == null) {
-			throw new NullPointerException("remoteIdentity");
-		}
+		nonNull(id, "remoteIdentity");
 		return new HashSet<>(Arrays.asList(id));
 	}
 	

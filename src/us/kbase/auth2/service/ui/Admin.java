@@ -527,6 +527,7 @@ public class Admin {
 			p.put("name", e.getKey());
 			p.put("enabled", e.getValue().isEnabled());
 			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
+			p.put("forceloginchoice", e.getValue().isForceLoginChoice());
 			prov.add(p);
 		}
 		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponse());

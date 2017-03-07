@@ -1,5 +1,7 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
+import java.io.IOException;
+
 import org.bson.Document;
 import org.junit.AfterClass;
 import org.junit.Before;
@@ -46,7 +48,13 @@ public class MongoStorageTester {
 			mc.close();
 		}
 		if (mongo != null) {
-			mongo.destroy(TestCommon.isDeleteTempFiles());
+			try {
+				mongo.destroy(TestCommon.isDeleteTempFiles());
+			} catch (IOException e) {
+				System.out.println("Error deleting temporarary files at: " +
+						TestCommon.getTempDir());
+				e.printStackTrace();
+			}
 		}
 	}
 	
