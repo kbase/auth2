@@ -2,6 +2,7 @@ package us.kbase.test.auth2.lib.storage.mongo;
 
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -25,6 +26,8 @@ import us.kbase.test.auth2.TestCommon;
  * these errors can be called. Here we test with the getUser().
  */
 public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
+	
+	private static final Instant NOW = Instant.now();
 
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
@@ -34,7 +37,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void missingUserName() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("user", null)));
 		
@@ -45,7 +48,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalUserName() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("user", "*foo")));
 		
@@ -57,7 +60,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void missingDisplayName() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("display", "    \t \n")));
 		
@@ -68,7 +71,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalDisplayName() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("display", TestCommon.LONG101)));
 		
@@ -79,7 +82,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void missingEmail() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("email", "    \t \n")));
 		
@@ -90,7 +93,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalEmail() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		db.getCollection("users").updateOne(new Document("user", "foo"),
 				new Document("$set", new Document("email", "noemailhere")));
 		
@@ -101,7 +104,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void disabledStateMissingReason() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),
@@ -114,7 +117,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void invalidDisabledState() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),
@@ -128,7 +131,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void disabledStateLongReason() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),

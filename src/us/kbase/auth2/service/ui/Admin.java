@@ -8,6 +8,7 @@ import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -37,6 +38,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.AuthConfig;
@@ -256,9 +258,9 @@ public class Admin {
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
 		ret.put("local", au.isLocal());
-		ret.put("created", au.getCreated().getTime());
-		final Date lastLogin = au.getLastLogin();
-		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
+		ret.put("created", au.getCreated().toEpochMilli());
+		final Optional<Instant> lastLogin = au.getLastLogin();
+		ret.put("lastlogin", lastLogin.isPresent() ? lastLogin.get().toEpochMilli() : null);
 		ret.put("disabled", au.isDisabled());
 		ret.put("disabledreason", au.getReasonForDisabled());
 		final Date disabled = au.getEnableToggleDate();

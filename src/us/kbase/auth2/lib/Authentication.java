@@ -7,6 +7,8 @@ import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Date;
@@ -103,7 +105,6 @@ public class Authentication {
 	//TODO USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
-	//TODO NOW ID have separate display name for providers to allow using the same provider class with different provider accounts. Still hard code db name & returned name. Then talk to bill & eric re special page
 	
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
@@ -125,6 +126,7 @@ public class Authentication {
 	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
+	private final Clock clock;
 	
 	/** Create a new Authentication instance.
 	 * @param storage the storage system to use for information persistance.
@@ -140,7 +142,8 @@ public class Authentication {
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
-		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator());
+		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator(),
+				Clock.systemDefaultZone()); // don't care about time zone, not using it
 	}
 
 	private static RandomDataGenerator getDefaultRandomGenerator() {
@@ -156,9 +159,10 @@ public class Authentication {
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
-			final RandomDataGenerator randGen)
+			final RandomDataGenerator randGen,
+			final Clock clock)
 			throws StorageInitException {
-		
+		this.clock = clock;
 		this.randGen = randGen;
 		try {
 			pwdcrypt = new PasswordCrypt();
@@ -198,6 +202,7 @@ public class Authentication {
 	//TODO TEST config manager
 	private class ConfigManager {
 	
+		//TODO UI show this with note that it'll take X seconds to sync to other server instance
 		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
 		
 		private AuthConfigSet<CollectingExternalConfig> cfg;
@@ -254,7 +259,8 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This is impossible", e);
 		}
-		final NewRootUser root = new NewRootUser(EmailAddress.UNKNOWN, dn, passwordHash, salt);
+		final NewRootUser root = new NewRootUser(
+				EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
 		try {
 			storage.createLocalUser(root);
 		// only way to avoid a race condition. Checking existence before creating user means if
@@ -304,7 +310,7 @@ public class Authentication {
 		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
+		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
 				passwordHash, salt, true);
 		storage.createLocalUser(lu);
 		clear(passwordHash);
@@ -454,7 +460,7 @@ public class Authentication {
 	private void setLastLogin(final UserName userName)
 			throws AuthStorageException {
 		try {
-			storage.setLastLogin(userName, new Date());
+			storage.setLastLogin(userName, clock.instant());
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
 					"Something is very broken. User should exist but doesn't: "
@@ -1225,7 +1231,9 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to create user with remote identity %s", identityID));
 		}
-		storage.createUser(new NewUser(userName, email, displayName, match.get(), new Date()));
+		final Instant now = clock.instant();
+		storage.createUser(new NewUser(
+				userName, email, displayName, match.get(), now, Optional.of(now)));
 		if (linkAll) {
 			ids.remove(match);
 			filterLinkCandidates(ids);
@@ -1751,6 +1759,7 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(userName, email, dn, ri.withID(), null));
+		storage.createUser(new NewUser(
+				userName, email, dn, ri.withID(), clock.instant(), Optional.absent()));
 	}
 }

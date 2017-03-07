@@ -6,12 +6,15 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.AuthUser;
@@ -28,7 +31,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class AuthUserTest {
 	
-	private static final Date NOW = new Date();
+	private static final Instant NOW = Instant.now();
 	
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
@@ -57,7 +60,7 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect last login", u.getLastLogin(), is((Date) null));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("foo")));
@@ -68,9 +71,8 @@ public class AuthUserTest {
 	
 	@Test
 	public void constructWithRoot() throws Exception {
-		final Date ll = new Date();
-		Thread.sleep(2);
-		final Date d = new Date();
+		final Optional<Instant> ll = Optional.of(Instant.now());
+		final Date d = new Date(ll.get().toEpochMilli() + 2);
 		
 		final AuthUser u = new AuthUser(UserName.ROOT,
 				new EmailAddress("f@g1.com"), new DisplayName("bar1"), null,
@@ -99,9 +101,8 @@ public class AuthUserTest {
 	
 	@Test
 	public void constructMaximal() throws Exception {
-		final Date ll = new Date();
-		Thread.sleep(2);
-		final Date d = new Date();
+		final Optional<Instant> ll = Optional.of(Instant.now());
+		final Date d = new Date(ll.get().toEpochMilli() + 2);
 		
 		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
@@ -120,6 +121,36 @@ public class AuthUserTest {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
+		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
+		assertThat("incorrect is disabled", u.isDisabled(), is(false));
+		assertThat("incorrect is local", u.isLocal(), is(false));
+		assertThat("incorrect is root", u.isRoot(), is(false));
+	}
+	
+	@Test
+	public void constructOptionalLastLogin() throws Exception {
+		final Optional<Instant> ll = Optional.absent();
+		final Date d = new Date();
+		
+		final AuthUser u = new AuthUser(new UserName("whoo"),
+				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
+				set(Role.DEV_TOKEN, Role.SERV_TOKEN), set("foo1"), NOW, ll, new UserDisabledState(
+						new UserName("whee1"), d));
+		
+		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
+				is(new UserName("whee1")));
+		assertThat("incorrect created date", u.getCreated(), is(NOW));
+		assertThat("incorrect custom roles", u.getCustomRoles(), is(set("foo1")));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
+				new UserName("whee1"), d)));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(d));
+		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
@@ -151,7 +182,7 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
-		assertThat("incorrect last login", u.getLastLogin(), is((Date) null));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
@@ -210,13 +241,12 @@ public class AuthUserTest {
 	
 	@Test
 	public void lastLogin() throws Exception {
-		final Date ll = new Date();
-		Thread.sleep(2);
-		final Date c = new Date();
+		final Optional<Instant> ll = Optional.of(Instant.now());
+		final Instant c = ll.get().plusMillis(1000);
 		final AuthUser u = new AuthUser(new UserName("foo"),
 				new EmailAddress("f@g.com"), new DisplayName("bar"), null,
 				null, null, c, ll, new UserDisabledState());
-		assertThat("last login not updated correctly", u.getLastLogin(), is(c));
+		assertThat("last login not updated correctly", u.getLastLogin(), is(Optional.of(c)));
 	}
 	
 	@Test
@@ -227,7 +257,7 @@ public class AuthUserTest {
 		final Set<RemoteIdentityWithLocalID> ids = set(REMOTE);
 		final Set<Role> roles = Collections.emptySet();
 		final Set<String> croles = Collections.emptySet();
-		final Date created = new Date();
+		final Instant created = Instant.now();
 		final UserDisabledState ds = new UserDisabledState();
 		failConstruct(null, email, dn, ids, roles, croles, created, ds,
 				new NullPointerException("userName"));
@@ -264,7 +294,7 @@ public class AuthUserTest {
 			final Set<RemoteIdentityWithLocalID> identities,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Date created,
+			final Instant created,
 			final UserDisabledState disabledState,
 			final Exception e) {
 		try {

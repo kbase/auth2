@@ -2,10 +2,12 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
@@ -21,6 +23,7 @@ public class NewUser extends AuthUser {
 	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
 	 * @param remoteIdentity the 3rd party identity associated with this user.
+	 * @param created the date the user was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date (e.g. the time this constructor is called) it will be silently modified to match
 	 * the creation date.
@@ -30,9 +33,10 @@ public class NewUser extends AuthUser {
 			final EmailAddress email,
 			final DisplayName displayName,
 			final RemoteIdentityWithLocalID remoteIdentity,
-			final Date lastLogin) {
+			final Instant created,
+			final Optional<Instant> lastLogin) {
 		super(userName, email, displayName, set(remoteIdentity), null, null,
-				new Date(), lastLogin, new UserDisabledState());
+				created, lastLogin, new UserDisabledState());
 	}
 
 	private static Set<RemoteIdentityWithLocalID> set(final RemoteIdentityWithLocalID id) {

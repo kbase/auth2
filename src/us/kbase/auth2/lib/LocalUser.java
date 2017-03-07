@@ -1,8 +1,11 @@
 package us.kbase.auth2.lib;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.Set;
+
+import com.google.common.base.Optional;
 
 /** A local user.
  * 
@@ -36,8 +39,8 @@ public class LocalUser extends AuthUser {
 			final DisplayName displayName,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Date created,
-			final Date lastLogin,
+			final Instant created,
+			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,
 			final byte[] salt,

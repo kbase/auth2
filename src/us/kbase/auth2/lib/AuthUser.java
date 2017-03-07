@@ -2,11 +2,14 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
@@ -29,8 +32,8 @@ public class AuthUser {
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
 	private final Set<RemoteIdentityWithLocalID> identities;
-	private final long created;
-	private final Long lastLogin;
+	private final Instant created;
+	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
 	
 	/** Create a new user.
@@ -53,10 +56,9 @@ public class AuthUser {
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
 			Set<String> customRoles,
-			final Date created,
-			final Date lastLogin,
+			final Instant created,
+			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
-		//TODO CODE use optionals vs. nulls
 		nonNull(userName, "userName");
 		nonNull(email, "email");
 		nonNull(displayName, "displayName");
@@ -96,9 +98,12 @@ public class AuthUser {
 		}
 		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
 				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
-		this.created = created.getTime();
-		this.lastLogin = lastLogin == null ? null :
-			(lastLogin.before(created) ? created.getTime() : lastLogin.getTime());
+		this.created = created;
+		if (lastLogin == null || !lastLogin.isPresent()) {
+			this.lastLogin = Optional.absent();
+		} else {
+			this.lastLogin = lastLogin.get().isBefore(created) ? Optional.of(created) : lastLogin;
+		}
 		this.disabledState = disabledState;
 	}
 	
@@ -187,15 +192,15 @@ public class AuthUser {
 	/** Get this user's creation date.
 	 * @return the creation date.
 	 */
-	public Date getCreated() {
-		return new Date(created);
+	public Instant getCreated() {
+		return created;
 	}
 
 	/** Get the date of the last login for this user.
 	 * @return the last login date, or null if the user has never logged in.
 	 */
-	public Date getLastLogin() {
-		return lastLogin == null ? null : new Date(lastLogin);
+	public Optional<Instant> getLastLogin() {
+		return lastLogin;
 	}
 	
 	/** Returns true if the account for this user is disabled.
@@ -256,7 +261,7 @@ public class AuthUser {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + (int) (created ^ (created >>> 32));
+		result = prime * result + ((created == null) ? 0 : created.hashCode());
 		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
 		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
 		result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
@@ -280,7 +285,11 @@ public class AuthUser {
 			return false;
 		}
 		AuthUser other = (AuthUser) obj;
-		if (created != other.created) {
+		if (created == null) {
+			if (other.created != null) {
+				return false;
+			}
+		} else if (!created.equals(other.created)) {
 			return false;
 		}
 		if (customRoles == null) {

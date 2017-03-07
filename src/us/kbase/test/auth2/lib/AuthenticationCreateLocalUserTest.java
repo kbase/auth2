@@ -12,11 +12,15 @@ import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthUser;
@@ -54,40 +58,40 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createWithAdminUser() throws Exception {
-		
+		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), new Date(), new Date(), new UserDisabledState());
+				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
 	
 	@Test
 	public void createWithCreateAdminUser() throws Exception {
-		
+		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), new Date(), new Date(), new UserDisabledState());
+				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
 	
 	@Test
 	public void createWithRootUser() throws Exception {
-		
+		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), new Date(), new Date(), new UserDisabledState());
+				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
 	
 	@Test
 	public void createFailWithoutAdminUser() throws Exception {
-		
+		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), new Date(), new Date(), new UserDisabledState());
+				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
 		createFail(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
@@ -105,12 +109,14 @@ public class AuthenticationCreateLocalUserTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clock;
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		final char[] pwdChar = new char [] {'a', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'};
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"3TdeAz9GffU+pVH/yqNZrlL8e/nyPkM7VJiVmjzc0Cg=");
+		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
 				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
@@ -122,8 +128,10 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
+		when(clock.instant()).thenReturn(create);
+		
 		final NewLocalUser expected = new NewLocalUser(new UserName("foo"),
-				new EmailAddress("f@g.com"), new DisplayName("bar"), hash, salt, true);
+				new EmailAddress("f@g.com"), new DisplayName("bar"), create, hash, salt, true);
 		
 		final LocalUserAnswerMatcher<NewLocalUser> matcher =
 				new LocalUserAnswerMatcher<>(expected);
@@ -157,7 +165,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), new Date(), new Date(),
+				Collections.emptySet(), Instant.now(), null,
 				new UserDisabledState("disabled", new UserName("foo"), new Date()));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);

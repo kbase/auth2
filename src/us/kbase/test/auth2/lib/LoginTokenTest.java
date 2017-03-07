@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class LoginTokenTest {
 			LOGIN_STATE = new LoginState.Builder("foo", false)
 					.withUser(new NewUser(new UserName("foo"),
 							new EmailAddress("f@g.com"),
-							new DisplayName("bar"), REMOTE, null), REMOTE).build();
+							new DisplayName("bar"), REMOTE, Instant.now(), null), REMOTE).build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests nub", e);
 		}

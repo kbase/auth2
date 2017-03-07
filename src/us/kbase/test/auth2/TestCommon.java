@@ -122,12 +122,6 @@ public class TestCommon {
 		}
 	}
 	
-	public static boolean dateWithin(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		return d.getTime() < now.getTime() + milliseconds &&
-				d.getTime() > now.getTime() - milliseconds;
-	}
-
 	public static Path getMongoExe() {
 		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();
 	}

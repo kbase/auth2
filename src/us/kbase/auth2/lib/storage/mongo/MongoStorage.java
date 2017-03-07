@@ -2,6 +2,7 @@ package us.kbase.auth2.lib.storage.mongo;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -85,6 +86,8 @@ import us.kbase.auth2.lib.token.TokenType;
  *
  */
 public class MongoStorage implements AuthStorage {
+	
+	//TODO TEST NOW mock date creation. Try to remove Date import.
 
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
@@ -307,8 +310,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
-				.append(Fields.USER_CREATED, local.getCreated())
-				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
+				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
+				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
+						Date.from(local.getLastLogin().get()) : null)
 				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
@@ -348,8 +352,8 @@ public class MongoStorage implements AuthStorage {
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
-				user.getDate(Fields.USER_CREATED),
-				user.getDate(Fields.USER_LAST_LOGIN),
+				user.getDate(Fields.USER_CREATED).toInstant(),
+				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
@@ -457,8 +461,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
-				.append(Fields.USER_CREATED, user.getCreated())
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
+				.append(Fields.USER_CREATED, Date.from(user.getCreated()))
+				.append(Fields.USER_LAST_LOGIN, user.getLastLogin().isPresent() ?
+						Date.from(user.getLastLogin().get()) : null)
 				// admin is always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
 				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
@@ -651,9 +656,17 @@ public class MongoStorage implements AuthStorage {
 				toIdentities(ids),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
-				user.getDate(Fields.USER_CREATED),
-				user.getDate(Fields.USER_LAST_LOGIN),
+				user.getDate(Fields.USER_CREATED).toInstant(),
+				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user));
+	}
+	
+	private Optional<Instant> getOptionalDate(final Document d, final String field) {
+		if (d.get(field) != null) {
+			return Optional.of(d.getDate(field).toInstant());
+		} else {
+			return Optional.absent();
+		}
 	}
 	
 	@Override
@@ -1344,10 +1357,10 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void setLastLogin(final UserName user, final Date lastLogin) 
+	public void setLastLogin(final UserName user, final Instant lastLogin) 
 			throws NoSuchUserException, AuthStorageException {
 		nonNull(lastLogin, "lastLogin");
-		updateUser(user, new Document(Fields.USER_LAST_LOGIN, lastLogin));
+		updateUser(user, new Document(Fields.USER_LAST_LOGIN, Date.from(lastLogin)));
 	}
 
 	private void updateConfig(

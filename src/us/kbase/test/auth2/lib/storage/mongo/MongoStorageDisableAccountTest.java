@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -20,6 +21,8 @@ import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageDisableAccountTest extends MongoStorageTester {
+	
+	private static final Instant NOW = Instant.now();
 
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
@@ -29,7 +32,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void disableAccountTwice() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -86,7 +89,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void enableAccountTwice() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -136,7 +139,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void disableEnableDisable() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, null));
+				new DisplayName("bar"), REMOTE, NOW, null));
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),

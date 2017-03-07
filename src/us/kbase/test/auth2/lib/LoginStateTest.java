@@ -6,8 +6,8 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -26,8 +26,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.test.auth2.TestCommon;
 
 public class LoginStateTest {
-	
-	private static final Date NOW = new Date();
 	
 	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715c9"),
@@ -49,10 +47,11 @@ public class LoginStateTest {
 	static {
 		try {
 			AUTH_USER1 = new NewUser(new UserName("foo4"), new EmailAddress("f@g.com"),
-					new DisplayName("bar4"), REMOTE1, null);
+					new DisplayName("bar4"), REMOTE1, Instant.now(), null);
 			AUTH_USER2 = new AuthUser(new UserName("foo5"),
 					new EmailAddress("f@g5.com"), new DisplayName("bar5"), set(REMOTE2, REMOTE3),
-					set(Role.ADMIN), Collections.emptySet(), NOW, NOW, new UserDisabledState());
+					set(Role.ADMIN), Collections.emptySet(), Instant.now(), null,
+					new UserDisabledState());
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}

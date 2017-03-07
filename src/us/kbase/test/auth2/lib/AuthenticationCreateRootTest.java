@@ -15,6 +15,8 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Date;
 
@@ -23,6 +25,7 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
@@ -57,19 +60,24 @@ public class AuthenticationCreateRootTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
-		final Password pwd = new Password("foobarbazbat".toCharArray());
+		final Clock clock = testauth.clock;
 		
+		final Password pwd = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
+		final Instant create = Instant.ofEpochMilli(1000000006);
+		
 		
 		final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
-				hash, salt);
+				create, hash, salt);
 		
 		final LocalUserAnswerMatcher<NewRootUser> matcher =
 				new LocalUserAnswerMatcher<NewRootUser>(exp);
 		
 		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(clock.instant()).thenReturn(create);
 		
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).createLocalUser(any(NewRootUser.class));
@@ -133,6 +141,7 @@ public class AuthenticationCreateRootTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clock;
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		// pwd will be cleared before the method call
@@ -144,6 +153,8 @@ public class AuthenticationCreateRootTest {
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
+		when(clock.instant()).thenReturn(Instant.now());
+		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
 				.when(storage).createLocalUser(any(NewRootUser.class));
 		
@@ -152,7 +163,7 @@ public class AuthenticationCreateRootTest {
 				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));
 		
 		when(storage.getUser(UserName.ROOT)).thenReturn(new NewRootUser(EmailAddress.UNKNOWN,
-				new DisplayName("root"), new byte[10], new byte[8]));
+				new DisplayName("root"), Instant.now(), new byte[10], new byte[8]));
 		
 		auth.createRoot(pwd);
 		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
@@ -174,8 +185,11 @@ public class AuthenticationCreateRootTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clock;
 		
 		when(rand.generateSalt()).thenReturn(new byte[8]);
+		
+		when(clock.instant()).thenReturn(Instant.now());
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
 				.when(storage).createLocalUser(any(NewRootUser.class));
@@ -199,8 +213,11 @@ public class AuthenticationCreateRootTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clock;
 		
 		when(rand.generateSalt()).thenReturn(new byte[8]);
+		
+		when(clock.instant()).thenReturn(Instant.now());
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
 				.when(storage).createLocalUser(any(NewRootUser.class));
@@ -208,7 +225,8 @@ public class AuthenticationCreateRootTest {
 		// ignore the change password call, tested elsewhere
 		final LocalUser disabled = new LocalUser(UserName.ROOT, EmailAddress.UNKNOWN,
 				new DisplayName("root"), set(Role.ROOT), Collections.emptySet(),
-				new Date(), new Date(), new UserDisabledState("foo", UserName.ROOT, new Date()),
+				Instant.now(), Optional.of(Instant.now()),
+				new UserDisabledState("foo", UserName.ROOT, new Date()),
 				new byte[10], new byte[8], false, null);
 		when(storage.getUser(UserName.ROOT)).thenReturn(disabled);
 		
