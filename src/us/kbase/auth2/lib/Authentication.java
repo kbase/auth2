@@ -126,6 +126,10 @@ public class Authentication {
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	private final Clock clock;
+	private final UUIDGenerator uuidGen;
+	
+	//TODO UI show this with note that it'll take X seconds to sync to other server instance
+	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
 	 * @param storage the storage system to use for information persistance.
@@ -141,8 +145,18 @@ public class Authentication {
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
-		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator(),
-				Clock.systemDefaultZone()); // don't care about time zone, not using it
+		this(storage,
+				identityProviderSet,
+				defaultExternalConfig,
+				getDefaultRandomGenerator(),
+				Clock.systemDefaultZone(), // don't care about time zone, not using it
+				new UUIDGenerator() {
+					
+					@Override
+					public UUID randomUUID() {
+						return UUID.randomUUID();
+					}
+				});
 	}
 
 	private static RandomDataGenerator getDefaultRandomGenerator() {
@@ -159,8 +173,10 @@ public class Authentication {
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
 			final RandomDataGenerator randGen,
-			final Clock clock)
+			final Clock clock,
+			final UUIDGenerator uuidGen)
 			throws StorageInitException {
+		this.uuidGen = uuidGen;
 		this.clock = clock;
 		this.randGen = randGen;
 		try {
@@ -195,15 +211,22 @@ public class Authentication {
 		}
 	}
 	
+	// for test purposes. Resets the next update time to be the previous update + seconds.
+	@SuppressWarnings("unused")
+	private void setConfigUpdateInterval(int seconds) {
+		final Instant prevUpdate = cfg.getNextUpdateTime();
+		final Instant newUpdate = prevUpdate.minusSeconds(cfgUpdateIntervalSec)
+				.plusSeconds(seconds);
+		cfgUpdateIntervalSec = seconds;
+		cfg.setNextUpdateTime(newUpdate);
+	}
+	
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
 	//TODO TEST config manager
 	private class ConfigManager {
 	
-		//TODO UI show this with note that it'll take X seconds to sync to other server instance
-		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
-		
 		private AuthConfigSet<CollectingExternalConfig> cfg;
 		private Instant nextConfigUpdate;
 		private AuthStorage storage;
@@ -212,6 +235,16 @@ public class Authentication {
 				throws AuthStorageException {
 			this.storage = storage;
 			updateConfig();
+		}
+		
+		// for testing purposes.
+		public synchronized Instant getNextUpdateTime() {
+			return nextConfigUpdate;
+		}
+		
+		// for testing purposes.
+		public synchronized void setNextUpdateTime(final Instant time) {
+			nextConfigUpdate = time;
 		}
 		
 		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
@@ -232,7 +265,7 @@ public class Authentication {
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
-			nextConfigUpdate = Instant.now().plusSeconds(CFG_UPDATE_INTERVAL_SEC);
+			nextConfigUpdate = Instant.now().plusSeconds(cfgUpdateIntervalSec);
 		}
 	}
 
@@ -350,8 +383,7 @@ public class Authentication {
 					"Username / password mismatch");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Non-admin login is disabled");
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled");
 		}
 		if (u.isDisabled()) {
 			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
@@ -447,7 +479,7 @@ public class Authentication {
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
-		final NewToken nt = new NewToken(TokenType.LOGIN, randGen.getToken(),
+		final NewToken nt = new NewToken(uuidGen.randomUUID(), TokenType.LOGIN, randGen.getToken(),
 				userName, clock.instant(),
 				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
@@ -549,7 +581,7 @@ public class Authentication {
 		} else {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
-		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
+		final NewToken nt = new NewToken(uuidGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
 				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
@@ -1125,7 +1157,7 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = new TemporaryToken(
+		final TemporaryToken tt = new TemporaryToken(uuidGen.randomUUID(),
 				randGen.getToken(), clock.instant(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 		return new LoginToken(tt, ls);
@@ -1434,7 +1466,7 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(
+			final TemporaryToken tt = new TemporaryToken(uuidGen.randomUUID(),
 					randGen.getToken(), clock.instant(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 					.collect(Collectors.toSet());

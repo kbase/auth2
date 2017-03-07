@@ -19,6 +19,7 @@ import org.ini4j.Ini;
 
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth2.lib.Password;
 import us.kbase.common.test.TestException;
 
 public class TestCommon {
@@ -113,6 +114,19 @@ public class TestCommon {
 			}
 		}
 	}
+
+	public static void assertClear(final Password p) {
+		assertClear(p.getPassword());
+	}
+	
+	public static void assertClear(final char[] chars) {
+		for (int i = 0; i < chars.length; i++) {
+			if (chars[i] != '0') {
+				fail(String.format("found char != '0' at postion %ss: %s", i, chars[i]));
+			}
+		}
+	}
+	
 	
 	public static Path getMongoExe() {
 		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();

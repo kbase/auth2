@@ -16,19 +16,26 @@ public class TemporaryToken {
 	private final String token;
 	private final Instant creationDate;
 	private final Instant expirationDate;
-	private final UUID id = UUID.randomUUID();
+	private final UUID id;
 
 	/** Create a new temporary token.
+	 * @param id the token id.
 	 * @param token the token string.
 	 * @param creation the creation date of the token.
 	 * @param lifetimeInMS the lifetime of the token in milliseconds.
 	 */
-	public TemporaryToken(final String token, final Instant creation, final long lifetimeInMS) {
+	public TemporaryToken(
+			final UUID id,
+			final String token,
+			final Instant creation,
+			final long lifetimeInMS) {
+		nonNull(id, "id");
 		checkStringNoCheckedException(token, "token");
 		nonNull(creation, "creation");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
+		this.id = id;
 		this.token = token;
 		this.creationDate = creation;
 		this.expirationDate = Instant.ofEpochMilli(
