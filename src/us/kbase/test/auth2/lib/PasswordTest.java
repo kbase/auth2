@@ -60,10 +60,10 @@ public class PasswordTest {
 	
 	@Test
 	public void passwordStrengthCheck() throws Exception {
-		testPasswordStrenghtFail("");
-		testPasswordStrenghtFail("12345");
-		testPasswordStrenghtFail("password");
-		testPasswordStrenghtFail("open");
+		testPasswordStrengthFail("");
+		testPasswordStrengthFail("12345");
+		testPasswordStrengthFail("password");
+		testPasswordStrengthFail("open");
 		
 	}
 	
