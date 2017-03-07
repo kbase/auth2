@@ -299,7 +299,9 @@ public class MongoStorage implements AuthStorage {
 				local.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		final UserName admin = local.getAdminThatToggledEnabledState();
+		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
+		final Optional<Instant> time = local.getEnableToggleDate();
+		final Optional<String> reason = local.getReasonForDisabled();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
@@ -313,10 +315,12 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
 						Date.from(local.getLastLogin().get()) : null)
-				// admin is always null for new user, but check for safety
-				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
-				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
-				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
+				// admin, time, and reason are always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN,
+						admin.isPresent() ? admin.get().getName() : null)
+				.append(Fields.USER_DISABLED_DATE,
+						time.isPresent() ? Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null)
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -365,9 +369,10 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException {
 		try {
 			return UserDisabledState.create(
-					user.getString(Fields.USER_DISABLED_REASON),
-					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-					user.getDate(Fields.USER_DISABLED_DATE));
+					Optional.fromNullable(user.getString(Fields.USER_DISABLED_REASON)),
+					Optional.fromNullable(getUserNameAllowNull(
+							user.getString(Fields.USER_DISABLED_ADMIN))),
+					getOptionalDate(user, Fields.USER_DISABLED_DATE));
 		} catch (IllegalParameterException | MissingParameterException | IllegalStateException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
@@ -450,7 +455,9 @@ public class MongoStorage implements AuthStorage {
 	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
 		nonNull(user, "user");
-		final UserName admin = user.getAdminThatToggledEnabledState();
+		final Optional<UserName> admin = user.getAdminThatToggledEnabledState();
+		final Optional<Instant> time = user.getEnableToggleDate();
+		final Optional<String> reason = user.getReasonForDisabled();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -464,10 +471,12 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_CREATED, Date.from(user.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin().isPresent() ?
 						Date.from(user.getLastLogin().get()) : null)
-				// admin is always null for new user, but check for safety
-				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
-				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
-				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
+				// admin, time, and reason are always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN,
+						admin.isPresent() ? admin.get().getName() : null)
+				.append(Fields.USER_DISABLED_DATE,
+						time.isPresent() ? Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null);
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {

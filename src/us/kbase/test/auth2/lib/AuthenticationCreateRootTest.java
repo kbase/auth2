@@ -18,7 +18,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 
 import org.junit.Test;
 
@@ -226,7 +225,7 @@ public class AuthenticationCreateRootTest {
 		final LocalUser disabled = new LocalUser(UserName.ROOT, EmailAddress.UNKNOWN,
 				new DisplayName("root"), set(Role.ROOT), Collections.emptySet(),
 				Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", UserName.ROOT, new Date()),
+				new UserDisabledState("foo", UserName.ROOT, Instant.now()),
 				new byte[10], new byte[8], false, null);
 		when(storage.getUser(UserName.ROOT)).thenReturn(disabled);
 		

@@ -45,7 +45,7 @@ public class LocalUserTest {
 		final Set<String> cr = set("foobar");
 		final Instant d = Instant.ofEpochMilli(5);
 		final Optional<Instant> ll = Optional.of(Instant.ofEpochMilli(6));
-		final Date dis = new Date();
+		final Instant dis = Instant.now();
 		final UserDisabledState uds = new UserDisabledState(new UserName("who"), dis);
 		final byte[] pwd = "foobarbazb".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wh".getBytes(StandardCharsets.UTF_8);
@@ -61,18 +61,18 @@ public class LocalUserTest {
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
-				is(new UserName("who")));
+				is(Optional.of(new UserName("who"))));
 		assertThat("incorrect created date", lu.getCreated(), is(d));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(set("foobar")));
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
 				new UserName("who"), dis)));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
-		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is(dis));
+		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is(Optional.of(dis)));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(), is(set(Role.ADMIN)));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect last login", lu.getLastLogin(), is(ll));
-		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", lu.getRoles(), is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect user name", lu.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
@@ -149,18 +149,18 @@ public class LocalUserTest {
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
-				is((UserName) null));
+				is(Optional.absent()));
 		assertThat("incorrect creation", lu.getCreated(), is(create));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("e@g.com")));
-		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is(Optional.absent()));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", lu.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", lu.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
@@ -184,18 +184,19 @@ public class LocalUserTest {
 		assertThat("incorrect reset date", lu.getLastPwdReset(), is((Date) null));
 		
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
-				is((UserName) null));
+				is(Optional.absent()));
 		assertThat("incorrect creation", lu.getCreated(), is(create));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("e@g.com")));
-		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(),
+				is(Optional.absent()));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", lu.getRoles(), is(set(Role.ROOT)));
 		assertThat("incorrect user name", lu.getUserName(), is(UserName.ROOT));
 		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
@@ -212,13 +213,14 @@ public class LocalUserTest {
 		final Set<String> cr = set("foobar");
 		final Instant d = Instant.ofEpochMilli(1000);
 		final Optional<Instant> ll = Optional.of(Instant.ofEpochMilli(2000));
-		final Date dis = new Date(3000);
+		final Instant dis = Instant.ofEpochMilli(3000);
+		final Date lastReset = new Date(3000);
 		final UserDisabledState uds = new UserDisabledState(new UserName("who"), dis);
 		final byte[] pwd = "foobarbazb".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wh".getBytes(StandardCharsets.UTF_8);
 		
 		final LocalUser lu = new LocalUser(un, e, dn, r, cr, d, ll, uds,
-				pwd, salt, false, dis);
+				pwd, salt, false, lastReset);
 		
 		assertThat("incorrect toString", lu.toString(), is(
 				"LocalUser [passwordHash=[102, 111, 111, 98, 97, 114, 98, 97, 122, 98], " +
@@ -228,8 +230,9 @@ public class LocalUserTest {
 				"getRoles()=[CREATE_ADMIN], getCustomRoles()=[foobar], " +
 				"getCreated()=1970-01-01T00:00:01Z, " +
 				"getLastLogin()=Optional.of(1970-01-01T00:00:02Z), " +
-				"getDisabledState()=UserDisabledState [disabledReason=null, " +
-				"byAdmin=UserName [name=who], time=3000]]"));
+				"getDisabledState()=UserDisabledState [disabledReason=Optional.absent(), " +
+				"byAdmin=Optional.of(UserName [name=who])," +
+				" time=Optional.of(1970-01-01T00:00:03Z)]]"));
 		
 	}
 

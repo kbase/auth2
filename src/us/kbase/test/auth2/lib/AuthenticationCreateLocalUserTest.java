@@ -166,7 +166,7 @@ public class AuthenticationCreateLocalUserTest {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
 				Collections.emptySet(), Instant.now(), null,
-				new UserDisabledState("disabled", new UserName("foo"), new Date()));
+				new UserDisabledState("disabled", new UserName("foo"), Instant.now()));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		

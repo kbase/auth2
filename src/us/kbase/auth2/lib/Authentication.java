@@ -11,7 +11,6 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -206,7 +205,7 @@ public class Authentication {
 		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
 		
 		private AuthConfigSet<CollectingExternalConfig> cfg;
-		private Date nextConfigUpdate;
+		private Instant nextConfigUpdate;
 		private AuthStorage storage;
 		
 		public ConfigManager(final AuthStorage storage)
@@ -217,7 +216,7 @@ public class Authentication {
 		
 		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
 				throws AuthStorageException {
-			if (new Date().after(nextConfigUpdate)) {
+			if (Instant.now().isAfter(nextConfigUpdate)) {
 				updateConfig();
 			}
 			return cfg;
@@ -233,8 +232,7 @@ public class Authentication {
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
-			nextConfigUpdate = new Date(new Date().getTime() +
-					CFG_UPDATE_INTERVAL_SEC * 1000);
+			nextConfigUpdate = Instant.now().plusSeconds(CFG_UPDATE_INTERVAL_SEC);
 		}
 	}
 

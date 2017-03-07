@@ -4,7 +4,6 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -211,25 +210,25 @@ public class AuthUser {
 	}
 	
 	/** Get the reason the account for this user was disabled.
-	 * @return the reason the user account was disabled, or null if the account is not disabled.
+	 * @return the reason the user account was disabled, or absent if the account is not disabled.
 	 */
-	public String getReasonForDisabled() {
+	public Optional<String> getReasonForDisabled() {
 		return disabledState.getDisabledReason();
 	}
 	
 	/** Get the user name of the administrator that enabled or disabled the user account.
-	 * @return the administrator that disabled or enabled the account, or null if the account has
+	 * @return the administrator that disabled or enabled the account, or absent if the account has
 	 * never been disabled.
 	 */
-	public UserName getAdminThatToggledEnabledState() {
+	public Optional<UserName> getAdminThatToggledEnabledState() {
 		return disabledState.getByAdmin();
 	}
 	
 	/** Get the date of the last time the user account was disabled or enabled.
-	 * @return the date of the laste time the user account was disabled or enabled, or null if the
-	 * account has never been disabled.
+	 * @return the date of the laste time the user account was disabled or enabled, or absent if
+	 * the account has never been disabled.
 	 */
-	public Date getEnableToggleDate() {
+	public Optional<Instant> getEnableToggleDate() {
 		return disabledState.getTime();
 	}
 	
@@ -350,6 +349,4 @@ public class AuthUser {
 		}
 		return true;
 	}
-	
-	
 }

@@ -5,9 +5,12 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -41,18 +44,22 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.disableAccount(new UserName("foo"), new UserName("baz"), "foo is a jerkface");
 		
 		final UserDisabledState uds = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is("foo is a jerkface"));
-		assertThat("incorrect disabled admin", uds.getByAdmin(), is(new UserName("baz")));
-		TestCommon.assertDateNoOlderThan(uds.getTime(), 200);
+		assertThat("incorrect disabled reason", uds.getDisabledReason(),
+				is(Optional.of("foo is a jerkface")));
+		assertThat("incorrect disabled admin", uds.getByAdmin(),
+				is(Optional.of(new UserName("baz"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds.getTime().get()), 200);
 		
 		Thread.sleep(250);
 		
 		storage.disableAccount(new UserName("foo"), new UserName("bung"), "foo is a doodyface");
 		
 		final UserDisabledState uds2 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is("foo is a doodyface"));
-		assertThat("incorrect disabled admin", uds2.getByAdmin(), is(new UserName("bung")));
-		TestCommon.assertDateNoOlderThan(uds2.getTime(), 200);
+		assertThat("incorrect disabled reason", uds2.getDisabledReason(),
+				is(Optional.of("foo is a doodyface")));
+		assertThat("incorrect disabled admin", uds2.getByAdmin(),
+				is(Optional.of(new UserName("bung"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds2.getTime().get()), 200);
 	}
 	
 	@Test
@@ -98,18 +105,20 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.enableAccount(new UserName("foo"), new UserName("baz"));
 		
 		final UserDisabledState uds = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is((String) null));
-		assertThat("incorrect disabled admin", uds.getByAdmin(), is(new UserName("baz")));
-		TestCommon.assertDateNoOlderThan(uds.getTime(), 200);
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled admin", uds.getByAdmin(),
+				is(Optional.of(new UserName("baz"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds.getTime().get()), 200);
 		
 		Thread.sleep(250);
 		
 		storage.enableAccount(new UserName("foo"), new UserName("bung"));
 		
 		final UserDisabledState uds2 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is((String) null));
-		assertThat("incorrect disabled admin", uds2.getByAdmin(), is(new UserName("bung")));
-		TestCommon.assertDateNoOlderThan(uds2.getTime(), 200);
+		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled admin", uds2.getByAdmin(),
+				is(Optional.of(new UserName("bung"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds2.getTime().get()), 200);
 	}
 	
 	@Test
@@ -148,26 +157,31 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.disableAccount(new UserName("foo"), new UserName("baz"), "foo is a jerkface");
 		
 		final UserDisabledState uds = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is("foo is a jerkface"));
-		assertThat("incorrect disabled admin", uds.getByAdmin(), is(new UserName("baz")));
-		TestCommon.assertDateNoOlderThan(uds.getTime(), 200);
+		assertThat("incorrect disabled reason", uds.getDisabledReason(),
+				is(Optional.of("foo is a jerkface")));
+		assertThat("incorrect disabled admin", uds.getByAdmin(),
+				is(Optional.of(new UserName("baz"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds.getTime().get()), 200);
 		
 		Thread.sleep(250);
 		
 		storage.enableAccount(new UserName("foo"), new UserName("bat"));
 		
 		final UserDisabledState uds2 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is((String) null));
-		assertThat("incorrect disabled admin", uds2.getByAdmin(), is(new UserName("bat")));
-		TestCommon.assertDateNoOlderThan(uds2.getTime(), 200);
+		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled admin", uds2.getByAdmin(),
+				is(Optional.of(new UserName("bat"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds2.getTime().get()), 200);
 		
 		Thread.sleep(250);
 		
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "foo is a dorkyface");
 		
 		final UserDisabledState uds3 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds3.getDisabledReason(), is("foo is a dorkyface"));
-		assertThat("incorrect disabled admin", uds3.getByAdmin(), is(new UserName("bar")));
-		TestCommon.assertDateNoOlderThan(uds3.getTime(), 200);
+		assertThat("incorrect disabled reason", uds3.getDisabledReason(),
+				is(Optional.of("foo is a dorkyface")));
+		assertThat("incorrect disabled admin", uds3.getByAdmin(),
+				is(Optional.of(new UserName("bar"))));
+		TestCommon.assertDateNoOlderThan(Date.from(uds3.getTime().get()), 200);
 	}
 }

@@ -8,7 +8,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
@@ -51,17 +50,17 @@ public class AuthUserTest {
 				null, null, NOW, null, new UserDisabledState());
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is((UserName) null));
+				is(Optional.absent()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -72,7 +71,7 @@ public class AuthUserTest {
 	@Test
 	public void constructWithRoot() throws Exception {
 		final Optional<Instant> ll = Optional.of(Instant.now());
-		final Date d = new Date(ll.get().toEpochMilli() + 2);
+		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = new AuthUser(UserName.ROOT,
 				new EmailAddress("f@g1.com"), new DisplayName("bar1"), null,
@@ -80,18 +79,19 @@ public class AuthUserTest {
 						"reason", new UserName("whee"), d));
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(new UserName("whee")));
+				is(Optional.of(new UserName("whee"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(set("bar", "foo")));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				"reason", new UserName("whee"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g1.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(d));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is("reason"));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(),
+				is(Optional.of("reason")));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.ROOT)));
 		assertThat("incorrect user name", u.getUserName(), is(UserName.ROOT));
 		assertThat("incorrect is disabled", u.isDisabled(), is(true));
@@ -102,7 +102,7 @@ public class AuthUserTest {
 	@Test
 	public void constructMaximal() throws Exception {
 		final Optional<Instant> ll = Optional.of(Instant.now());
-		final Date d = new Date(ll.get().toEpochMilli() + 2);
+		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
@@ -110,18 +110,18 @@ public class AuthUserTest {
 						new UserName("whee1"), d));
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(new UserName("whee1")));
+				is(Optional.of(new UserName("whee1"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(set("foo1")));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(d));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -132,7 +132,7 @@ public class AuthUserTest {
 	@Test
 	public void constructOptionalLastLogin() throws Exception {
 		final Optional<Instant> ll = Optional.absent();
-		final Date d = new Date();
+		final Instant d = Instant.now();
 		
 		final AuthUser u = new AuthUser(new UserName("whoo"),
 				new EmailAddress("f@g2.com"), new DisplayName("bar3"), set(REMOTE),
@@ -140,18 +140,18 @@ public class AuthUserTest {
 						new UserName("whee1"), d));
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(new UserName("whee1")));
+				is(Optional.of(new UserName("whee1"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(set("foo1")));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(d));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -173,17 +173,17 @@ public class AuthUserTest {
 		final AuthUser u = new AuthUser(pre, set(ri2));
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is((UserName) null));
+				is(Optional.absent()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is((Date) null));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is((String) null));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));

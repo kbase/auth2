@@ -124,8 +124,8 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 				new Document("$set", new Document("dsbleadmin", null)));
 		
 		failGetUser(new UserName("foo"), new AuthStorageException(
-				"Illegal value stored in db: If disabledReason is not null byAdmin and time " +
-				"cannot be null"));
+				"Illegal value stored in db: If disabledReason is present byAdmin and time " +
+				"cannot be absent"));
 	}
 	
 	@Test
