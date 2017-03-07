@@ -87,8 +87,6 @@ import us.kbase.auth2.lib.token.TokenType;
  *
  */
 public class MongoStorage implements AuthStorage {
-	
-	//TODO TEST NOW mock date creation. Try to remove Date import.
 
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
@@ -222,6 +220,7 @@ public class MongoStorage implements AuthStorage {
 		this(db, Clock.systemDefaultZone()); //don't use timezone
 	}
 	
+	// this should only be used for tests
 	private MongoStorage(final MongoDatabase db, final Clock clock) throws StorageInitException {
 		nonNull(db, "db");
 		this.db = db;
@@ -326,11 +325,13 @@ public class MongoStorage implements AuthStorage {
 				// admin, time, and reason are always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN,
 						admin.isPresent() ? admin.get().getName() : null)
-				.append(Fields.USER_DISABLED_DATE,
-						time.isPresent() ? Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_DATE, time.isPresent() ?
+						Date.from(time.get()) : null)
 				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null)
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
-				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ? reset.get() : null)
+				// last reset is always null for a new user, but check for safety
+				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ?
+						Date.from(reset.get()) : null)
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, salt);
 		try {
