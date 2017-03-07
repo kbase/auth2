@@ -52,7 +52,7 @@ public class LinkTokenTest {
 	@Test
 	public void tokenConstructor() throws Exception {
 		final LinkIdentities linkids = new LinkIdentities(AUTH_USER, "foobar");
-		final TemporaryToken tt = new TemporaryToken("foo", 10000);
+		final TemporaryToken tt = new TemporaryToken("foo", Instant.now(), 10000);
 		final LinkToken lt = new LinkToken(tt, linkids);
 		assertThat("incorrect isLinked()", lt.isLinked(), is(false));
 		assertThat("incorrect token id", lt.getTemporaryToken().getId(), is(tt.getId()));
@@ -89,7 +89,7 @@ public class LinkTokenTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new LinkIdentities(AUTH_USER, "foo"),
 				new NullPointerException("token"));
-		failConstruct(new TemporaryToken("foo", 10000), null,
+		failConstruct(new TemporaryToken("foo", Instant.now(), 10000), null,
 				new NullPointerException("linkIdentities"));
 	}
 	

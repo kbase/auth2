@@ -37,8 +37,8 @@ public class Token {
 		ret.put("cachefor", auth.getSuggestedTokenCacheTime());
 		ret.put("user", ht.getUserName().getName());
 		ret.put("type", ht.getTokenType().getID());
-		ret.put("created", ht.getCreationDate().getTime());
-		ret.put("expires", ht.getExpirationDate().getTime());
+		ret.put("created", ht.getCreationDate().toEpochMilli());
+		ret.put("expires", ht.getExpirationDate().toEpochMilli());
 		ret.put("name", ht.getTokenName());
 		ret.put("id", ht.getId().toString());
 		return ret;

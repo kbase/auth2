@@ -15,7 +15,6 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -55,6 +54,8 @@ public class AuthenticationCreateLocalUserTest {
 	 * http://stackoverflow.com/questions/9085738/can-mockito-verify-parameters-based-on-their-values-at-the-time-of-method-call
 	 * 
 	 */
+	
+	private final static Instant NOW = Instant.now();
 	
 	@Test
 	public void createWithAdminUser() throws Exception {
@@ -120,7 +121,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(storage.getToken(token.getHashedToken()))
 				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
-						new UserName("admin"), new Date(), new Date()));
+						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(adminUser);
 		
@@ -161,7 +162,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(storage.getToken(token.getHashedToken()))
 				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
-						new UserName("admin"), new Date(), new Date()));
+						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
@@ -201,7 +202,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(storage.getToken(token.getHashedToken()))
 				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
-						new UserName("admin"), new Date(), new Date()));
+						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("whee"));
 		

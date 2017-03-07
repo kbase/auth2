@@ -448,7 +448,8 @@ public class Authentication {
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
 		final NewToken nt = new NewToken(TokenType.LOGIN, randGen.getToken(),
-				userName, cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
+				userName, clock.instant(),
+				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
 		return nt;
@@ -549,7 +550,7 @@ public class Authentication {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
 		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
-				tokenName, randGen.getToken(), au.getUserName(), life);
+				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
 	}
@@ -1124,7 +1125,8 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 30 * 60 * 1000);
+		final TemporaryToken tt = new TemporaryToken(
+				randGen.getToken(), clock.instant(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 		return new LoginToken(tt, ls);
 	}
@@ -1432,7 +1434,8 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 10 * 60 * 1000);
+			final TemporaryToken tt = new TemporaryToken(
+					randGen.getToken(), clock.instant(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 					.collect(Collectors.toSet());
 			storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);

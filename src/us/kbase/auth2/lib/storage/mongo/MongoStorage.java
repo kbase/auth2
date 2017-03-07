@@ -555,8 +555,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_ID, token.getId().toString())
 				.append(Fields.TOKEN_NAME, token.getTokenName())
 				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_EXPIRY, token.getExpirationDate())
-				.append(Fields.TOKEN_CREATION, token.getCreationDate());
+				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
+				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()));
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -616,7 +616,7 @@ public class MongoStorage implements AuthStorage {
 		/* although expired tokens are automatically deleted from the DB by mongo, the thread
 		 * only runs ~1/min, so check here
 		 */
-		if (new Date().after(htoken.getExpirationDate())) {
+		if (Instant.now().isAfter(htoken.getExpirationDate())) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		return htoken;
@@ -629,8 +629,8 @@ public class MongoStorage implements AuthStorage {
 				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				t.getString(Fields.TOKEN_TOKEN),
 				getUserName(t.getString(Fields.TOKEN_USER_NAME)),
-				t.getDate(Fields.TOKEN_CREATION),
-				t.getDate(Fields.TOKEN_EXPIRY));
+				t.getDate(Fields.TOKEN_CREATION).toInstant(),
+				t.getDate(Fields.TOKEN_EXPIRY).toInstant());
 	}
 
 	@Override
@@ -1136,8 +1136,8 @@ public class MongoStorage implements AuthStorage {
 		final Document td = new Document(
 				Fields.TOKEN_TEMP_ID, token.getId().toString())
 				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_TEMP_EXPIRY, token.getExpirationDate())
-				.append(Fields.TOKEN_TEMP_CREATION, token.getCreationDate())
+				.append(Fields.TOKEN_TEMP_EXPIRY, Date.from(token.getExpirationDate()))
+				.append(Fields.TOKEN_TEMP_CREATION, Date.from(token.getCreationDate()))
 				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
@@ -1182,7 +1182,7 @@ public class MongoStorage implements AuthStorage {
 			throw new NoSuchTokenException("Token not found");
 		}
 		// if we do this anywhere else should make a method to go from doc -> temptoken class
-		if (new Date().after(d.getDate(Fields.TOKEN_TEMP_EXPIRY))) {
+		if (Instant.now().isAfter(d.getDate(Fields.TOKEN_TEMP_EXPIRY).toInstant())) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")

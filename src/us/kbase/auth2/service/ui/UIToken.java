@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.ui;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
 import us.kbase.auth2.lib.UserName;
@@ -30,14 +30,14 @@ public class UIToken {
 			final String tokenName,
 			final UUID id,
 			final UserName userName,
-			final Date creationDate,
-			final Date expirationDate) {
+			final Instant creationDate,
+			final Instant expirationDate) {
 		this.type = type.getDescription();
 		this.id = id.toString();
 		this.name = tokenName;
 		this.user = userName.getName();
-		this.expires = expirationDate.getTime();
-		this.created = creationDate.getTime();
+		this.expires = expirationDate.toEpochMilli();
+		this.created = creationDate.toEpochMilli();
 	}
 	
 	public String getType() {

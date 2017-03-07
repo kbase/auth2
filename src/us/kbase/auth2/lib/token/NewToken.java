@@ -4,7 +4,7 @@ import static us.kbase.auth2.lib.Utils.addNoOverflow;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
 import us.kbase.auth2.lib.UserName;
@@ -19,24 +19,27 @@ public class NewToken {
 	private final String tokenName;
 	private final String token;
 	private final UserName userName;
-	private final long expirationDate;
-	private final long creationDate = new Date().getTime();
+	private final Instant expirationDate;
+	private final Instant creationDate;
 	private final UUID id = UUID.randomUUID();
 	
 	/** Create a new unnamed token.
 	 * @param type the token type.
 	 * @param token the token string.
 	 * @param userName the user that possesses the token.
+	 * @param creation the date of this token's creation.
 	 * @param lifetimeInMS the token's lifetime in milliseconds.
 	 */
 	public NewToken(
 			final TokenType type,
 			final String token,
 			final UserName userName,
+			final Instant creation,
 			final long lifetimeInMS) {
 		checkStringNoCheckedException(token, "token");
 		nonNull(type, "type");
 		nonNull(userName, "userName");
+		nonNull(creation, "creation");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
@@ -44,7 +47,9 @@ public class NewToken {
 		this.tokenName = null;
 		this.token = token;
 		this.userName = userName;
-		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
+		this.creationDate = creation;
+		this.expirationDate = Instant.ofEpochMilli(
+				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
 	}
 	
 	/** Create a new named token.
@@ -52,6 +57,7 @@ public class NewToken {
 	 * @param tokenName the name of the token.
 	 * @param token the token string.
 	 * @param userName the user that possesses the token.
+	 * @param creation the date of this token's creation.
 	 * @param lifetimeInMS the token's lifetime in milliseconds.
 	 */
 	public NewToken(
@@ -59,11 +65,13 @@ public class NewToken {
 			final String tokenName,
 			final String token,
 			final UserName userName,
+			final Instant creation,
 			final long lifetimeInMS) {
 		checkStringNoCheckedException(token, "token");
 		checkStringNoCheckedException(tokenName, "tokenName");
 		nonNull(type, "type");
 		nonNull(userName, "userName");
+		nonNull(creation, "creation");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
@@ -71,7 +79,9 @@ public class NewToken {
 		this.tokenName = tokenName;
 		this.token = token;
 		this.userName = userName;
-		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
+		this.creationDate = creation;
+		this.expirationDate = Instant.ofEpochMilli(
+				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
 	}
 
 	/** Get the token's type.
@@ -112,15 +122,15 @@ public class NewToken {
 	/** Get the date this token was created.
 	 * @return the creation date.
 	 */
-	public Date getCreationDate() {
-		return new Date(creationDate);
+	public Instant getCreationDate() {
+		return creationDate;
 	}
 
 	/** Get the date this token expires.
 	 * @return the expiration date.
 	 */
-	public Date getExpirationDate() {
-		return new Date(expirationDate);
+	public Instant getExpirationDate() {
+		return expirationDate;
 	}
 
 	/** Get a hashed token based on this token.
@@ -130,7 +140,7 @@ public class NewToken {
 	 */
 	public HashedToken getHashedToken() {
 		return new HashedToken(type, tokenName, id, HashedToken.hash(token),
-				userName, new Date(creationDate), new Date(expirationDate));
+				userName, creationDate, expirationDate);
 	}
 
 }
