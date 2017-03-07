@@ -4,9 +4,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Date;
+import java.time.Instant;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -21,40 +23,42 @@ public class UserDisabledStateTest {
 	public void emptyConstructor() throws Exception {
 		final UserDisabledState uds = new UserDisabledState();
 		assertThat("incorrect disabled state", uds.isDisabled(), is(false));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is((String) null));
-		assertThat("incorrect by admin", uds.getByAdmin(), is((UserName) null));
-		assertThat("incorrect time", uds.getTime(), is((Date) null));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.absent()));
+		assertThat("incorrect time", uds.getTime(), is(Optional.absent()));
 	}
 	
 	@Test
 	public void disabledConstructor() throws Exception {
 		final UserDisabledState uds = new UserDisabledState("user ded",
-				new UserName("foo"), new Date(67));
+				new UserName("foo"), Instant.ofEpochMilli(67));
 		assertThat("incorrect disabled state", uds.isDisabled(), is(true));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is("user ded"));
-		assertThat("incorrect by admin", uds.getByAdmin(), is(new UserName("foo")));
-		assertThat("incorrect time", uds.getTime(), is(new Date(67)));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(),
+				is(Optional.of("user ded")));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.of(new UserName("foo"))));
+		assertThat("incorrect time", uds.getTime(), is(Optional.of(Instant.ofEpochMilli(67))));
 	}
 	
 	@Test
 	public void enabledConstructor() throws Exception {
-		final UserDisabledState uds = new UserDisabledState(new UserName("bar"), new Date(42));
+		final UserDisabledState uds = new UserDisabledState(new UserName("bar"),
+				Instant.ofEpochMilli(42));
 		assertThat("incorrect disabled state", uds.isDisabled(), is(false));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is((String) null));
-		assertThat("incorrect by admin", uds.getByAdmin(), is(new UserName("bar")));
-		assertThat("incorrect time", uds.getTime(), is(new Date(42)));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.of(new UserName("bar"))));
+		assertThat("incorrect time", uds.getTime(), is(Optional.of(Instant.ofEpochMilli(42))));
 	}
 	
 	@Test
 	public void enabledConstructorFail() throws Exception {
-		failEnabledConstructor(null, new Date(), new NullPointerException("byAdmin"));
+		failEnabledConstructor(null, Instant.now(), new NullPointerException("byAdmin"));
 		failEnabledConstructor(new UserName("foo"), null, new NullPointerException("time"));
 	}
 	
 	@Test
 	public void disabledConstructorFail() throws Exception {
 		final UserName un = new UserName("foo");
-		final Date d = new Date();
+		final Instant d = Instant.now();
 		failDisabledConstructor(null, un, d, new MissingParameterException("Disabled reason"));
 		failDisabledConstructor("   \t \n  ", un, d,
 				new MissingParameterException("Disabled reason"));
@@ -66,7 +70,7 @@ public class UserDisabledStateTest {
 	
 	private void failEnabledConstructor(
 			final UserName byAdmin,
-			final Date time,
+			final Instant time,
 			final Exception e) {
 		try {
 			new UserDisabledState(byAdmin, time);
@@ -79,7 +83,7 @@ public class UserDisabledStateTest {
 	private void failDisabledConstructor(
 			final String reason,
 			final UserName byAdmin,
-			final Date time,
+			final Instant time,
 			final Exception e) {
 		try {
 			new UserDisabledState(reason, byAdmin, time);
@@ -91,55 +95,64 @@ public class UserDisabledStateTest {
 	
 	@Test
 	public void emptyCreate() throws Exception {
-		final UserDisabledState uds = UserDisabledState.create(null, null, null);
+		final UserDisabledState uds = UserDisabledState.create(
+				Optional.absent(), Optional.absent(), Optional.absent());
 		assertThat("incorrect disabled state", uds.isDisabled(), is(false));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is((String) null));
-		assertThat("incorrect by admin", uds.getByAdmin(), is((UserName) null));
-		assertThat("incorrect time", uds.getTime(), is((Date) null));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.absent()));
+		assertThat("incorrect time", uds.getTime(), is(Optional.absent()));
 	}
 	
 	@Test
 	public void disabledCreate() throws Exception {
-		final UserDisabledState uds = UserDisabledState.create("user ded",
-				new UserName("foo"), new Date(67));
+		final UserDisabledState uds = UserDisabledState.create(Optional.of("user ded"),
+				Optional.of(new UserName("foo")), Optional.of(Instant.ofEpochMilli(67)));
 		assertThat("incorrect disabled state", uds.isDisabled(), is(true));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is("user ded"));
-		assertThat("incorrect by admin", uds.getByAdmin(), is(new UserName("foo")));
-		assertThat("incorrect time", uds.getTime(), is(new Date(67)));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(),
+				is(Optional.of("user ded")));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.of(new UserName("foo"))));
+		assertThat("incorrect time", uds.getTime(), is(Optional.of(Instant.ofEpochMilli(67))));
 	}
 	
 	@Test
 	public void enabledCreate() throws Exception {
 		final UserDisabledState uds = UserDisabledState.create(
-				null, new UserName("bar"), new Date(42));
+				Optional.absent(), Optional.of(new UserName("bar")),
+				Optional.of(Instant.ofEpochMilli(42)));
 		assertThat("incorrect disabled state", uds.isDisabled(), is(false));
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is((String) null));
-		assertThat("incorrect by admin", uds.getByAdmin(), is(new UserName("bar")));
-		assertThat("incorrect time", uds.getTime(), is(new Date(42)));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect by admin", uds.getByAdmin(), is(Optional.of(new UserName("bar"))));
+		assertThat("incorrect time", uds.getTime(), is(Optional.of(Instant.ofEpochMilli(42))));
 	}
 	
 	@Test
 	public void createFail() throws Exception {
-		final UserName un = new UserName("foo");
-		final Date d = new Date();
-		failCreate(null, null, d,
-				new IllegalStateException("If byAdmin is null time must also be null"));
-		failCreate(null, un, null,
-				new IllegalStateException("If byAdmin is not null time cannot be null"));
-		failCreate("   \t \n  ", un, d,
+		final Optional<UserName> un = Optional.of(new UserName("foo"));
+		final Optional<Instant> d = Optional.of(Instant.now());
+		failCreate(null, Optional.absent(), Optional.absent(),
+				new NullPointerException("disabledReason"));
+		failCreate(Optional.absent(), null, Optional.absent(),
+				new NullPointerException("byAdmin"));
+		failCreate(Optional.absent(), Optional.absent(), null,
+				new NullPointerException("time"));
+		failCreate(Optional.absent(), Optional.absent(), d,
+				new IllegalStateException("If byAdmin is absent time must also be absent"));
+		failCreate(Optional.absent(), un, Optional.absent(),
+				new IllegalStateException("If byAdmin is present time cannot be absent"));
+		failCreate(Optional.of("   \t \n  "), un, d,
 				new MissingParameterException("Disabled reason"));
-		failCreate(TestCommon.LONG1001, un, d,
+		failCreate(Optional.of(TestCommon.LONG1001), un, d,
 				new IllegalParameterException("Disabled reason size greater than limit 1000"));
-		failCreate("foo", null, d, new IllegalStateException(
-				"If disabledReason is not null byAdmin and time cannot be null"));
-		failCreate("foo", un, null, new IllegalStateException(
-				"If disabledReason is not null byAdmin and time cannot be null"));
+		failCreate(Optional.of("foo"), Optional.absent(), d, new IllegalStateException(
+				"If disabledReason is present byAdmin and time cannot be absent"));
+		failCreate(Optional.of("foo"), un, Optional.absent(), new IllegalStateException(
+				"If disabledReason is present byAdmin and time cannot be absent"));
 	}
 	
 	private void failCreate(
-			final String reason,
-			final UserName byAdmin,
-			final Date time,
+			final Optional<String> reason,
+			final Optional<UserName> byAdmin,
+			final Optional<Instant> time,
 			final Exception e) {
 		try {
 			UserDisabledState.create(reason, byAdmin, time);
@@ -158,15 +171,17 @@ public class UserDisabledStateTest {
 	public void toStringEmpty() {
 		final UserDisabledState uds = new UserDisabledState();
 		assertThat("incorrect toString", uds.toString(),
-				is("UserDisabledState [disabledReason=null, byAdmin=null, time=null]"));
+				is("UserDisabledState [disabledReason=Optional.absent(), " +
+				"byAdmin=Optional.absent(), time=Optional.absent()]"));
 	}
 	
 	@Test
 	public void toStringFull() throws Exception {
-		final Date now = new Date();
-		final UserDisabledState uds = new UserDisabledState("foo", new UserName("bar"), now);
-		assertThat("incorrect toString", uds.toString(), is(String.format(
-				"UserDisabledState [disabledReason=foo, byAdmin=UserName [name=bar], time=%s]",
-				now.getTime())));
+		final Instant t = Instant.ofEpochMilli(7000);
+		final UserDisabledState uds = new UserDisabledState("foo", new UserName("bar"), t);
+		assertThat("incorrect toString", uds.toString(), is(
+				"UserDisabledState [disabledReason=Optional.of(foo), " +
+				"byAdmin=Optional.of(UserName [name=bar]), " +
+				"time=Optional.of(1970-01-01T00:00:07Z)]"));
 	}
 }

@@ -9,7 +9,6 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -107,13 +106,6 @@ public class TestCommon {
 		return new HashSet<T>(Arrays.asList(objects));
 	}
 	
-	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
-				is(false));
-		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
-	}
-	
 	public static void assertClear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			if (bytes[i] != 0) {
@@ -122,12 +114,6 @@ public class TestCommon {
 		}
 	}
 	
-	public static boolean dateWithin(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		return d.getTime() < now.getTime() + milliseconds &&
-				d.getTime() > now.getTime() - milliseconds;
-	}
-
 	public static Path getMongoExe() {
 		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();
 	}

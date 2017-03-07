@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -35,7 +36,7 @@ public class LoginTokenTest {
 			LOGIN_STATE = new LoginState.Builder("foo", false)
 					.withUser(new NewUser(new UserName("foo"),
 							new EmailAddress("f@g.com"),
-							new DisplayName("bar"), REMOTE, null), REMOTE).build();
+							new DisplayName("bar"), REMOTE, Instant.now(), null), REMOTE).build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests nub", e);
 		}
@@ -43,8 +44,8 @@ public class LoginTokenTest {
 	
 	@Test
 	public void constructorNewToken() throws Exception {
-		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"),
-				10000);
+		final NewToken nt = new NewToken(
+				TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"), Instant.now(), 10000);
 		final LoginToken lt = new LoginToken(nt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(true));
 		assertThat("incorrect token type", lt.getToken().getTokenType(),
@@ -65,7 +66,7 @@ public class LoginTokenTest {
 	
 	@Test
 	public void constructorTemporaryToken() throws Exception {
-		final TemporaryToken tt = new TemporaryToken("baz", 5000);
+		final TemporaryToken tt = new TemporaryToken("baz", Instant.now(), 5000);
 		final LoginToken lt = new LoginToken(tt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(false));
 		assertThat("incorrect token id", lt.getTemporaryToken().getId(), is(tt.getId()));
@@ -81,8 +82,8 @@ public class LoginTokenTest {
 	
 	@Test
 	public void constructFail() throws Exception {
-		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"),
-				10000);
+		final NewToken nt = new NewToken(
+				TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"), Instant.now(), 10000);
 		failConstructToken((NewToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(nt, null, new NullPointerException("loginState"));
 		
@@ -95,9 +96,7 @@ public class LoginTokenTest {
 				new IllegalStateException("Login process is complete but user count != 1 " +
 						"or unlinked identities > 0"));
 		
-		
-		
-		final TemporaryToken tt = new TemporaryToken("baz", 5000);
+		final TemporaryToken tt = new TemporaryToken("baz", Instant.now(), 5000);
 		failConstructToken((TemporaryToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(tt, null, new NullPointerException("loginState"));
 	}

@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
 import java.util.UUID;
@@ -39,7 +40,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeAndGetEmpty() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();;
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
@@ -48,7 +50,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeAndGet1() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();;
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, set(REMOTE2));
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
@@ -57,7 +60,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeAndGet2() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();;
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, set(REMOTE2, REMOTE1));
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
@@ -66,7 +70,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeTempIDFailNulls() {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		failStoreTemporaryIdentity(null, Collections.emptySet(),
 				new NullPointerException("token"));
 		failStoreTemporaryIdentity(tt, null, new NullPointerException("identitySet"));
@@ -76,8 +81,10 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeTempIDFailDuplicateTokenID() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken("foobar2", 10000).getHashedToken();
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
+		final TemporaryHashedToken tt2 = new TemporaryToken("foobar2", Instant.now(), 10000)
+				.getHashedToken();
 		final Field id = tt2.getClass().getDeclaredField("id");
 		id.setAccessible(true);
 		id.set(tt2, tt.getId());
@@ -89,8 +96,10 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeTempIDFailDuplicateToken() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken("foobar", 10000).getHashedToken();
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
+		final TemporaryHashedToken tt2 = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		
 		storage.storeIdentitiesTemporarily(tt, set(REMOTE1));
 		failStoreTemporaryIdentity(tt2, set(REMOTE1), new IllegalArgumentException(
@@ -128,7 +137,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		 * maybe there's a way of turning token removal off temporarily?
 		 * only 1 sweep / min so not very likely
 		 */
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 0).getHashedToken();
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 0)
+				.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
 		Thread.sleep(1);
 		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
@@ -137,7 +147,8 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void getTempIDFailBadDBData() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken("foobar", 10000).getHashedToken();
+		final TemporaryHashedToken tt = new TemporaryToken("foobar", Instant.now(), 10000)
+				.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
 		db.getCollection("temptokens").updateOne(new Document("id", tt.getId().toString()),
 				new Document("$set", new Document("idents", null)));

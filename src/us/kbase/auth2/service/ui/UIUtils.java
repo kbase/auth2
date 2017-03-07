@@ -3,7 +3,7 @@ package us.kbase.auth2.service.ui;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -82,13 +82,14 @@ public class UIUtils {
 	}
 
 	private static int getMaxCookieAge(
-			final Date expiration,
+			final Instant expiration,
 			final boolean session) {
 	
 		if (session) {
 			return NewCookie.DEFAULT_MAX_AGE;
 		}
-		final long exp = (long) Math.floor((expiration.getTime() - new Date().getTime()) / 1000.0);
+		final long exp = (long) Math.floor(
+				(expiration.toEpochMilli() - Instant.now().toEpochMilli()) / 1000.0);
 		if (exp > Integer.MAX_VALUE) {
 			return Integer.MAX_VALUE;
 		}

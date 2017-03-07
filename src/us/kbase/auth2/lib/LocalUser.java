@@ -1,8 +1,10 @@
 package us.kbase.auth2.lib;
 
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Set;
+
+import com.google.common.base.Optional;
 
 /** A local user.
  * 
@@ -14,7 +16,7 @@ public class LocalUser extends AuthUser {
 	private final byte[] passwordHash;
 	private final byte[] salt;
 	private final boolean forceReset;
-	private final Long lastReset;
+	private final Optional<Instant> lastReset;
 	
 	/** Create a new local user.
 	 * @param userName the name of the user.
@@ -36,13 +38,13 @@ public class LocalUser extends AuthUser {
 			final DisplayName displayName,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Date created,
-			final Date lastLogin,
+			final Instant created,
+			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
-			final Date lastReset) {
+			final Optional<Instant> lastReset) {
 		super(userName, email, displayName, null, roles, customRoles, created, lastLogin,
 				disabledState);
 		// what's the right # here? Have to rely on user to some extent
@@ -55,7 +57,7 @@ public class LocalUser extends AuthUser {
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
-		this.lastReset = lastReset == null ? null : lastReset.getTime();
+		this.lastReset = lastReset == null ? Optional.absent() : lastReset;
 	}
 
 	/** Get the salted hash of the user's password.
@@ -82,8 +84,8 @@ public class LocalUser extends AuthUser {
 	/** The date of the last password reset.
 	 * @return the last password reset date or null if the password has never been reset.
 	 */
-	public Date getLastPwdReset() {
-		return lastReset == null ? null : new Date(lastReset);
+	public Optional<Instant> getLastPwdReset() {
+		return lastReset;
 	}
 
 	@Override

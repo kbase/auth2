@@ -2,6 +2,8 @@ package us.kbase.auth2.lib.storage.mongo;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
@@ -207,15 +209,22 @@ public class MongoStorage implements AuthStorage {
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
 	}
 	
-	private MongoDatabase db;
+	private final MongoDatabase db;
+	private final Clock clock;
 	
 	/** Create a new MongoDB authentication storage system.
 	 * @param db the MongoDB database to use for storage.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
 	public MongoStorage(final MongoDatabase db) throws StorageInitException {
+		this(db, Clock.systemDefaultZone()); //don't use timezone
+	}
+	
+	// this should only be used for tests
+	private MongoStorage(final MongoDatabase db, final Clock clock) throws StorageInitException {
 		nonNull(db, "db");
 		this.db = db;
+		this.clock = clock;
 		
 		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver)
 		ensureIndexes(); // MUST come before checkConfig();
@@ -296,7 +305,10 @@ public class MongoStorage implements AuthStorage {
 				local.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		final UserName admin = local.getAdminThatToggledEnabledState();
+		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
+		final Optional<Instant> time = local.getEnableToggleDate();
+		final Optional<String> reason = local.getReasonForDisabled();
+		final Optional<Instant> reset = local.getLastPwdReset();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
 				.append(Fields.USER_LOCAL, true)
@@ -307,14 +319,19 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
-				.append(Fields.USER_CREATED, local.getCreated())
-				.append(Fields.USER_LAST_LOGIN, local.getLastLogin())
-				// admin is always null for new user, but check for safety
-				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
-				.append(Fields.USER_DISABLED_REASON, local.getReasonForDisabled())
-				.append(Fields.USER_DISABLED_DATE, local.getEnableToggleDate())
+				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
+				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
+						Date.from(local.getLastLogin().get()) : null)
+				// admin, time, and reason are always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN,
+						admin.isPresent() ? admin.get().getName() : null)
+				.append(Fields.USER_DISABLED_DATE, time.isPresent() ?
+						Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null)
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
-				.append(Fields.USER_RESET_PWD_LAST, local.getLastPwdReset())
+				// last reset is always null for a new user, but check for safety
+				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ?
+						Date.from(reset.get()) : null)
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, salt);
 		try {
@@ -348,22 +365,23 @@ public class MongoStorage implements AuthStorage {
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
-				user.getDate(Fields.USER_CREATED),
-				user.getDate(Fields.USER_LAST_LOGIN),
+				user.getDate(Fields.USER_CREATED).toInstant(),
+				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user),
 				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
-				user.getDate(Fields.USER_RESET_PWD_LAST));
+				getOptionalDate(user, Fields.USER_RESET_PWD_LAST));
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
 			throws AuthStorageException {
 		try {
 			return UserDisabledState.create(
-					user.getString(Fields.USER_DISABLED_REASON),
-					getUserNameAllowNull(user.getString(Fields.USER_DISABLED_ADMIN)),
-					user.getDate(Fields.USER_DISABLED_DATE));
+					Optional.fromNullable(user.getString(Fields.USER_DISABLED_REASON)),
+					Optional.fromNullable(getUserNameAllowNull(
+							user.getString(Fields.USER_DISABLED_ADMIN))),
+					getOptionalDate(user, Fields.USER_DISABLED_DATE));
 		} catch (IllegalParameterException | MissingParameterException | IllegalStateException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
@@ -419,7 +437,7 @@ public class MongoStorage implements AuthStorage {
 		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
 		final String encsalt = Base64.getEncoder().encodeToString(salt);
 		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
-				.append(Fields.USER_RESET_PWD_LAST, new Date())
+				.append(Fields.USER_RESET_PWD_LAST, Date.from(clock.instant()))
 				.append(Fields.USER_PWD_HSH, pwdhsh)
 				.append(Fields.USER_SALT, encsalt);
 		updateUser(name, set);
@@ -446,7 +464,9 @@ public class MongoStorage implements AuthStorage {
 	public void createUser(final NewUser user)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
 		nonNull(user, "user");
-		final UserName admin = user.getAdminThatToggledEnabledState();
+		final Optional<UserName> admin = user.getAdminThatToggledEnabledState();
+		final Optional<Instant> time = user.getEnableToggleDate();
+		final Optional<String> reason = user.getReasonForDisabled();
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -457,12 +477,15 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
-				.append(Fields.USER_CREATED, user.getCreated())
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin())
-				// admin is always null for new user, but check for safety
-				.append(Fields.USER_DISABLED_ADMIN, admin == null ? null : admin.getName())
-				.append(Fields.USER_DISABLED_DATE, user.getEnableToggleDate())
-				.append(Fields.USER_DISABLED_REASON, user.getReasonForDisabled());
+				.append(Fields.USER_CREATED, Date.from(user.getCreated()))
+				.append(Fields.USER_LAST_LOGIN, user.getLastLogin().isPresent() ?
+						Date.from(user.getLastLogin().get()) : null)
+				// admin, time, and reason are always null for new user, but check for safety
+				.append(Fields.USER_DISABLED_ADMIN,
+						admin.isPresent() ? admin.get().getName() : null)
+				.append(Fields.USER_DISABLED_DATE,
+						time.isPresent() ? Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null);
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -514,7 +537,7 @@ public class MongoStorage implements AuthStorage {
 		nonNull(admin, "admin");
 		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
 				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
-				.append(Fields.USER_DISABLED_DATE, new Date());
+				.append(Fields.USER_DISABLED_DATE, Date.from(clock.instant()));
 		updateUser(user, update);
 	}
 	
@@ -533,8 +556,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_ID, token.getId().toString())
 				.append(Fields.TOKEN_NAME, token.getTokenName())
 				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_EXPIRY, token.getExpirationDate())
-				.append(Fields.TOKEN_CREATION, token.getCreationDate());
+				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
+				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()));
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -594,7 +617,7 @@ public class MongoStorage implements AuthStorage {
 		/* although expired tokens are automatically deleted from the DB by mongo, the thread
 		 * only runs ~1/min, so check here
 		 */
-		if (new Date().after(htoken.getExpirationDate())) {
+		if (Instant.now().isAfter(htoken.getExpirationDate())) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		return htoken;
@@ -607,8 +630,8 @@ public class MongoStorage implements AuthStorage {
 				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				t.getString(Fields.TOKEN_TOKEN),
 				getUserName(t.getString(Fields.TOKEN_USER_NAME)),
-				t.getDate(Fields.TOKEN_CREATION),
-				t.getDate(Fields.TOKEN_EXPIRY));
+				t.getDate(Fields.TOKEN_CREATION).toInstant(),
+				t.getDate(Fields.TOKEN_EXPIRY).toInstant());
 	}
 
 	@Override
@@ -651,9 +674,17 @@ public class MongoStorage implements AuthStorage {
 				toIdentities(ids),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
-				user.getDate(Fields.USER_CREATED),
-				user.getDate(Fields.USER_LAST_LOGIN),
+				user.getDate(Fields.USER_CREATED).toInstant(),
+				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user));
+	}
+	
+	private Optional<Instant> getOptionalDate(final Document d, final String field) {
+		if (d.get(field) != null) {
+			return Optional.of(d.getDate(field).toInstant());
+		} else {
+			return Optional.absent();
+		}
 	}
 	
 	@Override
@@ -1106,8 +1137,8 @@ public class MongoStorage implements AuthStorage {
 		final Document td = new Document(
 				Fields.TOKEN_TEMP_ID, token.getId().toString())
 				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_TEMP_EXPIRY, token.getExpirationDate())
-				.append(Fields.TOKEN_TEMP_CREATION, token.getCreationDate())
+				.append(Fields.TOKEN_TEMP_EXPIRY, Date.from(token.getExpirationDate()))
+				.append(Fields.TOKEN_TEMP_CREATION, Date.from(token.getCreationDate()))
 				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
@@ -1152,7 +1183,7 @@ public class MongoStorage implements AuthStorage {
 			throw new NoSuchTokenException("Token not found");
 		}
 		// if we do this anywhere else should make a method to go from doc -> temptoken class
-		if (new Date().after(d.getDate(Fields.TOKEN_TEMP_EXPIRY))) {
+		if (Instant.now().isAfter(d.getDate(Fields.TOKEN_TEMP_EXPIRY).toInstant())) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		@SuppressWarnings("unchecked")
@@ -1344,10 +1375,10 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void setLastLogin(final UserName user, final Date lastLogin) 
+	public void setLastLogin(final UserName user, final Instant lastLogin) 
 			throws NoSuchUserException, AuthStorageException {
 		nonNull(lastLogin, "lastLogin");
-		updateUser(user, new Document(Fields.USER_LAST_LOGIN, lastLogin));
+		updateUser(user, new Document(Fields.USER_LAST_LOGIN, Date.from(lastLogin)));
 	}
 
 	private void updateConfig(

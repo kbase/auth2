@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.storage;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -37,6 +37,9 @@ import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 
 /** A storage system for the auth server.
+ * 
+ * Note that although inputs and outputs from the storage system are or may contain Instants, only
+ * millisecond accuracy is guaranteed.
  * 
  * @author gaprice@lbl.gov
  *
@@ -180,7 +183,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void setLastLogin(UserName userName, Date lastLogin)
+	void setLastLogin(UserName userName, Instant lastLogin)
 			throws NoSuchUserException, AuthStorageException;
 	
 	/** Store a token in the database. No checking is done on the validity

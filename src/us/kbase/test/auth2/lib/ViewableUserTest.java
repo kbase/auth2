@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -28,7 +29,7 @@ public class ViewableUserTest {
 	@Test
 	public void constructWithoutEmail() throws Exception {
 		final AuthUser u = new NewUser(new UserName("foo"), new EmailAddress("e@f.com"),
-				new DisplayName("bar"), REMOTE, null);
+				new DisplayName("bar"), REMOTE, Instant.now(), null);
 		
 		final ViewableUser vu = new ViewableUser(u, false);
 		assertThat("incorrect username", vu.getUserName(), is(new UserName("foo")));
@@ -39,7 +40,7 @@ public class ViewableUserTest {
 	@Test
 	public void constructWithEmail() throws Exception {
 		final AuthUser u = new NewUser(new UserName("foo"), new EmailAddress("e@f.com"),
-				new DisplayName("bar"), REMOTE, null);
+				new DisplayName("bar"), REMOTE, Instant.now(), null);
 		
 		final ViewableUser vu = new ViewableUser(u, true);
 		assertThat("incorrect username", vu.getUserName(), is(new UserName("foo")));
