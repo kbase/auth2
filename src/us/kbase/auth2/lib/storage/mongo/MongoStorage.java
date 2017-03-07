@@ -536,7 +536,7 @@ public class MongoStorage implements AuthStorage {
 		nonNull(admin, "admin");
 		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
 				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
-				.append(Fields.USER_DISABLED_DATE, new Date());
+				.append(Fields.USER_DISABLED_DATE, Date.from(clock.instant()));
 		updateUser(user, update);
 	}
 	

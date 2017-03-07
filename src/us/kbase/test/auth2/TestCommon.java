@@ -9,7 +9,6 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -105,13 +104,6 @@ public class TestCommon {
 	@SafeVarargs
 	public static <T> Set<T> set(T... objects) {
 		return new HashSet<T>(Arrays.asList(objects));
-	}
-	
-	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
-				is(false));
-		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
 	}
 	
 	public static void assertClear(final byte[] bytes) {

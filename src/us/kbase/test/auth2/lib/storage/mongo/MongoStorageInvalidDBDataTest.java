@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -105,6 +106,8 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	public void disabledStateMissingReason() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), REMOTE, NOW, null));
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),
@@ -118,6 +121,8 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	public void invalidDisabledState() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), REMOTE, NOW, null));
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),
@@ -132,6 +137,8 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	public void disabledStateLongReason() throws Exception {
 		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), REMOTE, NOW, null));
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
 		storage.disableAccount(new UserName("foo"), new UserName("bar"), "baz");
 		
 		db.getCollection("users").updateOne(new Document("user", "foo"),

@@ -39,11 +39,6 @@ public class MongoStorageTester {
 				TestCommon.getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());
 		db = mc.getDatabase("test_mongostorage");
-		mockClock = mock(Clock.class);
-		final Constructor<MongoStorage> con = MongoStorage.class.getDeclaredConstructor(
-				MongoDatabase.class, Clock.class);
-		con.setAccessible(true);
-		storage = con.newInstance(db, mockClock);
 		
 		final Document bi = db.runCommand(new Document("buildinfo", 1));
 		final String version = bi.getString("version");
@@ -70,5 +65,10 @@ public class MongoStorageTester {
 	@Before
 	public void clearDB() throws Exception {
 		TestCommon.destroyDB(db);
+		mockClock = mock(Clock.class);
+		final Constructor<MongoStorage> con = MongoStorage.class.getDeclaredConstructor(
+				MongoDatabase.class, Clock.class);
+		con.setAccessible(true);
+		storage = con.newInstance(db, mockClock);
 	}
 }
