@@ -118,61 +118,16 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
-		return loginStart(provider, redirect, stayLoggedIn == null);
-	}
-
-	private Response loginStart(
-			final String provider,
-			final String redirect,
-			final boolean session)
-			throws AuthStorageException, IllegalParameterException,
-			NoSuchIdentityProviderException {
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
-
+		
 		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(session));
+				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect));
 		}
 		return r.build();
-	}
-	
-	private static class LoginStart extends IncomingJSON {
-		
-		public String provider;
-		public String redirect;
-		private Object stayLoggedIn;
-		
-		@JsonCreator
-		public LoginStart(
-				@JsonProperty("provider") final String provider,
-				@JsonProperty("redirect") final String redirect,
-				@JsonProperty("stay_logged_in") final Object stayLoggedIn) {
-			super();
-			this.provider = provider;
-			this.redirect = redirect;
-			this.stayLoggedIn = stayLoggedIn;
-		}
-		
-		public boolean isStayLoggedIn() throws IllegalParameterException {
-			return getBoolean(stayLoggedIn, "stay_logged_in");
-		}
-	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Path(UIPaths.LOGIN_START)
-	public Response loginStart(final LoginStart login)
-			throws IllegalParameterException, AuthStorageException,
-			NoSuchIdentityProviderException, MissingParameterException {
-		if (login == null) {
-			throw new MissingParameterException("JSON body missing");
-		}
-		
-		login.exceptOnAdditionalProperties();
-		return loginStart(login.provider, login.redirect, !login.isStayLoggedIn());
 	}
 
 	private URL getRedirectURL(final String redirect)

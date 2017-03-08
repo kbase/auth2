@@ -13,6 +13,8 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -113,11 +115,10 @@ public class UIUtils {
 			final HttpHeaders headers,
 			final String tokenCookieName)
 			throws NoTokenProvidedException {
-		return getTokenFromCookie(headers, tokenCookieName, true);
+		return getTokenFromCookie(headers, tokenCookieName, true).get();
 	}
 	
-	//TODO CODE use optional
-	public static IncomingToken getTokenFromCookie(
+	public static Optional<IncomingToken> getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName,
 			final boolean throwException)
@@ -128,17 +129,17 @@ public class UIUtils {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return null;
+			return Optional.absent();
 		}
 		final String val = c.getValue();
 		if (val == null || val.trim().isEmpty()) {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return null;
+			return Optional.absent();
 		}
 		try {
-			return new IncomingToken(val.trim());
+			return Optional.of(new IncomingToken(val.trim()));
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
