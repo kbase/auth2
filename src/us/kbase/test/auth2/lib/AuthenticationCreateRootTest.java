@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
+import static us.kbase.test.auth2.lib.AuthenticationTester.fromBase64;
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
 
@@ -26,7 +27,6 @@ import org.mockito.stubbing.Answer;
 
 import com.google.common.base.Optional;
 
-import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -98,7 +98,7 @@ public class AuthenticationCreateRootTest {
 	private class ChangePasswordAnswerMatcher implements Answer<Void> {
 		
 		private final UserName name;
-		private final Password pwd;
+		private final String hash;
 		private final byte[] salt;
 		private final boolean forceReset;
 		private byte[] savedSalt;
@@ -106,11 +106,11 @@ public class AuthenticationCreateRootTest {
 		
 		public ChangePasswordAnswerMatcher(
 				final UserName name,
-				final Password pwd,
+				final String hash,
 				final byte[] salt,
 				final boolean forceReset) {
 			this.name = name;
-			this.pwd = pwd;
+			this.hash = hash;
 			this.salt = salt;
 			this.forceReset = forceReset;
 		}
@@ -121,14 +121,10 @@ public class AuthenticationCreateRootTest {
 			savedHash = args.getArgument(1);
 			savedSalt = args.getArgument(2);
 			final boolean forceReset = args.getArgument(3);
-			/* sort of bogus to use the same pwd gen code from the method under test in the test
-			 * but the pwd gen code is tested elsewhere and trying to do this manually
-			 * would be a major pain.
-			 */
-			final byte[] hash = new PasswordCrypt().getEncryptedPassword(pwd.getPassword(), salt);
+			
 			assertThat("incorrect username", un, is(name));
 			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
-			assertThat("incorrect hash", savedHash, is(hash));
+			assertThat("incorrect hash", savedHash, is(fromBase64(hash)));
 			assertThat("incorrect salt", savedSalt, is(salt));
 			return null;
 		}
@@ -143,36 +139,38 @@ public class AuthenticationCreateRootTest {
 		final Clock clock = testauth.clock;
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
-		// pwd will be cleared before the method call
-		final Password pwd2 = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
+		final String hash = "0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=";
+		
+		final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
+				Instant.ofEpochMilli(1000), fromBase64(hash), salt);
 		
 		final ChangePasswordAnswerMatcher matcher =
-				new ChangePasswordAnswerMatcher(UserName.ROOT, pwd2, salt, false);
+				new ChangePasswordAnswerMatcher(UserName.ROOT, hash, salt, false);
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
-		when(clock.instant()).thenReturn(Instant.now());
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000));
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(any(NewRootUser.class));
+				.when(storage).createLocalUser(exp);
 		
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(
-				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));
+				UserName.ROOT, fromBase64(hash), salt, false);
 		
 		when(storage.getUser(UserName.ROOT)).thenReturn(new NewRootUser(EmailAddress.UNKNOWN,
 				new DisplayName("root"), Instant.now(), new byte[10], new byte[8]));
 		
 		auth.createRoot(pwd);
-		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
-		assertThat("password not cleared", pwd.getPassword(), is(clearpwd));
+
+		assertClear(pwd);
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);
 		
 		/* ensure method was called at least once
 		 * Usually not necessary when mocking the call, but since changepwd returns null
-		 * need to ensure the method was actually called and therefore the matcher ran
+		 * need to ensure the method was actually called and therefore the matcher above ran
 		 */
 		verify(storage).changePassword(
 				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));

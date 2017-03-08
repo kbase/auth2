@@ -122,7 +122,7 @@ public class TestCommon {
 	public static void assertClear(final char[] chars) {
 		for (int i = 0; i < chars.length; i++) {
 			if (chars[i] != '0') {
-				fail(String.format("found char != '0' at postion %ss: %s", i, chars[i]));
+				fail(String.format("found char != '0' at postion %s: %s", i, chars[i]));
 			}
 		}
 	}
