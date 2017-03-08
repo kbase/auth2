@@ -108,7 +108,7 @@ public class AuthenticationTester {
 	public static class ChangePasswordAnswerMatcher implements Answer<Void> {
 		
 		private final UserName name;
-		private final String hash;
+		private final byte[] hash;
 		private final byte[] salt;
 		private final boolean forceReset;
 		public byte[] savedSalt;
@@ -116,7 +116,7 @@ public class AuthenticationTester {
 		
 		public ChangePasswordAnswerMatcher(
 				final UserName name,
-				final String hash,
+				final byte[] hash,
 				final byte[] salt,
 				final boolean forceReset) {
 			this.name = name;
@@ -134,7 +134,7 @@ public class AuthenticationTester {
 			
 			assertThat("incorrect username", un, is(name));
 			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
-			assertThat("incorrect hash", savedHash, is(fromBase64(hash)));
+			assertThat("incorrect hash", savedHash, is(hash));
 			assertThat("incorrect salt", savedSalt, is(salt));
 			return null;
 		}

@@ -114,7 +114,7 @@ public class TestCommon {
 			}
 		}
 	}
-
+	
 	public static void assertClear(final Password p) {
 		assertClear(p.getPassword());
 	}

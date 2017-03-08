@@ -103,10 +103,10 @@ public class AuthenticationCreateRootTest {
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
-		final String hash = "0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=";
+		final byte[] hash = fromBase64("0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		
 		final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
-				Instant.ofEpochMilli(1000), fromBase64(hash), salt);
+				Instant.ofEpochMilli(1000), hash, salt);
 		
 		final ChangePasswordAnswerMatcher matcher =
 				new ChangePasswordAnswerMatcher(UserName.ROOT, hash, salt, false);
@@ -119,14 +119,13 @@ public class AuthenticationCreateRootTest {
 				.when(storage).createLocalUser(exp);
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).changePassword(
-				UserName.ROOT, fromBase64(hash), salt, false);
+		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
 		
 		when(storage.getUser(UserName.ROOT)).thenReturn(new NewRootUser(EmailAddress.UNKNOWN,
 				new DisplayName("root"), Instant.now(), new byte[10], new byte[8]));
 		
 		auth.createRoot(pwd);
-
+		
 		assertClear(pwd);
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);

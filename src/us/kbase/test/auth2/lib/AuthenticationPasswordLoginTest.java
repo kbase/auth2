@@ -3,6 +3,9 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.verify;
@@ -46,6 +49,7 @@ import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
 
 public class AuthenticationPasswordLoginTest {
@@ -295,6 +299,57 @@ public class AuthenticationPasswordLoginTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
+	}
+	
+	@Test
+	public void changePassword() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password pwdold = new Password("foobarbazbat".toCharArray());
+		final byte[] saltold = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hashold = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+
+		final Password pwdnew = new Password("foobarbazbatbing".toCharArray());
+		final byte[] saltnew = new byte[] {1, 1, 3, 4, 5, 6, 7, 8};
+		final byte[] hashnew = AuthenticationTester.fromBase64(
+				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hashold, saltold, false, null));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<>(new AuthConfig(true, null, null),
+						new CollectingExternalConfig(new HashMap<>())));
+		
+		when(rand.generateSalt()).thenReturn(saltnew);
+		
+		final ChangePasswordAnswerMatcher matcher =
+				new ChangePasswordAnswerMatcher(new UserName("foo"), hashnew, saltnew, false);
+		
+		// need to check at call time before bytes are cleared
+		doAnswer(matcher).when(storage).changePassword(new UserName("foo"), hashnew, saltnew, false);
+//		
+		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
+		
+		assertClear(pwdold);
+		assertClear(pwdnew);
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
+		
+		/* ensure method was called at least once
+		 * Usually not necessary when mocking the call, but since changepwd returns null
+		 * need to ensure the method was actually called and therefore the matcher above ran
+		 */
+		verify(storage).changePassword(
+				eq(new UserName("foo")), any(byte[].class), any(byte[].class), eq(false));
 	}
 	
 }
