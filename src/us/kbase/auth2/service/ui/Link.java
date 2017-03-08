@@ -147,20 +147,31 @@ public class Link {
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		IdentityProviderInput.checkState(state, retstate);
 		provider = upperCase(provider);
-		final LinkToken lt = auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				provider, authcode);
+		final Optional<IncomingToken> token =
+				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
+		final Optional<TemporaryToken> tt;
+		if (token.isPresent()) {
+			final LinkToken lt = auth.link(token.get(), provider, authcode);
+			if (lt.isLinked()) {
+				tt = Optional.absent();
+			} else {
+				tt = Optional.of(lt.getTemporaryToken());
+			}
+		} else {
+			tt = Optional.of(auth.link(provider, authcode));
+		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
-		if (lt.isLinked()) {
-			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
-					.cookie(getStateCookie(null)).build();
-		} else {
+		if (tt.isPresent()) {
 			r = Response.seeOther(getCompleteLinkRedirectURI(UIPaths.LINK_ROOT_CHOICE)).cookie(
-					getLinkInProcessCookie(lt.getTemporaryToken()))
+					getLinkInProcessCookie(tt.get()))
 					.cookie(getStateCookie(null))
 					.build();
+		} else {
+			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
+					.cookie(getStateCookie(null)).build();
 		}
 		return r;
 	}

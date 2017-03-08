@@ -177,8 +177,9 @@ public class Me {
 			throws NoTokenProvidedException, InvalidTokenException,
 			AuthStorageException, UnLinkFailedException, DisabledUserException {
 		// id can't be null
-		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
-		auth.unlink(token == null ? getToken(headerToken) : token, id);
+		final Optional<IncomingToken> token = getTokenFromCookie(
+				headers, cfg.getTokenCookieName(), false);
+		auth.unlink(token.isPresent() ? token.get() : getToken(headerToken), id);
 	}
 	
 	@POST

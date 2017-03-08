@@ -105,6 +105,7 @@ public class Authentication {
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
 	
+	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
 	
@@ -1147,12 +1148,9 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
-				randGen.getToken(), clock.instant(), 30 * 60 * 1000);
-		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
+		final TemporaryToken tt = storeIdentitiesTemporarily(store, 30 * 60 * 1000);
 		return new LoginToken(tt, ls);
 	}
-
 
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after {@link #login(String, String)}.
@@ -1390,6 +1388,73 @@ public class Authentication {
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider.
+	 * 
+	 * Unlike {@link #link(IncomingToken, String, String)} this method never links immediately
+	 * nor does it check the state of the user to ensure linking is allowed.
+	 * 
+	 * A temporary token is returned that is associated with the
+	 * state of the link request. This token can be used to retrieve the link state via
+	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
+	 * 
+	 * In some cases, this method will have
+	 * been called after a redirect from a 3rd party identity provider, and as such, the link
+	 * flow is not under the control of any UI elements at that point. Hence, the method continues
+	 * if no accounts are available for linking, and an error thrown in later stages of the
+	 * linking process. The state is stored so the user can be redirected to the appropriate
+	 * UI element, which can then retrieve the link state and continue. A secondary point is that
+	 * the URL will contain the identity provider authcode, and so the user should be redirected
+	 * to a new URL that does not contain said authcode as soon as possible.
+	 * 
+	 * @param provider the name of the identity provider that is servicing the link request.
+	 * @param authcode the authcode provided by the provider.
+	 * @return a temporary token.
+	 * @throws MissingParameterException if the authcode is missing.
+	 * @throws IdentityRetrievalException if an error occurred when trying to retrieve identities
+	 * from the provider.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
+	 */
+	public TemporaryToken link(
+			final String provider,
+			final String authcode)
+			throws InvalidTokenException, AuthStorageException,
+			MissingParameterException, IdentityRetrievalException,
+			NoSuchIdentityProviderException {
+		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
+		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
+		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
+		 * provider. Any controllable error should be thrown when the process flow is back
+		 * under the control of the primary auth UI.
+		 */
+		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
+				.collect(Collectors.toSet());
+		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+	}
+	
+	private TemporaryToken storeIdentitiesTemporarily(
+			final Set<RemoteIdentityWithLocalID> ids,
+			final int tokenLifeTimeMS)
+			throws AuthStorageException {
+		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
+				randGen.getToken(), clock.instant(), tokenLifeTimeMS);
+		storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
+		return tt;
+	}
+
+	private Set<RemoteIdentity> getLinkCandidates(final String provider, final String authcode)
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			MissingParameterException, IdentityRetrievalException {
+		final IdentityProvider idp = getIdentityProvider(provider);
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new MissingParameterException("authorization code");
+		}
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
+		filterLinkCandidates(ris);
+		return ris;
+	}
+	
+	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
+	 * identity provider.
 	 * If the information returned from the identity provider allows the link to occur
 	 * immediately, the account is linked to the remote identity immediately.
 	 * 
@@ -1430,12 +1495,7 @@ public class Authentication {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final IdentityProvider idp = getIdentityProvider(provider);
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
-		filterLinkCandidates(ris);
+		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
@@ -1456,12 +1516,10 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
-					randGen.getToken(), clock.instant(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 					.collect(Collectors.toSet());
-			storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
-			if (ids.isEmpty()) {
+			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+			if (ris.isEmpty()) {
 				lt = new LinkToken(tt, new LinkIdentities(u, provider));
 			} else {
 				lt = new LinkToken(tt, new LinkIdentities(u, ids));
@@ -1481,7 +1539,8 @@ public class Authentication {
 	}
 	
 	/** Get the current state of a linking process associated with a temporary token.
-	 * This method is expected to be called after {@link #link(IncomingToken, String, String)}.
+	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
+	 * {@link #link(String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, UUID)}.
 	 * 
