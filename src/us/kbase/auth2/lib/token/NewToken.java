@@ -21,9 +21,10 @@ public class NewToken {
 	private final UserName userName;
 	private final Instant expirationDate;
 	private final Instant creationDate;
-	private final UUID id = UUID.randomUUID();
+	private final UUID id;
 	
 	/** Create a new unnamed token.
+	 * @param id the token id.
 	 * @param type the token type.
 	 * @param token the token string.
 	 * @param userName the user that possesses the token.
@@ -31,11 +32,13 @@ public class NewToken {
 	 * @param lifetimeInMS the token's lifetime in milliseconds.
 	 */
 	public NewToken(
+			final UUID id,
 			final TokenType type,
 			final String token,
 			final UserName userName,
 			final Instant creation,
 			final long lifetimeInMS) {
+		nonNull(id, "id");
 		checkStringNoCheckedException(token, "token");
 		nonNull(type, "type");
 		nonNull(userName, "userName");
@@ -43,6 +46,7 @@ public class NewToken {
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
+		this.id = id;
 		this.type = type;
 		this.tokenName = null;
 		this.token = token;
@@ -53,6 +57,7 @@ public class NewToken {
 	}
 	
 	/** Create a new named token.
+	 * @param id the token id.
 	 * @param type the token type.
 	 * @param tokenName the name of the token.
 	 * @param token the token string.
@@ -61,12 +66,14 @@ public class NewToken {
 	 * @param lifetimeInMS the token's lifetime in milliseconds.
 	 */
 	public NewToken(
+			final UUID id,
 			final TokenType type,
 			final String tokenName,
 			final String token,
 			final UserName userName,
 			final Instant creation,
 			final long lifetimeInMS) {
+		nonNull(id, "id");
 		checkStringNoCheckedException(token, "token");
 		checkStringNoCheckedException(tokenName, "tokenName");
 		nonNull(type, "type");
@@ -75,6 +82,7 @@ public class NewToken {
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
+		this.id = id;
 		this.type = type;
 		this.tokenName = tokenName;
 		this.token = token;
@@ -143,4 +151,77 @@ public class NewToken {
 				userName, creationDate, expirationDate);
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
+		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((token == null) ? 0 : token.hashCode());
+		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
+		result = prime * result + ((type == null) ? 0 : type.hashCode());
+		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		NewToken other = (NewToken) obj;
+		if (creationDate == null) {
+			if (other.creationDate != null) {
+				return false;
+			}
+		} else if (!creationDate.equals(other.creationDate)) {
+			return false;
+		}
+		if (expirationDate == null) {
+			if (other.expirationDate != null) {
+				return false;
+			}
+		} else if (!expirationDate.equals(other.expirationDate)) {
+			return false;
+		}
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
+			return false;
+		}
+		if (token == null) {
+			if (other.token != null) {
+				return false;
+			}
+		} else if (!token.equals(other.token)) {
+			return false;
+		}
+		if (tokenName == null) {
+			if (other.tokenName != null) {
+				return false;
+			}
+		} else if (!tokenName.equals(other.tokenName)) {
+			return false;
+		}
+		if (type != other.type) {
+			return false;
+		}
+		if (userName == null) {
+			if (other.userName != null) {
+				return false;
+			}
+		} else if (!userName.equals(other.userName)) {
+			return false;
+		}
+		return true;
+	}
 }

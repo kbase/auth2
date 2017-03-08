@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -25,7 +26,7 @@ public class LocalLoginResultTest {
 
 	@Test
 	public void constructToken() throws Exception {
-		final NewToken nt = new NewToken(
+		final NewToken nt = new NewToken(UUID.randomUUID(),
 				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 5000);
 		final LocalLoginResult llr = new LocalLoginResult(nt);
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(false));

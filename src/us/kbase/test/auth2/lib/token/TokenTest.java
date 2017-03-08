@@ -46,6 +46,11 @@ public class TokenTest {
 	}
 	
 	@Test
+	public void equalsNewToken() {
+		EqualsVerifier.forClass(NewToken.class).usingGetClass().verify();
+	}
+	
+	@Test
 	public void tokenTypeGetType() throws Exception {
 		assertThat("failed to get login token type", TokenType.getType("Login"),
 				is(TokenType.LOGIN));
@@ -95,42 +100,42 @@ public class TokenTest {
 	@Test
 	public void temporaryToken() throws Exception {
 		final Instant i = Instant.ofEpochMilli(4000);
-		final TemporaryToken tt = new TemporaryToken("foobar", i, 5L);
+		final UUID id = UUID.randomUUID();
+		final TemporaryToken tt = new TemporaryToken(id, "foobar", i, 5L);
 		assertThat("incorrect token string", tt.getToken(), is("foobar"));
-		assertThat("incorrect ID class", tt.getId(), is(UUID.class));
+		assertThat("incorrect ID", tt.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect creation date", tt.getCreationDate(),
 				is(Instant.ofEpochMilli(4000)));
 		assertThat("incorrect expiration date", tt.getExpirationDate(), is(i.plusMillis(5)));
 		
-		final TemporaryToken tt2 = new TemporaryToken("whee", NOW, 1);
-		assertThat("same uuid for different instances", tt.getId().equals(tt2.getId()), is(false));
-		
 		final TemporaryHashedToken ht = tt.getHashedToken();
 		assertThat("incorrect token hash", ht.getTokenHash(),
 				is("w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI="));
-		assertThat("incorrect id", ht.getId(), is(tt.getId()));
+		assertThat("incorrect id", ht.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect creation date", ht.getCreationDate(),
 				is(Instant.ofEpochMilli(4000)));
 		assertThat("incorrect expiration date", ht.getExpirationDate(), is(i.plusMillis(5)));
 		
-		failCreateTemporaryToken("foo", NOW, -1,
+		failCreateTemporaryToken(null, "foo", NOW, 0, new NullPointerException("id"));
+		failCreateTemporaryToken(id, "foo", NOW, -1,
 				new IllegalArgumentException("lifetime must be >= 0"));
-		failCreateTemporaryToken("foo", null, 0, new NullPointerException("creation"));
-		failCreateTemporaryToken(null, NOW, 0,
+		failCreateTemporaryToken(id, "foo", null, 0, new NullPointerException("creation"));
+		failCreateTemporaryToken(id, null, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateTemporaryToken("", NOW, 0,
+		failCreateTemporaryToken(id, "", NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateTemporaryToken("\n", NOW, 0,
+		failCreateTemporaryToken(id, "\n", NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
 	}
 	
 	private void failCreateTemporaryToken(
+			final UUID id,
 			final String token,
 			final Instant created,
 			final long timeInMS,
 			final Exception exception) {
 		try {
-			new TemporaryToken(token, created, timeInMS);
+			new TemporaryToken(id, token, created, timeInMS);
 			fail("created bad temporary token");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, exception);
@@ -228,11 +233,12 @@ public class TokenTest {
 	@Test
 	public void newToken() throws Exception {
 		final Instant i = Instant.ofEpochMilli(60000);
-		final NewToken nt = new NewToken(TokenType.LOGIN, "baz", new UserName("foo"), i, 10);
+		final UUID id = UUID.randomUUID();
+		final NewToken nt = new NewToken(id, TokenType.LOGIN, "baz", new UserName("foo"), i, 10);
 		assertThat("incorrect token type", nt.getTokenType(), is(TokenType.LOGIN));
 		assertThat("incorrect token name", nt.getTokenName(), is((String) null));
 		assertThat("incorrect token string", nt.getToken(), is("baz"));
-		assertThat("incorrect ID class", nt.getId(), is(UUID.class));
+		assertThat("incorrect ID", nt.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect user", nt.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect creation date", nt.getCreationDate(), is(i));
 		assertThat("incorrect expiration date", nt.getExpirationDate(), is(i.plusMillis(10)));
@@ -240,7 +246,7 @@ public class TokenTest {
 		final HashedToken ht = nt.getHashedToken();
 		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
 		assertThat("incorrect token name", ht.getTokenName(), is((String) null));
-		assertThat("incorrect token id", ht.getId(), is(nt.getId()));
+		assertThat("incorrect token id", ht.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect token hash", ht.getTokenHash(),
 				is("uqWglk0zIPvAxqkiFARTyFE+okq4/QV3A0gEqWckgJY="));
 		assertThat("incorrect user", ht.getUserName(), is(new UserName("foo")));
@@ -250,55 +256,61 @@ public class TokenTest {
 		
 		// test with named token
 		final Instant i2 = Instant.ofEpochMilli(70000);
-		final NewToken nt2 = new NewToken(TokenType.EXTENDED_LIFETIME, "myname", "bar",
+		final UUID id2 = UUID.randomUUID();
+		final NewToken nt2 = new NewToken(id2, TokenType.EXTENDED_LIFETIME, "myname", "bar",
 				new UserName("foo2"), i2, 15);
 		assertThat("incorrect token type", nt2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
 		assertThat("incorrect token name", nt2.getTokenName(), is("myname"));
 		assertThat("incorrect token string", nt2.getToken(), is("bar"));
-		assertThat("incorrect ID class", nt2.getId(), is(UUID.class));
+		assertThat("incorrect ID", nt2.getId(), is(UUID.fromString(id2.toString())));
 		assertThat("incorrect user", nt2.getUserName(), is(new UserName("foo2")));
 		assertThat("incorrect creation date", nt2.getCreationDate(),
 				is(Instant.ofEpochMilli(70000)));
 		assertThat("incorrect expiration date", nt2.getExpirationDate(), is(i2.plusMillis(15)));
 		
 		final UserName u = new UserName("foo");
-		failCreateNewToken(null, "foo", u, NOW, 0, new NullPointerException("type"));
-		failCreateNewToken(TokenType.LOGIN, null, u, NOW, 0,
+		failCreateNewToken(null, TokenType.LOGIN, "foo", u, NOW, 0,
+				new NullPointerException("id"));
+		failCreateNewToken(id, null, "foo", u, NOW, 0, new NullPointerException("type"));
+		failCreateNewToken(id, TokenType.LOGIN, null, u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, "", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, " \t", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, " \t", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, "foo", null, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "foo", null, NOW, 0,
 				new NullPointerException("userName"));
-		failCreateNewToken(TokenType.LOGIN, "foo", u, null, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "foo", u, null, 0,
 				new NullPointerException("creation"));
-		failCreateNewToken(TokenType.LOGIN, "foo", u, NOW, -1,
+		failCreateNewToken(id, TokenType.LOGIN, "foo", u, NOW, -1,
 				new IllegalArgumentException("lifetime must be >= 0"));
 		
 		//test named token errors
-		failCreateNewToken(null, "myname", "foo", u, NOW, 0, new NullPointerException("type"));
-		failCreateNewToken(TokenType.LOGIN, null, "foo", u, NOW, 0,
+		failCreateNewToken(null, TokenType.LOGIN, "myname", "foo", u, NOW, 0,
+				new NullPointerException("id"));
+		failCreateNewToken(id, null, "myname", "foo", u, NOW, 0, new NullPointerException("type"));
+		failCreateNewToken(id, TokenType.LOGIN, null, "foo", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: tokenName"));
-		failCreateNewToken(TokenType.LOGIN, "", "foo", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "", "foo", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: tokenName"));
-		failCreateNewToken(TokenType.LOGIN, " \n", "foo", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, " \n", "foo", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: tokenName"));
-		failCreateNewToken(TokenType.LOGIN, "myname", null, u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "myname", null, u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, "myname", "", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "myname", "", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, "myname", " \t", u, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "myname", " \t", u, NOW, 0,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(TokenType.LOGIN, "myname", "foo", null, NOW, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "myname", "foo", null, NOW, 0,
 				new NullPointerException("userName"));
-		failCreateNewToken(TokenType.LOGIN, "foo", "foo", u, null, 0,
+		failCreateNewToken(id, TokenType.LOGIN, "foo", "foo", u, null, 0,
 				new NullPointerException("creation"));
-		failCreateNewToken(TokenType.LOGIN, "myname", "foo", u, NOW, -1,
+		failCreateNewToken(id, TokenType.LOGIN, "myname", "foo", u, NOW, -1,
 				new IllegalArgumentException("lifetime must be >= 0"));
 	}
 	
 	private void failCreateNewToken(
+			final UUID id,
 			final TokenType type,
 			final String token,
 			final UserName userName,
@@ -306,7 +318,7 @@ public class TokenTest {
 			final long lifetimeInMS,
 			final Exception exception) {
 		try {
-			new NewToken(type, token, userName, created, lifetimeInMS);
+			new NewToken(id, type, token, userName, created, lifetimeInMS);
 			fail("created bad token");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -314,6 +326,7 @@ public class TokenTest {
 	}
 	
 	private void failCreateNewToken(
+			final UUID id,
 			final TokenType type,
 			final String tokenName,
 			final String token,
@@ -322,7 +335,7 @@ public class TokenTest {
 			final long lifetimeInMS,
 			final Exception exception) {
 		try {
-			new NewToken(type, tokenName, token, userName, created, lifetimeInMS);
+			new NewToken(id, type, tokenName, token, userName, created, lifetimeInMS);
 			fail("created bad token");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);

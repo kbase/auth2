@@ -2,11 +2,13 @@ package us.kbase.auth2.cryptutils;
 
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base32;
 
 
-/** Generates salts, tokens and temporary passwords randomly using the SHA1PRNG algorithm.
+/** Generates salts, tokens and temporary passwords randomly using the SHA1PRNG algorithm, and
+ * UUIDs with the UUID.randomUUID() method.
  * @author gaprice@lbl.gov
  *
  */
@@ -56,5 +58,10 @@ public class SHA1RandomDataGenerator implements RandomDataGenerator {
 		final byte[] salt = new byte[8];
 		random.nextBytes(salt);
 		return salt;
+	}
+	
+	@Override
+	public UUID randomUUID() {
+		return UUID.randomUUID();
 	}
 }
