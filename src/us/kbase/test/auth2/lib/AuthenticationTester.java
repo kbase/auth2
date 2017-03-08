@@ -27,6 +27,7 @@ import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.storage.AuthStorage;
 
 public class AuthenticationTester {
@@ -102,7 +103,41 @@ public class AuthenticationTester {
 			assertThat("local user does not match.", user, is(this.user));
 			return null;
 		}
+	}
+
+	public static class ChangePasswordAnswerMatcher implements Answer<Void> {
 		
+		private final UserName name;
+		private final String hash;
+		private final byte[] salt;
+		private final boolean forceReset;
+		public byte[] savedSalt;
+		public byte[] savedHash;
+		
+		public ChangePasswordAnswerMatcher(
+				final UserName name,
+				final String hash,
+				final byte[] salt,
+				final boolean forceReset) {
+			this.name = name;
+			this.hash = hash;
+			this.salt = salt;
+			this.forceReset = forceReset;
+		}
+
+		@Override
+		public Void answer(final InvocationOnMock args) throws Throwable {
+			final UserName un = args.getArgument(0);
+			savedHash = args.getArgument(1);
+			savedSalt = args.getArgument(2);
+			final boolean forceReset = args.getArgument(3);
+			
+			assertThat("incorrect username", un, is(name));
+			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
+			assertThat("incorrect hash", savedHash, is(fromBase64(hash)));
+			assertThat("incorrect salt", savedSalt, is(salt));
+			return null;
+		}
 	}
 	
 	public static String toBase64(final byte[] bytes) {

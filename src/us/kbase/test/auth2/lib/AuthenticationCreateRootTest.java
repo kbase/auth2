@@ -22,9 +22,6 @@ import java.util.Collections;
 
 import org.junit.Test;
 
-import org.mockito.invocation.InvocationOnMock;
-import org.mockito.stubbing.Answer;
-
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
@@ -41,6 +38,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
 
@@ -93,41 +91,6 @@ public class AuthenticationCreateRootTest {
 		 * ran
 		 */
 		verify(storage).createLocalUser(any());
-	}
-
-	private class ChangePasswordAnswerMatcher implements Answer<Void> {
-		
-		private final UserName name;
-		private final String hash;
-		private final byte[] salt;
-		private final boolean forceReset;
-		private byte[] savedSalt;
-		private byte[] savedHash;
-		
-		public ChangePasswordAnswerMatcher(
-				final UserName name,
-				final String hash,
-				final byte[] salt,
-				final boolean forceReset) {
-			this.name = name;
-			this.hash = hash;
-			this.salt = salt;
-			this.forceReset = forceReset;
-		}
-
-		@Override
-		public Void answer(final InvocationOnMock args) throws Throwable {
-			final UserName un = args.getArgument(0);
-			savedHash = args.getArgument(1);
-			savedSalt = args.getArgument(2);
-			final boolean forceReset = args.getArgument(3);
-			
-			assertThat("incorrect username", un, is(name));
-			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
-			assertThat("incorrect hash", savedHash, is(fromBase64(hash)));
-			assertThat("incorrect salt", savedSalt, is(salt));
-			return null;
-		}
 	}
 	
 	@Test
