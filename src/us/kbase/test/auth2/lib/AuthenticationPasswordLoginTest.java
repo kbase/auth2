@@ -33,7 +33,6 @@ import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UUIDGenerator;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -69,7 +68,6 @@ public class AuthenticationPasswordLoginTest {
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
 		final Clock clock = testauth.clock;
-		final UUIDGenerator uuidGen = testauth.uuid;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -91,7 +89,7 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(loginAllowed, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		when(uuidGen.randomUUID()).thenReturn(UUID.fromString(id.toString()), (UUID) null);
+		when(rand.randomUUID()).thenReturn(UUID.fromString(id.toString()), (UUID) null);
 		
 		when(rand.getToken()).thenReturn("this is a token");
 		
@@ -248,7 +246,6 @@ public class AuthenticationPasswordLoginTest {
 		final Authentication auth = testauth.auth;
 		final RandomDataGenerator rand = testauth.randGen;
 		final Clock clock = testauth.clock;
-		final UUIDGenerator uuidGen = testauth.uuid;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -267,7 +264,7 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		when(uuidGen.randomUUID()).thenReturn(UUID.fromString(id.toString()), (UUID) null);
+		when(rand.randomUUID()).thenReturn(UUID.fromString(id.toString()), (UUID) null);
 		
 		when(rand.getToken()).thenReturn("this is a token");
 		

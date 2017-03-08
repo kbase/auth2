@@ -126,7 +126,6 @@ public class Authentication {
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	private final Clock clock;
-	private final UUIDGenerator uuidGen;
 	
 	//TODO UI show this with note that it'll take X seconds to sync to other server instance
 	private int cfgUpdateIntervalSec = 30;
@@ -149,14 +148,7 @@ public class Authentication {
 				identityProviderSet,
 				defaultExternalConfig,
 				getDefaultRandomGenerator(),
-				Clock.systemDefaultZone(), // don't care about time zone, not using it
-				new UUIDGenerator() {
-					
-					@Override
-					public UUID randomUUID() {
-						return UUID.randomUUID();
-					}
-				});
+				Clock.systemDefaultZone()); // don't care about time zone, not using it
 	}
 
 	private static RandomDataGenerator getDefaultRandomGenerator() {
@@ -173,10 +165,8 @@ public class Authentication {
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
 			final RandomDataGenerator randGen,
-			final Clock clock,
-			final UUIDGenerator uuidGen)
+			final Clock clock)
 			throws StorageInitException {
-		this.uuidGen = uuidGen;
 		this.clock = clock;
 		this.randGen = randGen;
 		try {
@@ -479,7 +469,7 @@ public class Authentication {
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
-		final NewToken nt = new NewToken(uuidGen.randomUUID(), TokenType.LOGIN, randGen.getToken(),
+		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.LOGIN, randGen.getToken(),
 				userName, clock.instant(),
 				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
@@ -581,7 +571,7 @@ public class Authentication {
 		} else {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
-		final NewToken nt = new NewToken(uuidGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
+		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
 				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
@@ -1157,7 +1147,7 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = new TemporaryToken(uuidGen.randomUUID(),
+		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
 				randGen.getToken(), clock.instant(), 30 * 60 * 1000);
 		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
 		return new LoginToken(tt, ls);
@@ -1466,7 +1456,7 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(uuidGen.randomUUID(),
+			final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
 					randGen.getToken(), clock.instant(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 					.collect(Collectors.toSet());

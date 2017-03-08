@@ -1,5 +1,7 @@
 package us.kbase.auth2.cryptutils;
 
+import java.util.UUID;
+
 /** Generates salts, tokens and temporary passwords randomly.
  * @author gaprice@lbl.gov
  *
@@ -23,5 +25,10 @@ public interface RandomDataGenerator {
 	 * @return the salt.
 	 */
 	byte[] generateSalt();
+	
+	/** Generates a random UUID.
+	 * @return the UUID.
+	 */
+	UUID randomUUID();
 
 }

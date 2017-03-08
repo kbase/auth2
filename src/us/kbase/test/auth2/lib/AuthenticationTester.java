@@ -27,7 +27,6 @@ import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.UUIDGenerator;
 import us.kbase.auth2.lib.storage.AuthStorage;
 
 public class AuthenticationTester {
@@ -37,19 +36,16 @@ public class AuthenticationTester {
 		final RandomDataGenerator randGen;
 		final Authentication auth;
 		final Clock clock;
-		final UUIDGenerator uuid;
 		
 		public TestAuth(
 				final AuthStorage storageMock,
 				final RandomDataGenerator randGen,
 				final Authentication auth,
-				final Clock clock,
-				final UUIDGenerator uuid) {
+				final Clock clock) {
 			this.storageMock = storageMock;
 			this.randGen = randGen;
 			this.auth = auth;
 			this.clock = clock;
-			this.uuid = uuid;
 		}
 	}
 	
@@ -57,7 +53,6 @@ public class AuthenticationTester {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
 		final Clock clock = mock(Clock.class);
-		final UUIDGenerator uuid = mock(UUIDGenerator.class);
 		
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
@@ -67,12 +62,12 @@ public class AuthenticationTester {
 		
 		final Constructor<Authentication> c = Authentication.class.getDeclaredConstructor(
 				AuthStorage.class, Set.class, ExternalConfig.class,
-				RandomDataGenerator.class, Clock.class, UUIDGenerator.class);
+				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Authentication instance = c.newInstance(storage, Collections.emptySet(),
-				new TestExternalConfig("foo"), randGen, clock, uuid);
+				new TestExternalConfig("foo"), randGen, clock);
 		reset(storage);
-		return new TestAuth(storage, randGen, instance, clock, uuid);
+		return new TestAuth(storage, randGen, instance, clock);
 	}
 	
 	public static void setConfigUpdateInterval(final Authentication auth, final int sec)
