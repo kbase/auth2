@@ -351,26 +351,26 @@ public class Authentication {
 	
 	/** Login with a local user.
 	 * @param userName the username of the account.
-	 * @param pwd the password for the account.
+	 * @param password the password for the account.
 	 * @return the result of the login attempt.
 	 * @throws AuthenticationException if the login attempt failed.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
 	 * the user account is disabled.
 	 */
-	public LocalLoginResult localLogin(final UserName userName, final Password pwd)
+	public LocalLoginResult localLogin(final UserName userName, final Password password)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException {
-		final LocalUser u = getLocalUser(userName, pwd);
+		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
 			return new LocalLoginResult(u.getUserName());
 		}
 		return new LocalLoginResult(login(u.getUserName()));
 	}
 
-	private LocalUser getLocalUser(final UserName userName, final Password pwd)
+	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
 		nonNull(userName, "userName");
-		nonNull(pwd, "pwd");
+		nonNull(password, "password");
 		final LocalUser u;
 		try {
 			u = storage.getLocalUser(userName);
@@ -378,7 +378,7 @@ public class Authentication {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
 		}
-		if (!pwdcrypt.authenticate(pwd.getPassword(), u.getPasswordHash(), u.getSalt())) {
+		if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 					"Username / password mismatch");
 		}
@@ -386,9 +386,9 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled");
 		}
 		if (u.isDisabled()) {
-			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
+			throw new DisabledUserException();
 		}
-		pwd.clear();
+		password.clear();
 		return u;
 	}
 
@@ -416,7 +416,7 @@ public class Authentication {
 			storage.changePassword(userName, passwordHash, salt, false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
-			throw new RuntimeException("Sorry, you ceased to exist in the last ~10ms.", e);
+			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
 		}
 		clear(passwordHash);
 		clear(salt);

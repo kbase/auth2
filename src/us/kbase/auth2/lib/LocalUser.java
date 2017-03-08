@@ -18,6 +18,8 @@ public class LocalUser extends AuthUser {
 	private final boolean forceReset;
 	private final Optional<Instant> lastReset;
 	
+	// should really consider a builder for these
+	
 	/** Create a new local user.
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.
