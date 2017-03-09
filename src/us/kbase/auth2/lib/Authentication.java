@@ -503,7 +503,7 @@ public class Authentication {
 			return; //ok, any admin can change a std user's pwd.
 		}
 		if (admin.getUserName().equals(user.getUserName())) {
-			return; //ok, a user can always change their own pwd.
+			return; //ok, an admin can always change their own pwd.
 		}
 		if (admin.isRoot()) {
 			return; //ok, duh. It's root.
@@ -711,7 +711,6 @@ public class Authentication {
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
-			//TODO CODE why Arrays.asList here? write tests and then remove
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
