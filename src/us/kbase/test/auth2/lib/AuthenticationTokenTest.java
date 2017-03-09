@@ -306,4 +306,15 @@ public class AuthenticationTokenTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void getBareToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		when(rand.getToken()).thenReturn("foobar");
+		
+		assertThat("incorrect token", auth.getBareToken(), is("foobar"));
+	}
 }
