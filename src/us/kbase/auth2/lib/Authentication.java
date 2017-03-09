@@ -539,8 +539,7 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
+		checkCanResetPassword(token, userName);
 		storage.forcePasswordReset(userName);
 	}
 
@@ -553,7 +552,7 @@ public class Authentication {
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.ADMIN); // force admin
+		getUser(token, Role.CREATE_ADMIN, Role.ROOT); // force admin
 		storage.forcePasswordReset();
 	}
 	
