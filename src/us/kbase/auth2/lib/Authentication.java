@@ -274,31 +274,35 @@ public class Authentication {
 		nonNull(pwd, "pwd");
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		pwd.clear();
-		final DisplayName dn;
 		try {
-			dn = new DisplayName("root");
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("This is impossible", e);
-		}
-		final NewRootUser root = new NewRootUser(
-				EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
-		try {
-			storage.createLocalUser(root);
-		// only way to avoid a race condition. Checking existence before creating user means if
-		// user is added between check and update update will fail
-		} catch (UserExistsException uee) {
+			pwd.clear();
+			final DisplayName dn;
 			try {
-				storage.changePassword(UserName.ROOT, passwordHash, salt, false);
-				if (storage.getUser(UserName.ROOT).isDisabled()) {
-					storage.enableAccount(UserName.ROOT, UserName.ROOT);
-				}
-			} catch (NoSuchUserException nsue) {
-				throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				dn = new DisplayName("root");
+			} catch (IllegalParameterException | MissingParameterException e) {
+				throw new RuntimeException("This is impossible", e);
 			}
+			final NewRootUser root = new NewRootUser(
+					EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
+			try {
+				storage.createLocalUser(root);
+				// only way to avoid a race condition. Checking existence before creating user
+				// means if user is added between check and update update will fail
+			} catch (UserExistsException uee) {
+				try {
+					storage.changePassword(UserName.ROOT, passwordHash, salt, false);
+					if (storage.getUser(UserName.ROOT).isDisabled()) {
+						storage.enableAccount(UserName.ROOT, UserName.ROOT);
+					}
+				} catch (NoSuchUserException nsue) {
+					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				}
+			}
+		} finally {
+			pwd.clear();
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 	
 	/** Creates a new local user.

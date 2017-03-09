@@ -1,7 +1,5 @@
 package us.kbase.test.auth2.lib;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import static org.mockito.Mockito.any;
@@ -81,8 +79,7 @@ public class AuthenticationCreateRootTest {
 		
 		auth.createRoot(pwd);
 		
-		final char[] clearpwd = {'0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0'};
-		assertThat("password not cleared", pwd.getPassword(), is(clearpwd));
+		assertClear(pwd);
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);
 		/* ensure method was called at least once
@@ -174,22 +171,38 @@ public class AuthenticationCreateRootTest {
 		final RandomDataGenerator rand = testauth.randGen;
 		final Clock clock = testauth.clock;
 		
-		when(rand.generateSalt()).thenReturn(new byte[8]);
+		final Password pwd = new Password("foobarbazbat".toCharArray());
+		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
+		final Instant create = Instant.ofEpochMilli(160000000);
 		
-		when(clock.instant()).thenReturn(Instant.now());
+		final ChangePasswordAnswerMatcher matcher = new ChangePasswordAnswerMatcher(
+				UserName.ROOT, hash, salt, false);
+		
+		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
 				.when(storage).createLocalUser(any(NewRootUser.class));
 		
-		// ignore the change password call, tested elsewhere
+		// need to check at call time before bytes are cleared
+		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
+		
 		final LocalUser disabled = new LocalUser(UserName.ROOT, EmailAddress.UNKNOWN,
 				new DisplayName("root"), set(Role.ROOT), Collections.emptySet(),
 				Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState("foo", UserName.ROOT, Instant.now()),
 				new byte[10], new byte[8], false, null);
+		
 		when(storage.getUser(UserName.ROOT)).thenReturn(disabled);
 		
-		auth.createRoot(new Password("foobarbazbat".toCharArray()));
+		auth.createRoot(pwd);
+		
+		assertClear(pwd);
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
 		
 		verify(storage).enableAccount(UserName.ROOT, UserName.ROOT);
 	}
