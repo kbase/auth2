@@ -380,7 +380,6 @@ public class Authentication {
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
-		//TODO CODE clear the pwd for any exception & test
 		nonNull(password, "password");
 		final LocalUser u;
 		try {
@@ -410,6 +409,9 @@ public class Authentication {
 	}
 
 	/** Change a local user's password.
+	 * 
+	 * Clears the passwords as soon as they're no longer needed or when an error occurs.
+	 * 
 	 * @param userName the user name of the account.
 	 * @param password the old password for the user account.
 	 * @param pwdnew the new password for the user account.
@@ -423,21 +425,31 @@ public class Authentication {
 			final Password password,
 			final Password pwdnew)
 			throws AuthenticationException, UnauthorizedException, AuthStorageException {
-		//TODO CODE clear the pwd and hashes for any exception & test
-		nonNull(pwdnew, "pwdnew");
 		//TODO PWD do any cross pwd checks like checking they're not the same
-		getLocalUser(userName, password); //checks pwd validity and nulls
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
-		pwdnew.clear();
+		byte[] salt = null;
+		byte[] passwordHash = null;
 		try {
+			nonNull(pwdnew, "pwdnew");
+			getLocalUser(userName, password); //checks pwd validity and nulls
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
+			pwdnew.clear();
 			storage.changePassword(userName, passwordHash, salt, false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
+		} finally {
+			if (password != null) {
+				password.clear();
+			}
+			if (pwdnew != null) {
+				pwdnew.clear();
+			}
+			// at least with mockito I don't see how to test these are actually cleared, since the
+			// change password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 
 	/** Reset a local user's password to a random password.

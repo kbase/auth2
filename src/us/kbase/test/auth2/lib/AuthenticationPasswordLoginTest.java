@@ -376,10 +376,21 @@ public class AuthenticationPasswordLoginTest {
 		final TestAuth testauth = initTestAuth();
 		final Authentication auth = testauth.auth;
 		final UserName u = new UserName("foo");
-		final Password p = new Password("foobarbazbing".toCharArray());
-		failChangePassword(auth, null, p, p, new NullPointerException("userName"));
-		failChangePassword(auth, u, null, p, new NullPointerException("password"));
-		failChangePassword(auth, u, p, null, new NullPointerException("pwdnew"));
+		
+		Password po = new Password("foobarbazbing".toCharArray());
+		Password pn = new Password("foobarbazbing1".toCharArray());
+		failChangePassword(auth, null, po, pn, new NullPointerException("userName"));
+		assertClear(po);
+		assertClear(pn);
+		
+		pn = new Password("foobarbazbing1".toCharArray());
+		failChangePassword(auth, u, null, pn, new NullPointerException("password"));
+		assertClear(pn);
+		
+		po = new Password("foobarbazbing".toCharArray());
+		failChangePassword(auth, u, po, null, new NullPointerException("pwdnew"));
+		assertClear(po);
+		
 	}
 	
 	@Test
@@ -390,10 +401,13 @@ public class AuthenticationPasswordLoginTest {
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
-		final Password p = new Password("foobarbazbat".toCharArray());
+		final Password po = new Password("foobarbazbat".toCharArray());
+		final Password pn = new Password("foobarbazbat1".toCharArray());
 		
-		failChangePassword(auth, new UserName("foo"), p, p, new AuthenticationException(
+		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		assertClear(po);
+		assertClear(pn);
 	}
 	
 	@Test
@@ -404,7 +418,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
-		final Password p = new Password("foobarbazbatch".toCharArray());
+		final Password po = new Password("foobarbazbatch".toCharArray());
+		final Password pn = new Password("foobarbazbatch1".toCharArray());
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
@@ -414,8 +429,10 @@ public class AuthenticationPasswordLoginTest {
 				Collections.emptySet(), Collections.emptySet(),
 				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
 		
-		failChangePassword(auth, new UserName("foo"), p, p, new AuthenticationException(
+		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		assertClear(po);
+		assertClear(pn);
 	}
 	
 	@Test
@@ -426,7 +443,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
-		final Password p = new Password("foobarbazbat".toCharArray());
+		final Password po = new Password("foobarbazbat".toCharArray());
+		final Password pn = new Password("foobarbazbat1".toCharArray());
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
@@ -440,8 +458,10 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(false, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failChangePassword(auth, new UserName("foo"), p, p, new UnauthorizedException(
+		failChangePassword(auth, new UserName("foo"), po, pn, new UnauthorizedException(
 				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+		assertClear(po);
+		assertClear(pn);
 	}
 	
 	@Test
@@ -452,7 +472,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
-		final Password p = new Password("foobarbazbat".toCharArray());
+		final Password po = new Password("foobarbazbat".toCharArray());
+		final Password pn = new Password("foobarbazbat1".toCharArray());
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
@@ -468,7 +489,9 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failChangePassword(auth, new UserName("foo"), p, p, new DisabledUserException());
+		failChangePassword(auth, new UserName("foo"), po, pn, new DisabledUserException());
+		assertClear(po);
+		assertClear(pn);
 	}
 	
 	@Test
@@ -507,6 +530,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		failChangePassword(auth, new UserName("foo"), pwdold, pwdnew, new AuthStorageException(
 				"Sorry, you ceased to exist in the last ~10ms."));
+		assertClear(pwdold);
+		assertClear(pwdnew);
 	}
 	
 	private void failChangePassword(

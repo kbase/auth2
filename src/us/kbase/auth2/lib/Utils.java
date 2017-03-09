@@ -86,7 +86,7 @@ public class Utils {
 		return c;
 	}
 	
-	/** Sets all the elements of a byte array to 0.
+	/** Sets all the elements of a byte array to 0. Does nothing if the byte array is null.
 	 * @param bytes the byte array to clear.
 	 */
 	public static void clear(final byte[] bytes) {
