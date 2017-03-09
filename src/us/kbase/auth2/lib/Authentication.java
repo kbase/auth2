@@ -358,6 +358,9 @@ public class Authentication {
 	}
 	
 	/** Login with a local user.
+	 * 
+	 * The password is always cleared once the password has been verified or if an error occurs.
+	 * 
 	 * @param userName the username of the account.
 	 * @param password the password for the account.
 	 * @return the result of the login attempt.
@@ -378,26 +381,31 @@ public class Authentication {
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
 		//TODO CODE clear the pwd for any exception & test
-		nonNull(userName, "userName");
 		nonNull(password, "password");
 		final LocalUser u;
 		try {
-			u = storage.getLocalUser(userName);
-		} catch (NoSuchUserException e) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
+			nonNull(userName, "userName");
+			try {
+				u = storage.getLocalUser(userName);
+			} catch (NoSuchUserException e) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			password.clear();
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Non-admin login is disabled");
+			}
+			if (u.isDisabled()) {
+				throw new DisabledUserException();
+			}
+		} finally {
+			password.clear();
 		}
-		if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
-		}
-		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled");
-		}
-		if (u.isDisabled()) {
-			throw new DisabledUserException();
-		}
-		password.clear();
 		return u;
 	}
 

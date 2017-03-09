@@ -148,8 +148,11 @@ public class AuthenticationPasswordLoginTest {
 	public void loginNulls() throws Exception {
 		final TestAuth testauth = initTestAuth();
 		final Authentication auth = testauth.auth;
-		failLogin(auth, null, new Password("foobarbazbat".toCharArray()),
-				new NullPointerException("userName"));
+		
+		final Password password = new Password("foobarbazbat".toCharArray());
+		failLogin(auth, null, password, new NullPointerException("userName"));
+		assertClear(password);
+		
 		failLogin(auth, new UserName("foo"), null, new NullPointerException("password"));
 	}
 	
@@ -161,9 +164,12 @@ public class AuthenticationPasswordLoginTest {
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
-		failLogin(auth, new UserName("foo"), new Password("foobarbazbat".toCharArray()),
+		final Password password = new Password("foobarbazbat".toCharArray());
+		failLogin(auth, new UserName("foo"), password,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch"));
+		assertClear(password);
+		
 	}
 	
 	@Test
@@ -187,6 +193,7 @@ public class AuthenticationPasswordLoginTest {
 		failLogin(auth, new UserName("foo"), p,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch") );
+		assertClear(p);
 	}
 	
 	@Test
@@ -213,6 +220,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		failLogin(auth, new UserName("foo"), p, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Non-admin login is disabled"));
+		assertClear(p);
 	}
 	
 	@Test
@@ -240,6 +248,7 @@ public class AuthenticationPasswordLoginTest {
 						new CollectingExternalConfig(new HashMap<>())));
 		
 		failLogin(auth, new UserName("foo"), p, new DisabledUserException());
+		assertClear(p);
 	}
 	
 	@Test
@@ -286,6 +295,7 @@ public class AuthenticationPasswordLoginTest {
 				UUID.fromString(id.toString()),
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
 				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
+		assertClear(p);
 	}
 
 	private void failLogin(
