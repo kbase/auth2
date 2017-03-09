@@ -1199,4 +1199,126 @@ public class AuthenticationPasswordLoginTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void forceResetAllPasswordsCreateAdmin() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		forceResetAllPasswords(admin);
+	}
+	
+	@Test
+	public void forceResetAllPasswordsRoot() throws Exception {
+		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		forceResetAllPasswords(admin);
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailStdAdmin() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		failForceResetAllPasswords(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailDisabled() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
+		failForceResetAllPasswords(admin, new DisabledUserException());
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailNulls() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final Authentication auth = testauth.auth;
+
+		failForceResetAllPasswords(auth, null, new NullPointerException("token"));
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailInvalidToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failForceResetAllPasswords(auth, t, new InvalidTokenException());
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailCatastrophicNoUser() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+				"wubba", new UserName("admin"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
+		
+		failForceResetAllPasswords(auth, t, new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+
+	private void forceResetAllPasswords(final AuthUser admin) throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		
+		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+				"wubba", admin.getUserName(), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		when(storage.getUser(admin.getUserName())).thenReturn(admin, (AuthUser) null);
+		try {
+			auth.forceResetAllPasswords(t);
+			verify(storage).forcePasswordReset();
+		} catch (Throwable th) {
+			if (admin.isDisabled()) {
+				verify(storage).deleteTokens(admin.getUserName());
+			}
+			throw th;
+		}
+	}
+	
+	private void failForceResetAllPasswords(
+			final AuthUser admin,
+			final Exception e) {
+		try {
+			forceResetAllPasswords(admin);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failForceResetAllPasswords(
+			final Authentication auth,
+			final IncomingToken token,
+			final Exception e) {
+		try {
+			auth.forceResetAllPasswords(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 }
