@@ -465,19 +465,68 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		//TODO RESET to reset and get admin password must be that admin
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
-		
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		storage.changePassword(userName, passwordHash, salt, true);
-		clear(passwordHash);
-		clear(salt);
+		checkCanResetPassword(token, userName);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			storage.changePassword(userName, passwordHash, salt, true);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the change
+			// password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	
+	private void checkCanResetPassword(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		// this method is gross. rethink. ideally based on the grantable roles somehow.
+		nonNull(userName, "userName");
+		final AuthUser admin = getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
+		final AuthUser user = storage.getUser(userName);
+		if (!user.isLocal()) {
+			throw new NoSuchUserException(String.format(
+					"%s is not a local user and has no password", userName.getName()));
+		}
+		if (!Role.isAdmin(user.getRoles())) {
+			return; //ok, any admin can change a std user's pwd.
+		}
+		if (admin.getUserName().equals(user.getUserName())) {
+			return; //ok, a user can always change their own pwd.
+		}
+		if (admin.isRoot()) {
+			return; //ok, duh. It's root.
+		}
+		if (user.isRoot()) { // already know admin isn't root, so bail out.
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Only root can reset root password");
+		}
+		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
+		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with create administrator role");
+		}
+		/* at this point we know user is a standard admin and admin is not root. That means
+		 * that admin has to have CREATE_ADMIN to proceed. 
+		 */
+		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with administrator role");
+		}
+		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
+	}
+
 	/** Force a local user to reset their password on their next login.
 	 * @param token a token for a user with the administrator role.
 	 * @param userName the user name of the account for which a password reset is required.

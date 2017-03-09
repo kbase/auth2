@@ -27,6 +27,7 @@ import org.junit.Test;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfigSet;
+import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
@@ -46,6 +47,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
@@ -354,7 +356,8 @@ public class AuthenticationPasswordLoginTest {
 				new ChangePasswordAnswerMatcher(new UserName("foo"), hashnew, saltnew, false);
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).changePassword(new UserName("foo"), hashnew, saltnew, false);
+		doAnswer(matcher).when(storage).changePassword(
+				new UserName("foo"), hashnew, saltnew, false);
 //		
 		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
 		
@@ -546,5 +549,61 @@ public class AuthenticationPasswordLoginTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
+	}
+	
+	@Test
+	public void resetPassword() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		final char[] pwd = "foobarbazbat".toCharArray();
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+				"wubba", new UserName("admin"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin, (AuthUser) null);
+		when(storage.getUser(new UserName("foo"))).thenReturn(user, (AuthUser) null);
+		
+		when(rand.getTemporaryPassword(10)).thenReturn(pwd);
+		when(rand.generateSalt()).thenReturn(salt);
+		
+		final ChangePasswordAnswerMatcher matcher =
+				new ChangePasswordAnswerMatcher(new UserName("foo"), hash, salt, true);
+		
+		// need to check at call time before bytes are cleared
+		doAnswer(matcher).when(storage).changePassword(
+				new UserName("foo"), hash, salt, true);
+	
+		final Password p = auth.resetPassword(t, new UserName("foo"));
+
+		assertThat("incorrect password", p.getPassword(), is(pwd));
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
+		
+		/* ensure method was called at least once
+		 * Usually not necessary when mocking the call, but since changepwd returns null
+		 * need to ensure the method was actually called and therefore the matcher above ran
+		 */
+		verify(storage).changePassword(
+				eq(new UserName("foo")), any(byte[].class), any(byte[].class), eq(true));
+		
+		
 	}
 }
