@@ -145,7 +145,7 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void nulls() throws Exception {
+	public void loginNulls() throws Exception {
 		final TestAuth testauth = initTestAuth();
 		final Authentication auth = testauth.auth;
 		failLogin(auth, null, new Password("foobarbazbat".toCharArray()),
@@ -302,7 +302,168 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void changePassword() throws Exception {
+	public void changePasswordStdUser() throws Exception {
+		changePassword(Collections.emptySet(), true);
+	}
+	
+	@Test
+	public void changePasswordAdminUser() throws Exception {
+		changePassword(set(Role.ADMIN), false);
+	}
+	
+	private void changePassword(Set<Role> roles, boolean allowLogin) throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password pwdold = new Password("foobarbazbat".toCharArray());
+		final byte[] saltold = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hashold = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+
+		final Password pwdnew = new Password("foobarbazbatbing".toCharArray());
+		final byte[] saltnew = new byte[] {1, 1, 3, 4, 5, 6, 7, 8};
+		final byte[] hashnew = AuthenticationTester.fromBase64(
+				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				roles, Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hashold, saltold, false, null));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<>(new AuthConfig(allowLogin, null, null),
+						new CollectingExternalConfig(new HashMap<>())));
+		
+		when(rand.generateSalt()).thenReturn(saltnew);
+		
+		final ChangePasswordAnswerMatcher matcher =
+				new ChangePasswordAnswerMatcher(new UserName("foo"), hashnew, saltnew, false);
+		
+		// need to check at call time before bytes are cleared
+		doAnswer(matcher).when(storage).changePassword(new UserName("foo"), hashnew, saltnew, false);
+//		
+		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
+		
+		assertClear(pwdold);
+		assertClear(pwdnew);
+		assertClear(matcher.savedSalt);
+		assertClear(matcher.savedHash);
+		
+		/* ensure method was called at least once
+		 * Usually not necessary when mocking the call, but since changepwd returns null
+		 * need to ensure the method was actually called and therefore the matcher above ran
+		 */
+		verify(storage).changePassword(
+				eq(new UserName("foo")), any(byte[].class), any(byte[].class), eq(false));
+	}
+	
+	@Test
+	public void changePasswordFailNulls() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final Authentication auth = testauth.auth;
+		final UserName u = new UserName("foo");
+		final Password p = new Password("foobarbazbing".toCharArray());
+		failChangePassword(auth, null, p, p, new NullPointerException("userName"));
+		failChangePassword(auth, u, null, p, new NullPointerException("password"));
+		failChangePassword(auth, u, p, null, new NullPointerException("pwdnew"));
+	}
+	
+	@Test
+	public void changePasswordFailNoUser() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		final Password p = new Password("foobarbazbat".toCharArray());
+		
+		failChangePassword(auth, new UserName("foo"), p, p, new AuthenticationException(
+				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+	}
+	
+	@Test
+	public void changePasswordFailFailBadPwd() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password p = new Password("foobarbazbatch".toCharArray());
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		
+		failChangePassword(auth, new UserName("foo"), p, p, new AuthenticationException(
+				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+	}
+	
+	@Test
+	public void changePasswordFailNoLoginAllowed() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password p = new Password("foobarbazbat".toCharArray());
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<>(new AuthConfig(false, null, null),
+						new CollectingExternalConfig(new HashMap<>())));
+		
+		failChangePassword(auth, new UserName("foo"), p, p, new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+	}
+	
+	@Test
+	public void changepasswordFailDisabled() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password p = new Password("foobarbazbat".toCharArray());
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null,
+				new UserDisabledState("foo", new UserName("foo"), Instant.now()),
+				hash, salt, false, null));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<>(new AuthConfig(true, null, null),
+						new CollectingExternalConfig(new HashMap<>())));
+		
+		failChangePassword(auth, new UserName("foo"), p, p, new DisabledUserException());
+	}
+	
+	@Test
+	public void changePasswordFailCatastrophic() throws Exception {
+		// should never happen under normal circumstances
 		final TestAuth testauth = initTestAuth();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -331,25 +492,24 @@ public class AuthenticationPasswordLoginTest {
 		
 		when(rand.generateSalt()).thenReturn(saltnew);
 		
-		final ChangePasswordAnswerMatcher matcher =
-				new ChangePasswordAnswerMatcher(new UserName("foo"), hashnew, saltnew, false);
+		doThrow(new NoSuchUserException("foo")).when(storage)
+				.changePassword(new UserName("foo"), hashnew, saltnew, false);
 		
-		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).changePassword(new UserName("foo"), hashnew, saltnew, false);
-//		
-		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
-		
-		assertClear(pwdold);
-		assertClear(pwdnew);
-		assertClear(matcher.savedSalt);
-		assertClear(matcher.savedHash);
-		
-		/* ensure method was called at least once
-		 * Usually not necessary when mocking the call, but since changepwd returns null
-		 * need to ensure the method was actually called and therefore the matcher above ran
-		 */
-		verify(storage).changePassword(
-				eq(new UserName("foo")), any(byte[].class), any(byte[].class), eq(false));
+		failChangePassword(auth, new UserName("foo"), pwdold, pwdnew, new AuthStorageException(
+				"Sorry, you ceased to exist in the last ~10ms."));
 	}
 	
+	private void failChangePassword(
+			final Authentication auth,
+			final UserName userName,
+			final Password pwdold,
+			final Password pwdnew,
+			final Exception e) {
+		try {
+			auth.localPasswordChange(userName, pwdold, pwdnew);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 }

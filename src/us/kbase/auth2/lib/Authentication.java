@@ -360,6 +360,7 @@ public class Authentication {
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
+		//TODO CODE clear the pwd for any exception & test
 		nonNull(userName, "userName");
 		nonNull(password, "password");
 		final LocalUser u;
@@ -385,7 +386,7 @@ public class Authentication {
 
 	/** Change a local user's password.
 	 * @param userName the user name of the account.
-	 * @param pwdold the old password for the user account.
+	 * @param password the old password for the user account.
 	 * @param pwdnew the new password for the user account.
 	 * @throws AuthenticationException if the username and password do not match.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
@@ -394,12 +395,13 @@ public class Authentication {
 	 */
 	public void localPasswordChange(
 			final UserName userName,
-			final Password pwdold,
+			final Password password,
 			final Password pwdnew)
 			throws AuthenticationException, UnauthorizedException, AuthStorageException {
+		//TODO CODE clear the pwd and hashes for any exception & test
 		nonNull(pwdnew, "pwdnew");
 		//TODO PWD do any cross pwd checks like checking they're not the same
-		getLocalUser(userName, pwdold); //checks pwd validity and nulls
+		getLocalUser(userName, password); //checks pwd validity and nulls
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
 		pwdnew.clear();
