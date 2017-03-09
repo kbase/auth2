@@ -51,6 +51,11 @@ public class TokenTest {
 	}
 	
 	@Test
+	public void equalsTokenSet() {
+		EqualsVerifier.forClass(TokenSet.class).usingGetClass().verify();
+	}
+	
+	@Test
 	public void tokenTypeGetType() throws Exception {
 		assertThat("failed to get login token type", TokenType.getType("Login"),
 				is(TokenType.LOGIN));
