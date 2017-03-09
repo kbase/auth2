@@ -333,14 +333,27 @@ public class Authentication {
 					"Cannot create ROOT user");
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
-				passwordHash, salt, true);
-		storage.createLocalUser(lu);
-		clear(passwordHash);
-		clear(salt);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
+					passwordHash, salt, true);
+			storage.createLocalUser(lu);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the create
+			// user storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	

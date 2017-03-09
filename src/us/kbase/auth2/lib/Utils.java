@@ -90,6 +90,9 @@ public class Utils {
 	 * @param bytes the byte array to clear.
 	 */
 	public static void clear(final byte[] bytes) {
+		if (bytes == null) {
+			return;
+		}
 		for (int i = 0; i < bytes.length; i++) {
 			bytes[i] = 0;
 		}

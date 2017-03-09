@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -38,6 +39,7 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -150,6 +152,71 @@ public class AuthenticationCreateLocalUserTest {
 		 * ran
 		 */
 		verify(storage).createLocalUser(any());
+	}
+	
+	@Test
+	public void createFailUserExists() throws Exception {
+		// mostly for exercising the pwd, hash, and salt clears
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clock;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final char[] pwdChar = new char [] {'a', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'};
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final Instant create = Instant.ofEpochSecond(1000);
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+						new UserName("admin"), NOW, NOW));
+		
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState());
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
+		
+		when(rand.getTemporaryPassword(10)).thenReturn(pwdChar);
+		
+		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(clock.instant()).thenReturn(create);
+		
+		doThrow(new UserExistsException("foo")).when(storage)
+				.createLocalUser(any(LocalUser.class));
+		
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new UserExistsException("foo"));
+	}
+	
+	@Test
+	public void createFailRuntimeOnGetPwd() throws Exception {
+		// mostly for exercising the pwd, hash, and salt clears
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+						new UserName("admin"), NOW, NOW));
+		
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState());
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
+		
+		when(rand.getTemporaryPassword(10)).thenThrow(new RuntimeException("booga"));
+		
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new RuntimeException("booga"));
 	}
 	
 	@Test
