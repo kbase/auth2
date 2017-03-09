@@ -274,31 +274,35 @@ public class Authentication {
 		nonNull(pwd, "pwd");
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		pwd.clear();
-		final DisplayName dn;
 		try {
-			dn = new DisplayName("root");
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("This is impossible", e);
-		}
-		final NewRootUser root = new NewRootUser(
-				EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
-		try {
-			storage.createLocalUser(root);
-		// only way to avoid a race condition. Checking existence before creating user means if
-		// user is added between check and update update will fail
-		} catch (UserExistsException uee) {
+			pwd.clear();
+			final DisplayName dn;
 			try {
-				storage.changePassword(UserName.ROOT, passwordHash, salt, false);
-				if (storage.getUser(UserName.ROOT).isDisabled()) {
-					storage.enableAccount(UserName.ROOT, UserName.ROOT);
-				}
-			} catch (NoSuchUserException nsue) {
-				throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				dn = new DisplayName("root");
+			} catch (IllegalParameterException | MissingParameterException e) {
+				throw new RuntimeException("This is impossible", e);
 			}
+			final NewRootUser root = new NewRootUser(
+					EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
+			try {
+				storage.createLocalUser(root);
+				// only way to avoid a race condition. Checking existence before creating user
+				// means if user is added between check and update update will fail
+			} catch (UserExistsException uee) {
+				try {
+					storage.changePassword(UserName.ROOT, passwordHash, salt, false);
+					if (storage.getUser(UserName.ROOT).isDisabled()) {
+						storage.enableAccount(UserName.ROOT, UserName.ROOT);
+					}
+				} catch (NoSuchUserException nsue) {
+					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				}
+			}
+		} finally {
+			pwd.clear();
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 	
 	/** Creates a new local user.
@@ -329,18 +333,34 @@ public class Authentication {
 					"Cannot create ROOT user");
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
-				passwordHash, salt, true);
-		storage.createLocalUser(lu);
-		clear(passwordHash);
-		clear(salt);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
+					passwordHash, salt, true);
+			storage.createLocalUser(lu);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the create
+			// user storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	
 	/** Login with a local user.
+	 * 
+	 * The password is always cleared once the password has been verified or if an error occurs.
+	 * 
 	 * @param userName the username of the account.
 	 * @param password the password for the account.
 	 * @return the result of the login attempt.
@@ -360,32 +380,40 @@ public class Authentication {
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
-		nonNull(userName, "userName");
 		nonNull(password, "password");
 		final LocalUser u;
 		try {
-			u = storage.getLocalUser(userName);
-		} catch (NoSuchUserException e) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
+			nonNull(userName, "userName");
+			try {
+				u = storage.getLocalUser(userName);
+			} catch (NoSuchUserException e) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			password.clear();
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Non-admin login is disabled");
+			}
+			if (u.isDisabled()) {
+				throw new DisabledUserException();
+			}
+		} finally {
+			password.clear();
 		}
-		if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
-		}
-		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled");
-		}
-		if (u.isDisabled()) {
-			throw new DisabledUserException();
-		}
-		password.clear();
 		return u;
 	}
 
 	/** Change a local user's password.
+	 * 
+	 * Clears the passwords as soon as they're no longer needed or when an error occurs.
+	 * 
 	 * @param userName the user name of the account.
-	 * @param pwdold the old password for the user account.
+	 * @param password the old password for the user account.
 	 * @param pwdnew the new password for the user account.
 	 * @throws AuthenticationException if the username and password do not match.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
@@ -394,23 +422,34 @@ public class Authentication {
 	 */
 	public void localPasswordChange(
 			final UserName userName,
-			final Password pwdold,
+			final Password password,
 			final Password pwdnew)
 			throws AuthenticationException, UnauthorizedException, AuthStorageException {
-		nonNull(pwdnew, "pwdnew");
 		//TODO PWD do any cross pwd checks like checking they're not the same
-		getLocalUser(userName, pwdold); //checks pwd validity and nulls
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
-		pwdnew.clear();
+		byte[] salt = null;
+		byte[] passwordHash = null;
 		try {
+			nonNull(pwdnew, "pwdnew");
+			getLocalUser(userName, password); //checks pwd validity and nulls
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
+			pwdnew.clear();
 			storage.changePassword(userName, passwordHash, salt, false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
+		} finally {
+			if (password != null) {
+				password.clear();
+			}
+			if (pwdnew != null) {
+				pwdnew.clear();
+			}
+			// at least with mockito I don't see how to test these are actually cleared, since the
+			// change password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 
 	/** Reset a local user's password to a random password.
@@ -426,19 +465,68 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		//TODO RESET to reset and get admin password must be that admin
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
-		
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		storage.changePassword(userName, passwordHash, salt, true);
-		clear(passwordHash);
-		clear(salt);
+		checkCanResetPassword(token, userName);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			storage.changePassword(userName, passwordHash, salt, true);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the change
+			// password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	
+	private void checkCanResetPassword(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		// this method is gross. rethink. ideally based on the grantable roles somehow.
+		nonNull(userName, "userName");
+		final AuthUser admin = getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
+		final AuthUser user = storage.getUser(userName);
+		if (!user.isLocal()) {
+			throw new NoSuchUserException(String.format(
+					"%s is not a local user and has no password", userName.getName()));
+		}
+		if (!Role.isAdmin(user.getRoles())) {
+			return; //ok, any admin can change a std user's pwd.
+		}
+		if (admin.getUserName().equals(user.getUserName())) {
+			return; //ok, an admin can always change their own pwd.
+		}
+		if (admin.isRoot()) {
+			return; //ok, duh. It's root.
+		}
+		if (user.isRoot()) { // already know admin isn't root, so bail out.
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Only root can reset root password");
+		}
+		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
+		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with create administrator role");
+		}
+		/* at this point we know user is a standard admin and admin is not root. That means
+		 * that admin has to have CREATE_ADMIN to proceed. 
+		 */
+		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with administrator role");
+		}
+		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
+	}
+
 	/** Force a local user to reset their password on their next login.
 	 * @param token a token for a user with the administrator role.
 	 * @param userName the user name of the account for which a password reset is required.
@@ -451,8 +539,7 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
+		checkCanResetPassword(token, userName);
 		storage.forcePasswordReset(userName);
 	}
 
@@ -465,7 +552,7 @@ public class Authentication {
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.ADMIN); // force admin
+		getUser(token, Role.CREATE_ADMIN, Role.ROOT); // force admin
 		storage.forcePasswordReset();
 	}
 	
@@ -623,7 +710,6 @@ public class Authentication {
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
-			//TODO CODE why Arrays.asList here? write tests and then remove
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);

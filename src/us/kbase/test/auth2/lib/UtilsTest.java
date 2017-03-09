@@ -41,6 +41,8 @@ public class UtilsTest {
 		final byte[] b = "foobar".getBytes();
 		Utils.clear(b);
 		assertThat("clear failed", b, is(new byte[6]));
+		
+		Utils.clear(null); // noop
 	}
 	
 	@Test
