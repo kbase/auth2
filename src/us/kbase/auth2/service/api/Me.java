@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -24,6 +23,7 @@ import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -56,8 +56,14 @@ public class Me {
 		final Optional<Instant> ll = u.getLastLogin();
 		ret.put("lastlogin", ll.isPresent() ? ll.get().toEpochMilli() : null);
 		ret.put("customroles", u.getCustomRoles());
-		ret.put("roles", u.getRoles().stream().map(r -> r.getDescription())
-				.collect(Collectors.toList()));
+		final List<Map<String, String>> roles = new LinkedList<>();
+		for (final Role r: u.getRoles()) {
+			final Map<String, String> role = new HashMap<>();
+			role.put("id", r.getID());
+			role.put("desc", r.getDescription());
+			roles.add(role);
+		}
+		ret.put("roles", roles);
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put("idents", idents);
 		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
