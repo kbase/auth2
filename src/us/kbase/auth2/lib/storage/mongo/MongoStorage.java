@@ -52,6 +52,7 @@ import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -394,7 +395,7 @@ public class MongoStorage implements AuthStorage {
 		return getUserName(namestr);
 	}
 
-	private UserName getUserName(String namestr) throws AuthStorageException {
+	private UserName getUserName(final String namestr) throws AuthStorageException {
 		try {
 			return new UserName(namestr);
 		} catch (MissingParameterException | IllegalParameterException e) {
@@ -419,7 +420,19 @@ public class MongoStorage implements AuthStorage {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage() , e);
 		}
-	}	
+	}
+	
+	private Optional<TokenName> getTokenName(final String tokenName) throws AuthStorageException {
+		if (tokenName == null) {
+			return Optional.absent();
+		}
+		try {
+			return Optional.of(new TokenName(tokenName));
+		} catch (MissingParameterException | IllegalParameterException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
+		}
+	}
+	
 	@Override
 	public void changePassword(
 			final UserName name,
@@ -550,11 +563,13 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void storeToken(final HashedToken token) throws AuthStorageException {
 		nonNull(token, "token");
+		final Optional<TokenName> tokenName = token.getTokenName();
 		final Document td = new Document(
 				Fields.TOKEN_TYPE, token.getTokenType().getID())
 				.append(Fields.TOKEN_USER_NAME, token.getUserName().getName())
 				.append(Fields.TOKEN_ID, token.getId().toString())
-				.append(Fields.TOKEN_NAME, token.getTokenName())
+				.append(Fields.TOKEN_NAME, tokenName.isPresent() ?
+						tokenName.get().getName() : null)
 				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
 				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
 				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()));
@@ -626,7 +641,7 @@ public class MongoStorage implements AuthStorage {
 	private HashedToken getToken(final Document t) throws AuthStorageException {
 		return new HashedToken(
 				TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
-				t.getString(Fields.TOKEN_NAME),
+				getTokenName(t.getString(Fields.TOKEN_NAME)),
 				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				t.getString(Fields.TOKEN_TOKEN),
 				getUserName(t.getString(Fields.TOKEN_USER_NAME)),

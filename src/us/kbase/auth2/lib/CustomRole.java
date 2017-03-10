@@ -1,9 +1,9 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.checkString;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static us.kbase.auth2.lib.Utils.checkString;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -44,7 +44,7 @@ public class CustomRole {
 	
 	public static void checkValidRoleID(final String id)
 			throws MissingParameterException, IllegalParameterException {
-		checkString(id, "custom role id", MAX_ROLE_LENGTH);
+		Name.checkValidName(id, "custom role id", MAX_ROLE_LENGTH);
 		final Matcher m = INVALID_CHARS.matcher(id);
 		if (m.find()) {
 			throw new IllegalParameterException(String.format(

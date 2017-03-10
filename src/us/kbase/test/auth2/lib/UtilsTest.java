@@ -50,6 +50,7 @@ public class UtilsTest {
 		Utils.checkString(TestCommon.LONG1001, "name");
 		Utils.checkStringNoCheckedException(TestCommon.LONG1001, "name");
 		Utils.checkString("ok", "name", 2);
+		Utils.checkString(" \n  ok   \t", "name", 2);
 	}
 	
 	@Test

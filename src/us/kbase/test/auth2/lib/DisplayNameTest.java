@@ -19,10 +19,9 @@ public class DisplayNameTest {
 	
 	@Test
 	public void constructor() throws Exception {
-		//tests removing control characters
-		final DisplayName dn = new DisplayName("    fo\no\boΔ\n");
+		final DisplayName dn = new DisplayName("    foooΔ   ");
 		assertThat("incorrect displayname", dn.getName(), is("foooΔ"));
-		assertThat("incorrect toString", dn.toString(), is("DisplayName [name=foooΔ]"));
+		assertThat("incorrect toString", dn.toString(), is("DisplayName [getName()=foooΔ]"));
 	}
 	
 	@Test
@@ -34,6 +33,8 @@ public class DisplayNameTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new MissingParameterException("display name"));
 		failConstruct("   \n  ", new MissingParameterException("display name"));
+		failConstruct("    fo\no\boΔ\n", new IllegalParameterException(
+				"display name contains control characters"));
 		failConstruct(TestCommon.LONG101, new IllegalParameterException(
 				ErrorType.ILLEGAL_PARAMETER,
 				"display name size greater than limit 100"));
@@ -50,7 +51,7 @@ public class DisplayNameTest {
 	
 	@Test
 	public void canonical() throws Exception {
-		final DisplayName dn = new DisplayName("whEe      BA\nR  \n bleΔah   wuΞgga");
+		final DisplayName dn = new DisplayName("whEe      BAR   bleΔah   wuΞgga");
 		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(),
 				is(Arrays.asList("whee", "bar", "bleδah", "wuξgga")));
 	}

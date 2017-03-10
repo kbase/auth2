@@ -35,6 +35,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -98,7 +99,7 @@ public class Tokens {
 			@FormParam("tokentype") final String tokenType)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException {
+			UnauthorizedException, IllegalParameterException {
 		return createtoken(tokenName, tokenType,
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 	}
@@ -179,8 +180,9 @@ public class Tokens {
 			final IncomingToken userToken)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException {
-		return new UINewToken(auth.createToken(userToken, tokenName, "server".equals(tokenType)));
+			UnauthorizedException, IllegalParameterException {
+		return new UINewToken(auth.createToken(userToken, new TokenName(tokenName),
+				"server".equals(tokenType)));
 	}
 
 	private Map<String, Object> getTokens(final IncomingToken token)

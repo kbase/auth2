@@ -56,4 +56,44 @@ public class TokenSet {
 	public Set<HashedToken> getTokens() {
 		return tokens;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((currentToken == null) ? 0 : currentToken.hashCode());
+		result = prime * result + ((tokens == null) ? 0 : tokens.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		TokenSet other = (TokenSet) obj;
+		if (currentToken == null) {
+			if (other.currentToken != null) {
+				return false;
+			}
+		} else if (!currentToken.equals(other.currentToken)) {
+			return false;
+		}
+		if (tokens == null) {
+			if (other.tokens != null) {
+				return false;
+			}
+		} else if (!tokens.equals(other.tokens)) {
+			return false;
+		}
+		return true;
+	}
+	
+	
 }

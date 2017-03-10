@@ -224,13 +224,14 @@ public class LocalUserTest {
 				"LocalUser [passwordHash=[102, 111, 111, 98, 97, 114, 98, 97, 122, 98], " +
 				"salt=[119, 104], forceReset=false, " +
 				"lastReset=Optional.of(1970-01-01T00:00:04Z), " +
-				"getDisplayName()=DisplayName [name=bar], " +
-				"getEmail()=EmailAddress [email=f@g.com], getUserName()=UserName [name=foo], " +
+				"getDisplayName()=DisplayName [getName()=bar], " +
+				"getEmail()=EmailAddress [email=f@g.com], " +
+				"getUserName()=UserName [getName()=foo], " +
 				"getRoles()=[CREATE_ADMIN], getCustomRoles()=[foobar], " +
 				"getCreated()=1970-01-01T00:00:01Z, " +
 				"getLastLogin()=Optional.of(1970-01-01T00:00:02Z), " +
 				"getDisabledState()=UserDisabledState [disabledReason=Optional.absent(), " +
-				"byAdmin=Optional.of(UserName [name=who])," +
+				"byAdmin=Optional.of(UserName [getName()=who])," +
 				" time=Optional.of(1970-01-01T00:00:03Z)]]"));
 		
 	}

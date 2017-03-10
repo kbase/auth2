@@ -9,14 +9,20 @@ import java.util.UUID;
 import org.bson.Document;
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 
 /* Tests the case where somehow invalid data gets into the DB and a container class throws an
@@ -100,6 +106,25 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 		
 		failGetUser(new UserName("foo"), new AuthStorageException(
 				"Illegal value stored in db: 30020 Illegal email address: noemailhere"));
+	}
+	
+	@Test
+	public void illegalTokenName() throws Exception {
+		final IncomingToken t = new IncomingToken("foobar");
+		storage.storeToken(new HashedToken(TokenType.LOGIN, Optional.of(new TokenName("foo")),
+				UUID.randomUUID(), t.getHashedToken().getTokenHash(), new UserName("baz"),
+				Instant.now(), Instant.now().plusSeconds(3600)));
+		db.getCollection("tokens").updateOne(new Document("user", "baz"),
+				new Document("$set", new Document("name", "  foo\nbar  ")));
+		
+		try {
+			storage.getToken(t.getHashedToken());
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
+					"Illegal value stored in db: 30001 Illegal input parameter: " +
+					"token name contains control characters"));
+		}
 	}
 	
 	@Test

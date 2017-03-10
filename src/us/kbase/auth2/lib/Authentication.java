@@ -1,6 +1,5 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
@@ -636,11 +635,11 @@ public class Authentication {
 	 */
 	public NewToken createToken(
 			final IncomingToken token,
-			final String tokenName,
+			final TokenName tokenName,
 			final boolean serverToken)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, UnauthorizedException {
-		checkString(tokenName, "token name"); //TODO CODE max token name size 100, make a Name class that handles the checking, removes control chars, etc and UserName & other classes inherit from
+		nonNull(tokenName, "tokenName");
 		final HashedToken t = getToken(token);
 		if (!t.getTokenType().equals(TokenType.LOGIN)) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,

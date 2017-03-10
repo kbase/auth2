@@ -7,6 +7,9 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import java.time.Instant;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 
 /** A new token associated with a user.
@@ -16,7 +19,7 @@ import us.kbase.auth2.lib.UserName;
 public class NewToken {
 
 	private final TokenType type;
-	private final String tokenName;
+	private final Optional<TokenName> tokenName;
 	private final String token;
 	private final UserName userName;
 	private final Instant expirationDate;
@@ -48,7 +51,7 @@ public class NewToken {
 		}
 		this.id = id;
 		this.type = type;
-		this.tokenName = null;
+		this.tokenName = Optional.absent();
 		this.token = token;
 		this.userName = userName;
 		this.creationDate = creation;
@@ -68,14 +71,14 @@ public class NewToken {
 	public NewToken(
 			final UUID id,
 			final TokenType type,
-			final String tokenName,
+			final TokenName tokenName,
 			final String token,
 			final UserName userName,
 			final Instant creation,
 			final long lifetimeInMS) {
 		nonNull(id, "id");
 		checkStringNoCheckedException(token, "token");
-		checkStringNoCheckedException(tokenName, "tokenName");
+		nonNull(tokenName, "tokenName");
 		nonNull(type, "type");
 		nonNull(userName, "userName");
 		nonNull(creation, "creation");
@@ -84,7 +87,7 @@ public class NewToken {
 		}
 		this.id = id;
 		this.type = type;
-		this.tokenName = tokenName;
+		this.tokenName = Optional.of(tokenName);
 		this.token = token;
 		this.userName = userName;
 		this.creationDate = creation;
@@ -99,10 +102,10 @@ public class NewToken {
 		return type;
 	}
 	
-	/** Get the token's name, or null if the token is not named.
+	/** Get the token's name, or absent if the token is not named.
 	 * @return the token's name.
 	 */
-	public String getTokenName() {
+	public Optional<TokenName> getTokenName() {
 		return tokenName;
 	}
 

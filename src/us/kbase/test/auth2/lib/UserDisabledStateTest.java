@@ -181,7 +181,7 @@ public class UserDisabledStateTest {
 		final UserDisabledState uds = new UserDisabledState("foo", new UserName("bar"), t);
 		assertThat("incorrect toString", uds.toString(), is(
 				"UserDisabledState [disabledReason=Optional.of(foo), " +
-				"byAdmin=Optional.of(UserName [name=bar]), " +
+				"byAdmin=Optional.of(UserName [getName()=bar]), " +
 				"time=Optional.of(1970-01-01T00:00:07Z)]"));
 	}
 }
