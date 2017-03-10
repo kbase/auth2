@@ -444,6 +444,179 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
+	@Test
+	public void revokeTokenAdmin() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+
+		revokeTokenAdmin(admin);
+	}
+	
+	@Test
+	public void revokeTokenAdminFailStdUser() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+
+		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void revokeTokenAdminFailCreate() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+
+		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void revokeTokenAdminFailRoot() throws Exception {
+		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+
+		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void revokeTokenAdminFailDisabled() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
+
+		failRevokeTokenAdmin(admin, new DisabledUserException());
+	}
+	
+	@Test
+	public void revokeTokenAdminFailNulls() throws Exception {
+		final Authentication auth = initTestAuth().auth;
+		failRevokeTokenAdmin(auth, null, new UserName("foo"), UUID.randomUUID(),
+				new NullPointerException("token"));
+		failRevokeTokenAdmin(auth, new IncomingToken("f"), null, UUID.randomUUID(),
+				new NullPointerException("userName"));
+		failRevokeTokenAdmin(auth, new IncomingToken("f"), new UserName("foo"), null,
+				new NullPointerException("tokenID"));
+	}
+	
+	@Test
+	public void revokeTokenAdminFailBadToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final UUID target = UUID.randomUUID();
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failRevokeTokenAdmin(auth, t, new UserName("foo"), target, new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeTokenAdminFailCatastropic() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID target = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		failRevokeTokenAdmin(auth, t, new UserName("bar"), target, new RuntimeException(
+				"There seems to be an error in the " +
+				"storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void revokeTokenAdminFailNoSuchToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final UUID target = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(admin);
+		
+		doThrow(new NoSuchTokenException(target.toString()))
+				.when(storage).deleteToken(new UserName("bar"), target);
+		
+		failRevokeTokenAdmin(auth, t, new UserName("bar"), target,
+				new NoSuchTokenException(target.toString()));
+	}
+
+	private void revokeTokenAdmin(final AuthUser admin) throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID target = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				admin.getUserName(), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		when(storage.getUser(admin.getUserName())).thenReturn(admin);
+		
+		try {
+			auth.revokeToken(t, new UserName("whee"), target);
+		
+			verify(storage).deleteToken(new UserName("whee"), target);
+		} catch (Throwable th) {
+			if (admin.isDisabled()) {
+				verify(storage).deleteTokens(admin.getUserName());
+			}
+			throw th;
+		}
+	}
+	
+	private void failRevokeTokenAdmin(
+			final AuthUser admin,
+			final Exception e) {
+		try {
+			revokeTokenAdmin(admin);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failRevokeTokenAdmin(
+			final Authentication auth,
+			final IncomingToken t,
+			final UserName name,
+			final UUID target,
+			final Exception e) {
+		try {
+			auth.revokeToken(t, name, target);
+			fail("exception expected");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 	
 	//TODO NOW TEST create & revoke
 	
