@@ -4,11 +4,11 @@ package us.kbase.auth2.lib;
 import com.nulabinc.zxcvbn.Zxcvbn;
 import com.nulabinc.zxcvbn.Strength;
 
-import org.bouncycastle.util.Arrays;
-
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
+
+import java.util.Arrays;
 
 /** A password.
  * 
@@ -22,6 +22,8 @@ import static us.kbase.auth2.lib.Utils.nonNull;
  *
  */
 public class Password {
+
+
 
 	/** Sets the minimum strength score required of a password.  The zxcvbn strength score is:
 	 * 
@@ -39,13 +41,26 @@ public class Password {
 	
 	private final char[] password;
 	
-	/** Create a password. Note that the incoming array is not copied, and any changes to the array
-	 * will be reflected in this class.
+	/**
+	 * Writes the 0 character to every position of the password array to clear from memory.
+	 * @param password
+	 */
+	public static void clearPasswordArray(final char[] password) {
+		nonNull(password, "password");
+		for (int i = 0; i < password.length; i++) {
+			password[i] = '0';
+		}
+	}
+	
+	/** Create a password.  Any further changes to the input char array will not be
+	 * reflected.  You should use {@link #clearPasswordArray()} to clear your input
+	 * array as soon as the Password object is initialized to prevent your password
+	 * from lingering in memory.
 	 * @param password the password to wrap.
 	 */
 	public Password(final char[] password) {
 		nonNull(password, "password");
-		this.password = password;
+		this.password = Arrays.copyOf(password, password.length);;
 	}
 	
 	/** Get the password.
@@ -73,7 +88,7 @@ public class Password {
 		}
 		
 		// check strength requirement
-		Strength strength = new Zxcvbn().measure(new String(password));
+		final Strength strength = new Zxcvbn().measure(new String(password));
 		if(strength.getScore() < MIN_PASSWORD_STRENGTH_SCORE) {
 			String warning = strength.getFeedback().getWarning();
 			throw new IllegalPasswordException("Password is not strong enough. " + warning);
@@ -81,17 +96,22 @@ public class Password {
 	}
 	
 	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + Arrays.hashCode(password);
+		return result;
+	}
+	
+	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) {
+		if (this == obj)
 			return true;
-		}
-		if (obj == null) {
+		if (obj == null)
 			return false;
-		}
-		if (getClass() != obj.getClass()) {
+		if (getClass() != obj.getClass())
 			return false;
-		}
 		final Password other = (Password) obj;
-		return Arrays.areEqual(password, other.getPassword());
+		return Arrays.equals(password, other.getPassword());
 	}
 }

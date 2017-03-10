@@ -14,6 +14,7 @@ import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -129,6 +130,14 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ile.getErr(), is(et));
 		assertThat("incorrect message", ile.getMessage(), is(format(et, "bar")));
 		assertThat("incorrect cause", ile.getCause(), is((Throwable) null));
+	}
+	
+	@Test
+	public void illegalPassword() throws Exception {
+		final ErrorType et = ErrorType.ILLEGAL_PASSWORD;
+		final IllegalPasswordException ipe = new IllegalPasswordException("foo");
+		assertThat("incorrect message", ipe.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ipe.getCause(), is((Throwable) null));
 	}
 	
 	@Test

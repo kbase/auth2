@@ -5,10 +5,6 @@ package us.kbase.auth2.lib.exceptions;
  */
 @SuppressWarnings("serial")
 public class IllegalPasswordException extends AuthException {
-	public IllegalPasswordException() {
-		super(ErrorType.ILLEGAL_PASSWORD, null);
-	}
-	
 	public IllegalPasswordException(final String message) {
 		super(ErrorType.ILLEGAL_PASSWORD, message);
 	}
