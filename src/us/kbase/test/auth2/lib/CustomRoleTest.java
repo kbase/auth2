@@ -28,7 +28,8 @@ public class CustomRoleTest {
 		failConstruct(null, "foo", new MissingParameterException("custom role id"));
 		failConstruct("   \n  ", "foo", new MissingParameterException("custom role id"));
 		failConstruct("bar", null, new MissingParameterException("custom role description"));
-		failConstruct("bar", "   \t \n  ", new MissingParameterException("custom role description"));
+		failConstruct("bar", "   \t \n  ",
+				new MissingParameterException("custom role description"));
 		
 		failConstruct(TestCommon.LONG101, "foo", new IllegalParameterException(
 				ErrorType.ILLEGAL_PARAMETER,
@@ -84,5 +85,4 @@ public class CustomRoleTest {
 	public void equals() {
 		EqualsVerifier.forClass(CustomRole.class).usingGetClass().verify();
 	}
-	
 }

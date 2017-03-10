@@ -640,7 +640,7 @@ public class Authentication {
 			final boolean serverToken)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, UnauthorizedException {
-		checkString(tokenName, "token name"); //TODO CODE max token name size 100, make a Name class that handles the checking, removes control chars, etc and UserName & other classes inherit from
+		checkString(tokenName, "token name");
 		final HashedToken t = getToken(token);
 		if (!t.getTokenType().equals(TokenType.LOGIN)) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
