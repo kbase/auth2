@@ -446,7 +446,7 @@ public class Authentication {
 			pwdnew.checkValidity();
 			getLocalUser(userName, password); //checks pwd validity and nulls
 			salt = randGen.generateSalt();
-			char [] pwd_copy = pwdnew.getPassword();
+			final char [] pwd_copy = pwdnew.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			Password.clearPasswordArray(pwd_copy);
 			pwdnew.clear();
