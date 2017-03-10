@@ -617,6 +617,54 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
+	@Test
+	public void revokeAllTokensUser() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		auth.revokeTokens(t);
+		
+		verify(storage).deleteTokens(new UserName("foo"));
+	}
+	
+	@Test
+	public void revokeAllTokensUserFailNull() throws Exception {
+		final Authentication auth = initTestAuth().auth;
+		failRevokeAllTokensUser(auth, null, new NullPointerException("token"));
+	}
+	
+	@Test
+	public void revokeAllTokenUserFailBadToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failRevokeAllTokensUser(auth, t, new InvalidTokenException());
+	}
+	
+	private void failRevokeAllTokensUser(
+			final Authentication auth,
+			final IncomingToken t,
+			final Exception e) {
+		try {
+			auth.revokeTokens(t);
+			fail("expected exceptoin");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 	
 	//TODO NOW TEST create & revoke
 	
