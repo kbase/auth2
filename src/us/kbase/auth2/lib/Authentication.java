@@ -1,15 +1,15 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.URL;
 import java.security.NoSuchAlgorithmException;
+import java.time.Clock;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -104,8 +104,8 @@ public class Authentication {
 	//TODO USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
-	//TODO NOW ID have separate display name for providers to allow using the same provider class with different provider accounts. Still hard code db name & returned name. Then talk to bill & eric re special page
 	
+	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
 	
@@ -126,6 +126,10 @@ public class Authentication {
 	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
+	private final Clock clock;
+	
+	//TODO UI show this with note that it'll take X seconds to sync to other server instance
+	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
 	 * @param storage the storage system to use for information persistance.
@@ -141,7 +145,11 @@ public class Authentication {
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException {
-		this(storage, identityProviderSet, defaultExternalConfig, getDefaultRandomGenerator());
+		this(storage,
+				identityProviderSet,
+				defaultExternalConfig,
+				getDefaultRandomGenerator(),
+				Clock.systemDefaultZone()); // don't care about time zone, not using it
 	}
 
 	private static RandomDataGenerator getDefaultRandomGenerator() {
@@ -157,9 +165,10 @@ public class Authentication {
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
-			final RandomDataGenerator randGen)
+			final RandomDataGenerator randGen,
+			final Clock clock)
 			throws StorageInitException {
-		
+		this.clock = clock;
 		this.randGen = randGen;
 		try {
 			pwdcrypt = new PasswordCrypt();
@@ -193,16 +202,24 @@ public class Authentication {
 		}
 	}
 	
+	// for test purposes. Resets the next update time to be the previous update + seconds.
+	@SuppressWarnings("unused")
+	private void setConfigUpdateInterval(int seconds) {
+		final Instant prevUpdate = cfg.getNextUpdateTime();
+		final Instant newUpdate = prevUpdate.minusSeconds(cfgUpdateIntervalSec)
+				.plusSeconds(seconds);
+		cfgUpdateIntervalSec = seconds;
+		cfg.setNextUpdateTime(newUpdate);
+	}
+	
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
 	//TODO TEST config manager
 	private class ConfigManager {
 	
-		private static final int CFG_UPDATE_INTERVAL_SEC = 30;
-		
 		private AuthConfigSet<CollectingExternalConfig> cfg;
-		private Date nextConfigUpdate;
+		private Instant nextConfigUpdate;
 		private AuthStorage storage;
 		
 		public ConfigManager(final AuthStorage storage)
@@ -211,9 +228,19 @@ public class Authentication {
 			updateConfig();
 		}
 		
+		// for testing purposes.
+		public synchronized Instant getNextUpdateTime() {
+			return nextConfigUpdate;
+		}
+		
+		// for testing purposes.
+		public synchronized void setNextUpdateTime(final Instant time) {
+			nextConfigUpdate = time;
+		}
+		
 		public synchronized AuthConfigSet<CollectingExternalConfig> getConfig()
 				throws AuthStorageException {
-			if (new Date().after(nextConfigUpdate)) {
+			if (Instant.now().isAfter(nextConfigUpdate)) {
 				updateConfig();
 			}
 			return cfg;
@@ -229,8 +256,7 @@ public class Authentication {
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
-			nextConfigUpdate = new Date(new Date().getTime() +
-					CFG_UPDATE_INTERVAL_SEC * 1000);
+			nextConfigUpdate = Instant.now().plusSeconds(cfgUpdateIntervalSec);
 		}
 	}
 
@@ -249,30 +275,35 @@ public class Authentication {
 		pwd.checkValidity();
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		pwd.clear();
-		final DisplayName dn;
 		try {
-			dn = new DisplayName("root");
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("This is impossible", e);
-		}
-		final NewRootUser root = new NewRootUser(EmailAddress.UNKNOWN, dn, passwordHash, salt);
-		try {
-			storage.createLocalUser(root);
-		// only way to avoid a race condition. Checking existence before creating user means if
-		// user is added between check and update update will fail
-		} catch (UserExistsException uee) {
+			pwd.clear();
+			final DisplayName dn;
 			try {
-				storage.changePassword(UserName.ROOT, passwordHash, salt, false);
-				if (storage.getUser(UserName.ROOT).isDisabled()) {
-					storage.enableAccount(UserName.ROOT, UserName.ROOT);
-				}
-			} catch (NoSuchUserException nsue) {
-				throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				dn = new DisplayName("root");
+			} catch (IllegalParameterException | MissingParameterException e) {
+				throw new RuntimeException("This is impossible", e);
 			}
+			final NewRootUser root = new NewRootUser(
+					EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
+			try {
+				storage.createLocalUser(root);
+				// only way to avoid a race condition. Checking existence before creating user
+				// means if user is added between check and update update will fail
+			} catch (UserExistsException uee) {
+				try {
+					storage.changePassword(UserName.ROOT, passwordHash, salt, false);
+					if (storage.getUser(UserName.ROOT).isDisabled()) {
+						storage.enableAccount(UserName.ROOT, UserName.ROOT);
+					}
+				} catch (NoSuchUserException nsue) {
+					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
+				}
+			}
+		} finally {
+			pwd.clear();
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 	
 	/** Creates a new local user.
@@ -303,64 +334,87 @@ public class Authentication {
 					"Cannot create ROOT user");
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
-				passwordHash, salt, true);
-		storage.createLocalUser(lu);
-		clear(passwordHash);
-		clear(salt);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
+					passwordHash, salt, true);
+			storage.createLocalUser(lu);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the create
+			// user storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	
 	/** Login with a local user.
+	 * 
+	 * The password is always cleared once the password has been verified or if an error occurs.
+	 * 
 	 * @param userName the username of the account.
-	 * @param pwd the password for the account.
+	 * @param password the password for the account.
 	 * @return the result of the login attempt.
 	 * @throws AuthenticationException if the login attempt failed.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
 	 * the user account is disabled.
 	 */
-	public LocalLoginResult localLogin(final UserName userName, final Password pwd)
+	public LocalLoginResult localLogin(final UserName userName, final Password password)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException {
-		final LocalUser u = getLocalUser(userName, pwd);
+		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
 			return new LocalLoginResult(u.getUserName());
 		}
 		return new LocalLoginResult(login(u.getUserName()));
 	}
 
-	private LocalUser getLocalUser(final UserName userName, final Password pwd)
+	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
-		nonNull(userName, "userName");
-		nonNull(pwd, "pwd");
+		nonNull(password, "password");
 		final LocalUser u;
 		try {
-			u = storage.getLocalUser(userName);
-		} catch (NoSuchUserException e) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
+			nonNull(userName, "userName");
+			try {
+				u = storage.getLocalUser(userName);
+			} catch (NoSuchUserException e) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
+				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch");
+			}
+			password.clear();
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Non-admin login is disabled");
+			}
+			if (u.isDisabled()) {
+				throw new DisabledUserException();
+			}
+		} finally {
+			password.clear();
 		}
-		if (!pwdcrypt.authenticate(pwd.getPassword(), u.getPasswordHash(), u.getSalt())) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"Username / password mismatch");
-		}
-		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Non-admin login is disabled");
-		}
-		if (u.isDisabled()) {
-			throw new UnauthorizedException(ErrorType.DISABLED, "This account is disabled");
-		}
-		pwd.clear();
 		return u;
 	}
 
 	/** Change a local user's password.
+	 * 
+	 * Clears the passwords as soon as they're no longer needed or when an error occurs.
+	 * 
 	 * @param userName the user name of the account.
-	 * @param pwdold the old password for the user account.
+	 * @param password the old password for the user account.
 	 * @param pwdnew the new password for the user account.
 	 * @throws AuthenticationException if the username and password do not match.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
@@ -369,26 +423,37 @@ public class Authentication {
 	 */
 	public void localPasswordChange(
 			final UserName userName,
-			final Password pwdold,
+			final Password password,
 			final Password pwdnew)
-			throws AuthenticationException, UnauthorizedException, AuthStorageException, IllegalPasswordException {
-		nonNull(pwdnew, "pwdnew");
-		if(pwdnew.equals(pwdold)) {
-			throw new IllegalPasswordException("Old and new passwords are identical.");
-		}
-		pwdnew.checkValidity();
-		getLocalUser(userName, pwdold); //checks pwd validity and nulls
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
-		pwdnew.clear();
+					throws AuthenticationException, UnauthorizedException, AuthStorageException, IllegalPasswordException {
+		byte[] salt = null;
+		byte[] passwordHash = null;
 		try {
+			nonNull(pwdnew, "pwdnew");
+			if(pwdnew.equals(password)) {
+				throw new IllegalPasswordException("Old and new passwords are identical.");
+			}
+			pwdnew.checkValidity();
+			getLocalUser(userName, password); //checks pwd validity and nulls
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwdnew.getPassword(), salt);
+			pwdnew.clear();
 			storage.changePassword(userName, passwordHash, salt, false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
-			throw new RuntimeException("Sorry, you ceased to exist in the last ~10ms.", e);
+			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
+		} finally {
+			if (password != null) {
+				password.clear();
+			}
+			if (pwdnew != null) {
+				pwdnew.clear();
+			}
+			// at least with mockito I don't see how to test these are actually cleared, since the
+			// change password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
 		}
-		clear(passwordHash);
-		clear(salt);
 	}
 
 	/** Reset a local user's password to a random password.
@@ -404,19 +469,68 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		//TODO RESET to reset and get admin password must be that admin
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
-		
-		final Password pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
-		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-		storage.changePassword(userName, passwordHash, salt, true);
-		clear(passwordHash);
-		clear(salt);
+		checkCanResetPassword(token, userName);
+		Password pwd = null;
+		byte[] salt = null;
+		byte[] passwordHash = null;
+		try {
+			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			salt = randGen.generateSalt();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			storage.changePassword(userName, passwordHash, salt, true);
+		} catch (Throwable t) {
+			if (pwd != null) {
+				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
+			}
+			throw t;
+		} finally {
+			// at least with mockito I don't see how to capture these either, since the change
+			// password storage call needs to throw an exception so can't use an Answer
+			clear(passwordHash);
+			clear(salt);
+		}
 		return pwd;
 	}
 	
+	private void checkCanResetPassword(final IncomingToken token, final UserName userName)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+			NoSuchUserException {
+		// this method is gross. rethink. ideally based on the grantable roles somehow.
+		nonNull(userName, "userName");
+		final AuthUser admin = getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
+		final AuthUser user = storage.getUser(userName);
+		if (!user.isLocal()) {
+			throw new NoSuchUserException(String.format(
+					"%s is not a local user and has no password", userName.getName()));
+		}
+		if (!Role.isAdmin(user.getRoles())) {
+			return; //ok, any admin can change a std user's pwd.
+		}
+		if (admin.getUserName().equals(user.getUserName())) {
+			return; //ok, an admin can always change their own pwd.
+		}
+		if (admin.isRoot()) {
+			return; //ok, duh. It's root.
+		}
+		if (user.isRoot()) { // already know admin isn't root, so bail out.
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Only root can reset root password");
+		}
+		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
+		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with create administrator role");
+		}
+		/* at this point we know user is a standard admin and admin is not root. That means
+		 * that admin has to have CREATE_ADMIN to proceed. 
+		 */
+		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Cannot reset password of user with administrator role");
+		}
+		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
+	}
+
 	/** Force a local user to reset their password on their next login.
 	 * @param token a token for a user with the administrator role.
 	 * @param userName the user name of the account for which a password reset is required.
@@ -429,8 +543,7 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
+		checkCanResetPassword(token, userName);
 		storage.forcePasswordReset(userName);
 	}
 
@@ -443,13 +556,14 @@ public class Authentication {
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.ADMIN); // force admin
+		getUser(token, Role.CREATE_ADMIN, Role.ROOT); // force admin
 		storage.forcePasswordReset();
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
-		final NewToken nt = new NewToken(TokenType.LOGIN, randGen.getToken(),
-				userName, cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
+		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.LOGIN, randGen.getToken(),
+				userName, clock.instant(),
+				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		storage.storeToken(nt.getHashedToken());
 		setLastLogin(userName);
 		return nt;
@@ -459,7 +573,7 @@ public class Authentication {
 	private void setLastLogin(final UserName userName)
 			throws AuthStorageException {
 		try {
-			storage.setLastLogin(userName, new Date());
+			storage.setLastLogin(userName, clock.instant());
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
 					"Something is very broken. User should exist but doesn't: "
@@ -526,11 +640,11 @@ public class Authentication {
 	 */
 	public NewToken createToken(
 			final IncomingToken token,
-			final String tokenName,
+			final TokenName tokenName,
 			final boolean serverToken)
 			throws AuthStorageException, MissingParameterException,
 			InvalidTokenException, UnauthorizedException {
-		checkString(tokenName, "token name"); //TODO CODE max token name size 100, make a Name class that handles the checking, removes control chars, etc and UserName & other classes inherit from
+		nonNull(tokenName, "tokenName");
 		final HashedToken t = getToken(token);
 		if (!t.getTokenType().equals(TokenType.LOGIN)) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -549,8 +663,8 @@ public class Authentication {
 		} else {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
-		final NewToken nt = new NewToken(TokenType.EXTENDED_LIFETIME,
-				tokenName, randGen.getToken(), au.getUserName(), life);
+		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
+				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
 	}
@@ -600,7 +714,6 @@ public class Authentication {
 		if (required.length > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
-			//TODO CODE why Arrays.asList here? write tests and then remove
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
@@ -1125,11 +1238,9 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 30 * 60 * 1000);
-		storage.storeIdentitiesTemporarily(tt.getHashedToken(), store);
+		final TemporaryToken tt = storeIdentitiesTemporarily(store, 30 * 60 * 1000);
 		return new LoginToken(tt, ls);
 	}
-
 
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after {@link #login(String, String)}.
@@ -1230,7 +1341,9 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to create user with remote identity %s", identityID));
 		}
-		storage.createUser(new NewUser(userName, email, displayName, match.get(), new Date()));
+		final Instant now = clock.instant();
+		storage.createUser(new NewUser(
+				userName, email, displayName, match.get(), now, Optional.of(now)));
 		if (linkAll) {
 			ids.remove(match);
 			filterLinkCandidates(ids);
@@ -1365,6 +1478,73 @@ public class Authentication {
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider.
+	 * 
+	 * Unlike {@link #link(IncomingToken, String, String)} this method never links immediately
+	 * nor does it check the state of the user to ensure linking is allowed.
+	 * 
+	 * A temporary token is returned that is associated with the
+	 * state of the link request. This token can be used to retrieve the link state via
+	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
+	 * 
+	 * In some cases, this method will have
+	 * been called after a redirect from a 3rd party identity provider, and as such, the link
+	 * flow is not under the control of any UI elements at that point. Hence, the method continues
+	 * if no accounts are available for linking, and an error thrown in later stages of the
+	 * linking process. The state is stored so the user can be redirected to the appropriate
+	 * UI element, which can then retrieve the link state and continue. A secondary point is that
+	 * the URL will contain the identity provider authcode, and so the user should be redirected
+	 * to a new URL that does not contain said authcode as soon as possible.
+	 * 
+	 * @param provider the name of the identity provider that is servicing the link request.
+	 * @param authcode the authcode provided by the provider.
+	 * @return a temporary token.
+	 * @throws MissingParameterException if the authcode is missing.
+	 * @throws IdentityRetrievalException if an error occurred when trying to retrieve identities
+	 * from the provider.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
+	 */
+	public TemporaryToken link(
+			final String provider,
+			final String authcode)
+			throws InvalidTokenException, AuthStorageException,
+			MissingParameterException, IdentityRetrievalException,
+			NoSuchIdentityProviderException {
+		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
+		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
+		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
+		 * provider. Any controllable error should be thrown when the process flow is back
+		 * under the control of the primary auth UI.
+		 */
+		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
+				.collect(Collectors.toSet());
+		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+	}
+	
+	private TemporaryToken storeIdentitiesTemporarily(
+			final Set<RemoteIdentityWithLocalID> ids,
+			final int tokenLifeTimeMS)
+			throws AuthStorageException {
+		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
+				randGen.getToken(), clock.instant(), tokenLifeTimeMS);
+		storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
+		return tt;
+	}
+
+	private Set<RemoteIdentity> getLinkCandidates(final String provider, final String authcode)
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			MissingParameterException, IdentityRetrievalException {
+		final IdentityProvider idp = getIdentityProvider(provider);
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new MissingParameterException("authorization code");
+		}
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
+		filterLinkCandidates(ris);
+		return ris;
+	}
+	
+	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
+	 * identity provider.
 	 * If the information returned from the identity provider allows the link to occur
 	 * immediately, the account is linked to the remote identity immediately.
 	 * 
@@ -1405,12 +1585,7 @@ public class Authentication {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final IdentityProvider idp = getIdentityProvider(provider);
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
-		filterLinkCandidates(ris);
+		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
@@ -1431,11 +1606,10 @@ public class Authentication {
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = new TemporaryToken(randGen.getToken(), 10 * 60 * 1000);
 			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
 					.collect(Collectors.toSet());
-			storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
-			if (ids.isEmpty()) {
+			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+			if (ris.isEmpty()) {
 				lt = new LinkToken(tt, new LinkIdentities(u, provider));
 			} else {
 				lt = new LinkToken(tt, new LinkIdentities(u, ids));
@@ -1455,7 +1629,8 @@ public class Authentication {
 	}
 	
 	/** Get the current state of a linking process associated with a temporary token.
-	 * This method is expected to be called after {@link #link(IncomingToken, String, String)}.
+	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
+	 * {@link #link(String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, UUID)}.
 	 * 
@@ -1756,6 +1931,7 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(userName, email, dn, ri.withID(), null));
+		storage.createUser(new NewUser(
+				userName, email, dn, ri.withID(), clock.instant(), Optional.absent()));
 	}
 }

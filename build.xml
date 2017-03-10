@@ -207,6 +207,8 @@
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
       <test name="us.kbase.test.auth2.lib.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.CollectingExternalConfigTest"/>
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
@@ -218,10 +220,11 @@
       <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
+      <test name="us.kbase.test.auth2.lib.NameTest"/>
       <test name="us.kbase.test.auth2.lib.NewUserTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
-      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
+      <test name="us.kbase.test.auth2.lib.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>
@@ -244,6 +247,7 @@
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
+      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

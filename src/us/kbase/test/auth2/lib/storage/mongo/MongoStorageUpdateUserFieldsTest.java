@@ -4,10 +4,13 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Date;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
@@ -23,6 +26,8 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 
+	private static final Instant NOW = Instant.now();
+	
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
 			new RemoteIdentityID("prov", "bar1"),
@@ -31,7 +36,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateNoop() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, null);
+				new DisplayName("bar1"), REMOTE, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"), new UserUpdate());
 		final AuthUser au = storage.getUser(new UserName("user1"));
@@ -43,7 +48,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateDisplay() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, null);
+				new DisplayName("bar1"), REMOTE, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withDisplayName(new DisplayName("whee")));
@@ -56,7 +61,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateEmail() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, null);
+				new DisplayName("bar1"), REMOTE, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com")));
@@ -69,7 +74,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateBoth() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, null);
+				new DisplayName("bar1"), REMOTE, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com"))
@@ -105,26 +110,26 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void lastLogin() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, null);
+				new DisplayName("bar1"), REMOTE, NOW, null);
 		storage.createUser(nu);
-		final Date d = new Date(new Date().getTime() + 1000);
+		final Instant d = NOW.plus(Duration.ofHours(2));
 		storage.setLastLogin(new UserName("user1"), d);
 		assertThat("incorrect login date", storage.getUser(new UserName("user1")).getLastLogin(),
-				is(d));
+				is(Optional.of(d)));
 	}
 	
 	@Test
 	public void lastLoginFailNulls() throws Exception {
-		failLastLogin(null, new Date(), new NullPointerException("userName"));
+		failLastLogin(null, Instant.now(), new NullPointerException("userName"));
 		failLastLogin(new UserName("foo"), null, new NullPointerException("lastLogin"));
 	}
 	
 	@Test
 	public void lastLoginFailNoSuchUser() throws Exception {
-		failLastLogin(new UserName("foo"), new Date(), new NoSuchUserException("foo"));
+		failLastLogin(new UserName("foo"), Instant.now(), new NoSuchUserException("foo"));
 	}
 	
-	private void failLastLogin(final UserName name, final Date d, final Exception e) {
+	private void failLastLogin(final UserName name, final Instant d, final Exception e) {
 		try {
 			storage.setLastLogin(name, d);
 			fail("expected exception");

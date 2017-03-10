@@ -1,6 +1,10 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
+import static org.mockito.Mockito.mock;
+
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.time.Clock;
 
 import org.bson.Document;
 import org.junit.AfterClass;
@@ -21,6 +25,7 @@ public class MongoStorageTester {
 	static MongoClient mc;
 	static MongoDatabase db;
 	static MongoStorage storage;
+	static Clock mockClock;
 	static Version mongoDBVer;
 	static int indexVer;
 	
@@ -34,7 +39,6 @@ public class MongoStorageTester {
 				TestCommon.getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());
 		db = mc.getDatabase("test_mongostorage");
-		storage = new MongoStorage(db);
 		
 		final Document bi = db.runCommand(new Document("buildinfo", 1));
 		final String version = bi.getString("version");
@@ -61,5 +65,10 @@ public class MongoStorageTester {
 	@Before
 	public void clearDB() throws Exception {
 		TestCommon.destroyDB(db);
+		mockClock = mock(Clock.class);
+		final Constructor<MongoStorage> con = MongoStorage.class.getDeclaredConstructor(
+				MongoDatabase.class, Clock.class);
+		con.setAccessible(true);
+		storage = con.newInstance(db, mockClock);
 	}
 }

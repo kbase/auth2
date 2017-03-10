@@ -8,8 +8,8 @@ import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -37,6 +37,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.AuthConfig;
@@ -256,15 +257,16 @@ public class Admin {
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
 		ret.put("local", au.isLocal());
-		ret.put("created", au.getCreated().getTime());
-		final Date lastLogin = au.getLastLogin();
-		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
+		ret.put("created", au.getCreated().toEpochMilli());
+		final Optional<Instant> lastLogin = au.getLastLogin();
+		ret.put("lastlogin", lastLogin.isPresent() ? lastLogin.get().toEpochMilli() : null);
 		ret.put("disabled", au.isDisabled());
-		ret.put("disabledreason", au.getReasonForDisabled());
-		final Date disabled = au.getEnableToggleDate();
-		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
-		final UserName admin = au.getAdminThatToggledEnabledState();
-		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
+		final Optional<String> dis = au.getReasonForDisabled();
+		ret.put("disabledreason", dis.isPresent() ? au.getReasonForDisabled().get() : null);
+		final Optional<Instant> disabled = au.getEnableToggleDate();
+		ret.put("enabletoggledate", disabled.isPresent() ? disabled.get().toEpochMilli() : null);
+		final Optional<UserName> admin = au.getAdminThatToggledEnabledState();
+		ret.put("enabledtoggledby", admin.isPresent() ? admin.get().getName() : null);
 		ret.put(Role.ADMIN.getID(), au.hasRole(Role.ADMIN));
 		ret.put(Role.SERV_TOKEN.getID(), au.hasRole(Role.SERV_TOKEN));
 		ret.put(Role.DEV_TOKEN.getID(), au.hasRole(Role.DEV_TOKEN));

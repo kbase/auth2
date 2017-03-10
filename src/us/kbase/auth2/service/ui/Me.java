@@ -6,7 +6,7 @@ import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -36,6 +36,7 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
@@ -100,9 +101,9 @@ public class Me {
 		ret.put("local", u.isLocal());
 		ret.put("display", u.getDisplayName().getName());
 		ret.put("email", u.getEmail().getAddress());
-		ret.put("created", u.getCreated().getTime());
-		final Date ll = u.getLastLogin();
-		ret.put("lastlogin", ll == null ? null : ll.getTime());
+		ret.put("created", u.getCreated().toEpochMilli());
+		final Optional<Instant> ll = u.getLastLogin();
+		ret.put("lastlogin", ll.isPresent() ? ll.get().toEpochMilli() : null);
 		ret.put("customroles", u.getCustomRoles());
 		ret.put("unlink", u.getIdentities().size() > 1);
 		final List<Map<String, String>> roles = new LinkedList<>();
@@ -176,8 +177,9 @@ public class Me {
 			throws NoTokenProvidedException, InvalidTokenException,
 			AuthStorageException, UnLinkFailedException, DisabledUserException {
 		// id can't be null
-		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
-		auth.unlink(token == null ? getToken(headerToken) : token, id);
+		final Optional<IncomingToken> token = getTokenFromCookie(
+				headers, cfg.getTokenCookieName(), false);
+		auth.unlink(token.isPresent() ? token.get() : getToken(headerToken), id);
 	}
 	
 	@POST

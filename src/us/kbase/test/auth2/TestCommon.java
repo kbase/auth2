@@ -11,7 +11,6 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -22,6 +21,7 @@ import org.ini4j.Ini;
 
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth2.lib.Password;
 import us.kbase.common.test.TestException;
 
 public class TestCommon {
@@ -116,13 +116,6 @@ public class TestCommon {
 		return new HashSet<T>(Arrays.asList(objects));
 	}
 	
-	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
-				is(false));
-		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
-	}
-	
 	public static void assertClear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			if (bytes[i] != 0) {
@@ -131,12 +124,19 @@ public class TestCommon {
 		}
 	}
 	
-	public static boolean dateWithin(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		return d.getTime() < now.getTime() + milliseconds &&
-				d.getTime() > now.getTime() - milliseconds;
+	public static void assertClear(final Password p) {
+		assertClear(p.getPassword());
 	}
-
+	
+	public static void assertClear(final char[] chars) {
+		for (int i = 0; i < chars.length; i++) {
+			if (chars[i] != '0') {
+				fail(String.format("found char != '0' at postion %s: %s", i, chars[i]));
+			}
+		}
+	}
+	
+	
 	public static Path getMongoExe() {
 		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();
 	}

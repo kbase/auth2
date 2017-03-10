@@ -4,10 +4,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import java.lang.reflect.Constructor;
-import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.time.Clock;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.Set;
@@ -20,14 +22,13 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.test.auth2.TestCommon;
 
 public class AuthenticationTester {
 	
@@ -35,20 +36,25 @@ public class AuthenticationTester {
 		final AuthStorage storageMock;
 		final RandomDataGenerator randGen;
 		final Authentication auth;
+		final Clock clock;
 		
 		public TestAuth(
 				final AuthStorage storageMock,
 				final RandomDataGenerator randGen,
-				final Authentication auth) {
+				final Authentication auth,
+				final Clock clock) {
 			this.storageMock = storageMock;
 			this.randGen = randGen;
 			this.auth = auth;
+			this.clock = clock;
 		}
 	}
 	
 	public static TestAuth initTestAuth() throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
+		final Clock clock = mock(Clock.class);
+		
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
@@ -57,18 +63,25 @@ public class AuthenticationTester {
 		
 		final Constructor<Authentication> c = Authentication.class.getDeclaredConstructor(
 				AuthStorage.class, Set.class, ExternalConfig.class,
-				RandomDataGenerator.class);
+				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Authentication instance = c.newInstance(storage, Collections.emptySet(),
-				new TestExternalConfig("foo"), randGen);
-		return new TestAuth(storage, randGen, instance);
+				new TestExternalConfig("foo"), randGen, clock);
+		reset(storage);
+		return new TestAuth(storage, randGen, instance, clock);
+	}
+	
+	public static void setConfigUpdateInterval(final Authentication auth, final int sec)
+			throws Exception {
+		final Method method = auth.getClass().getDeclaredMethod(
+				"setConfigUpdateInterval", int.class);
+		method.setAccessible(true);
+		method.invoke(auth, sec);
 	}
 	
 	/* Match a LocalUser.
 	 * The references to the user's password hash and salt are saved so that tests can check
 	 * the data is cleared in the creation method.
-	 * The created date in the provided user is ignored.
-	 * The created date on the new user is checked to be within 1 s of the current time.
 	 */
 	public static class LocalUserAnswerMatcher<T extends LocalUser> implements Answer<Void> {
 
@@ -87,18 +100,44 @@ public class AuthenticationTester {
 			savedSalt = user.getSalt();
 			savedHash = user.getPasswordHash();
 
-			/* omg you bad person */
-			final Field f = AuthUser.class.getDeclaredField("created");
-			f.setAccessible(true);
-			f.set(user, this.user.getCreated().getTime());
-			assertThat("local user does not match. Created date was not checked.", user,
-					is(this.user));
-			// TODO TEST mock date generation
-			assertThat("creation date not within 1000ms",
-					TestCommon.dateWithin(user.getCreated(), 1000), is(true));
+			assertThat("local user does not match.", user, is(this.user));
 			return null;
 		}
+	}
+
+	public static class ChangePasswordAnswerMatcher implements Answer<Void> {
 		
+		private final UserName name;
+		private final byte[] hash;
+		private final byte[] salt;
+		private final boolean forceReset;
+		public byte[] savedSalt;
+		public byte[] savedHash;
+		
+		public ChangePasswordAnswerMatcher(
+				final UserName name,
+				final byte[] hash,
+				final byte[] salt,
+				final boolean forceReset) {
+			this.name = name;
+			this.hash = hash;
+			this.salt = salt;
+			this.forceReset = forceReset;
+		}
+
+		@Override
+		public Void answer(final InvocationOnMock args) throws Throwable {
+			final UserName un = args.getArgument(0);
+			savedHash = args.getArgument(1);
+			savedSalt = args.getArgument(2);
+			final boolean forceReset = args.getArgument(3);
+			
+			assertThat("incorrect username", un, is(name));
+			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
+			assertThat("incorrect hash", savedHash, is(hash));
+			assertThat("incorrect salt", savedSalt, is(salt));
+			return null;
+		}
 	}
 	
 	public static String toBase64(final byte[] bytes) {

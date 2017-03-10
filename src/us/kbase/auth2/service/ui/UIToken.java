@@ -1,8 +1,11 @@
 package us.kbase.auth2.service.ui;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -27,17 +30,17 @@ public class UIToken {
 
 	UIToken(
 			final TokenType type,
-			final String tokenName,
+			final Optional<TokenName> tokenName,
 			final UUID id,
 			final UserName userName,
-			final Date creationDate,
-			final Date expirationDate) {
+			final Instant creationDate,
+			final Instant expirationDate) {
 		this.type = type.getDescription();
 		this.id = id.toString();
-		this.name = tokenName;
+		this.name = tokenName.isPresent() ? tokenName.get().getName() : null;
 		this.user = userName.getName();
-		this.expires = expirationDate.getTime();
-		this.created = creationDate.getTime();
+		this.expires = expirationDate.toEpochMilli();
+		this.created = creationDate.toEpochMilli();
 	}
 	
 	public String getType() {

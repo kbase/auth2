@@ -13,6 +13,8 @@ import us.kbase.auth2.lib.token.NewToken;
  *
  */
 public class LocalLoginResult {
+	
+	//TODO CODE use optionals
 
 	private final UserName userName;
 	private final NewToken token;

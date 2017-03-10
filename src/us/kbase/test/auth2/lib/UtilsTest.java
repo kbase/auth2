@@ -41,6 +41,8 @@ public class UtilsTest {
 		final byte[] b = "foobar".getBytes();
 		Utils.clear(b);
 		assertThat("clear failed", b, is(new byte[6]));
+		
+		Utils.clear(null); // noop
 	}
 	
 	@Test
@@ -48,6 +50,7 @@ public class UtilsTest {
 		Utils.checkString(TestCommon.LONG1001, "name");
 		Utils.checkStringNoCheckedException(TestCommon.LONG1001, "name");
 		Utils.checkString("ok", "name", 2);
+		Utils.checkString(" \n  ok   \t", "name", 2);
 	}
 	
 	@Test

@@ -4,7 +4,12 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
+import java.util.UUID;
+
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.UserName;
@@ -23,7 +28,8 @@ public class LocalLoginResultTest {
 
 	@Test
 	public void constructToken() throws Exception {
-		final NewToken nt = new NewToken(TokenType.LOGIN, "foo", new UserName("bar"), 5000);
+		final NewToken nt = new NewToken(UUID.randomUUID(),
+				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 5000);
 		final LocalLoginResult llr = new LocalLoginResult(nt);
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(false));
 		assertThat("incorrect token type", llr.getToken().getTokenType(), is(TokenType.LOGIN));
@@ -33,7 +39,7 @@ public class LocalLoginResultTest {
 				is(nt.getExpirationDate()));
 		assertThat("incorrect token id", llr.getToken().getId(), is(nt.getId()));
 		assertThat("incorrect token", llr.getToken().getToken(), is("foo"));
-		assertThat("incorrect token name", llr.getToken().getTokenName(), is((String) null));
+		assertThat("incorrect token name", llr.getToken().getTokenName(), is(Optional.absent()));
 		assertThat("incorrect token username", llr.getToken().getUserName(),
 				is(new UserName("bar")));
 		

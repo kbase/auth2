@@ -4,13 +4,15 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
@@ -39,7 +41,7 @@ public class LinkIdentitiesTest {
 	static {
 		try {
 			AUTH_USER = new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-					new DisplayName("bar"), REMOTE1, null);
+					new DisplayName("bar"), REMOTE1, Instant.now(), null);
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
@@ -65,7 +67,7 @@ public class LinkIdentitiesTest {
 						new RemoteIdentityDetails("user", "full", "email"))));
 		assertThat("incorrect creation date", li.getUser().getCreated(),
 				is(AUTH_USER.getCreated()));
-		assertThat("incorrect login date", li.getUser().getLastLogin(), is((Date) null));
+		assertThat("incorrect login date", li.getUser().getLastLogin(), is(Optional.absent()));
 		
 		// check provider is correct
 		assertThat("incorrect provider", li.getProvider(), is("foo1"));
@@ -96,7 +98,7 @@ public class LinkIdentitiesTest {
 						new RemoteIdentityDetails("user", "full", "email"))));
 		assertThat("incorrect creation date", li.getUser().getCreated(),
 				is(AUTH_USER.getCreated()));
-		assertThat("incorrect login date", li.getUser().getLastLogin(), is((Date) null));
+		assertThat("incorrect login date", li.getUser().getLastLogin(), is(Optional.absent()));
 		
 		// check provider is correct
 		assertThat("incorrect provider", li.getProvider(), is("foobar"));
