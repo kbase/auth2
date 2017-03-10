@@ -321,6 +321,55 @@ public class AuthenticationTokenTest {
 		assertThat("incorrect token", auth.getBareToken(), is("foobar"));
 	}
 	
+	@Test
+	public void revokeSelf() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID id = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, id, "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		final Optional<HashedToken> res = auth.revokeToken(t);
+		
+		verify(storage).deleteToken(new UserName("foo"), id);
+		
+		assertThat("incorrect token", res, is(Optional.of(ht)));
+	}
+	
+	@Test
+	public void revokeSelfNoToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		final Optional<HashedToken> res = auth.revokeToken(t);
+		
+		assertThat("incorrect token", res, is(Optional.absent()));
+	}
+	
+	@Test
+	public void revokeSelfFail() throws Exception {
+		final Authentication auth = initTestAuth().auth;
+		try {
+			auth.revokeToken(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
+	
+	
 	//TODO NOW TEST create & revoke
 	
 }
