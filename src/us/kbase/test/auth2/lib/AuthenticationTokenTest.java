@@ -24,12 +24,15 @@ import java.util.UUID;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
@@ -57,10 +60,10 @@ public class AuthenticationTokenTest {
 	private static final HashedToken TOKEN2;
 	static {
 		try {
-		TOKEN1 = new HashedToken(TokenType.LOGIN, null,
+		TOKEN1 = new HashedToken(TokenType.LOGIN, Optional.absent(),
 				UUID.randomUUID(), "whee", new UserName("foo"), Instant.ofEpochMilli(3000),
 				Instant.ofEpochMilli(4000));
-		TOKEN2 = new HashedToken(TokenType.EXTENDED_LIFETIME, "baz",
+		TOKEN2 = new HashedToken(TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("baz")),
 				UUID.randomUUID(), "whee1", new UserName("foo"), Instant.ofEpochMilli(5000),
 				Instant.ofEpochMilli(6000));
 		} catch (Exception e) {
@@ -79,13 +82,13 @@ public class AuthenticationTokenTest {
 		final Instant now = Instant.now();
 		final UUID id = UUID.randomUUID();
 		
-		final HashedToken expected = new HashedToken(TokenType.LOGIN, null, id,
+		final HashedToken expected = new HashedToken(TokenType.LOGIN, Optional.absent(), id,
 				"whee", new UserName("foo"), now, now);
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(expected);
 		
 		final HashedToken ht = auth.getToken(t);
-		assertThat("incorrect token", ht, is(new HashedToken(TokenType.LOGIN, null,
+		assertThat("incorrect token", ht, is(new HashedToken(TokenType.LOGIN, Optional.absent(),
 				id, "whee", new UserName("foo"), now, now)));
 	}
 	
@@ -247,8 +250,8 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
-				"wubba", new UserName("admin"), Instant.now(), Instant.now());
+		final HashedToken token = new HashedToken(TokenType.LOGIN, Optional.absent(),
+				UUID.randomUUID(), "wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		
@@ -265,8 +268,8 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
-				"wubba", admin.getUserName(), Instant.now(), Instant.now());
+		final HashedToken token = new HashedToken(TokenType.LOGIN, Optional.absent(),
+				UUID.randomUUID(), "wubba", admin.getUserName(), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		
@@ -317,4 +320,7 @@ public class AuthenticationTokenTest {
 		
 		assertThat("incorrect token", auth.getBareToken(), is("foobar"));
 	}
+	
+	//TODO NOW TEST create & revoke
+	
 }

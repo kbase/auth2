@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
@@ -56,7 +58,7 @@ public class LoginTokenTest {
 				is(nt.getExpirationDate()));
 		assertThat("incorrect token id", lt.getToken().getId(), is(nt.getId()));
 		assertThat("incorrect token", lt.getToken().getToken(), is("foo"));
-		assertThat("incorrect token name", lt.getToken().getTokenName(), is((String) null));
+		assertThat("incorrect token name", lt.getToken().getTokenName(), is(Optional.absent()));
 		assertThat("incorrect token username", lt.getToken().getUserName(),
 				is(new UserName("bar")));
 		assertThat("incorrect login state provider", lt.getLoginState().getProvider(), is("foo"));

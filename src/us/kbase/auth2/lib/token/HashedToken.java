@@ -10,6 +10,9 @@ import java.time.Instant;
 import java.util.Base64;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 
 /** A hashed token associated with a user.
@@ -21,7 +24,7 @@ public class HashedToken {
 
 	private final TokenType type;
 	private final UUID id;
-	private final String tokenName;
+	private final Optional<TokenName> tokenName;
 	private final String tokenHash;
 	private final UserName userName;
 	private final Instant expirationDate;
@@ -38,7 +41,7 @@ public class HashedToken {
 	 */
 	public HashedToken(
 			final TokenType type,
-			final String tokenName,
+			final Optional<TokenName> tokenName,
 			final UUID id,
 			final String tokenHash,
 			final UserName userName,
@@ -54,7 +57,7 @@ public class HashedToken {
 			throw new IllegalArgumentException("expirationDate must be > creationDate");
 		}
 		this.type = type;
-		this.tokenName = tokenName; // null ok
+		this.tokenName = tokenName == null ? Optional.absent() : tokenName;
 		this.tokenHash = tokenHash;
 		this.userName = userName;
 		this.expirationDate = expirationDate;
@@ -76,10 +79,10 @@ public class HashedToken {
 		return id;
 	}
 	
-	/** Get the name of the token, or null if it is unnamed.
+	/** Get the name of the token, or absent if it is unnamed.
 	 * @return the name of the token.
 	 */
-	public String getTokenName() {
+	public Optional<TokenName> getTokenName() {
 		return tokenName;
 	}
 
