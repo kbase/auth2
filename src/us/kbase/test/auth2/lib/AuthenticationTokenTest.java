@@ -369,6 +369,81 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
+	@Test
+	public void revokeToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID target = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		auth.revokeToken(t, target);
+		
+		verify(storage).deleteToken(new UserName("foo"), target);
+	}
+	
+	@Test
+	public void revokeTokenFailBadIncomingToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failRevokeToken(auth, t, UUID.randomUUID(), new InvalidTokenException());
+		
+	}
+	
+	@Test
+	public void revokeTokenFailNoSuchToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID target = UUID.randomUUID();
+		
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		doThrow(new NoSuchTokenException(target.toString()))
+			.when(storage).deleteToken(new UserName("foo"), target);
+		
+		failRevokeToken(auth, t, target, new NoSuchTokenException(target.toString()));
+	}
+	
+	@Test
+	public void revokeTokenFailNulls() throws Exception {
+		final Authentication auth = initTestAuth().auth;
+		failRevokeToken(auth, null, UUID.randomUUID(), new NullPointerException("token"));
+		failRevokeToken(auth, new IncomingToken("f"), null, new NullPointerException("tokenID"));
+	}
+	
+	private void failRevokeToken(
+			final Authentication auth,
+			final IncomingToken t,
+			final UUID target,
+			final Exception e) {
+		try {
+			auth.revokeToken(t, target);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 	
 	//TODO NOW TEST create & revoke
 	
