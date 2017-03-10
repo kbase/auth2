@@ -273,8 +273,10 @@ public class Authentication {
 	public void createRoot(final Password pwd) throws AuthStorageException, IllegalPasswordException {
 		nonNull(pwd, "pwd");
 		pwd.checkValidity();
+		final char[] pwd_copy = pwd.getPassword();
 		final byte[] salt = randGen.generateSalt();
-		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
+		Password.clearPasswordArray(pwd_copy);
 		try {
 			pwd.clear();
 			final DisplayName dn;
@@ -335,12 +337,14 @@ public class Authentication {
 		}
 		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
+		char [] pwd_copy = null;
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {
 			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
 			salt = randGen.generateSalt();
-			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
+			pwd_copy = pwd.getPassword();
+			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
 					passwordHash, salt, true);
 			storage.createLocalUser(lu);
@@ -354,6 +358,9 @@ public class Authentication {
 			// user storage call needs to throw an exception so can't use an Answer
 			clear(passwordHash);
 			clear(salt);
+			if (pwd_copy != null) {
+				Password.clearPasswordArray(pwd_copy);
+			}
 		}
 		return pwd;
 	}

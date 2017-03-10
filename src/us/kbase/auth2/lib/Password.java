@@ -60,14 +60,14 @@ public class Password {
 	 */
 	public Password(final char[] password) {
 		nonNull(password, "password");
-		this.password = Arrays.copyOf(password, password.length);;
+		this.password = Arrays.copyOf(password, password.length);
 	}
 	
 	/** Get the password.
 	 * @return the password.
 	 */
 	public char[] getPassword() {
-		return password;
+		return Arrays.copyOf(password, password.length);
 	}
 	
 	/** Writes the 0 character to every position in the password array. */
@@ -112,6 +112,6 @@ public class Password {
 		if (getClass() != obj.getClass())
 			return false;
 		final Password other = (Password) obj;
-		return Arrays.equals(password, other.getPassword());
+		return Arrays.equals(password, other.password);
 	}
 }
