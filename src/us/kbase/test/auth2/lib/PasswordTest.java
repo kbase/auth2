@@ -33,7 +33,7 @@ public class PasswordTest {
 	}
 	
 	@Test
-	public void clear_class_method() throws Exception {
+	public void clearClassMethod() throws Exception {
 		final char[] pwd = "this is also a password".toCharArray();
 		final Password p = new Password(pwd);
 		p.clear();
@@ -41,16 +41,12 @@ public class PasswordTest {
 	}
 	
 	@Test
-	public void clear_static_method() throws Exception {
+	public void clearStaticMethod() throws Exception {
 		final char[] pwd = "this is also a password".toCharArray();
 		Password.clearPasswordArray(pwd);
 		assertThat("clearPasswordArray failed", pwd, is("00000000000000000000000".toCharArray()));
-		try {
-			Password.clearPasswordArray(null);
-			fail("attempt to call clearPasswordArray on null did not fail as expected");
-		} catch (NullPointerException e) {
-			TestCommon.assertExceptionMessageContains(e, "password");
-		}
+		// This should work and be a no-op
+		Password.clearPasswordArray(null);
 	}
 	
 	

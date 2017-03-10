@@ -46,9 +46,10 @@ public class Password {
 	 * @param password
 	 */
 	public static void clearPasswordArray(final char[] password) {
-		nonNull(password, "password");
-		for (int i = 0; i < password.length; i++) {
-			password[i] = '0';
+		if(password != null) {
+			for (int i = 0; i < password.length; i++) {
+				password[i] = '0';
+			}
 		}
 	}
 	
@@ -90,7 +91,7 @@ public class Password {
 		// check strength requirement
 		final Strength strength = new Zxcvbn().measure(new String(password));
 		if(strength.getScore() < MIN_PASSWORD_STRENGTH_SCORE) {
-			String warning = strength.getFeedback().getWarning();
+			final String warning = strength.getFeedback().getWarning();
 			throw new IllegalPasswordException("Password is not strong enough. " + warning);
 		}
 	}
