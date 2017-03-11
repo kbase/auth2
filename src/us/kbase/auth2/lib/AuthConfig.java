@@ -34,7 +34,9 @@ public class AuthConfig {
 		m.put(TokenLifetimeType.EXT_CACHE,			   5 * 60 * 1000L);
 		m.put(TokenLifetimeType.LOGIN,		14 * 24 * 60 * 60 * 1000L);
 		m.put(TokenLifetimeType.DEV,		90 * 24 * 60 * 60 * 1000L);
-		m.put(TokenLifetimeType.SERV, 99_999_999_999L * 24 * 60 * 60 * 1000L);
+		// this is set so absurdly low because some other, lesser languages can't represent
+		// anything much bigger
+		m.put(TokenLifetimeType.SERV, 100_000_000L * 24 * 60 * 60 * 1000L);
 		DEFAULT_TOKEN_LIFETIMES_MS = Collections.unmodifiableMap(m);
 	}
 
