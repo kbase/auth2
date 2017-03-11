@@ -39,6 +39,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -1727,15 +1728,15 @@ public class Authentication {
 	 * @param id the ID of the remote identity to remove.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws UnLinkFailedException if the user has only one identity or does not possess the
-	 * specified identity.
+	 * @throws UnLinkFailedException if the user has only one identity or is a local user.
 	 * @throws DisabledUserException if the user is disabled.
+	 * @throws NoSuchIdentityException if the user does not possess the identity.
 	 */
 	public void unlink(
 			final IncomingToken token,
 			final UUID id)
 			throws InvalidTokenException, AuthStorageException,
-			UnLinkFailedException, DisabledUserException {
+			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
 		nonNull(id, "id");
 		final AuthUser au = getUser(token);
 		try {

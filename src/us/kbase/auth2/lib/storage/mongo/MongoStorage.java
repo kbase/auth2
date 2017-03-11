@@ -63,6 +63,7 @@ import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -1320,7 +1321,8 @@ public class MongoStorage implements AuthStorage {
 	public void unlink(
 			final UserName userName,
 			final UUID id)
-			throws AuthStorageException, UnLinkFailedException, NoSuchUserException {
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
+			NoSuchIdentityException {
 		nonNull(id, "id");
 		final AuthUser u = getUser(userName);
 		if (u.isLocal()) {
@@ -1340,7 +1342,8 @@ public class MongoStorage implements AuthStorage {
 				throw new UnLinkFailedException("The user has only one associated identity");
 			}
 			if (r.getModifiedCount() != 1) {
-				throw new UnLinkFailedException("The user is not linked to the provided identity");
+				throw new NoSuchIdentityException(
+						"The user is not linked to identity " + id.toString());
 			}
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);

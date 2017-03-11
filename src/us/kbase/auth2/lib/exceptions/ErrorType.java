@@ -38,8 +38,10 @@ public enum ErrorType {
 	NO_SUCH_TOKEN			(50010, "No such token"),
 	/** The requested identity provider does not exist. */
 	NO_SUCH_IDENT_PROV		(50020, "No such identity provider"),
+	/** The requested identity does not exist. */
+	NO_SUCH_IDENTITY		(50030, "No such identity"),
 	/** The requested role does not exist. */
-	NO_SUCH_ROLE			(50030, "No such role"),
+	NO_SUCH_ROLE			(50040, "No such role"),
 	/** The attempt to link one account to another failed. */
 	LINK_FAILED				(60000, "Account linkage failed"),
 	/** The attemp to unlink one account from another failed. */

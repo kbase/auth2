@@ -17,6 +17,7 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoDataException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
@@ -187,6 +188,15 @@ public class ExceptionTest {
 	public void noDataException() throws Exception {
 		final ErrorType et = ErrorType.MISSING_PARAMETER;
 		final NoDataException ae = new NoDataException(et, "foo");
+		assertThat("incorrect error code", ae.getErr(), is(et));
+		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
+	}
+	
+	@Test
+	public void noSuchIdentity() throws Exception {
+		final ErrorType et = ErrorType.NO_SUCH_IDENTITY;
+		final NoSuchIdentityException ae = new NoSuchIdentityException("foo");
 		assertThat("incorrect error code", ae.getErr(), is(et));
 		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
 		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
