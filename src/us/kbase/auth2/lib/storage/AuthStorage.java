@@ -24,6 +24,7 @@ import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -337,13 +338,14 @@ public interface AuthStorage {
 	 * @param userName the user.
 	 * @param id the remote identity to remove from the user.
 	 * @throws NoSuchUserException if the user does not exist.
-	 * @throws UnLinkFailedException if the user only has one identity
-	 * or the user does not possess the specified identity.
+	 * @throws UnLinkFailedException if the user only has one identity or is a local user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
+	 * @throws NoSuchIdentityException if the user does not possess the identity.
 	 */
 	void unlink(UserName userName, UUID id)
-			throws AuthStorageException, UnLinkFailedException, NoSuchUserException;
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
+			NoSuchIdentityException;
 
 	/** Update the system configuration.
 	 * @param authConfigSet the configuration to set. Null values are ignored.

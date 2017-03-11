@@ -45,6 +45,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -168,14 +169,14 @@ public class Me {
 		updateUser(auth, getToken(token), update.display, update.email);
 	}
 	
-	@POST // not delete since non-idempotent
+	@POST // not DELETE since non-idempotent, diff results based on # of IDs the user has
 	@Path(UIPaths.ME_UNLINK_ID)
 	public void unlink(
 			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			@PathParam("id") final UUID id)
-			throws NoTokenProvidedException, InvalidTokenException,
-			AuthStorageException, UnLinkFailedException, DisabledUserException {
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
 		// id can't be null
 		final Optional<IncomingToken> token = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);

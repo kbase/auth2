@@ -20,6 +20,7 @@ import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -250,7 +251,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		storage.createUser(new NewUser(new UserName("foo1"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), REMOTE3, NOW, null));
 		failUnlink(new UserName("foo"), REMOTE3.getID(),
-				new UnLinkFailedException("The user is not linked to the provided identity"));
+				new NoSuchIdentityException("The user is not linked to identity " +
+						REMOTE3.getID()));
 	}
 	
 	private void failUnlink(final UserName name, final UUID id, final Exception e) {
