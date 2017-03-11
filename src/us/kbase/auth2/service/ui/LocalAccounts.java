@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -105,7 +106,8 @@ public class LocalAccounts {
 			@FormParam("pwdold") String pwdold,
 			@FormParam("pwdnew") String pwdnew)
 			throws MissingParameterException, IllegalParameterException,
-				AuthenticationException, UnauthorizedException, AuthStorageException {
+				AuthenticationException, UnauthorizedException, AuthStorageException,
+				IllegalPasswordException {
 		if (userName == null || userName.trim().isEmpty()) {
 			throw new MissingParameterException("user");
 		}

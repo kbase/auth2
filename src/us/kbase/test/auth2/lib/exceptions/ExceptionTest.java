@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.lib.exceptions;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -13,6 +14,7 @@ import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -56,7 +58,7 @@ public class ExceptionTest {
 				new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et2));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et2, "foo2")));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 	}
 
 	private String format(final ErrorType et, final String msg) {
@@ -78,7 +80,7 @@ public class ExceptionTest {
 		final AuthException ae2 = new AuthException(et2, null, new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et2));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et2, null)));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 		
 		final AuthException ae3 = new AuthException(et2, "\t");
 		assertThat("incorrect error code", ae3.getErr(), is(et2));
@@ -132,6 +134,15 @@ public class ExceptionTest {
 	}
 	
 	@Test
+	public void illegalPassword() throws Exception {
+		final ErrorType et = ErrorType.ILLEGAL_PASSWORD;
+		final IllegalPasswordException ipe = new IllegalPasswordException("foo");
+		assertThat("incorrect error code", ipe.getErr(), is(et));
+		assertThat("incorrect message", ipe.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ipe.getCause(), is((Throwable) null));
+	}
+	
+	@Test
 	public void illegalParameter() throws Exception {
 		final ErrorType et = ErrorType.ILLEGAL_PARAMETER;
 		final IllegalParameterException ae = new IllegalParameterException("foo");
@@ -143,7 +154,7 @@ public class ExceptionTest {
 				new NullPointerException());
 		assertThat("incorrect error code", ae2.getErr(), is(et));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et, "foo2")));
-		assertThat("incorrect cause", ae2.getCause(), is(NullPointerException.class));
+		assertThat("incorrect cause", ae2.getCause(), instanceOf(NullPointerException.class));
 		
 		final ErrorType et3 = ErrorType.NO_SUCH_USER;
 		final IllegalParameterException ae3 = new IllegalParameterException(et3, "");

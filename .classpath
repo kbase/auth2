@@ -47,7 +47,7 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/osgi/org.osgi.core-4.2.0.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/validationapi/validation-api-1.1.0.Final.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jcommander/jcommander-1.48.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/junit/junit-4.9.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/junit/junit-4.12.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-lang3-3.1.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-validator-1.5.1.jar"/>
@@ -56,6 +56,7 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/bytebuddy/byte-buddy-agent-1.6.8.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mockito/mockito-core-2.7.10.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/objenesis/objenesis-2.5.1.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/nulab-inc/zxcvbn-1.2.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jsemver/java-semver-0.9.0.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

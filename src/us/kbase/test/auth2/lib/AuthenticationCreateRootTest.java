@@ -32,6 +32,7 @@ import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -214,6 +215,16 @@ public class AuthenticationCreateRootTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("pwd"));
+		}
+	}
+	
+	@Test
+	public void validPwd() throws Exception {
+		try {
+			initTestAuth().auth.createRoot(new Password("12345".toCharArray()));
+			fail("expected exception");
+		} catch (IllegalPasswordException got) {
+			TestCommon.assertExceptionMessageContains(got, "Password is not strong enough.");
 		}
 	}
 }

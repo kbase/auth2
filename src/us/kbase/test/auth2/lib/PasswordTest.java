@@ -6,12 +6,13 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
+
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.test.auth2.TestCommon;
 
 public class PasswordTest {
-	
-	//TODO TEST these will need to change once the strength checker is in place
 	
 	@Test
 	public void constructor() throws Exception {
@@ -27,11 +28,25 @@ public class PasswordTest {
 	}
 	
 	@Test
-	public void clear() throws Exception {
+	public void equals() {
+		EqualsVerifier.forClass(Password.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void clearClassMethod() throws Exception {
 		final char[] pwd = "this is also a password".toCharArray();
 		final Password p = new Password(pwd);
 		p.clear();
 		assertThat("clear failed", p.getPassword(), is("00000000000000000000000".toCharArray()));
+	}
+	
+	@Test
+	public void clearStaticMethod() throws Exception {
+		final char[] pwd = "this is also a password".toCharArray();
+		Password.clearPasswordArray(pwd);
+		assertThat("clearPasswordArray failed", pwd, is("00000000000000000000000".toCharArray()));
+		// This should work and be a no-op
+		Password.clearPasswordArray(null);
 	}
 	
 	
@@ -43,5 +58,38 @@ public class PasswordTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
-
+	
+	@Test
+	public void passwordTooLong() throws Exception {
+		char [] longpwd = new char [300];
+		for(int k=0; k<longpwd.length; k++) {
+			longpwd[k] = 'p';
+		}
+		Password password = new Password(longpwd);
+		try {
+			password.checkValidity();
+			fail("created a password that was too long");
+		} catch (IllegalPasswordException e) {
+			TestCommon.assertExceptionMessageContains(e, "Password exceeds max length");
+		}
+	}
+	
+	@Test
+	public void passwordStrengthCheck() throws Exception {
+		testPasswordStrengthFail("");
+		testPasswordStrengthFail("12345");
+		testPasswordStrengthFail("password");
+		testPasswordStrengthFail("open");
+		
+	}
+	
+	private void testPasswordStrengthFail(String pwd) {
+		Password password = new Password(pwd.toCharArray());
+		try {
+			password.checkValidity();
+			fail("created a password ("+pwd+") that was not strong enough");
+		} catch (IllegalPasswordException e) {
+			TestCommon.assertExceptionMessageContains(e, "Password is not strong enough");
+		}
+	}
 }

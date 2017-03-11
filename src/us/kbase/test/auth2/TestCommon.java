@@ -1,6 +1,8 @@
 package us.kbase.test.auth2;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -64,7 +66,14 @@ public class TestCommon {
 			final Exception expected) {
 		assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
 				got.getMessage(), is(expected.getMessage()));
-		assertThat("incorrect exception type", got, is(expected.getClass()));
+		assertThat("incorrect exception type", got, instanceOf(expected.getClass()));
+	}
+	
+	public static void assertExceptionMessageContains(
+			final Exception got,
+			final String expectedMessagePart) {
+		assertThat("incorrect exception message. trace:\n" + ExceptionUtils.getStackTrace(got),
+				got.getMessage(), containsString(expectedMessagePart));
 	}
 	
 	/** See https://gist.github.com/vorburger/3429822

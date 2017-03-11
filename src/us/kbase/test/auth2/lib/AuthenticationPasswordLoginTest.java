@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfigSet;
@@ -42,6 +43,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -444,6 +446,54 @@ public class AuthenticationPasswordLoginTest {
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		assertClear(po);
+		assertClear(pn);
+	}
+	
+	@Test
+	public void changePasswordFailIdenticalPwd() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password po = new Password("foobarbazbatch".toCharArray());
+		final Password pn = new Password("foobarbazbatch".toCharArray());
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		
+		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
+				"Old and new passwords are identical."));
+		assertClear(po);
+		assertClear(pn);
+	}
+	
+	@Test
+	public void changePasswordFailPwdTooSimple() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		
+		final Password po = new Password("foobarbazbatch".toCharArray());
+		final Password pn = new Password("open".toCharArray());
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
+				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
+				Collections.emptySet(), Collections.emptySet(),
+				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		
+		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
+				"Password is not strong enough. A word by itself is easy to guess."));
 		assertClear(po);
 		assertClear(pn);
 	}
