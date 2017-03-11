@@ -136,6 +136,7 @@ public class ExceptionTest {
 	public void illegalPassword() throws Exception {
 		final ErrorType et = ErrorType.ILLEGAL_PASSWORD;
 		final IllegalPasswordException ipe = new IllegalPasswordException("foo");
+		assertThat("incorrect error code", ipe.getErr(), is(et));
 		assertThat("incorrect message", ipe.getMessage(), is(format(et, "foo")));
 		assertThat("incorrect cause", ipe.getCause(), is((Throwable) null));
 	}
