@@ -9,7 +9,7 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
+import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import static us.kbase.test.auth2.lib.AuthenticationTester.fromBase64;
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
@@ -39,7 +39,7 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
-import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
+import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCreateRootTest {
 	
@@ -52,11 +52,11 @@ public class AuthenticationCreateRootTest {
 
 	@Test
 	public void createRoot() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
@@ -93,11 +93,11 @@ public class AuthenticationCreateRootTest {
 	
 	@Test
 	public void resetRootPassword() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
@@ -138,11 +138,11 @@ public class AuthenticationCreateRootTest {
 	
 	@Test
 	public void catastrophicFail() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		when(rand.generateSalt()).thenReturn(new byte[8]);
 		
@@ -166,11 +166,11 @@ public class AuthenticationCreateRootTest {
 	
 	@Test
 	public void enableRoot() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		final Password pwd = new Password("foobarbazbat".toCharArray());
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
@@ -211,7 +211,7 @@ public class AuthenticationCreateRootTest {
 	@Test
 	public void nullPwd() throws Exception {
 		try {
-			initTestAuth().auth.createRoot(null);
+			initTestMocks().auth.createRoot(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("pwd"));
@@ -221,7 +221,7 @@ public class AuthenticationCreateRootTest {
 	@Test
 	public void validPwd() throws Exception {
 		try {
-			initTestAuth().auth.createRoot(new Password("12345".toCharArray()));
+			initTestMocks().auth.createRoot(new Password("12345".toCharArray()));
 			fail("expected exception");
 		} catch (IllegalPasswordException got) {
 			TestCommon.assertExceptionMessageContains(got, "Password is not strong enough.");

@@ -9,7 +9,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
+import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -50,7 +50,7 @@ import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
-import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
+import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTokenTest {
 	
@@ -73,7 +73,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -94,14 +94,14 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokenFailNull() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failGetToken(auth, null, new NullPointerException("token"));
 	}
 
 	
 	@Test
 	public void getTokenFailNoSuchToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -126,7 +126,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokens() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -148,14 +148,14 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokensFailNull() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failGetTokens(auth, null, new NullPointerException("token"));
 	}
 
 	
 	@Test
 	public void getTokensFailNoSuchToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -221,7 +221,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokensUserFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		
 		failGetTokensUser(auth, null, new UserName("foo"), new NullPointerException("token"));
@@ -231,7 +231,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokensUserFailInvalidToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -244,7 +244,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void forceResetAllPasswordsFailCatastrophicNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -262,7 +262,7 @@ public class AuthenticationTokenTest {
 	}
 
 	private void getTokensUser(final AuthUser admin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -312,9 +312,9 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getBareToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		when(rand.getToken()).thenReturn("foobar");
 		
@@ -323,7 +323,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeSelf() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -345,7 +345,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeSelfNoToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -360,7 +360,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeSelfFail() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		try {
 			auth.revokeToken(null);
 			fail("expected exception");
@@ -371,7 +371,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -391,7 +391,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenFailBadIncomingToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -405,7 +405,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenFailNoSuchToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -426,7 +426,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenFailNulls() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failRevokeToken(auth, null, UUID.randomUUID(), new NullPointerException("token"));
 		failRevokeToken(auth, new IncomingToken("f"), null, new NullPointerException("tokenID"));
 	}
@@ -492,7 +492,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenAdminFailNulls() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failRevokeTokenAdmin(auth, null, new UserName("foo"), UUID.randomUUID(),
 				new NullPointerException("token"));
 		failRevokeTokenAdmin(auth, new IncomingToken("f"), null, UUID.randomUUID(),
@@ -503,7 +503,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenAdminFailBadToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -517,7 +517,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenAdminFailCatastropic() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -539,7 +539,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenAdminFailNoSuchToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -565,7 +565,7 @@ public class AuthenticationTokenTest {
 	}
 
 	private void revokeTokenAdmin(final AuthUser admin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -619,7 +619,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -637,13 +637,13 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensUserFailNull() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failRevokeAllTokensUser(auth, null, new NullPointerException("token"));
 	}
 	
 	@Test
 	public void revokeAllTokenUserFailBadToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -714,13 +714,13 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminAllFailNull() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failRevokeAllTokensAdminAll(auth, null, new NullPointerException("token"));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailBadToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -733,7 +733,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminAllFailCatastropic() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -752,7 +752,7 @@ public class AuthenticationTokenTest {
 	}
 	
 	private void revokeAllTokensAdminAll(final AuthUser admin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -848,7 +848,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminUserFailNull() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		failRevokeAllTokensAdminUser(auth, null, new UserName("foo"),
 				new NullPointerException("token"));
 		failRevokeAllTokensAdminUser(auth, new IncomingToken("f"), null,
@@ -857,7 +857,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminUserFailBadToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -870,7 +870,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminUserFailCatastropic() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -889,7 +889,7 @@ public class AuthenticationTokenTest {
 	}
 	
 	private void revokeAllTokensAdminUser(final AuthUser admin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1029,7 +1029,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailNulls() throws Exception {
-		final Authentication auth = initTestAuth().auth;
+		final Authentication auth = initTestMocks().auth;
 		
 		failCreateToken(auth, null, new TokenName("foo"), false,
 				new NullPointerException("token"));
@@ -1039,7 +1039,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailBadToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1052,7 +1052,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailNotLoginToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1069,7 +1069,7 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailCatastrophic() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1095,11 +1095,11 @@ public class AuthenticationTokenTest {
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final long expectedLifetime,
 			final boolean serverToken) throws Exception { 
-		final TestAuth testauth = initTestAuth(); //TODO NOW TEST rename to TestMocks and initTestMocks, rename all vars to *Mock except for auth
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final Clock clock = testauth.clock;
-		final RandomDataGenerator rand = testauth.randGen;
+		final Clock clock = testauth.clockMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, -1);
 		

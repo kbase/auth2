@@ -13,7 +13,7 @@ import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
+import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -59,7 +59,7 @@ import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
-import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
+import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationPasswordLoginTest {
 	
@@ -81,11 +81,11 @@ public class AuthenticationPasswordLoginTest {
 	}
 
 	private void login(final boolean loginAllowed, final Set<Role> roles) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -130,7 +130,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginResetRequired() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 
@@ -160,7 +160,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
@@ -172,7 +172,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginFailNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -188,7 +188,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginFailBadPwd() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -212,7 +212,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginFailNoLoginAllowed() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -239,7 +239,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void loginFailDisabled() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -268,11 +268,11 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void loginFailCatastrophic() throws Exception {
 		// should never happen under normal circumstances
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -336,10 +336,10 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	private void changePassword(Set<Role> roles, boolean allowLogin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -388,7 +388,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		final UserName u = new UserName("foo");
 		
@@ -410,7 +410,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -427,7 +427,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailFailBadPwd() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -452,7 +452,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailIdenticalPwd() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -476,7 +476,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailPwdTooSimple() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -500,7 +500,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailNoLoginAllowed() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -529,7 +529,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void changePasswordFailDisabled() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -560,10 +560,10 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void changePasswordFailCatastrophic() throws Exception {
 		// should never happen under normal circumstances
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
@@ -762,7 +762,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void resetPasswordFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 
 		failResetPassword(auth, null, new UserName("foo"), new NullPointerException("token"));
@@ -772,7 +772,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void resetPasswordFailInvalidToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -785,7 +785,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void resetPasswordFailCatastrophicNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -804,7 +804,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void resetPasswordFailNoSuchUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -837,10 +837,10 @@ public class AuthenticationPasswordLoginTest {
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
 				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
 		
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
@@ -870,10 +870,10 @@ public class AuthenticationPasswordLoginTest {
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
 				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
 		
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		final char[] pwd = "foobarbazbat".toCharArray();
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -926,10 +926,10 @@ public class AuthenticationPasswordLoginTest {
 	}
 
 	private void resetPassword(final AuthUser admin, final AuthUser user) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		final char[] pwd = "foobarbazbat".toCharArray();
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
@@ -1132,7 +1132,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetPasswordFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 
 		failForceResetPassword(auth, null, new UserName("foo"), new NullPointerException("token"));
@@ -1142,7 +1142,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetPasswordFailInvalidToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1155,7 +1155,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetPasswordFailCatastrophicNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1174,7 +1174,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetPasswordFailNoSuchUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1196,7 +1196,7 @@ public class AuthenticationPasswordLoginTest {
 	}
 
 	private void forceResetPassword(final AuthUser admin, final AuthUser user) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1285,7 +1285,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetAllPasswordsFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 
 		failForceResetAllPasswords(auth, null, new NullPointerException("token"));
@@ -1293,7 +1293,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetAllPasswordsFailInvalidToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1306,7 +1306,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetAllPasswordsFailCatastrophicNoUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -1325,7 +1325,7 @@ public class AuthenticationPasswordLoginTest {
 	
 
 	private void forceResetAllPasswords(final AuthUser admin) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
