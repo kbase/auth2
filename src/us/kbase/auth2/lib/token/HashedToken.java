@@ -203,27 +203,4 @@ public class HashedToken {
 		}
 		return true;
 	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("HashedToken [type=");
-		builder.append(type);
-		builder.append(", id=");
-		builder.append(id);
-		builder.append(", tokenName=");
-		builder.append(tokenName);
-		builder.append(", tokenHash=");
-		builder.append(tokenHash);
-		builder.append(", userName=");
-		builder.append(userName);
-		builder.append(", creationDate=");
-		builder.append(creationDate);
-		builder.append(", expirationDate=");
-		builder.append(expirationDate);
-		builder.append("]");
-		return builder.toString();
-	}
-	
-	
 }
