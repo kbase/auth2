@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -10,8 +11,11 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -20,14 +24,19 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
+import us.kbase.auth2.lib.AuthConfig;
+import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -37,6 +46,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
@@ -928,7 +938,239 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
+	@Test
+	public void createDevToken() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
+	}
 	
-	//TODO NOW TEST create
+	@Test
+	public void createDevTokenAltLifetime() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
+		lifetimes.put(TokenLifetimeType.DEV, 42 * 24 * 3600 * 1000L);
+		createToken(user, lifetimes, 42 * 24 * 3600 * 1000L, false);
+	}
+	
+	@Test
+	public void createDevTokenWithServRole() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
+	}
+	
+	@Test
+	public void createServToken() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
+	}
+	
+	@Test
+	public void createServTokenWithAdminRole() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
+	}
+	
+	@Test
+	public void createServTokenWithAltLifetime() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
+		lifetimes.put(TokenLifetimeType.SERV, 24 * 24 * 3600 * 1000L);
+		createToken(user, lifetimes, 24 * 24 * 3600 * 1000L, true);
+	}
+	
+	@Test
+	public void createTokenFailDisabledUser() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		
+		failCreateToken(user, false, new DisabledUserException());
+	}
+	
+	@Test
+	public void createTokenFailNoDevRole() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		failCreateToken(user, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"User foo is not authorized to create this token type."));
+	}
+	
+	@Test
+	public void createTokenFailNoServRole() throws Exception {
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(),
+				set(Role.CREATE_ADMIN, Role.DEV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		failCreateToken(user, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"User foo is not authorized to create this token type."));
+	}
+	
+	@Test
+	public void createTokenFailNulls() throws Exception {
+		final Authentication auth = initTestAuth().auth;
+		
+		failCreateToken(auth, null, new TokenName("foo"), false,
+				new NullPointerException("token"));
+		failCreateToken(auth, new IncomingToken("foo"), null, false,
+				new NullPointerException("tokenName"));
+	}
+	
+	@Test
+	public void createTokenFailBadToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failCreateToken(auth, t, new TokenName("foo"), false, new InvalidTokenException());
+	}
+	
+	@Test
+	public void createTokenFailNotLoginToken() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final HashedToken ht = new HashedToken(TokenType.EXTENDED_LIFETIME, null,
+				UUID.randomUUID(), "baz", new UserName("foo"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		failCreateToken(auth, t, new TokenName("foo"), false,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only login tokens may be used to create a token"));
+	}
+	
+	@Test
+	public void createTokenFailCatastrophic() throws Exception {
+		final TestAuth testauth = initTestAuth();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				user.getUserName(), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		when(storage.getUser(user.getUserName())).thenThrow(new NoSuchUserException("foo"));
+		
+		failCreateToken(auth, t, new TokenName("baz"), false, new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+	private void createToken(
+			final AuthUser user,
+			final Map<TokenLifetimeType, Long> lifetimes,
+			final long expectedLifetime,
+			final boolean serverToken) throws Exception { 
+		final TestAuth testauth = initTestAuth(); //TODO NOW TEST rename to TestMocks and initTestMocks, rename all vars to *Mock except for auth
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGen;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final UUID id = UUID.randomUUID();
+		final Instant time = Instant.ofEpochMilli(100000);
+		final HashedToken ht = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "baz",
+				user.getUserName(), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		
+		when(storage.getUser(user.getUserName())).thenReturn(user, (AuthUser) null);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<>(new AuthConfig(true, null, lifetimes),
+						new CollectingExternalConfig(new HashMap<>())));
+		
+		when(rand.randomUUID()).thenReturn(id, (UUID) null);
+		when(rand.getToken()).thenReturn("this is a token", (String)null);
+		when(clock.instant()).thenReturn(time, (Instant) null);
+		
+		try {
+			final NewToken nt = auth.createToken(t, new TokenName("a name"), serverToken);
+			
+			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
+					(expectedLifetime));
+			//TODO NOW CODE make token constructor arg orders the same
+			verify(storage).storeToken(new HashedToken(
+					TokenType.EXTENDED_LIFETIME,
+					Optional.of(new TokenName("a name")), id,
+					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", user.getUserName(),
+					time,
+					expiration));
+			
+			final NewToken expected = new NewToken(id, TokenType.EXTENDED_LIFETIME,
+					new TokenName("a name"), "this is a token", user.getUserName(), time,
+					expectedLifetime);
+			
+		assertThat("incorrect token", nt, is(expected));
+		} catch (Throwable th) {
+			if (user.isDisabled()) {
+				verify(storage).deleteTokens(user.getUserName());
+			}
+			throw th;
+		}
+	}
+	
+	private void failCreateToken(
+			final AuthUser user,
+			final boolean serverToken,
+			final Exception e) {
+		try {
+			createToken(user, new HashMap<>(), 3L, serverToken);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failCreateToken(
+			final Authentication auth,
+			final IncomingToken t,
+			final TokenName name,
+			final boolean serverToken,
+			final Exception e) {
+		try {
+			auth.createToken(t, name, serverToken);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 	
 }

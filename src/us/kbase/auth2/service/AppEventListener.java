@@ -14,6 +14,8 @@ public class AppEventListener implements ServletContextListener {
 			AuthenticationService.setConfig(new KBaseAuthConfig());
 		} catch (AuthConfigurationException e) {
 			e.printStackTrace();
+			//TODO NOW this is crappy, server will start anyway and then throw a dumb exception.
+			//TODO NOW pass in config class to load.
 			//server will fail to start since there's no config
 		}
 	}

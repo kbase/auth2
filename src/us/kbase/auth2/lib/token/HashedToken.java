@@ -27,8 +27,8 @@ public class HashedToken {
 	private final Optional<TokenName> tokenName;
 	private final String tokenHash;
 	private final UserName userName;
-	private final Instant expirationDate;
 	private final Instant creationDate;
+	private final Instant expirationDate;
 	
 	/** Create a hashed token.
 	 * @param type the type of the token.

@@ -1,5 +1,6 @@
 package us.kbase.test.auth2.cryptutils;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -59,7 +60,7 @@ public class SHA1RandomDataGeneratorTest {
 	public void uuid() throws Exception {
 		// not much to test here
 		assertThat("doesn't generate a uuid", new SHA1RandomDataGenerator().randomUUID(),
-				is(UUID.class));
+				instanceOf(UUID.class));
 	}
 
 }

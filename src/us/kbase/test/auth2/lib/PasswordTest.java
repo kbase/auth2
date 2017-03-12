@@ -7,7 +7,7 @@ import static org.junit.Assert.fail;
 import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-
+import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.test.auth2.TestCommon;
@@ -19,12 +19,16 @@ public class PasswordTest {
 		final char[] pwd = "this is a password".toCharArray();
 		final Password p = new Password(pwd);
 		assertThat("incorrect password", p.getPassword(), is(pwd));
-		
 	}
 	
 	@Test
 	public void nullConstructor() throws Exception {
-		failCreate(null, new NullPointerException("password"));
+		try {
+			new Password(null);
+			fail("created bad password");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("password"));
+		}
 	}
 	
 	@Test
@@ -49,47 +53,58 @@ public class PasswordTest {
 		Password.clearPasswordArray(null);
 	}
 	
+	@Test
+	public void passValidityCheck() throws Exception {
+		final char[] pwd = new SHA1RandomDataGenerator().getTemporaryPassword(256);
+		new Password(pwd).checkValidity();
+	}
 	
-	private void failCreate(final char[] pwd, final Exception e) throws Exception {
-		try {
-			new Password(pwd);
-			fail("created bad password");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
+	@Test
+	public void passValidityCheckUnicode() throws Exception {
+		final char[] pwd = randomUnicode(256);
+		assertThat("incorrect length", pwd.length, is(256 * 2));
+		new Password(pwd).checkValidity();
+	}
+
+	private char[] randomUnicode(final int codePoints) {
+		final StringBuilder sb = new StringBuilder();
+		for (int i = 0; i < codePoints; i ++) {
+			sb.appendCodePoint(70000 + (int)(Math.random() * 10000));
 		}
+		return sb.toString().toCharArray();
 	}
 	
 	@Test
 	public void passwordTooLong() throws Exception {
-		char [] longpwd = new char [300];
-		for(int k=0; k<longpwd.length; k++) {
-			longpwd[k] = 'p';
-		}
-		Password password = new Password(longpwd);
-		try {
-			password.checkValidity();
-			fail("created a password that was too long");
-		} catch (IllegalPasswordException e) {
-			TestCommon.assertExceptionMessageContains(e, "Password exceeds max length");
-		}
+		failValidate(TestCommon.LONG1001.substring(0, 257), "Password exceeds max length");
+	}
+	
+	@Test
+	public void passwordTooLongUnicode() throws Exception {
+		final char[] pwd = randomUnicode(257);
+		assertThat("incorrect length", pwd.length, is(257 * 2));
+		failValidate(new String(pwd), "Password exceeds max length");
 	}
 	
 	@Test
 	public void passwordStrengthCheck() throws Exception {
-		testPasswordStrengthFail("");
-		testPasswordStrengthFail("12345");
-		testPasswordStrengthFail("password");
-		testPasswordStrengthFail("open");
-		
+		failPasswordStrength("");
+		failPasswordStrength("12345");
+		failPasswordStrength("password");
+		failPasswordStrength("open");
 	}
 	
-	private void testPasswordStrengthFail(String pwd) {
+	private void failPasswordStrength(final String pwd) {
+		failValidate(pwd, "Password is not strong enough");
+	}
+
+	private void failValidate(final String pwd, final String exceptionPart) {
 		Password password = new Password(pwd.toCharArray());
 		try {
 			password.checkValidity();
-			fail("created a password ("+pwd+") that was not strong enough");
+			fail("validated a bad password (" + pwd + ")");
 		} catch (IllegalPasswordException e) {
-			TestCommon.assertExceptionMessageContains(e, "Password is not strong enough");
+			TestCommon.assertExceptionMessageContains(e, exceptionPart);
 		}
 	}
 }

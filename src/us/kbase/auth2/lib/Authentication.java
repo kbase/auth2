@@ -666,8 +666,9 @@ public class Authentication {
 		final AuthUser au = getUser(t);
 		final Role reqRole = serverToken ? Role.SERV_TOKEN : Role.DEV_TOKEN;
 		if (!reqRole.isSatisfiedBy(au.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"User %s is not authorized to create this token type.");
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
+					"User %s is not authorized to create this token type.",
+					au.getUserName().getName()));
 		}
 		final long life;
 		final AuthConfig c = cfg.getAppConfig();
