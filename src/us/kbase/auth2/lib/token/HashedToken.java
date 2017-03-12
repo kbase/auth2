@@ -22,8 +22,8 @@ import us.kbase.auth2.lib.UserName;
  */
 public class HashedToken {
 
-	private final TokenType type;
 	private final UUID id;
+	private final TokenType type;
 	private final Optional<TokenName> tokenName;
 	private final String tokenHash;
 	private final UserName userName;
@@ -31,18 +31,18 @@ public class HashedToken {
 	private final Instant expirationDate;
 	
 	/** Create a hashed token.
+	 * @param id the ID of the token.
 	 * @param type the type of the token.
 	 * @param tokenName the name of the token, or null to leave the token unnamed.
-	 * @param id the ID of the token.
 	 * @param tokenHash the hash of the token string.
 	 * @param userName the username of the token.
 	 * @param creationDate the creation date of the token.
 	 * @param expirationDate the expiration date of the token.
 	 */
 	public HashedToken(
+			final UUID id,
 			final TokenType type,
 			final Optional<TokenName> tokenName,
-			final UUID id,
 			final String tokenHash,
 			final UserName userName,
 			final Instant creationDate,

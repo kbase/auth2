@@ -9,14 +9,14 @@ import java.util.UUID;
  */
 public class TemporaryHashedToken {
 	
+	private final UUID id;
 	private final String tokenHash;
 	private final Instant created;
 	private final Instant expiry;
-	private final UUID id;
 
 	TemporaryHashedToken(
-			final String tokenHash,
 			final UUID id,
+			final String tokenHash,
 			final Instant creationDate,
 			final Instant expirationDate) {
 		// since this method is only called by TemporaryToken, we assume the inputs are ok

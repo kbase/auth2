@@ -13,10 +13,10 @@ import java.util.UUID;
  */
 public class TemporaryToken {
 	
+	private final UUID id;
 	private final String token;
 	private final Instant creationDate;
 	private final Instant expirationDate;
-	private final UUID id;
 
 	/** Create a new temporary token.
 	 * @param id the token id.
@@ -76,6 +76,6 @@ public class TemporaryToken {
 	 * @return a hashed temporary token.
 	 */
 	public TemporaryHashedToken getHashedToken() {
-		return new TemporaryHashedToken(HashedToken.hash(token), id, creationDate, expirationDate);
+		return new TemporaryHashedToken(id, HashedToken.hash(token), creationDate, expirationDate);
 	}
 }

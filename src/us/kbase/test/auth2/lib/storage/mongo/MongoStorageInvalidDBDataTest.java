@@ -111,8 +111,8 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalTokenName() throws Exception {
 		final IncomingToken t = new IncomingToken("foobar");
-		storage.storeToken(new HashedToken(TokenType.LOGIN, Optional.of(new TokenName("foo")),
-				UUID.randomUUID(), t.getHashedToken().getTokenHash(), new UserName("baz"),
+		storage.storeToken(new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")), t.getHashedToken().getTokenHash(), new UserName("baz"),
 				Instant.now(), Instant.now().plusSeconds(3600)));
 		db.getCollection("tokens").updateOne(new Document("user", "baz"),
 				new Document("$set", new Document("name", "  foo\nbar  ")));
