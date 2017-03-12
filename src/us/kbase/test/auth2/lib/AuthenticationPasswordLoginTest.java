@@ -116,7 +116,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
 		
-		verify(storage).storeToken(new HashedToken(TokenType.LOGIN, null, t.getToken().getId(),
+		verify(storage).storeToken(new HashedToken(t.getToken().getId(), TokenType.LOGIN, null,
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
 				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
 		
@@ -305,8 +305,8 @@ public class AuthenticationPasswordLoginTest {
 				"Something is very broken. User should exist but doesn't: " +
 				"50000 No such user: foo"));
 		
-		verify(storage).storeToken(new HashedToken(TokenType.LOGIN, null,
-				UUID.fromString(id.toString()),
+		verify(storage).storeToken(new HashedToken(UUID.fromString(id.toString()), TokenType.LOGIN,
+				null,
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
 				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
 		assertClear(p);
@@ -791,7 +791,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -810,7 +810,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
@@ -845,7 +845,7 @@ public class AuthenticationPasswordLoginTest {
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -883,7 +883,7 @@ public class AuthenticationPasswordLoginTest {
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -939,7 +939,7 @@ public class AuthenticationPasswordLoginTest {
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", admin.getUserName(), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -1161,7 +1161,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -1180,7 +1180,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
@@ -1202,7 +1202,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", admin.getUserName(), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -1312,7 +1312,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
@@ -1332,7 +1332,7 @@ public class AuthenticationPasswordLoginTest {
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
 		
-		final HashedToken token = new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(),
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", admin.getUserName(), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);

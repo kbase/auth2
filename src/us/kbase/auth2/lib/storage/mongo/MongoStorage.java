@@ -641,9 +641,9 @@ public class MongoStorage implements AuthStorage {
 	
 	private HashedToken getToken(final Document t) throws AuthStorageException {
 		return new HashedToken(
+				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
 				getTokenName(t.getString(Fields.TOKEN_NAME)),
-				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				t.getString(Fields.TOKEN_TOKEN),
 				getUserName(t.getString(Fields.TOKEN_USER_NAME)),
 				t.getDate(Fields.TOKEN_CREATION).toInstant(),

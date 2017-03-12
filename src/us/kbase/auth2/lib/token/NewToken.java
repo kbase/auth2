@@ -150,7 +150,7 @@ public class NewToken {
 	 * @return a hashed token.
 	 */
 	public HashedToken getHashedToken() {
-		return new HashedToken(type, tokenName, id, HashedToken.hash(token),
+		return new HashedToken(id, type, tokenName, HashedToken.hash(token),
 				userName, creationDate, expirationDate);
 	}
 

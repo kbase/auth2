@@ -122,7 +122,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(adminUser);
@@ -169,7 +169,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
@@ -203,7 +203,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
@@ -228,7 +228,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
@@ -268,7 +268,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(TokenType.LOGIN, null, UUID.randomUUID(), "foobarhash",
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("whee"));
