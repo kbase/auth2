@@ -1126,7 +1126,6 @@ public class AuthenticationTokenTest {
 			
 			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
 					(expectedLifetime));
-			//TODO NOW CODE make token constructor arg orders the same
 			verify(storage).storeToken(new HashedToken(
 					id,
 					TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("a name")),

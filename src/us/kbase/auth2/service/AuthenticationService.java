@@ -1,6 +1,6 @@
 package us.kbase.auth2.service;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.nio.file.Paths;
 
@@ -18,6 +18,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
+import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.auth2.service.exceptions.ExceptionHandler;
 import us.kbase.auth2.service.template.TemplateProcessor;
@@ -30,22 +31,26 @@ public class AuthenticationService extends ResourceConfig {
 	//TODO TEST
 	//TODO JAVADOC
 	
-	private static AuthStartupConfig cfg = null;
+	private static String cfgClass = null;
 	private static MongoClient mc;
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
-	public static void setConfig(final AuthStartupConfig config) {
-		nonNull(config, "config");
-		cfg = config;
+	public static void setConfig(final String config) {
+		checkStringNoCheckedException(config, "config");
+		cfgClass = config;
 	}
 	
 	public AuthenticationService()
 			throws StorageInitException, AuthConfigurationException {
-		if (cfg == null) {
+		if (cfgClass == null) {
 			throw new IllegalStateException("Call setConfig() before " +
 					"starting the server ya daft numpty");
 		}
+		//TODO ZLATER Get the class name from environment if we need alternate config mechanism
+		final AuthStartupConfig cfg = ServiceCommon.loadClassWithInterface(
+				cfgClass, AuthStartupConfig.class);
+		
 		quietLogger();
 		logger = cfg.getLogger();
 		try {
