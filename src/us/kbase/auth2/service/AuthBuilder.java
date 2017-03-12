@@ -23,6 +23,7 @@ import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
+import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 
 public class AuthBuilder {
@@ -89,49 +90,16 @@ public class AuthBuilder {
 		}
 		//TODO TEST authenticate to db, write actual test with authentication
 		final AuthStorage s = new MongoStorage(db);
-		final Set<IdentityProvider> provs = configureIdentityProviders(c);
-		return new Authentication(s, provs, defaultExternalConfig);
-	}
-	
-	private Set<IdentityProvider> configureIdentityProviders(final AuthStartupConfig c)
-			throws AuthConfigurationException {
+		
 		final Set<IdentityProvider> providers = new HashSet<>();
 		for (final IdentityProviderConfig idc: c.getIdentityProviderConfigs()) {
-			try {
-				final Class<?> fac;
-				try {
-					fac = Class.forName(idc.getIdentityProviderFactoryClassName());
-				} catch (ClassNotFoundException e) {
-					throw new AuthConfigurationException(String.format(
-							"Cannot load identity provider factory %s: %s",
-							idc.getIdentityProviderFactoryClassName(),
-							e.getMessage(), e));
-				}
-				final Set<Class<?>> interfaces = new HashSet<>(Arrays.asList(fac.getInterfaces()));
-				if (!interfaces.contains(IdentityProviderFactory.class)) {
-					throw new AuthConfigurationException(String.format(
-							"Module %s must implement %s interface",
-							idc.getIdentityProviderFactoryClassName(),
-							IdentityProviderFactory.class.getName()));
-				}
-				final IdentityProviderFactory cfgr;
-				try {
-					cfgr = (IdentityProviderFactory) fac.newInstance();
-				} catch (IllegalAccessException | InstantiationException e) {
-					throw new AuthConfigurationException(String.format(
-							"Module %s could not be instantiated: %s",
-							idc.getIdentityProviderFactoryClassName(), e.getMessage()), e);
-				}
-				providers.add(cfgr.configure(idc));
-			} catch (IllegalArgumentException e) {
-				throw new AuthConfigurationException(String.format(
-						"Error registering identity provider %s: %s",
-						idc.getIdentityProviderFactoryClassName(),  e.getMessage()), e);
-			}
+			final IdentityProviderFactory fac = ServiceCommon.loadClassWithInterface(
+					idc.getIdentityProviderFactoryClassName(), IdentityProviderFactory.class);
+			providers.add(fac.configure(idc));
 		}
-		return providers;
+		return new Authentication(s, providers, defaultExternalConfig);
 	}
-
+	
 	public MongoClient getMongoClient() {
 		return mc;
 	}
