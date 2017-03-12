@@ -11,7 +11,7 @@ import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.lib.AuthenticationTester.initTestAuth;
+import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -46,7 +46,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
-import us.kbase.test.auth2.lib.AuthenticationTester.TestAuth;
+import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCreateLocalUserTest {
 
@@ -108,11 +108,11 @@ public class AuthenticationCreateLocalUserTest {
 	}
 
 	private void create(final AuthUser adminUser) throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		final char[] pwdChar = new char [] {'a', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'};
@@ -157,11 +157,11 @@ public class AuthenticationCreateLocalUserTest {
 	@Test
 	public void createFailUserExists() throws Exception {
 		// mostly for exercising the pwd, hash, and salt clears
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
-		final Clock clock = testauth.clock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		final char[] pwdChar = new char [] {'a', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'};
@@ -195,10 +195,10 @@ public class AuthenticationCreateLocalUserTest {
 	@Test
 	public void createFailRuntimeOnGetPwd() throws Exception {
 		// mostly for exercising the pwd, hash, and salt clears
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGen;
+		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
@@ -221,7 +221,7 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createUserFailDisabledUser() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -246,7 +246,7 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createUserFailInvalidToken() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -261,7 +261,7 @@ public class AuthenticationCreateLocalUserTest {
 	@Test
 	public void createUserFailNoSuchUser() throws Exception {
 		// should never actually happen if db isn't corrupted
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -280,7 +280,7 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createUserFailNulls() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		
 		failCreateLocalUser(auth, null, new UserName("foo"), new DisplayName("bar"),
@@ -301,7 +301,7 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createRootUserFail() throws Exception {
-		final TestAuth testauth = initTestAuth();
+		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		
 		failCreateLocalUser(auth, null, UserName.ROOT, new DisplayName("bar"),

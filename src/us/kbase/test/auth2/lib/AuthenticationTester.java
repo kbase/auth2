@@ -32,25 +32,25 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 
 public class AuthenticationTester {
 	
-	public static class TestAuth {
+	public static class TestMocks {
 		final AuthStorage storageMock;
-		final RandomDataGenerator randGen;
+		final RandomDataGenerator randGenMock;
 		final Authentication auth;
-		final Clock clock;
+		final Clock clockMock;
 		
-		public TestAuth(
+		public TestMocks(
 				final AuthStorage storageMock,
-				final RandomDataGenerator randGen,
-				final Authentication auth,
-				final Clock clock) {
+				final RandomDataGenerator randGenMock,
+				final Authentication auth, // not a mock
+				final Clock clockMock) {
 			this.storageMock = storageMock;
-			this.randGen = randGen;
+			this.randGenMock = randGenMock;
 			this.auth = auth;
-			this.clock = clock;
+			this.clockMock = clockMock;
 		}
 	}
 	
-	public static TestAuth initTestAuth() throws Exception {
+	public static TestMocks initTestMocks() throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
 		final Clock clock = mock(Clock.class);
@@ -68,7 +68,7 @@ public class AuthenticationTester {
 		final Authentication instance = c.newInstance(storage, Collections.emptySet(),
 				new TestExternalConfig("foo"), randGen, clock);
 		reset(storage);
-		return new TestAuth(storage, randGen, instance, clock);
+		return new TestMocks(storage, randGen, instance, clock);
 	}
 	
 	public static void setConfigUpdateInterval(final Authentication auth, final int sec)
