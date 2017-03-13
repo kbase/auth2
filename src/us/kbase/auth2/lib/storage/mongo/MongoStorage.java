@@ -713,7 +713,8 @@ public class MongoStorage implements AuthStorage {
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
-		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
+		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers))
+				.append(Fields.USER_DISABLED_REASON, null);
 		return getDisplayNames(query, Fields.USER_NAME, -1);
 	}
 
@@ -785,6 +786,9 @@ public class MongoStorage implements AuthStorage {
 					new Document("$in", spec.getSearchCustomRoles())));
 			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
 					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
+		}
+		if (!spec.isDisabledIncluded()) {
+			query.put(Fields.USER_DISABLED_REASON, null);
 		}
 		return getDisplayNames(query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
 	}

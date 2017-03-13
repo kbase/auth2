@@ -136,7 +136,7 @@ public interface AuthStorage {
 	Optional<AuthUser> getUser(RemoteIdentity remoteID) throws AuthStorageException;
 	
 	/** Get the display names for a set of users. Any non-existent users are left out of the
-	 * returned map.
+	 * returned map. Disabled users are never returned.
 	 * @param usernames the usernames for which to get display names.
 	 * @return a mapping of username to display name.
 	 * @throws AuthStorageException if a problem connecting with the storage
@@ -145,7 +145,12 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
 			throws AuthStorageException;
 	
-	/** Search for users based on a prefix of the user and display names and the user's roles.
+	//TODO ZLATER CODE could make a wrapper class for UserSearchSpec that doesn't include the root user stuff.
+	/** Search for users based on a search specification.
+	 * 
+	 * Note that auth storage implementations have no knowledge of root users and therefore
+	 * ignore the root user selection in the search specification.
+	 * 
 	 * @param spec the specification for the search.
 	 * @param maxReturnedUsers the maximum number of users to return.
 	 * @return a mapping of user name to display name for the discovered users.

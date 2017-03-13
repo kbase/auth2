@@ -57,7 +57,7 @@ public class AuthBuilder {
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
-		//TODO ZLATER handle shards & replica sets
+		//TODO ZLATER MONGO handle shards & replica sets
 		try {
 			if (c.getMongoUser().isPresent()) {
 				final List<MongoCredential> creds = Arrays.asList(MongoCredential.createCredential(

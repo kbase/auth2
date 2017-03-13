@@ -20,7 +20,7 @@ import com.google.common.base.Optional;
  */
 public class UserSearchSpec {
 	
-	//TODO CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
+	//TODO ZLATER CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
 	private Optional<String> prefix = Optional.absent();
 	private boolean searchUser = false;
@@ -28,6 +28,8 @@ public class UserSearchSpec {
 	private final Set<Role> searchRoles = new HashSet<>();
 	private final Set<String> searchCustomRoles = new HashSet<>();
 	private boolean isRegex = false;
+	private boolean includeRoot = false;
+	private boolean includeDisabled = false;
 	
 	private UserSearchSpec() {}
 
@@ -102,6 +104,20 @@ public class UserSearchSpec {
 	 */
 	public Set<String> getSearchCustomRoles() {
 		return Collections.unmodifiableSet(searchCustomRoles);
+	}
+	
+	/** Returns true if the root user should be included in the search results if warranted.
+	 * @return true if the root user should be included.
+	 */
+	public boolean isRootIncluded() {
+		return includeRoot;
+	}
+	
+	/** Returns true if disabled users should be included in the search results if warranted.
+	 * @return true if disabled users should be included.
+	 */
+	public boolean isDisabledIncluded() {
+		return includeDisabled;
 	}
 	
 	/** Returns the field by which users should be ordered when applying a limit.
@@ -248,6 +264,24 @@ public class UserSearchSpec {
 						"Custom role cannot be null or the empty string");
 			}
 			uss.searchCustomRoles.add(customRole);
+			return this;
+		}
+		
+		/** Include the root user in the search results, if warranted.
+		 * @param include true to include the root user.
+		 * @return this builder.
+		 */
+		public Builder withIncludeRoot(final boolean include) {
+			uss.includeRoot = include;
+			return this;
+		}
+		
+		/** Include disabled users in the search results, if warranted.
+		 * @param include true to include disabled users.
+		 * @return this builder.
+		 */
+		public Builder withIncludeDisabled(final boolean include) {
+			uss.includeDisabled = include;
 			return this;
 		}
 		

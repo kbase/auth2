@@ -155,7 +155,8 @@ public class Admin {
 			throws InvalidTokenException, IllegalParameterException, NoTokenProvidedException,
 			AuthStorageException, UnauthorizedException {
 		final String prefix = form.getFirst("prefix");
-		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
+		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder().withIncludeDisabled(true)
+				.withIncludeRoot(true); // may want to include option to exclude disabled
 		final boolean hasPrefix;
 		if (prefix != null && !prefix.trim().isEmpty()) {
 			build.withSearchPrefix(prefix);

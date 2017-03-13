@@ -93,16 +93,15 @@ public class Authentication {
 	//TODO TEST unit tests
 	//TODO TEST test logging on startup
 	//TODO TEST test logging on calls
-	//TODO ZZLATER validate email address by sending an email
+	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
-	//TODO SCOPES configure scopes via ui
-	//TODO SCOPES configure scope on login via ui
-	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
-	//TODO USER_PROFILE_SERVICE email & username change propagation
-	//TODO DEPLOY jetty should start app immediately & fail if app fails
+	//TODO ZLATER SCOPES configure scopes via ui
+	//TODO ZLATER SCOPES configure scope on login via ui
+	//TODO ZLATER SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
+	//TODO ZLATER DEPLOY jetty should start app immediately & fail if app fails - can't figure out how to do this
 	//TODO SECURITY keep track of logins over last X seconds, lock account for Y seconds after Z failures
-	//TODO USER_INPUT check for obscene/offensive content and reject
+	//TODO ZLATER USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
 	
@@ -596,6 +595,13 @@ public class Authentication {
 		}
 	}
 
+	/** Get a random token. This token is not persisted in the storage system.
+	 * @return a token.
+	 */
+	public String getBareToken() {
+		return randGen.getToken();
+	}
+
 	/** Get the tokens associated with a user account associated with a possessed token.
 	 * @param token a user token for the account in question.
 	 * @return the tokens.
@@ -767,8 +773,29 @@ public class Authentication {
 		return new ViewableUser(u, sameUser);
 	}
 
+	/** Get a user as an admin.
+	 * @param adminToken a token for a user with the administator, create administator, or root
+	 * role.
+	 * @param userName the name of the user account to get.
+	 * @return the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if no user exists with the given user name.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user account associated with the token does not have
+	 * one of the required roles.
+	 */
+	public AuthUser getUserAsAdmin(
+			final IncomingToken adminToken,
+			final UserName userName)
+			throws AuthStorageException, NoSuchUserException,
+			InvalidTokenException, UnauthorizedException {
+		nonNull(userName, "userName");
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		return storage.getUser(userName);
+	}
+
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
-	 * at once.
+	 * at once. Never returns the root user name or disabled users.
 	 * @param token a token for the user requesting the lookup.
 	 * @param usernames the user names to look up.
 	 * @return the display names for each user name. Any non-existent user names will be missing.
@@ -781,8 +808,6 @@ public class Authentication {
 			final IncomingToken token,
 			final Set<UserName> usernames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
-		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
-		//TODO SEARCH never include root user
 		getToken(token); // just check the token is valid
 		if (usernames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
@@ -791,7 +816,10 @@ public class Authentication {
 		if (usernames.isEmpty()) {
 			return new HashMap<>();
 		}
-		return storage.getUserDisplayNames(usernames);
+		
+		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(usernames);
+		displayNames.remove(UserName.ROOT);
+		return displayNames;
 	}
 	
 	/** Look up display names based on a search specification. A maximum of 10000 users will be
@@ -801,7 +829,8 @@ public class Authentication {
 	 * @return the display names of the users.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user does not have the administrator, create
-	 * administrator, or root role and a role search or prefix-less search is requested.
+	 * administrator, or root role and a role search, prefix-less search is requested or the
+	 * results are to include the root use or disabled users.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public Map<UserName, DisplayName> getUserDisplayNames(
@@ -809,10 +838,8 @@ public class Authentication {
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
-		//TODO SEARCH only include root user if admin and requested (add to search spec)
-		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
 		final AuthUser user = getUser(token);
-		if (!Role.ADMIN.isSatisfiedBy(user.getRoles())) {
+		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search on roles");
@@ -821,12 +848,86 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search without a prefix");
 			}
+			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only admins amy search with root or disabled users included");
+			}
 		}
 		if (spec.isRegex()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Regex search is currently for internal use only");
 		}
-		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS);
+		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(
+				spec, MAX_RETURNED_USERS);
+		if (!spec.isRootIncluded()) {
+			displayNames.remove(UserName.ROOT);
+		}
+		return displayNames;
+	}
+	
+
+	/** Get a currently available user name given a user name suggestion. Returns an empty Optional
+	 * if a reasonable user name cannot be found.
+	 * @param suggestedUserName the suggested user name.
+	 * @return an available user name.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
+			throws AuthStorageException {
+		nonNull(suggestedUserName, "suggestedUserName");
+		final UserName un = UserName.sanitizeName(suggestedUserName);
+		if (un == null) {
+			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
+		} else {
+			return getAvailableUserName(un, false);
+		}
+	}
+	
+	private Optional<UserName> getAvailableUserName(
+			final UserName suggestedUserName,
+			final boolean forceNumericSuffix)
+			throws AuthStorageException {
+		
+		final String sugName = suggestedUserName.getName();
+		final String sugStrip = sugName.replaceAll("\\d*$", "");
+		/* this might return a lot of names, but not super likely and it'd take a *lot* to cause
+		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
+		 * db side and search and sort db side.
+		 */
+		final UserSearchSpec spec = UserSearchSpec.getBuilder()
+				// checked that this does indeed use an index for the mongo implementation
+				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
+				.withSearchOnUserName(true).withIncludeDisabled(true).build();
+		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
+		boolean match = false;
+		long largest = 0;
+		for (final UserName d: users.keySet()) {
+			final String lastName = d.getName();
+			match = match || sugName.equals(lastName);
+			final String num = lastName.replace(sugStrip, "");
+			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
+			largest = n > largest ? n : largest;
+		}
+		final String newName;
+		if (largest == 0 || !match) {
+			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+			if (!hasNumSuffix && forceNumericSuffix) {
+				newName = sugStrip + (largest + 1);
+			} else {
+				newName = sugName;
+			}
+		} else {
+			newName = sugStrip + (largest + 1);
+		}
+		if (newName.length() > UserName.MAX_NAME_LENGTH) {
+			 // not worth trying to do something clever here, should never happen
+			return Optional.absent();
+		}
+		try {
+			return Optional.of(new UserName(newName));
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("this should be impossible", e);
+		}
 	}
 	
 	/** Revoke a token.
@@ -931,27 +1032,6 @@ public class Authentication {
 		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // ensure admin
 		storage.deleteTokens(userName);
-	}
-
-	/** Get a user as an admin.
-	 * @param adminToken a token for a user with the administator, create administator, or root
-	 * role.
-	 * @param userName the name of the user account to get.
-	 * @return the user.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws NoSuchUserException if no user exists with the given user name.
-	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * one of the required roles.
-	 */
-	public AuthUser getUserAsAdmin(
-			final IncomingToken adminToken,
-			final UserName userName)
-			throws AuthStorageException, NoSuchUserException,
-			InvalidTokenException, UnauthorizedException {
-		nonNull(userName, "userName");
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		return storage.getUser(userName);
 	}
 	
 	/** Remove roles from a user.
@@ -1179,13 +1259,6 @@ public class Authentication {
 			final boolean link)
 			throws NoSuchIdentityProviderException, AuthStorageException {
 		return getIdentityProvider(provider).getLoginURL(state, link);
-	}
-
-	/** Get a random token. This token is not persisted in the storage system.
-	 * @return a token.
-	 */
-	public String getBareToken() {
-		return randGen.getToken();
 	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1434,69 +1507,6 @@ public class Authentication {
 			}
 		}
 		return Optional.absent();
-	}
-
-	/** Get a currently available user name given a user name suggestion. Returns an empty Optional
-	 * if a reasonable user name cannot be found.
-	 * @param suggestedUserName the suggested user name.
-	 * @return an available user name.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 */
-	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
-			throws AuthStorageException {
-		nonNull(suggestedUserName, "suggestedUserName");
-		final UserName un = UserName.sanitizeName(suggestedUserName);
-		if (un == null) {
-			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
-		} else {
-			return getAvailableUserName(un, false);
-		}
-	}
-	
-	private Optional<UserName> getAvailableUserName(
-			final UserName suggestedUserName,
-			final boolean forceNumericSuffix) throws AuthStorageException {
-		
-		final String sugName = suggestedUserName.getName();
-		final String sugStrip = sugName.replaceAll("\\d*$", "");
-		/* this might return a lot of names, but not super likely and it'd take a *lot* to cause
-		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
-		 * db side and search and sort db side.
-		 */
-		final UserSearchSpec spec = UserSearchSpec.getBuilder()
-				// checked that this does indeed use an index for the mongo implementation
-				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
-				.withSearchOnUserName(true).build();
-		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
-		boolean match = false;
-		long largest = 0;
-		for (final UserName d: users.keySet()) {
-			final String lastName = d.getName();
-			match = match || sugName.equals(lastName);
-			final String num = lastName.replace(sugStrip, "");
-			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
-			largest = n > largest ? n : largest;
-		}
-		final String newName;
-		if (largest == 0 || !match) {
-			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
-			if (!hasNumSuffix && forceNumericSuffix) {
-				newName = sugStrip + (largest + 1);
-			} else {
-				newName = sugName;
-			}
-		} else {
-			newName = sugStrip + (largest + 1);
-		}
-		if (newName.length() > UserName.MAX_NAME_LENGTH) {
-			 // not worth trying to do something clever here, should never happen
-			return Optional.absent();
-		}
-		try {
-			return Optional.of(new UserName(newName));
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("this should be impossible", e);
-		}
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party

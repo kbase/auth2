@@ -29,8 +29,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	//TODO JAVADOC
 	//TODO TEST unittests
 	
-	//TODO DOCs document deploy.cfg.example
-	
 	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
 	private static final String DEFAULT_LOG_NAME = "KBaseAuthService2";

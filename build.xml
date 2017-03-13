@@ -4,7 +4,7 @@
       Build file for the second KBase Authentication Service 
   </description>
 	
-  <!-- TODO BUILD switch to gradle or at least ivy -->
+  <!-- TODO ZLATER BUILD switch to gradle or at least ivy -->
 
   <!-- set global properties for this build -->
   <property name="package" value="KBase authentication service"/>

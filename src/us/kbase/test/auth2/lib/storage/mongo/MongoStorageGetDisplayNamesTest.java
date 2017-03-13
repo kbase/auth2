@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
@@ -82,6 +83,27 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		assertThat("incorrect users found", storage.getUserDisplayNames(
 				Collections.emptySet()), is(expected));
+	}
+	
+	@Test
+	public void getNamesFromListWithDisabledUsers() throws Exception {
+		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), REMOTE1, NOW, null));
+		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
+				new DisplayName("whoo"), REMOTE2, NOW, null));
+		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
+				new DisplayName("wonk"), REMOTE3, NOW, null));
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("whee"), new UserName("admin"), "they suck");
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("bar"));
+		expected.put(new UserName("wugga"), new DisplayName("wonk"));
+		assertThat("incorrect users found", storage.getUserDisplayNames(set(
+				new UserName("foo"), new UserName("whee"), new UserName("wugga"))),
+				is(expected));
 	}
 	
 	@Test
@@ -407,6 +429,61 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
 				.withSearchOnCustomRole("baz").withSearchOnCustomRole("bat").build(), 2),
 				is(expected));
+	}
+	
+	@Test
+	public void searchWithDisabled() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withIncludeDisabled(true).build(), 10), is(expected));
+	}
+	
+	@Test
+	public void searchWithoutDisabled() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withIncludeDisabled(false).build(), 10), is(expected));
+	}
+	
+	@Test
+	public void searchWithoutDisabledDefault() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.build(), 10), is(expected));
 	}
 	
 	@Test
