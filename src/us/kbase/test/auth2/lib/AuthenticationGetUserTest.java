@@ -27,9 +27,11 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -277,6 +279,209 @@ public class AuthenticationGetUserTest {
 			final Exception e) {
 		try {
 			auth.getUser(token, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getUserAsAdmin() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		getUserAsAdmin(admin, user);
+	}
+	
+	@Test
+	public void getUserAsAdminSelf() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		getUserAsAdmin(admin, user);
+	}
+	
+	
+	@Test
+	public void getUserAsAdminCreate() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		getUserAsAdmin(admin, user);
+	}
+	
+	@Test
+	public void getUserAsAdminRoot() throws Exception {
+		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		getUserAsAdmin(admin, user);
+	}
+	
+	@Test
+	public void getUserAsAdminFailNotAdmin() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		failGetUserAsAdmin(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void getUserAsAdminFailDisabled() throws Exception {
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
+				Collections.emptySet(), Instant.now(), null,
+				new UserDisabledState("baz", new UserName("whee"), Instant.now()));
+		
+		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
+				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		failGetUserAsAdmin(admin, user, new DisabledUserException());
+	}
+	
+	@Test
+	public void getUserAsAdminFailNulls() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failGetUserAsAdmin(auth, null, new UserName("foo"), new NullPointerException("token"));
+		failGetUserAsAdmin(auth, new IncomingToken("foo"), null,
+				new NullPointerException("userName"));
+	}
+	
+	@Test
+	public void getUserAsAdminFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		failGetUserAsAdmin(auth, t, new UserName("bar"), new InvalidTokenException());
+	}
+	
+	@Test
+	public void getUserAsAdminFailCatastrophic() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("foobar"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("foobar"))).thenThrow(new NoSuchUserException("foobar"));
+		
+		failGetUserAsAdmin(auth, t, new UserName("bleah"), new RuntimeException(
+				"There seems to be an error " +
+				"in the storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void getUserAsAdminFailNoSuchUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("admin"), Instant.now(), Instant.now());
+		
+		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
+				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin, (AuthUser) null);
+		when(storage.getUser(new UserName("bar"))).thenThrow(new NoSuchUserException("bar"));
+		
+		failGetUserAsAdmin(auth, t, new UserName("bar"), new NoSuchUserException("bar"));
+	}
+
+	private void getUserAsAdmin(final AuthUser admin, final AuthUser user) throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobarbaz");
+		
+		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", admin.getUserName(), Instant.now(), Instant.now());
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		
+		if (user.getUserName().equals(admin.getUserName())) {
+			when(storage.getUser(admin.getUserName())).thenReturn(admin, user, (AuthUser) null);
+		} else {
+			when(storage.getUser(admin.getUserName())).thenReturn(admin, (AuthUser) null);
+			when(storage.getUser(user.getUserName())).thenReturn(user, (AuthUser) null);
+		}
+		
+		try {
+			final AuthUser gotUser = auth.getUserAsAdmin(t, user.getUserName());
+		
+			assertThat("incorrect user", gotUser, is(user));
+		} catch (Throwable th) {
+			if (admin.isDisabled()) {
+				verify(storage).deleteTokens(admin.getUserName());
+			} else {
+				verify(storage, never()).deleteTokens(admin.getUserName());
+			}
+			throw th;
+		}
+	}
+	
+	private void failGetUserAsAdmin(
+			final AuthUser admin,
+			final AuthUser user,
+			final Exception e) {
+		try {
+			getUserAsAdmin(admin, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failGetUserAsAdmin(
+			final Authentication auth,
+			final IncomingToken token,
+			final UserName user,
+			final Exception e) {
+		try {
+			auth.getUserAsAdmin(token, user);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
