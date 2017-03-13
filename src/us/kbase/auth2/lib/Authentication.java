@@ -596,6 +596,13 @@ public class Authentication {
 		}
 	}
 
+	/** Get a random token. This token is not persisted in the storage system.
+	 * @return a token.
+	 */
+	public String getBareToken() {
+		return randGen.getToken();
+	}
+
 	/** Get the tokens associated with a user account associated with a possessed token.
 	 * @param token a user token for the account in question.
 	 * @return the tokens.
@@ -767,6 +774,27 @@ public class Authentication {
 		return new ViewableUser(u, sameUser);
 	}
 
+	/** Get a user as an admin.
+	 * @param adminToken a token for a user with the administator, create administator, or root
+	 * role.
+	 * @param userName the name of the user account to get.
+	 * @return the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if no user exists with the given user name.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user account associated with the token does not have
+	 * one of the required roles.
+	 */
+	public AuthUser getUserAsAdmin(
+			final IncomingToken adminToken,
+			final UserName userName)
+			throws AuthStorageException, NoSuchUserException,
+			InvalidTokenException, UnauthorizedException {
+		nonNull(userName, "userName");
+		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		return storage.getUser(userName);
+	}
+
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
 	 * at once.
 	 * @param token a token for the user requesting the lookup.
@@ -827,6 +855,70 @@ public class Authentication {
 					"Regex search is currently for internal use only");
 		}
 		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS);
+	}
+	
+
+	/** Get a currently available user name given a user name suggestion. Returns an empty Optional
+	 * if a reasonable user name cannot be found.
+	 * @param suggestedUserName the suggested user name.
+	 * @return an available user name.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
+			throws AuthStorageException {
+		nonNull(suggestedUserName, "suggestedUserName");
+		final UserName un = UserName.sanitizeName(suggestedUserName);
+		if (un == null) {
+			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
+		} else {
+			return getAvailableUserName(un, false);
+		}
+	}
+	
+	private Optional<UserName> getAvailableUserName(
+			final UserName suggestedUserName,
+			final boolean forceNumericSuffix) throws AuthStorageException {
+		
+		final String sugName = suggestedUserName.getName();
+		final String sugStrip = sugName.replaceAll("\\d*$", "");
+		/* this might return a lot of names, but not super likely and it'd take a *lot* to cause
+		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
+		 * db side and search and sort db side.
+		 */
+		final UserSearchSpec spec = UserSearchSpec.getBuilder()
+				// checked that this does indeed use an index for the mongo implementation
+				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
+				.withSearchOnUserName(true).build();
+		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
+		boolean match = false;
+		long largest = 0;
+		for (final UserName d: users.keySet()) {
+			final String lastName = d.getName();
+			match = match || sugName.equals(lastName);
+			final String num = lastName.replace(sugStrip, "");
+			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
+			largest = n > largest ? n : largest;
+		}
+		final String newName;
+		if (largest == 0 || !match) {
+			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+			if (!hasNumSuffix && forceNumericSuffix) {
+				newName = sugStrip + (largest + 1);
+			} else {
+				newName = sugName;
+			}
+		} else {
+			newName = sugStrip + (largest + 1);
+		}
+		if (newName.length() > UserName.MAX_NAME_LENGTH) {
+			 // not worth trying to do something clever here, should never happen
+			return Optional.absent();
+		}
+		try {
+			return Optional.of(new UserName(newName));
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("this should be impossible", e);
+		}
 	}
 	
 	/** Revoke a token.
@@ -931,27 +1023,6 @@ public class Authentication {
 		nonNull(userName, "userName");
 		getUser(token, Role.ADMIN); // ensure admin
 		storage.deleteTokens(userName);
-	}
-
-	/** Get a user as an admin.
-	 * @param adminToken a token for a user with the administator, create administator, or root
-	 * role.
-	 * @param userName the name of the user account to get.
-	 * @return the user.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws NoSuchUserException if no user exists with the given user name.
-	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * one of the required roles.
-	 */
-	public AuthUser getUserAsAdmin(
-			final IncomingToken adminToken,
-			final UserName userName)
-			throws AuthStorageException, NoSuchUserException,
-			InvalidTokenException, UnauthorizedException {
-		nonNull(userName, "userName");
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		return storage.getUser(userName);
 	}
 	
 	/** Remove roles from a user.
@@ -1179,13 +1250,6 @@ public class Authentication {
 			final boolean link)
 			throws NoSuchIdentityProviderException, AuthStorageException {
 		return getIdentityProvider(provider).getLoginURL(state, link);
-	}
-
-	/** Get a random token. This token is not persisted in the storage system.
-	 * @return a token.
-	 */
-	public String getBareToken() {
-		return randGen.getToken();
 	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1434,69 +1498,6 @@ public class Authentication {
 			}
 		}
 		return Optional.absent();
-	}
-
-	/** Get a currently available user name given a user name suggestion. Returns an empty Optional
-	 * if a reasonable user name cannot be found.
-	 * @param suggestedUserName the suggested user name.
-	 * @return an available user name.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 */
-	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
-			throws AuthStorageException {
-		nonNull(suggestedUserName, "suggestedUserName");
-		final UserName un = UserName.sanitizeName(suggestedUserName);
-		if (un == null) {
-			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
-		} else {
-			return getAvailableUserName(un, false);
-		}
-	}
-	
-	private Optional<UserName> getAvailableUserName(
-			final UserName suggestedUserName,
-			final boolean forceNumericSuffix) throws AuthStorageException {
-		
-		final String sugName = suggestedUserName.getName();
-		final String sugStrip = sugName.replaceAll("\\d*$", "");
-		/* this might return a lot of names, but not super likely and it'd take a *lot* to cause
-		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
-		 * db side and search and sort db side.
-		 */
-		final UserSearchSpec spec = UserSearchSpec.getBuilder()
-				// checked that this does indeed use an index for the mongo implementation
-				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
-				.withSearchOnUserName(true).build();
-		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
-		boolean match = false;
-		long largest = 0;
-		for (final UserName d: users.keySet()) {
-			final String lastName = d.getName();
-			match = match || sugName.equals(lastName);
-			final String num = lastName.replace(sugStrip, "");
-			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
-			largest = n > largest ? n : largest;
-		}
-		final String newName;
-		if (largest == 0 || !match) {
-			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
-			if (!hasNumSuffix && forceNumericSuffix) {
-				newName = sugStrip + (largest + 1);
-			} else {
-				newName = sugName;
-			}
-		} else {
-			newName = sugStrip + (largest + 1);
-		}
-		if (newName.length() > UserName.MAX_NAME_LENGTH) {
-			 // not worth trying to do something clever here, should never happen
-			return Optional.absent();
-		}
-		try {
-			return Optional.of(new UserName(newName));
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("this should be impossible", e);
-		}
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
