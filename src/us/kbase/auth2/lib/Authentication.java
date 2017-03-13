@@ -746,20 +746,25 @@ public class Authentication {
 	 * @return a view of the user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws NoSuchUserException if there is no user corresponding to the given user name.
+	 * @throws NoSuchUserException if there is no user corresponding to the given user name or the
+	 * user is disabled.
 	 */
 	public ViewableUser getUser(
 			final IncomingToken token,
 			final UserName user)
 			throws AuthStorageException, InvalidTokenException,
 			NoSuchUserException {
+		nonNull(user, "userName");
 		final HashedToken ht = getToken(token);
 		final AuthUser u = storage.getUser(user);
-		if (ht.getUserName().equals(u.getUserName())) {
-			return new ViewableUser(u, true);
-		} else {
-			return new ViewableUser(u, false);
+		final boolean sameUser = ht.getUserName().equals(u.getUserName());
+		if (u.isDisabled()) {
+			if (sameUser) {
+				storage.deleteTokens(u.getUserName());
+			}
+			throw new NoSuchUserException(u.getUserName().getName());
 		}
+		return new ViewableUser(u, sameUser);
 	}
 
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up

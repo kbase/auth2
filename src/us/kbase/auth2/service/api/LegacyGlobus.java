@@ -126,7 +126,7 @@ public class LegacyGlobus {
 			throw new UnauthorizedException(
 					e.getErr(), "Authentication failed.");
 		}
-		final String email = u.getEmail() == null ? null : u.getEmail().getAddress(); 
+		final String email = u.getEmail().isPresent() ? u.getEmail().get().getAddress() : null;
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("username", u.getUserName().getName());
 		ret.put("email_validated", false);

@@ -9,6 +9,9 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -27,6 +30,11 @@ public class ViewableUserTest {
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 
 	@Test
+	public void equals() {
+		EqualsVerifier.forClass(ViewableUser.class).usingGetClass().verify();
+	}
+	
+	@Test
 	public void constructWithoutEmail() throws Exception {
 		final AuthUser u = new NewUser(new UserName("foo"), new EmailAddress("e@f.com"),
 				new DisplayName("bar"), REMOTE, Instant.now(), null);
@@ -34,7 +42,7 @@ public class ViewableUserTest {
 		final ViewableUser vu = new ViewableUser(u, false);
 		assertThat("incorrect username", vu.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect display name", vu.getDisplayName(), is(new DisplayName("bar")));
-		assertThat("incorrect email", vu.getEmail(), is((EmailAddress) null));
+		assertThat("incorrect email", vu.getEmail(), is(Optional.absent()));
 	}
 	
 	@Test
@@ -45,7 +53,7 @@ public class ViewableUserTest {
 		final ViewableUser vu = new ViewableUser(u, true);
 		assertThat("incorrect username", vu.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect display name", vu.getDisplayName(), is(new DisplayName("bar")));
-		assertThat("incorrect email", vu.getEmail(), is(new EmailAddress("e@f.com")));
+		assertThat("incorrect email", vu.getEmail(), is(Optional.of(new EmailAddress("e@f.com"))));
 	}
 	
 	@Test
