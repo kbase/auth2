@@ -80,10 +80,10 @@ public class LocalAccounts {
 		//TODO LOG log
 		if (llr.isPwdResetRequired()) {
 			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?user=" +
-					llr.getUserName().getName())).build();
+					llr.getUserName().get().getName())).build();
 		}
 		return Response.seeOther(toURI(UIPaths.ME_ROOT))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), llr.getToken(),
+				.cookie(getLoginCookie(cfg.getTokenCookieName(), llr.getToken().get(),
 						stayLoggedIn == null))
 				.build();
 	}

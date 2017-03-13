@@ -2,6 +2,8 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.token.NewToken;
 
 /** Represents the result of a successful local login, which can result of one of two states.
@@ -14,18 +16,16 @@ import us.kbase.auth2.lib.token.NewToken;
  */
 public class LocalLoginResult {
 	
-	//TODO CODE use optionals
-
-	private final UserName userName;
-	private final NewToken token;
+	private final Optional<UserName> userName;
+	private final Optional<NewToken> token;
 	
 	/** Create a login result where a password reset is required.
 	 * @param userName the username of the user that logged in.
 	 */
 	public LocalLoginResult(final UserName userName) {
 		nonNull(userName, "userName");
-		this.userName = userName;
-		token = null;
+		this.userName = Optional.of(userName);
+		token = Optional.absent();
 	}
 	
 	/** Create a login result where the login is complete.
@@ -33,28 +33,28 @@ public class LocalLoginResult {
 	 */
 	public LocalLoginResult(final NewToken token) {
 		nonNull(token, "token");
-		userName = null;
-		this.token = token;
+		userName = Optional.absent();
+		this.token = Optional.of(token);
 	}
 
 	/** Returns whether a password reset is required.
 	 * @return true if a password reset is required, false otherwise.
 	 */
 	public boolean isPwdResetRequired() {
-		return token == null;
+		return userName.isPresent();
 	}
 
 	/** Get the user's new token.
-	 * @return the token, or null if a password reset is required.
+	 * @return the token, or absent if a password reset is required.
 	 */
-	public NewToken getToken() {
+	public Optional<NewToken> getToken() {
 		return token;
 	}
 	
 	/** Get the name of the user requiring a password reset.
-	 * @return the username, or null if a password reset is not required.
+	 * @return the username, or absent if a password reset is not required.
 	 */
-	public UserName getUserName() {
+	public Optional<UserName> getUserName() {
 		return userName;
 	}
 }

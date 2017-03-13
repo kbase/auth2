@@ -22,8 +22,8 @@ public class LocalLoginResultTest {
 	public void constructUser() throws Exception {
 		final LocalLoginResult llr = new LocalLoginResult(new UserName("foo"));
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(true));
-		assertThat("incorrect username", llr.getUserName(), is(new UserName("foo")));
-		assertThat("incorrect token", llr.getToken(), is((NewToken) null));
+		assertThat("incorrect username", llr.getUserName(), is(Optional.of(new UserName("foo"))));
+		assertThat("incorrect token", llr.getToken(), is(Optional.absent()));
 	}
 
 	@Test
@@ -32,18 +32,19 @@ public class LocalLoginResultTest {
 				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 5000);
 		final LocalLoginResult llr = new LocalLoginResult(nt);
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(false));
-		assertThat("incorrect token type", llr.getToken().getTokenType(), is(TokenType.LOGIN));
-		assertThat("incorrect creation date", llr.getToken().getCreationDate(),
+		final NewToken got = llr.getToken().get();
+		assertThat("incorrect token type", got.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect creation date", got.getCreationDate(),
 				is(nt.getCreationDate()));
-		assertThat("incorrect expiration date", llr.getToken().getExpirationDate(),
+		assertThat("incorrect expiration date", got.getExpirationDate(),
 				is(nt.getExpirationDate()));
-		assertThat("incorrect token id", llr.getToken().getId(), is(nt.getId()));
-		assertThat("incorrect token", llr.getToken().getToken(), is("foo"));
-		assertThat("incorrect token name", llr.getToken().getTokenName(), is(Optional.absent()));
-		assertThat("incorrect token username", llr.getToken().getUserName(),
+		assertThat("incorrect token id", got.getId(), is(nt.getId()));
+		assertThat("incorrect token", got.getToken(), is("foo"));
+		assertThat("incorrect token name", got.getTokenName(), is(Optional.absent()));
+		assertThat("incorrect token username", got.getUserName(),
 				is(new UserName("bar")));
 		
-		assertThat("incorrect username",  llr.getUserName(), is((UserName) null));
+		assertThat("incorrect username",  llr.getUserName(), is(Optional.absent()));
 	}
 	
 	@Test
