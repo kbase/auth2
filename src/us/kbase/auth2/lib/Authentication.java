@@ -93,16 +93,15 @@ public class Authentication {
 	//TODO TEST unit tests
 	//TODO TEST test logging on startup
 	//TODO TEST test logging on calls
-	//TODO ZZLATER validate email address by sending an email
+	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
-	//TODO SCOPES configure scopes via ui
-	//TODO SCOPES configure scope on login via ui
-	//TODO SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
-	//TODO USER_PROFILE_SERVICE email & username change propagation
-	//TODO DEPLOY jetty should start app immediately & fail if app fails
+	//TODO ZLATER SCOPES configure scopes via ui
+	//TODO ZLATER SCOPES configure scope on login via ui
+	//TODO ZLATER SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)
+	//TODO ZLATER DEPLOY jetty should start app immediately & fail if app fails - can't figure out how to do this
 	//TODO SECURITY keep track of logins over last X seconds, lock account for Y seconds after Z failures
-	//TODO USER_INPUT check for obscene/offensive content and reject
+	//TODO ZLATER USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
 	
@@ -830,7 +829,8 @@ public class Authentication {
 	 * @return the display names of the users.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user does not have the administrator, create
-	 * administrator, or root role and a role search or prefix-less search is requested.
+	 * administrator, or root role and a role search, prefix-less search is requested or the
+	 * results are to include the root use or disabled users.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public Map<UserName, DisplayName> getUserDisplayNames(
@@ -838,10 +838,8 @@ public class Authentication {
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
-		//TODO SEARCH only include root user if admin and requested (add to search spec)
-		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
 		final AuthUser user = getUser(token);
-		if (!Role.ADMIN.isSatisfiedBy(user.getRoles())) {
+		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search on roles");
@@ -850,12 +848,21 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search without a prefix");
 			}
+			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Only admins amy search with root or disabled users included");
+			}
 		}
 		if (spec.isRegex()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Regex search is currently for internal use only");
 		}
-		return storage.getUserDisplayNames(spec, MAX_RETURNED_USERS);
+		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(
+				spec, MAX_RETURNED_USERS);
+		if (!spec.isRootIncluded()) {
+			displayNames.remove(UserName.ROOT);
+		}
+		return displayNames;
 	}
 	
 
@@ -878,7 +885,8 @@ public class Authentication {
 	
 	private Optional<UserName> getAvailableUserName(
 			final UserName suggestedUserName,
-			final boolean forceNumericSuffix) throws AuthStorageException {
+			final boolean forceNumericSuffix)
+			throws AuthStorageException {
 		
 		final String sugName = suggestedUserName.getName();
 		final String sugStrip = sugName.replaceAll("\\d*$", "");
@@ -889,7 +897,7 @@ public class Authentication {
 		final UserSearchSpec spec = UserSearchSpec.getBuilder()
 				// checked that this does indeed use an index for the mongo implementation
 				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
-				.withSearchOnUserName(true).build();
+				.withSearchOnUserName(true).withIncludeDisabled(true).build();
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
 		boolean match = false;
 		long largest = 0;

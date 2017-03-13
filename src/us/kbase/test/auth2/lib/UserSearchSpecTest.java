@@ -30,6 +30,8 @@ public class UserSearchSpecTest {
 				.withSearchOnRole(Role.DEV_TOKEN)
 				.withSearchOnCustomRole("bar")
 				.withSearchOnCustomRole("baz")
+				.withIncludeRoot(true)
+				.withIncludeDisabled(true)
 				.build();
 		
 		assertThat("incorrect prefix", uss.getSearchPrefix().get(), is("foo"));
@@ -43,6 +45,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(set("baz", "bar")));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(true));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(true));
 		
 	}
 	
@@ -59,6 +63,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -75,6 +81,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -92,6 +100,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -110,6 +120,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search roles", uss.getSearchRoles(), is(set(Role.SERV_TOKEN)));
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(), is(set("bar")));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.DISPLAYNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -126,6 +138,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search roles", uss.getSearchRoles(), is(set(Role.DEV_TOKEN)));
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(), is(set("foo")));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.CUSTOMROLE));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -142,6 +156,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.ROLE));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -158,6 +174,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -175,6 +193,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 
 	private void setRegex(final Builder b, final String regex) throws Exception {
@@ -199,6 +219,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test
@@ -216,6 +238,8 @@ public class UserSearchSpecTest {
 		assertThat("incorrect search custom roles", uss.getSearchCustomRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect orderby", uss.orderBy(), is(SearchField.USERNAME));
+		assertThat("incorrect include root", uss.isRootIncluded(), is(false));
+		assertThat("incorrect include disabled", uss.isDisabledIncluded(), is(false));
 	}
 	
 	@Test

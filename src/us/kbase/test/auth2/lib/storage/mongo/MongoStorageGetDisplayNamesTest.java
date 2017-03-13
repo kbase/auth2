@@ -432,6 +432,61 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	}
 	
 	@Test
+	public void searchWithDisabled() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withIncludeDisabled(true).build(), 10), is(expected));
+	}
+	
+	@Test
+	public void searchWithoutDisabled() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withIncludeDisabled(false).build(), 10), is(expected));
+	}
+	
+	@Test
+	public void searchWithoutDisabledDefault() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		when(mockClock.instant()).thenReturn(Instant.now());
+		
+		storage.disableAccount(new UserName("u3"), new UserName("foo"), "foo");
+		
+
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.build(), 10), is(expected));
+	}
+	
+	@Test
 	public void searchFail() throws Exception {
 		//only one way to actually cause an exception
 		try {

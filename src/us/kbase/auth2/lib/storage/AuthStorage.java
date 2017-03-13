@@ -145,7 +145,12 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
 			throws AuthStorageException;
 	
-	/** Search for users based on a prefix of the user and display names and the user's roles.
+	//TODO ZLATER CODE could make a wrapper class for UserSearchSpec that doesn't include the root user stuff.
+	/** Search for users based on a search specification.
+	 * 
+	 * Note that auth storage implementations have no knowledge of root users and therefore
+	 * ignore the root user selection in the search specification.
+	 * 
 	 * @param spec the specification for the search.
 	 * @param maxReturnedUsers the maximum number of users to return.
 	 * @return a mapping of user name to display name for the discovered users.

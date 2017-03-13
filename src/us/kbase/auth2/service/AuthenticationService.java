@@ -24,8 +24,6 @@ import us.kbase.auth2.service.exceptions.ExceptionHandler;
 import us.kbase.auth2.service.template.TemplateProcessor;
 import us.kbase.auth2.service.template.mustache.MustacheProcessor;
 
-//TODO WAIT accept json in text/plain and application/x-www-form-urlencoded or manually handle it
-
 public class AuthenticationService extends ResourceConfig {
 	
 	//TODO TEST
@@ -47,7 +45,7 @@ public class AuthenticationService extends ResourceConfig {
 			throw new IllegalStateException("Call setConfig() before " +
 					"starting the server ya daft numpty");
 		}
-		//TODO ZLATER Get the class name from environment if we need alternate config mechanism
+		//TODO ZLATER CONFIG Get the class name from environment if we need alternate config mechanism
 		final AuthStartupConfig cfg = ServiceCommon.loadClassWithInterface(
 				cfgClass, AuthStartupConfig.class);
 		
