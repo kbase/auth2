@@ -37,23 +37,17 @@ public class ServiceCommon {
 			final String displayName,
 			final String email)
 			throws IllegalParameterException, InvalidTokenException, AuthStorageException {
-		final DisplayName dn;
-		final EmailAddress e;
+		final UserUpdate uu = new UserUpdate();
 		try {
-			if (displayName == null || displayName.isEmpty()) {
-				dn = null;
-			} else {
-				dn = new DisplayName(displayName);
+			if (displayName != null && !displayName.isEmpty()) {
+				uu.withDisplayName(new DisplayName(displayName));
 			}
-			if (email == null || email.isEmpty()) {
-				e = null;
-			} else {
-				e = new EmailAddress(email);
+			if (email != null && !email.isEmpty()) {
+				uu.withEmail(new EmailAddress(email));
 			}
 		} catch (MissingParameterException mpe) {
 			throw new RuntimeException("This is impossible", mpe);
 		}
-		final UserUpdate uu = new UserUpdate().withEmail(e).withDisplayName(dn);
 		auth.updateUser(token, uu);
 	}
 	
