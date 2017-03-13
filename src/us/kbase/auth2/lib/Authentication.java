@@ -271,7 +271,8 @@ public class Authentication {
 	 * @param pwd the new password for the root account.
 	 * @throws AuthStorageException if updating the root account fails.
 	 */
-	public void createRoot(final Password pwd) throws AuthStorageException, IllegalPasswordException {
+	public void createRoot(final Password pwd)
+			throws AuthStorageException, IllegalPasswordException {
 		nonNull(pwd, "pwd");
 		try {
 			pwd.checkValidity();
@@ -436,7 +437,8 @@ public class Authentication {
 			final UserName userName,
 			final Password password,
 			final Password pwdnew)
-					throws AuthenticationException, UnauthorizedException, AuthStorageException, IllegalPasswordException {
+			throws AuthenticationException, UnauthorizedException, AuthStorageException,
+					IllegalPasswordException {
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {
@@ -695,8 +697,10 @@ public class Authentication {
 		try {
 			return getUser(token, new Role[0]);
 		} catch (DisabledUserException e) {
-			throw e; // what the hell is the point of this?
-		} catch (UnauthorizedException e) {
+			// this catch block is here because a disabled user exception is a subclass of
+			// unauthorized exception. We want to throw DUE but not UE.
+			throw e;
+		} catch (UnauthorizedException e) { // this is impossible to test
 			throw new RuntimeException("Good job dude, you just broke reality", e);
 		}
 	}
