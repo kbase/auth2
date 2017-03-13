@@ -796,7 +796,7 @@ public class Authentication {
 	}
 
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
-	 * at once.
+	 * at once. Never returns the root user name or disabled users.
 	 * @param token a token for the user requesting the lookup.
 	 * @param usernames the user names to look up.
 	 * @return the display names for each user name. Any non-existent user names will be missing.
@@ -809,8 +809,6 @@ public class Authentication {
 			final IncomingToken token,
 			final Set<UserName> usernames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
-		//TODO DISABLED don't return disabled users in user search (do return in search from admin)
-		//TODO SEARCH never include root user
 		getToken(token); // just check the token is valid
 		if (usernames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
@@ -819,7 +817,10 @@ public class Authentication {
 		if (usernames.isEmpty()) {
 			return new HashMap<>();
 		}
-		return storage.getUserDisplayNames(usernames);
+		
+		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(usernames);
+		displayNames.remove(UserName.ROOT);
+		return displayNames;
 	}
 	
 	/** Look up display names based on a search specification. A maximum of 10000 users will be

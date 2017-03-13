@@ -136,7 +136,7 @@ public interface AuthStorage {
 	Optional<AuthUser> getUser(RemoteIdentity remoteID) throws AuthStorageException;
 	
 	/** Get the display names for a set of users. Any non-existent users are left out of the
-	 * returned map.
+	 * returned map. Disabled users are never returned.
 	 * @param usernames the usernames for which to get display names.
 	 * @return a mapping of username to display name.
 	 * @throws AuthStorageException if a problem connecting with the storage

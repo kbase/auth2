@@ -20,7 +20,7 @@ import com.google.common.base.Optional;
  */
 public class UserSearchSpec {
 	
-	//TODO CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
+	//TODO ZLATER CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
 	private Optional<String> prefix = Optional.absent();
 	private boolean searchUser = false;

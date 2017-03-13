@@ -713,7 +713,8 @@ public class MongoStorage implements AuthStorage {
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
-		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers));
+		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers))
+				.append(Fields.USER_DISABLED_REASON, null);
 		return getDisplayNames(query, Fields.USER_NAME, -1);
 	}
 
