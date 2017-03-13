@@ -850,7 +850,7 @@ public class Authentication {
 			}
 			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only admins amy search with root or disabled users included");
+						"Only admins may search with root or disabled users included");
 			}
 		}
 		if (spec.isRegex()) {
@@ -875,11 +875,11 @@ public class Authentication {
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		nonNull(suggestedUserName, "suggestedUserName");
-		final UserName un = UserName.sanitizeName(suggestedUserName);
-		if (un == null) {
-			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
+		final Optional<UserName> un = UserName.sanitizeName(suggestedUserName);
+		if (un.isPresent()) {
+			return getAvailableUserName(un.get(), false);
 		} else {
-			return getAvailableUserName(un, false);
+			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
 		}
 	}
 	

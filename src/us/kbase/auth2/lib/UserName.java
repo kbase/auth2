@@ -1,7 +1,11 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -67,15 +71,16 @@ public class UserName extends Name{
 
 	// returns the null if the name contains no lowercase letters.
 	/** Given a string, returns a new name based on that string that is a legal user name. If
-	 * it is not possible construct a valid user name, null is returned.
+	 * it is not possible construct a valid user name, absent is returned.
 	 * @param suggestedUserName the user name to mutate into a legal user name.
-	 * @return the new user name, or null if mutation proved impossible.
+	 * @return the new user name, or absent if mutation proved impossible.
 	 */
-	public static UserName sanitizeName(final String suggestedUserName) {
+	public static Optional<UserName> sanitizeName(final String suggestedUserName) {
+		nonNull(suggestedUserName, "suggestedUserName");
 		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
 				.replaceAll("^[^a-z]+", "");
 		try {
-			return s.isEmpty() ? null : new UserName(s);
+			return s.isEmpty() ? Optional.absent() : Optional.of(new UserName(s));
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
