@@ -207,6 +207,7 @@
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationGetAvailableUserNameTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationGetUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationGetUserDisplayNamesTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
