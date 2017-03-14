@@ -840,6 +840,10 @@ public class Authentication {
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
+		if (spec.isRegex()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Regex search is currently for internal use only");
+		}
 		final AuthUser user = getUser(token);
 		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
@@ -854,10 +858,6 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search with root or disabled users included");
 			}
-		}
-		if (spec.isRegex()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Regex search is currently for internal use only");
 		}
 		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(
 				spec, MAX_RETURNED_USERS);
