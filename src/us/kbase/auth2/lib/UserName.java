@@ -20,7 +20,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  * @author gaprice@lbl.gov
  *
  */
-public class UserName extends Name{
+public class UserName extends Name implements Comparable<UserName>{
 
 	// this must never be a valid username 
 	private final static String ROOT_NAME = "***ROOT***";
@@ -67,6 +67,15 @@ public class UserName extends Name{
 	 */
 	public boolean isRoot() {
 		return getName().equals(ROOT_NAME);
+	}
+	
+
+	@Override
+	public int compareTo(final UserName userName) {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		return getName().compareTo(userName.getName());
 	}
 
 	// returns the null if the name contains no lowercase letters.

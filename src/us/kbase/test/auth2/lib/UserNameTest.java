@@ -70,6 +70,34 @@ public class UserNameTest {
 	}
 	
 	@Test
+	public void compareLessThan() throws Exception {
+		assertThat("incorrect compare",
+				new UserName("foo123").compareTo(new UserName("foo2")) < 0, is(true));
+	}
+	
+	@Test
+	public void compareEquals() throws Exception {
+		assertThat("incorrect compare",
+				new UserName("foo2").compareTo(new UserName("foo2")), is(0));
+	}
+	
+	@Test
+	public void compareGreaterThan() throws Exception {
+		assertThat("incorrect compare",
+				new UserName("foo13").compareTo(new UserName("foo111")) > 0, is(true));
+	}
+	
+	@Test
+	public void compareFail() throws Exception {
+		try {
+			new UserName("foo").compareTo(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("userName"));
+		}
+	}
+	
+	@Test
 	public void equals() throws Exception {
 		EqualsVerifier.forClass(UserName.class).usingGetClass().verify();
 	}

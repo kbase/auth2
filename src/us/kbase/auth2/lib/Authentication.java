@@ -868,7 +868,7 @@ public class Authentication {
 	}
 	
 
-	/** Get a currently available user name given a user name suggestion. Returns an empty Optional
+	/** Get a currently available user name given a user name suggestion. Returns absent
 	 * if a reasonable user name cannot be found.
 	 * @param suggestedUserName the suggested user name.
 	 * @return an available user name.
@@ -877,18 +877,24 @@ public class Authentication {
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		nonNull(suggestedUserName, "suggestedUserName");
-		final Optional<UserName> un = UserName.sanitizeName(suggestedUserName);
-		if (un.isPresent()) {
-			return getAvailableUserName(un.get(), false);
-		} else {
-			return getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true);
+		final Optional<UserName> target = UserName.sanitizeName(suggestedUserName);
+		Optional<UserName> availableUserName = Optional.absent();
+		if (target.isPresent()) {
+			availableUserName = getAvailableUserName(target.get(), false, true);
 		}
+		if (!availableUserName.isPresent()) {
+			availableUserName = getAvailableUserName(DEFAULT_SUGGESTED_USER_NAME, true, false);
+		}
+		return availableUserName;
 	}
 	
 	private Optional<UserName> getAvailableUserName(
 			final UserName suggestedUserName,
-			final boolean forceNumericSuffix)
+			final boolean forceNumericSuffix,
+			final boolean startAt2)
 			throws AuthStorageException {
+		// lots of opportunities for speed optimization in this method, but it probably doesn't
+		// matter
 		
 		final String sugName = suggestedUserName.getName();
 		final String sugStrip = sugName.replaceAll("\\d*$", "");
@@ -901,37 +907,31 @@ public class Authentication {
 				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
 				.withSearchOnUserName(true).withIncludeDisabled(true).build();
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
-		boolean match = false;
-		long largest = 0;
-		for (final UserName d: users.keySet()) {
-			final String lastName = d.getName();
-			match = match || sugName.equals(lastName);
-			final String num = lastName.replace(sugStrip, "");
-			final long n = num.isEmpty() ? 1 : Long.parseLong(num);
-			largest = n > largest ? n : largest;
+		final boolean match = users.containsKey(suggestedUserName);
+		final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+		if (!match && (!forceNumericSuffix || hasNumSuffix)) {
+			return Optional.of(suggestedUserName);
 		}
-		final String newName;
-		if (largest == 0 || !match) {
-			final boolean hasNumSuffix = sugStrip.length() != sugName.length();
-			if (!hasNumSuffix && forceNumericSuffix) {
-				newName = sugStrip + (largest + 1);
-			} else {
-				newName = sugName;
+		final Set<String> names = users.keySet().stream().map(u -> u.getName())
+				.collect(Collectors.toSet());
+		final long start = startAt2 ? 2 : 1;
+		for (long i = start; i < Long.MAX_VALUE; i++) {
+			final String potential = sugStrip + i;
+			if (potential.length() > UserName.MAX_NAME_LENGTH) {
+				return Optional.absent();
 			}
-		} else {
-			newName = sugStrip + (largest + 1);
+			if (!names.contains(potential)) {
+				try {
+					return Optional.of(new UserName(potential));
+				} catch (IllegalParameterException | MissingParameterException e) {
+					throw new RuntimeException("this should be impossible", e);
+				}
+			}
 		}
-		if (newName.length() > UserName.MAX_NAME_LENGTH) {
-			 // not worth trying to do something clever here, should never happen
-			return Optional.absent();
-		}
-		try {
-			return Optional.of(new UserName(newName));
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("this should be impossible", e);
-		}
+		// this means there's > 10^63 names in the database. Not testing this path.
+		return Optional.absent();
 	}
-	
+
 	/** Revoke a token.
 	 * @param token the user's token.
 	 * @param tokenID the id of the token to revoke.
