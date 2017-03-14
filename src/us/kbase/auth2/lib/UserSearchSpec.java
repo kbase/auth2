@@ -22,16 +22,33 @@ public class UserSearchSpec {
 	
 	//TODO ZLATER CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
-	private Optional<String> prefix = Optional.absent();
-	private boolean searchUser = false;
-	private boolean searchDisplayName = false;
-	private final Set<Role> searchRoles = new HashSet<>();
-	private final Set<String> searchCustomRoles = new HashSet<>();
-	private boolean isRegex = false;
-	private boolean includeRoot = false;
-	private boolean includeDisabled = false;
-	
-	private UserSearchSpec() {}
+	private final Optional<String> prefix;
+	private final boolean searchUser;
+	private final boolean searchDisplayName;
+	private final Set<Role> searchRoles;
+	private final Set<String> searchCustomRoles;
+	private final boolean isRegex;
+	private final boolean includeRoot;
+	private final boolean includeDisabled;
+
+	private UserSearchSpec(
+			final Optional<String> prefix,
+			final boolean searchUser,
+			final boolean searchDisplayName,
+			final Set<Role> searchRoles,
+			final Set<String> searchCustomRoles,
+			final boolean isRegex,
+			final boolean includeRoot,
+			final boolean includeDisabled) {
+		this.prefix = prefix;
+		this.searchUser = searchUser;
+		this.searchDisplayName = searchDisplayName;
+		this.searchRoles = searchRoles;
+		this.searchCustomRoles = searchCustomRoles;
+		this.isRegex = isRegex;
+		this.includeRoot = includeRoot;
+		this.includeDisabled = includeDisabled;
+	}
 
 	/** Returns the user and/or display name prefix or regex for the search, if any.
 	 * The prefix matches the start of the username or the start of any part of the whitespace
@@ -165,13 +182,86 @@ public class UserSearchSpec {
 		return new Builder();
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (includeDisabled ? 1231 : 1237);
+		result = prime * result + (includeRoot ? 1231 : 1237);
+		result = prime * result + (isRegex ? 1231 : 1237);
+		result = prime * result + ((prefix == null) ? 0 : prefix.hashCode());
+		result = prime * result + ((searchCustomRoles == null) ? 0 : searchCustomRoles.hashCode());
+		result = prime * result + (searchDisplayName ? 1231 : 1237);
+		result = prime * result + ((searchRoles == null) ? 0 : searchRoles.hashCode());
+		result = prime * result + (searchUser ? 1231 : 1237);
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		UserSearchSpec other = (UserSearchSpec) obj;
+		if (includeDisabled != other.includeDisabled) {
+			return false;
+		}
+		if (includeRoot != other.includeRoot) {
+			return false;
+		}
+		if (isRegex != other.isRegex) {
+			return false;
+		}
+		if (prefix == null) {
+			if (other.prefix != null) {
+				return false;
+			}
+		} else if (!prefix.equals(other.prefix)) {
+			return false;
+		}
+		if (searchCustomRoles == null) {
+			if (other.searchCustomRoles != null) {
+				return false;
+			}
+		} else if (!searchCustomRoles.equals(other.searchCustomRoles)) {
+			return false;
+		}
+		if (searchDisplayName != other.searchDisplayName) {
+			return false;
+		}
+		if (searchRoles == null) {
+			if (other.searchRoles != null) {
+				return false;
+			}
+		} else if (!searchRoles.equals(other.searchRoles)) {
+			return false;
+		}
+		if (searchUser != other.searchUser) {
+			return false;
+		}
+		return true;
+	}
+
 	/** A builder for a UserSearchSpec.
 	 * @author gaprice@lbl.gov
 	 *
 	 */
 	public static class Builder {
 		
-		private UserSearchSpec uss = new UserSearchSpec();
+		private Optional<String> prefix = Optional.absent();
+		private boolean searchUser = false;
+		private boolean searchDisplayName = false;
+		private final Set<Role> searchRoles = new HashSet<>();
+		private final Set<String> searchCustomRoles = new HashSet<>();
+		private boolean isRegex = false;
+		private boolean includeRoot = false;
+		private boolean includeDisabled = false;
 		
 		private Builder() {}
 		
@@ -188,8 +278,8 @@ public class UserSearchSpec {
 			if (prefix == null || prefix.trim().isEmpty()) {
 				throw new IllegalArgumentException("Prefix cannot be null or the empty string");
 			}
-			uss.prefix = Optional.of(prefix.toLowerCase());
-			uss.isRegex = false;
+			this.prefix = Optional.of(prefix.toLowerCase());
+			this.isRegex = false;
 			return this;
 		}
 		
@@ -206,8 +296,8 @@ public class UserSearchSpec {
 			if (regex == null || regex.trim().isEmpty()) {
 				throw new IllegalArgumentException("Regex cannot be null or the empty string");
 			}
-			uss.prefix = Optional.of(regex);
-			uss.isRegex = true;
+			this.prefix = Optional.of(regex);
+			this.isRegex = true;
 			return this;
 		}
 		
@@ -218,7 +308,7 @@ public class UserSearchSpec {
 		 */
 		public Builder withSearchOnUserName(final boolean search) {
 			checkSearchPrefix(search);
-			uss.searchUser = search;
+			this.searchUser = search;
 			return this;
 		}
 		
@@ -229,12 +319,12 @@ public class UserSearchSpec {
 		 */
 		public Builder withSearchOnDisplayName(final boolean search) {
 			checkSearchPrefix(search);
-			uss.searchDisplayName = search;
+			this.searchDisplayName = search;
 			return this;
 		}
 
 		private void checkSearchPrefix(final boolean search) {
-			if (search && !uss.prefix.isPresent()) {
+			if (search && !this.prefix.isPresent()) {
 				throw new IllegalStateException(
 						"Must provide a prefix if a name search is to occur");
 			}
@@ -248,7 +338,7 @@ public class UserSearchSpec {
 		 */
 		public Builder withSearchOnRole(final Role role) {
 			nonNull(role, "role");
-			uss.searchRoles.add(role);
+			this.searchRoles.add(role);
 			return this;
 		}
 		
@@ -263,7 +353,7 @@ public class UserSearchSpec {
 				throw new IllegalArgumentException(
 						"Custom role cannot be null or the empty string");
 			}
-			uss.searchCustomRoles.add(customRole);
+			this.searchCustomRoles.add(customRole);
 			return this;
 		}
 		
@@ -272,7 +362,7 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		public Builder withIncludeRoot(final boolean include) {
-			uss.includeRoot = include;
+			this.includeRoot = include;
 			return this;
 		}
 		
@@ -281,7 +371,7 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		public Builder withIncludeDisabled(final boolean include) {
-			uss.includeDisabled = include;
+			this.includeDisabled = include;
 			return this;
 		}
 		
@@ -289,8 +379,8 @@ public class UserSearchSpec {
 		 * @return a UserSearchSpec.
 		 */
 		public UserSearchSpec build() {
-			return uss;
+			return new UserSearchSpec(prefix, searchUser, searchDisplayName, searchRoles,
+					searchCustomRoles, isRegex, includeRoot, includeDisabled);
 		}
 	}
-	
 }

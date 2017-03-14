@@ -12,6 +12,7 @@ import java.util.Collections;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserSearchSpec.Builder;
@@ -19,6 +20,11 @@ import us.kbase.auth2.lib.UserSearchSpec.SearchField;
 import us.kbase.test.auth2.TestCommon;
 
 public class UserSearchSpecTest {
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(UserSearchSpec.class).usingGetClass().verify();
+	}
 
 	@Test
 	public void buildWithEverything() {
