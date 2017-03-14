@@ -6,6 +6,8 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
@@ -73,11 +75,21 @@ public class UserNameTest {
 	}
 	
 	@Test
-	public void santitize() throws Exception {
-		assertThat("incorrect santize", UserName.sanitizeName("999aFA8 ea6t  \t   ѱ ** J(())"),
-				is(new UserName("afa8ea6tj")));
+	public void sanitize() throws Exception {
+		assertThat("incorrect santize", UserName.sanitizeName("  999aFA8 ea6t  \t   ѱ ** J(())"),
+				is(Optional.of(new UserName("afa8ea6tj"))));
 		assertThat("incorrect santize", UserName.sanitizeName("999  8 6  \t   ѱ ** (())"),
-				is((UserName) null));
+				is(Optional.absent()));
+	}
+	
+	@Test
+	public void failSanitize() {
+		try {
+			UserName.sanitizeName(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("suggestedUserName"));
+		}
 	}
 	
 }

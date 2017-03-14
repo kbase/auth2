@@ -24,6 +24,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthConfig;
@@ -116,16 +118,16 @@ public class AuthenticationPasswordLoginTest {
 		
 		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
 		
-		verify(storage).storeToken(new HashedToken(t.getToken().getId(), TokenType.LOGIN, null,
-				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
+		verify(storage).storeToken(new HashedToken(t.getToken().get().getId(), TokenType.LOGIN,
+				null, "p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
 				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(6000));
 		
 		assertClear(p);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(false));
-		assertThat("incorrect username", t.getUserName(), is((UserName) null));
-		assertThat("incorrect token", t.getToken(), is(expectedToken));
+		assertThat("incorrect username", t.getUserName(), is(Optional.absent()));
+		assertThat("incorrect token", t.getToken(), is(Optional.of(expectedToken)));
 	}
 	
 	@Test
@@ -154,8 +156,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		assertClear(p);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(true));
-		assertThat("incorrect username", t.getUserName(), is(new UserName("foo")));
-		assertThat("incorrect token", t.getToken(), is((NewToken) null));
+		assertThat("incorrect username", t.getUserName(), is(Optional.of(new UserName("foo"))));
+		assertThat("incorrect token", t.getToken(), is(Optional.absent()));
 	}
 	
 	@Test

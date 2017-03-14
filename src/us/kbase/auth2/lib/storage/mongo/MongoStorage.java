@@ -1366,13 +1366,13 @@ public class MongoStorage implements AuthStorage {
 			return; //noop
 		}
 		final Document d = new Document();
-		if (update.getDisplayName() != null) {
-			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().getName())
+		if (update.getDisplayName().isPresent()) {
+			d.append(Fields.USER_DISPLAY_NAME, update.getDisplayName().get().getName())
 				.append(Fields.USER_DISPLAY_NAME_CANONICAL, 
-						update.getDisplayName().getCanonicalDisplayName());
+						update.getDisplayName().get().getCanonicalDisplayName());
 		}
-		if (update.getEmail() != null) {
-			d.append(Fields.USER_EMAIL, update.getEmail().getAddress());
+		if (update.getEmail().isPresent()) {
+			d.append(Fields.USER_EMAIL, update.getEmail().get().getAddress());
 		}
 		updateUser(userName, d);
 	}
