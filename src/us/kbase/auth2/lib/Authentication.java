@@ -797,7 +797,7 @@ public class Authentication {
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
 	 * at once. Never returns the root user name or disabled users.
 	 * @param token a token for the user requesting the lookup.
-	 * @param usernames the user names to look up.
+	 * @param userNames the user names to look up.
 	 * @return the display names for each user name. Any non-existent user names will be missing.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -806,18 +806,20 @@ public class Authentication {
 	 */
 	public Map<UserName, DisplayName> getUserDisplayNames(
 			final IncomingToken token,
-			final Set<UserName> usernames)
+			final Set<UserName> userNames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
+		nonNull(userNames, "userNames");
+		noNulls(userNames, "Null name in userNames");
 		getToken(token); // just check the token is valid
-		if (usernames.size() > MAX_RETURNED_USERS) {
+		if (userNames.isEmpty()) {
+			return new HashMap<>();
+		}
+		if (userNames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
 					"User count exceeds maximum of " + MAX_RETURNED_USERS);
 		}
-		if (usernames.isEmpty()) {
-			return new HashMap<>();
-		}
 		
-		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(usernames);
+		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(userNames);
 		displayNames.remove(UserName.ROOT);
 		return displayNames;
 	}
@@ -838,6 +840,10 @@ public class Authentication {
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
+		if (spec.isRegex()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Regex search is currently for internal use only");
+		}
 		final AuthUser user = getUser(token);
 		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
@@ -852,10 +858,6 @@ public class Authentication {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only admins may search with root or disabled users included");
 			}
-		}
-		if (spec.isRegex()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Regex search is currently for internal use only");
 		}
 		final Map<UserName, DisplayName> displayNames = storage.getUserDisplayNames(
 				spec, MAX_RETURNED_USERS);
