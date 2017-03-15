@@ -18,7 +18,7 @@ public class LocalUser extends AuthUser {
 	private final boolean forceReset;
 	private final Optional<Instant> lastReset;
 	
-	// should really consider a builder for these
+	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
 	
 	/** Create a new local user.
 	 * @param userName the name of the user.
@@ -26,6 +26,7 @@ public class LocalUser extends AuthUser {
 	 * @param displayName the display name of the user.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
+	 * @param policyIDs the set of policy IDs associated with the user.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login.
 	 * @param disabledState whether the user account is disabled.
@@ -40,6 +41,7 @@ public class LocalUser extends AuthUser {
 			final DisplayName displayName,
 			final Set<Role> roles,
 			final Set<String> customRoles,
+			final Set<PolicyID> policyIDs,
 			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
@@ -47,8 +49,8 @@ public class LocalUser extends AuthUser {
 			final byte[] salt,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
-		super(userName, email, displayName, null, roles, customRoles, created, lastLogin,
-				disabledState);
+		super(userName, email, displayName, null, roles, customRoles, policyIDs, created,
+				lastLogin, disabledState);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException("passwordHash missing or too small");
@@ -131,37 +133,4 @@ public class LocalUser extends AuthUser {
 		}
 		return true;
 	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("LocalUser [passwordHash=");
-		builder.append(Arrays.toString(passwordHash));
-		builder.append(", salt=");
-		builder.append(Arrays.toString(salt));
-		builder.append(", forceReset=");
-		builder.append(forceReset);
-		builder.append(", lastReset=");
-		builder.append(lastReset);
-		builder.append(", getDisplayName()=");
-		builder.append(getDisplayName());
-		builder.append(", getEmail()=");
-		builder.append(getEmail());
-		builder.append(", getUserName()=");
-		builder.append(getUserName());
-		builder.append(", getRoles()=");
-		builder.append(getRoles());
-		builder.append(", getCustomRoles()=");
-		builder.append(getCustomRoles());
-		builder.append(", getCreated()=");
-		builder.append(getCreated());
-		builder.append(", getLastLogin()=");
-		builder.append(getLastLogin());
-		builder.append(", getDisabledState()=");
-		builder.append(getDisabledState());
-		builder.append("]");
-		return builder.toString();
-	}
-	
-	
 }

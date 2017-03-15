@@ -17,6 +17,7 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -34,7 +35,7 @@ public class NewUserTest {
 	public void constructorNoLastLogin() throws Exception {
 		final Instant now = Instant.now();
 		final NewUser u = new NewUser(new UserName("foo"), new EmailAddress("e@g.com"),
-				new DisplayName("bar"), REMOTE, now, null);
+				new DisplayName("bar"), REMOTE, set(new PolicyID("foo")), now, null);
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
@@ -49,6 +50,7 @@ public class NewUserTest {
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(set(new PolicyID("foo"))));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -63,7 +65,7 @@ public class NewUserTest {
 		final Instant create = Instant.ofEpochMilli(4000);
 		final Optional<Instant> ll = Optional.of(Instant.ofEpochMilli(6000));
 		final NewUser u = new NewUser(new UserName("foo"), new EmailAddress("e@g.com"),
-				new DisplayName("bar"), REMOTE, create, ll);
+				new DisplayName("bar"), REMOTE, Collections.emptySet(), create, ll);
 		
 		//check that super() is called correctly
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
@@ -78,6 +80,7 @@ public class NewUserTest {
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptySet()));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -91,7 +94,7 @@ public class NewUserTest {
 	public void constructorFail() throws Exception {
 		try {
 			new NewUser(new UserName("foo"), new EmailAddress("e@g.com"),
-					new DisplayName("bar"), null, Instant.now(), null);
+					new DisplayName("bar"), null, Collections.emptySet(), Instant.now(), null);
 			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("incorrect exception message", e.getMessage(), is("remoteIdentity"));

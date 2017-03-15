@@ -6,6 +6,8 @@ import static org.junit.Assert.fail;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -16,6 +18,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -28,6 +31,8 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 
 	private static final Instant NOW = Instant.now();
 	
+	private static final Set<PolicyID> MTPID = Collections.emptySet();
+	
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
 			new RemoteIdentityID("prov", "bar1"),
@@ -36,7 +41,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateNoop() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, NOW, null);
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"), new UserUpdate());
 		final AuthUser au = storage.getUser(new UserName("user1"));
@@ -48,7 +53,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateDisplay() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, NOW, null);
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withDisplayName(new DisplayName("whee")));
@@ -61,7 +66,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateEmail() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, NOW, null);
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com")));
@@ -74,7 +79,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateBoth() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, NOW, null);
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com"))
@@ -110,7 +115,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void lastLogin() throws Exception {
 		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE, NOW, null);
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
 		storage.createUser(nu);
 		final Instant d = NOW.plus(Duration.ofHours(2));
 		storage.setLastLogin(new UserName("user1"), d);

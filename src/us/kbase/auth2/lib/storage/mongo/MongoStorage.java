@@ -51,6 +51,7 @@ import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -307,6 +308,8 @@ public class MongoStorage implements AuthStorage {
 				local.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
+		final Set<String> policyIDs = local.getPolicyIDs().stream().map(id -> id.getName())
+				.collect(Collectors.toSet());
 		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = local.getEnableToggleDate();
 		final Optional<String> reason = local.getReasonForDisabled();
@@ -321,6 +324,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
+				.append(Fields.USER_POLICY_IDS, policyIDs)
 				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
 						Date.from(local.getLastLogin().get()) : null)
@@ -367,6 +371,7 @@ public class MongoStorage implements AuthStorage {
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
+				getPolicyIds(user),
 				user.getDate(Fields.USER_CREATED).toInstant(),
 				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user),
@@ -374,6 +379,20 @@ public class MongoStorage implements AuthStorage {
 				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
 				user.getBoolean(Fields.USER_RESET_PWD),
 				getOptionalDate(user, Fields.USER_RESET_PWD_LAST));
+	}
+
+	private Set<PolicyID> getPolicyIds(final Document user) throws AuthStorageException {
+		final Set<PolicyID> ret = new HashSet<>(); 
+		try {
+			@SuppressWarnings("unchecked")
+			final List<String> str = (List<String>) user.get(Fields.USER_POLICY_IDS);
+			for (final String id: str) {
+				ret.add(new PolicyID(id));
+			}
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
+		}
+		return ret;
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
@@ -481,6 +500,8 @@ public class MongoStorage implements AuthStorage {
 		final Optional<UserName> admin = user.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = user.getEnableToggleDate();
 		final Optional<String> reason = user.getReasonForDisabled();
+		final Set<String> policyIDs = user.getPolicyIDs().stream().map(id -> id.getName())
+				.collect(Collectors.toSet());
 		final Document u = new Document(
 				Fields.USER_NAME, user.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -491,6 +512,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, new LinkedList<String>())
 				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
+				.append(Fields.USER_POLICY_IDS, policyIDs)
 				.append(Fields.USER_CREATED, Date.from(user.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, user.getLastLogin().isPresent() ?
 						Date.from(user.getLastLogin().get()) : null)
@@ -690,6 +712,7 @@ public class MongoStorage implements AuthStorage {
 				toIdentities(ids),
 				new HashSet<>(roles),
 				getCustomRoles(userName, new HashSet<>(custroles)),
+				getPolicyIds(user),
 				user.getDate(Fields.USER_CREATED).toInstant(),
 				getOptionalDate(user, Fields.USER_LAST_LOGIN),
 				getUserDisabledState(user));

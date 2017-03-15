@@ -23,6 +23,7 @@ public class NewUser extends AuthUser {
 	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
 	 * @param remoteIdentity the 3rd party identity associated with this user.
+	 * @param policyIDs the policy IDs associated with this user.
 	 * @param created the date the user was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date (e.g. the time this constructor is called) it will be silently modified to match
@@ -33,9 +34,10 @@ public class NewUser extends AuthUser {
 			final EmailAddress email,
 			final DisplayName displayName,
 			final RemoteIdentityWithLocalID remoteIdentity,
+			final Set<PolicyID> policyIDs,
 			final Instant created,
 			final Optional<Instant> lastLogin) {
-		super(userName, email, displayName, set(remoteIdentity), null, null,
+		super(userName, email, displayName, set(remoteIdentity), null, null, policyIDs,
 				created, lastLogin, new UserDisabledState());
 	}
 

@@ -31,9 +31,12 @@ public class AuthUser {
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
 	private final Set<RemoteIdentityWithLocalID> identities;
+	private final Set<PolicyID> policyIDs;
 	private final Instant created;
 	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
+	
+	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
 	
 	/** Create a new user.
 	 * @param userName the name of the user.
@@ -43,6 +46,7 @@ public class AuthUser {
 	 * users.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
+	 * @param policyIDs the policy IDs associated with the user.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date it will be silently modified to match the creation date.
@@ -55,6 +59,7 @@ public class AuthUser {
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
 			Set<String> customRoles,
+			Set<PolicyID> policyIDs,
 			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
@@ -81,6 +86,11 @@ public class AuthUser {
 		}
 		Utils.noNulls(customRoles, "null item in customRoles");
 		this.customRoles = Collections.unmodifiableSet(new HashSet<>(customRoles));
+		if (policyIDs == null) {
+			policyIDs = new HashSet<>();
+		}
+		Utils.noNulls(policyIDs, "null item in policyIDs");
+		this.policyIDs = Collections.unmodifiableSet(new HashSet<>(policyIDs));
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
 		 * This'll do for now
@@ -113,7 +123,7 @@ public class AuthUser {
 	 */
 	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
 		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
-				user.getCustomRoles(), user.getCreated(), user.getLastLogin(),
+				user.getCustomRoles(), user.getPolicyIDs(), user.getCreated(), user.getLastLogin(),
 				user.getDisabledState());
 	}
 
@@ -186,6 +196,13 @@ public class AuthUser {
 	 */
 	public Set<RemoteIdentityWithLocalID> getIdentities() {
 		return identities;
+	}
+	
+	/** Get the set of policyIDs associated with this user.
+	 * @return the policy IDs.
+	 */
+	public Set<PolicyID> getPolicyIDs() {
+		return policyIDs;
 	}
 	
 	/** Get this user's creation date.
@@ -267,6 +284,7 @@ public class AuthUser {
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
 		result = prime * result + ((lastLogin == null) ? 0 : lastLogin.hashCode());
+		result = prime * result + ((policyIDs == null) ? 0 : policyIDs.hashCode());
 		result = prime * result + ((roles == null) ? 0 : roles.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
 		return result;
@@ -331,6 +349,13 @@ public class AuthUser {
 				return false;
 			}
 		} else if (!lastLogin.equals(other.lastLogin)) {
+			return false;
+		}
+		if (policyIDs == null) {
+			if (other.policyIDs != null) {
+				return false;
+			}
+		} else if (!policyIDs.equals(other.policyIDs)) {
 			return false;
 		}
 		if (roles == null) {

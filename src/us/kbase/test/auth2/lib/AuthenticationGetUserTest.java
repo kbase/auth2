@@ -12,6 +12,7 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -22,6 +23,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -41,12 +43,14 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserTest {
 	
+	private static final Set<PolicyID> MTPID = Collections.emptySet();
+	
 	@Test
 	public void getUser() throws Exception {
 		
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		getUser(user);
@@ -56,7 +60,7 @@ public class AuthenticationGetUserTest {
 	public void getUserFailDisabled() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
 		
 		failGetUser(user, new DisabledUserException());
@@ -152,7 +156,7 @@ public class AuthenticationGetUserTest {
 	public void getOtherUserSameUser() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		getOtherUser(user, new UserName("admin"), true);
@@ -162,7 +166,7 @@ public class AuthenticationGetUserTest {
 	public void getOtherUserDiffUser() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		getOtherUser(user, new UserName("foo"), false);
@@ -172,7 +176,7 @@ public class AuthenticationGetUserTest {
 	public void getOtherUserFailDisabledSameUser() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
 		
 		failGetOtherUser(user, new UserName("admin"), new NoSuchUserException("admin"));
@@ -182,7 +186,7 @@ public class AuthenticationGetUserTest {
 	public void getOtherUserFailDisabledDiffUser() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
 		
 		failGetOtherUser(user, new UserName("foo"), new NoSuchUserException("admin"));
@@ -289,11 +293,11 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdmin() throws Exception {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -302,11 +306,11 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdminSelf() throws Exception {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -316,11 +320,11 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdminCreate() throws Exception {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -329,11 +333,11 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdminRoot() throws Exception {
 		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -342,11 +346,11 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdminFailNotAdmin() throws Exception {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		failGetUserAsAdmin(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
@@ -355,12 +359,12 @@ public class AuthenticationGetUserTest {
 	public void getUserAsAdminFailDisabled() throws Exception {
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), Instant.now(), null,
+				Collections.emptySet(), MTPID, Instant.now(), null,
 				new UserDisabledState("baz", new UserName("whee"), Instant.now()));
 		
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
 				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		failGetUserAsAdmin(admin, user, new DisabledUserException());
 	}
@@ -420,7 +424,7 @@ public class AuthenticationGetUserTest {
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null, new UserDisabledState());
+				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		

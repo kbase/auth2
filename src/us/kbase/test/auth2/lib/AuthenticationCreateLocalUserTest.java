@@ -16,6 +16,7 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -30,6 +31,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -59,12 +61,13 @@ public class AuthenticationCreateLocalUserTest {
 	
 	private final static Instant NOW = Instant.now();
 	
+	private static final Set<PolicyID> MTPID = Collections.emptySet();
 	@Test
 	public void createWithAdminUser() throws Exception {
 		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
+				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
@@ -74,7 +77,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
+				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
@@ -84,7 +87,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
+				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
 		
 		create(admin);
 	}
@@ -94,7 +97,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant now = Instant.now();
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), now, Optional.of(now), new UserDisabledState());
+				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
 		createFail(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
@@ -134,7 +137,8 @@ public class AuthenticationCreateLocalUserTest {
 		when(clock.instant()).thenReturn(create);
 		
 		final NewLocalUser expected = new NewLocalUser(new UserName("foo"),
-				new EmailAddress("f@g.com"), new DisplayName("bar"), create, hash, salt, true);
+				new EmailAddress("f@g.com"), new DisplayName("bar"), MTPID,
+				create, hash, salt, true);
 		
 		final LocalUserAnswerMatcher<NewLocalUser> matcher =
 				new LocalUserAnswerMatcher<>(expected);
@@ -174,7 +178,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null,
+				Collections.emptySet(), MTPID, Instant.now(), null,
 				new UserDisabledState());
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
@@ -208,7 +212,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), null,
+				Collections.emptySet(), MTPID, Instant.now(), null,
 				new UserDisabledState());
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
@@ -233,7 +237,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), Instant.now(), null,
+				Collections.emptySet(), MTPID, Instant.now(), null,
 				new UserDisabledState("disabled", new UserName("foo"), Instant.now()));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);

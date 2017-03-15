@@ -35,6 +35,8 @@ public class Fields {
 	public static final String USER_ROLES = "roles";
 	/** The custom roles the user possesses. */
 	public static final String USER_CUSTOM_ROLES = "custrls";
+	/** Any policy IDs associated with the user. */
+	public static final String USER_POLICY_IDS = "policyids";
 	/** The date the user account was created. */
 	public static final String USER_CREATED = "create";
 	/** The date of the user's last login. */

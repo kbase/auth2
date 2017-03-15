@@ -28,6 +28,7 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -47,6 +48,8 @@ import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserDisplayNamesTest {
+	
+	private static final Set<PolicyID> MTPID = Collections.emptySet();
 
 	@Test
 	public void getDisplayNamesSet() throws Exception {
@@ -157,7 +160,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpec() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
@@ -173,7 +176,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsAdmin() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -191,7 +194,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsCreate() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -209,7 +212,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsRoot() throws Exception {
 		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -239,7 +242,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 						r == Role.ROOT ? UserName.ROOT : new UserName("foo"),
 								new EmailAddress("f@g.com"),
 						new DisplayName("foo"), Collections.emptySet(), set(r),
-						Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+						Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 						new UserDisabledState());
 				
 				final Map<UserName, DisplayName> expected = new HashMap<>();
@@ -267,7 +270,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailRegex() throws Exception {
 		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
@@ -316,7 +319,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailDisabled() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
@@ -328,7 +331,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserCustomRole() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -342,7 +345,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserRole() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -356,7 +359,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserNoPrefix() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().build();
@@ -369,7 +372,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserIncludeRoot() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -383,7 +386,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserIncludeDisabled() throws Exception {
 		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
 				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), Instant.now(), Optional.of(Instant.now()),
+				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
 				new UserDisabledState());
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -454,8 +457,5 @@ public class AuthenticationGetUserDisplayNamesTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
-		// TODO Auto-generated method stub
-		
 	}
-	
 }
