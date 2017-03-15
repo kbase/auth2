@@ -1343,8 +1343,8 @@ public class Authentication {
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after {@link #login(String, String)}.
 	 * After user interaction is completed, a new user can be created via
-	 * {@link #createUser(IncomingToken, UUID, UserName, DisplayName, EmailAddress, boolean)} or
-	 * the login can complete via {@link #login(IncomingToken, UUID, boolean)}.
+	 * {@link #createUser(IncomingToken, UUID, UserName, DisplayName, EmailAddress, Set, boolean)}
+	 * or the login can complete via {@link #login(IncomingToken, UUID, Set, boolean)}.
 	 * @param token the temporary token.
 	 * @return the state of the login process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -1481,7 +1481,6 @@ public class Authentication {
 			LinkFailedException {
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
-		//TODO NOW handle policy IDs
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
