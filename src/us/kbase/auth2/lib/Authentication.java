@@ -351,8 +351,8 @@ public class Authentication {
 			salt = randGen.generateSalt();
 			pwd_copy = pwd.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
-			final NewLocalUser lu = new NewLocalUser(userName, email, displayName, clock.instant(),
-					passwordHash, salt, true);
+			final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
+					Collections.emptySet(), clock.instant(), passwordHash, salt, true);
 			storage.createLocalUser(lu);
 		} catch (Throwable t) {
 			if (pwd != null) {
@@ -1403,6 +1403,7 @@ public class Authentication {
 	 * @param userName the user name for the new user.
 	 * @param displayName the display name for the new user.
 	 * @param email the email address for the new user.
+	 * @param policyIDs the policy IDs to be added to the user account.
 	 * @param linkAll link all other available identities associated with the temporary token to
 	 * this account.
 	 * @return a new login token for the new user.
@@ -1420,6 +1421,7 @@ public class Authentication {
 			final UserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
+			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
 			throws AuthStorageException, AuthenticationException, UserExistsException,
 			UnauthorizedException, IdentityLinkedException, LinkFailedException {
@@ -1430,6 +1432,8 @@ public class Authentication {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
+		nonNull(policyIDs, "policyIDs");
+		noNulls(policyIDs, "null item in policyIDs");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
@@ -1441,7 +1445,7 @@ public class Authentication {
 		}
 		final Instant now = clock.instant();
 		storage.createUser(new NewUser(
-				userName, email, displayName, match.get(), now, Optional.of(now)));
+				userName, email, displayName, match.get(), policyIDs, now, Optional.of(now)));
 		if (linkAll) {
 			ids.remove(match);
 			filterLinkCandidates(ids);
@@ -1457,6 +1461,7 @@ public class Authentication {
 	 * @param identityID the id of the identity associated with the user account that is the login
 	 * target. This identity must be included in the login state associated with the temporary
 	 * token. 
+	 * @param policyIDs the policy IDs to add to the user account.
 	 * @param linkAll link all other available identities associated with the temporary token to
 	 * this account.
 	 * @return a new login token.
@@ -1467,9 +1472,16 @@ public class Authentication {
 	 * is not allowed or the user account is disabled.
 	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
-	public NewToken login(final IncomingToken token, final UUID identityID, final boolean linkAll)
+	public NewToken login(
+			final IncomingToken token,
+			final UUID identityID,
+			final Set<PolicyID> policyIDs,
+			final boolean linkAll)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
 			LinkFailedException {
+		nonNull(policyIDs, "policyIDs");
+		noNulls(policyIDs, "null item in policyIDs");
+		//TODO NOW handle policy IDs
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
@@ -1490,6 +1502,7 @@ public class Authentication {
 		if (u.get().isDisabled()) {
 			throw new DisabledUserException("This account is disabled");
 		}
+		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
 			ids.remove(ri);
 			filterLinkCandidates(ids);
@@ -1501,7 +1514,7 @@ public class Authentication {
 	private Optional<RemoteIdentityWithLocalID> getIdentity(
 			final UUID identityID,
 			final Set<RemoteIdentityWithLocalID> identities)
-			throws AuthStorageException, InvalidTokenException {
+					throws AuthStorageException, InvalidTokenException {
 		nonNull(identityID, "identityID");
 		for (final RemoteIdentityWithLocalID ri: identities) {
 			if (ri.getID().equals(identityID)) {
@@ -1509,6 +1522,33 @@ public class Authentication {
 			}
 		}
 		return Optional.absent();
+	}
+
+	// assumes inputs have been checked and the user exists
+	private void addPolicyIDs(final UserName user, final Set<PolicyID> pids)
+			throws AuthStorageException {
+		try {
+			storage.addPolicyIDs(user, pids);
+		} catch (NoSuchUserException e) {
+			throw new AuthStorageException(
+					"Something is very broken. User should exist but doesn't: "
+							+ e.getMessage(), e);
+		}
+	}
+	
+	/** Remove a policy ID from all users. Primarily used to remove policy IDs that may have been
+	 * added in error.
+	 * @param token the user's token
+	 * @param policyID the policyID to remove.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user is not authorized to remove policy IDs.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		nonNull(policyID, "policyID");
+		getUser(token, Role.ADMIN);
+		storage.removePolicyID(policyID);
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
@@ -1967,6 +2007,7 @@ public class Authentication {
 			email = EmailAddress.UNKNOWN;
 		}
 		storage.createUser(new NewUser(
-				userName, email, dn, ri.withID(), clock.instant(), Optional.absent()));
+				userName, email, dn, ri.withID(), Collections.emptySet(),
+				clock.instant(), Optional.absent()));
 	}
 }

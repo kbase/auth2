@@ -2,6 +2,7 @@ package us.kbase.auth2.lib;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 
 /** A newly created root user.
@@ -24,6 +25,7 @@ public class NewRootUser extends LocalUser {
 			final byte[] passwordHash,
 			final byte[] salt) {
 		super(UserName.ROOT, email, displayName, new HashSet<>(Arrays.asList(Role.ROOT)), null,
-				created, null, new UserDisabledState(), passwordHash, salt, false, null);
+				Collections.emptySet(), created, null, new UserDisabledState(), passwordHash, salt,
+				false, null);
 	}
 }

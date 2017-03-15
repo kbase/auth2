@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -36,9 +37,9 @@ public class LoginTokenTest {
 	static {
 		try {
 			LOGIN_STATE = new LoginState.Builder("foo", false)
-					.withUser(new NewUser(new UserName("foo"),
-							new EmailAddress("f@g.com"),
-							new DisplayName("bar"), REMOTE, Instant.now(), null), REMOTE).build();
+					.withUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
+							new DisplayName("bar"), REMOTE, Collections.emptySet(),
+							Instant.now(), null), REMOTE).build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests nub", e);
 		}

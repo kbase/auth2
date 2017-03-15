@@ -226,6 +226,7 @@
       <test name="us.kbase.test.auth2.lib.NameTest"/>
       <test name="us.kbase.test.auth2.lib.NewUserTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
+      <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
       <test name="us.kbase.test.auth2.lib.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>

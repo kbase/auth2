@@ -11,9 +11,11 @@ accounts:</p>
 {{#login}}
 Username: {{username}} {{#disabled}}DISABLED{{/disabled}} {{#adminonly}}***Currently only admin accounts can log in***{{/adminonly}}<br/>
 Provider usernames: {{prov_usernames}}<br/>
+Policy IDs: {{policy_ids}}<br/>
 {{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
+	Add policy IDs: <input type="text" name="policy_ids"/><br>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="submit" value="Login"/>
 </form>
@@ -34,7 +36,8 @@ Email is only visible to you, software acting on your behalf, and system adminis
 <form action="{{createurl}}" method="post">
 	User name: <input type="text" name="user" value="{{usernamesugg}}"/><br/>
 	Display name: <input type="text" name="display" value="{{prov_fullname}}"/><br/>
-	Email: <input type="text" name="email" value="{{prov_email}}"/></br/>
+	Email: <input type="text" name="email" value="{{prov_email}}"/><br/>
+	Policy IDs: <input type="text" name="policy_ids"/><br>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Create"/>

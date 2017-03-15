@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -41,7 +42,7 @@ public class LinkIdentitiesTest {
 	static {
 		try {
 			AUTH_USER = new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-					new DisplayName("bar"), REMOTE1, Instant.now(), null);
+					new DisplayName("bar"), REMOTE1, Collections.emptySet(), Instant.now(), null);
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}

@@ -83,8 +83,10 @@ provider, e.g. a choice of accounts is required.
 Select this option if a custom UI is setting its own login cookies but is not intercepting the 
 3rd party identity provider redirect. The server will then always
 redirect to the UI prior to logging in a user (but after processing the return from the identity
-provider), so the UI can then use JSON endpoints that don't
-set a cookie with a login token.
+provider), so the UI can then use JSON endpoints that don't set a cookie with a login token.</br>
+
+Also set this option if users must agree to policy documents prior to login and the IDs of the
+policy documents should be stored in the auth server.
 </p>
 <input type="reset" value="Reset"/>
 <input type="submit" value="Update"/>

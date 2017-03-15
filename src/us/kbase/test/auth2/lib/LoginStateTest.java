@@ -47,11 +47,11 @@ public class LoginStateTest {
 	static {
 		try {
 			AUTH_USER1 = new NewUser(new UserName("foo4"), new EmailAddress("f@g.com"),
-					new DisplayName("bar4"), REMOTE1, Instant.now(), null);
+					new DisplayName("bar4"), REMOTE1, Collections.emptySet(), Instant.now(), null);
 			AUTH_USER2 = new AuthUser(new UserName("foo5"),
 					new EmailAddress("f@g5.com"), new DisplayName("bar5"), set(REMOTE2, REMOTE3),
-					set(Role.ADMIN), Collections.emptySet(), Instant.now(), null,
-					new UserDisabledState());
+					set(Role.ADMIN), Collections.emptySet(), Collections.emptySet(),
+					Instant.now(), null, new UserDisabledState());
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}

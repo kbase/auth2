@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -96,13 +97,15 @@ public class Admin {
 			@Context final HttpHeaders headers)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
-		return ImmutableMap.of(
-				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD),
-				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL),
-				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN),
-				"searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH),
-				"croles", auth.getCustomRoles(getTokenFromCookie(
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
+		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
+		ret.put("policyurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
+		ret.put("searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
+		ret.put("croles", auth.getCustomRoles(getTokenFromCookie(
 						headers, cfg.getTokenCookieName()), true));
+		return ret;
 	}
 	
 	@POST
@@ -128,8 +131,7 @@ public class Admin {
 	public Map<String, Object> getUserToken(
 			@Context final UriInfo uriInfo,
 			@FormParam("token") final String token)
-			throws NoTokenProvidedException, MissingParameterException, InvalidTokenException,
-			NoSuchTokenException, UnauthorizedException, AuthStorageException {
+			throws MissingParameterException, InvalidTokenException, AuthStorageException {
 		final IncomingToken t;
 		try {
 			t = getToken(token);
@@ -143,6 +145,17 @@ public class Admin {
 				ht.getUserName().getName() + SEP + UIPaths.ADMIN_TOKENS + SEP +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP + ht.getId().toString()));
 		return ret;
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_POLICY_ID)
+	public void removePolicyID(
+			@Context final HttpHeaders headers,
+			@FormParam("policy_id") final String policyID)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+				MissingParameterException, IllegalParameterException, AuthStorageException {
+		auth.removePolicyID(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				new PolicyID(policyID));
 	}
 	
 	@POST
