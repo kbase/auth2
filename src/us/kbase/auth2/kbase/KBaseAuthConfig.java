@@ -1,4 +1,4 @@
-package us.kbase.auth2.service.kbase;
+package us.kbase.auth2.kbase;
 
 import java.io.File;
 import java.io.IOException;
@@ -29,8 +29,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	//TODO JAVADOC
 	//TODO TEST unittests
 	
-	//TODO DOCs document deploy.cfg.example
-	
 	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
 	private static final String DEFAULT_LOG_NAME = "KBaseAuthService2";
@@ -44,6 +42,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
+	private static final String KEY_SUFFIX_ID_PROVS_FACTORY = "-factory";
 	private static final String KEY_SUFFIX_ID_PROVS_LOGIN_URL = "-login-url";
 	private static final String KEY_SUFFIX_ID_PROVS_API_URL = "-api-url";
 	private static final String KEY_SUFFIX_ID_PROVS_CLIENT_ID = "-client-id";
@@ -119,6 +118,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				continue;
 			}
 			final String pre = KEY_PREFIX_ID_PROVS + p;
+			final String factory = getString(pre + KEY_SUFFIX_ID_PROVS_FACTORY, cfg, true);
 			final String cliid = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_ID, cfg, true);
 			final String clisec = getString(pre + KEY_SUFFIX_ID_PROVS_CLIENT_SEC, cfg, true);
 			final URL login = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_URL, cfg);
@@ -127,7 +127,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
 			try {
 				ips.add(new IdentityProviderConfig(
-						p, login, api, cliid, clisec, loginRedirect, linkRedirect));
+						factory, login, api, cliid, clisec, loginRedirect, linkRedirect));
 			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(

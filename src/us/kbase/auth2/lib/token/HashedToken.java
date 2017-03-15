@@ -1,14 +1,18 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.time.Instant;
 import java.util.Base64;
-import java.util.Date;
 import java.util.UUID;
 
+import com.google.common.base.Optional;
+
+import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 
 /** A hashed token associated with a user.
@@ -18,56 +22,46 @@ import us.kbase.auth2.lib.UserName;
  */
 public class HashedToken {
 
-	private final TokenType type;
 	private final UUID id;
-	private final String tokenName;
+	private final TokenType type;
+	private final Optional<TokenName> tokenName;
 	private final String tokenHash;
 	private final UserName userName;
-	private final long expirationDate;
-	private final long creationDate;
+	private final Instant creationDate;
+	private final Instant expirationDate;
 	
 	/** Create a hashed token.
+	 * @param id the ID of the token.
 	 * @param type the type of the token.
 	 * @param tokenName the name of the token, or null to leave the token unnamed.
-	 * @param id the ID of the token.
 	 * @param tokenHash the hash of the token string.
 	 * @param userName the username of the token.
 	 * @param creationDate the creation date of the token.
 	 * @param expirationDate the expiration date of the token.
 	 */
 	public HashedToken(
-			final TokenType type,
-			final String tokenName,
 			final UUID id,
+			final TokenType type,
+			final Optional<TokenName> tokenName,
 			final String tokenHash,
 			final UserName userName,
-			final Date creationDate,
-			final Date expirationDate) {
+			final Instant creationDate,
+			final Instant expirationDate) {
 		checkStringNoCheckedException(tokenHash, "tokenHash");
-		if (type == null) {
-			throw new NullPointerException("type");
-		}
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		if (expirationDate == null) {
-			throw new NullPointerException("expirationDate");
-		}
-		if (creationDate == null) {
-			throw new NullPointerException("creationDate");
-		}
-		if (creationDate.after(expirationDate)) {
+		nonNull(type, "type");
+		nonNull(userName, "userName");
+		nonNull(creationDate, "creationDate");
+		nonNull(expirationDate, "expirationDate");
+		nonNull(id, "id");
+		if (creationDate.isAfter(expirationDate)) {
 			throw new IllegalArgumentException("expirationDate must be > creationDate");
 		}
-		if (id == null) {
-			throw new NullPointerException("id");
-		}
 		this.type = type;
-		this.tokenName = tokenName; // null ok
+		this.tokenName = tokenName == null ? Optional.absent() : tokenName;
 		this.tokenHash = tokenHash;
 		this.userName = userName;
-		this.expirationDate = expirationDate.getTime();
-		this.creationDate = creationDate.getTime();
+		this.expirationDate = expirationDate;
+		this.creationDate = creationDate;
 		this.id = id;
 	}
 
@@ -85,10 +79,10 @@ public class HashedToken {
 		return id;
 	}
 	
-	/** Get the name of the token, or null if it is unnamed.
+	/** Get the name of the token, or absent if it is unnamed.
 	 * @return the name of the token.
 	 */
-	public String getTokenName() {
+	public Optional<TokenName> getTokenName() {
 		return tokenName;
 	}
 
@@ -109,15 +103,15 @@ public class HashedToken {
 	/** Get the date the token was created.
 	 * @return the creation date.
 	 */
-	public Date getCreationDate() {
-		return new Date(creationDate);
+	public Instant getCreationDate() {
+		return creationDate;
 	}
 
 	/** Get the date the token expires.
 	 * @return the expiration date.
 	 */
-	public Date getExpirationDate() {
-		return new Date(expirationDate);
+	public Instant getExpirationDate() {
+		return expirationDate;
 	}
 
 	/** Get a SHA-256 hash of a token.
@@ -140,8 +134,8 @@ public class HashedToken {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + (int) (creationDate ^ (creationDate >>> 32));
-		result = prime * result + (int) (expirationDate ^ (expirationDate >>> 32));
+		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
+		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((tokenHash == null) ? 0 : tokenHash.hashCode());
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
@@ -162,10 +156,18 @@ public class HashedToken {
 			return false;
 		}
 		HashedToken other = (HashedToken) obj;
-		if (creationDate != other.creationDate) {
+		if (creationDate == null) {
+			if (other.creationDate != null) {
+				return false;
+			}
+		} else if (!creationDate.equals(other.creationDate)) {
 			return false;
 		}
-		if (expirationDate != other.expirationDate) {
+		if (expirationDate == null) {
+			if (other.expirationDate != null) {
+				return false;
+			}
+		} else if (!expirationDate.equals(other.expirationDate)) {
 			return false;
 		}
 		if (id == null) {

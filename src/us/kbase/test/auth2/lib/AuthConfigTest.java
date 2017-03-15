@@ -34,7 +34,7 @@ public class AuthConfigTest {
 		final Map<TokenLifetimeType, Long> defaultLifeTimes = new HashMap<>();
 		defaultLifeTimes.put(TokenLifetimeType.LOGIN, 14 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.DEV, 90 * 24 * 60 * 60 * 1000L);
-		defaultLifeTimes.put(TokenLifetimeType.SERV, 99_999_999_999L * 24 * 60 * 60 * 1000L);
+		defaultLifeTimes.put(TokenLifetimeType.SERV, 100_000_000L * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.EXT_CACHE, 5 * 60 * 1000L);
 		assertThat("incorrect token lifetimes", AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS,
 				is(defaultLifeTimes));
@@ -106,7 +106,7 @@ public class AuthConfigTest {
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.DEV),
 				is(500000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.SERV),
-				is(8639999999913600000L));
+				is(8640000000000000L));
 		assertThat("incorrect to string", ac.toString(), is(
 				"AuthConfig [loginAllowed=false, providers={" +
 				"pc1=ProviderConfig [enabled=null, forceLoginChoice=true, " +
@@ -137,7 +137,7 @@ public class AuthConfigTest {
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.DEV),
 				is(90 * 24 * 60 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.SERV),
-				is(8639999999913600000L));
+				is(8640000000000000L));
 		assertThat("incorrect to string", ac.toString(), is(
 				"AuthConfig [loginAllowed=null, providers={}, tokenLifetimeMS={}]"));
 	}

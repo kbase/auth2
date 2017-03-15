@@ -3,7 +3,7 @@ package us.kbase.auth2.service.ui;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -12,6 +12,8 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -82,13 +84,14 @@ public class UIUtils {
 	}
 
 	private static int getMaxCookieAge(
-			final Date expiration,
+			final Instant expiration,
 			final boolean session) {
 	
 		if (session) {
 			return NewCookie.DEFAULT_MAX_AGE;
 		}
-		final long exp = (long) Math.floor((expiration.getTime() - new Date().getTime()) / 1000.0);
+		final long exp = (long) Math.floor(
+				(expiration.toEpochMilli() - Instant.now().toEpochMilli()) / 1000.0);
 		if (exp > Integer.MAX_VALUE) {
 			return Integer.MAX_VALUE;
 		}
@@ -112,11 +115,10 @@ public class UIUtils {
 			final HttpHeaders headers,
 			final String tokenCookieName)
 			throws NoTokenProvidedException {
-		return getTokenFromCookie(headers, tokenCookieName, true);
+		return getTokenFromCookie(headers, tokenCookieName, true).get();
 	}
 	
-	//TODO CODE use optional
-	public static IncomingToken getTokenFromCookie(
+	public static Optional<IncomingToken> getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName,
 			final boolean throwException)
@@ -127,17 +129,17 @@ public class UIUtils {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return null;
+			return Optional.absent();
 		}
 		final String val = c.getValue();
 		if (val == null || val.trim().isEmpty()) {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return null;
+			return Optional.absent();
 		}
 		try {
-			return new IncomingToken(val.trim());
+			return Optional.of(new IncomingToken(val.trim()));
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}

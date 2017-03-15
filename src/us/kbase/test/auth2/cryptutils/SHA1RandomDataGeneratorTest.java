@@ -1,8 +1,11 @@
 package us.kbase.test.auth2.cryptutils;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+
+import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base32;
 import org.junit.Test;
@@ -51,6 +54,13 @@ public class SHA1RandomDataGeneratorTest {
 		// even all 0s is a valid output
 		final byte[] salt = new SHA1RandomDataGenerator().generateSalt();
 		assertThat("incorrect salt length", salt.length, is(8));
+	}
+	
+	@Test
+	public void uuid() throws Exception {
+		// not much to test here
+		assertThat("doesn't generate a uuid", new SHA1RandomDataGenerator().randomUUID(),
+				instanceOf(UUID.class));
 	}
 
 }

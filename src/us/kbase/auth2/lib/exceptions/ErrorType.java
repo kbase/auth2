@@ -26,6 +26,8 @@ public enum ErrorType {
 	ILLEGAL_USER_NAME		(30010, "Illegal user name"),
 	/** The provided email address was not legal. */
 	ILLEGAL_EMAIL_ADDRESS	(30020, "Illegal email address"),
+	/** The provided password was not legal. */
+	ILLEGAL_PASSWORD		(30030, "Illegal password"),
 	/** The user could not be created because it already exists. */
 	USER_ALREADY_EXISTS		(40000, "User already exists"),
 	/** The identity is already linked to a different user */
@@ -38,8 +40,10 @@ public enum ErrorType {
 	NO_SUCH_TOKEN			(50010, "No such token"),
 	/** The requested identity provider does not exist. */
 	NO_SUCH_IDENT_PROV		(50020, "No such identity provider"),
+	/** The requested identity does not exist. */
+	NO_SUCH_IDENTITY		(50030, "No such identity"),
 	/** The requested role does not exist. */
-	NO_SUCH_ROLE			(50030, "No such role"),
+	NO_SUCH_ROLE			(50040, "No such role"),
 	/** The attempt to link one account to another failed. */
 	LINK_FAILED				(60000, "Account linkage failed"),
 	/** The attemp to unlink one account from another failed. */

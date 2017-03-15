@@ -105,55 +105,25 @@ public class Link {
 		return ret;
 	}
 	
+	/* this method intentionally does not check the user identity because UIs must use a browser
+	 * form submit rather than AJAX for the redirect to work correctly. Since it's a form submit
+	 * the UI cannot trap any errors, and an invalid token error would default to the built in
+	 * HTML UI. Hence, this method should only throw errors when the request absolutely cannot
+	 * continue.
+	 */
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_START)
 	public Response linkStart(
-			@Context final HttpHeaders headers,
 			@FormParam("provider") final String provider)
 			throws NoTokenProvidedException, NoSuchIdentityProviderException,
 			AuthStorageException, InvalidTokenException, DisabledUserException {
-		
-		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		return linkStart(provider, incToken);
-	}
-
-	private Response linkStart(final String provider, final IncomingToken incToken)
-			throws InvalidTokenException, AuthStorageException, DisabledUserException,
-			NoSuchIdentityProviderException {
-		auth.getUser(incToken); // ensures the token is valid
 		
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
 		return Response.seeOther(target).cookie(getStateCookie(state)).build();
 	}
-	
-	private static class LinkStart extends IncomingJSON {
-		
-		public final String provider;
 
-		@JsonCreator
-		public LinkStart(@JsonProperty("provider") final String provider) {
-			this.provider = provider;
-		}
-	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Path(UIPaths.LINK_START)
-	public Response linkStart(
-			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
-			final LinkStart start)
-			throws NoTokenProvidedException, InvalidTokenException, DisabledUserException,
-				NoSuchIdentityProviderException, AuthStorageException, IllegalParameterException,
-				MissingParameterException {
-		if (start == null) {
-			throw new MissingParameterException("JSON body missing");
-		}
-		start.exceptOnAdditionalProperties();
-		return linkStart(start.provider, getToken(token));
-	}
-	
 	private NewCookie getStateCookie(final String state) {
 		return new NewCookie(new Cookie(LINK_STATE_COOKIE,
 				state == null ? "no state" : state, UIPaths.LINK_ROOT_COMPLETE, null),
@@ -177,20 +147,31 @@ public class Link {
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		IdentityProviderInput.checkState(state, retstate);
 		provider = upperCase(provider);
-		final LinkToken lt = auth.link(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				provider, authcode);
+		final Optional<IncomingToken> token =
+				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
+		final Optional<TemporaryToken> tt;
+		if (token.isPresent()) {
+			final LinkToken lt = auth.link(token.get(), provider, authcode);
+			if (lt.isLinked()) {
+				tt = Optional.absent();
+			} else {
+				tt = Optional.of(lt.getTemporaryToken());
+			}
+		} else {
+			tt = Optional.of(auth.link(provider, authcode));
+		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
-		if (lt.isLinked()) {
-			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
-					.cookie(getStateCookie(null)).build();
-		} else {
+		if (tt.isPresent()) {
 			r = Response.seeOther(getCompleteLinkRedirectURI(UIPaths.LINK_ROOT_CHOICE)).cookie(
-					getLinkInProcessCookie(lt.getTemporaryToken()))
+					getLinkInProcessCookie(tt.get()))
 					.cookie(getStateCookie(null))
 					.build();
+		} else {
+			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
+					.cookie(getStateCookie(null)).build();
 		}
 		return r;
 	}

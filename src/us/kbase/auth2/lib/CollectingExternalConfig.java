@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Map;
 
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -17,6 +19,7 @@ public class CollectingExternalConfig implements ExternalConfig {
 	 * @param map the map defining the configuration.
 	 */
 	public CollectingExternalConfig(final Map<String, String> map) {
+		nonNull(map, "map");
 		cfg = map;
 	}
 	

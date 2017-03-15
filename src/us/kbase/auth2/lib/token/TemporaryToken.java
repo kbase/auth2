@@ -2,8 +2,9 @@ package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.addNoOverflow;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
 /** A temporary token.
@@ -12,22 +13,33 @@ import java.util.UUID;
  */
 public class TemporaryToken {
 	
+	private final UUID id;
 	private final String token;
-	private final long creationDate = new Date().getTime();
-	private final long expirationDate;
-	private final UUID id = UUID.randomUUID();
+	private final Instant creationDate;
+	private final Instant expirationDate;
 
 	/** Create a new temporary token.
+	 * @param id the token id.
 	 * @param token the token string.
+	 * @param creation the creation date of the token.
 	 * @param lifetimeInMS the lifetime of the token in milliseconds.
 	 */
-	public TemporaryToken(final String token, final long lifetimeInMS) {
+	public TemporaryToken(
+			final UUID id,
+			final String token,
+			final Instant creation,
+			final long lifetimeInMS) {
+		nonNull(id, "id");
 		checkStringNoCheckedException(token, "token");
+		nonNull(creation, "creation");
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
+		this.id = id;
 		this.token = token;
-		this.expirationDate = new Date(addNoOverflow(creationDate, lifetimeInMS)).getTime();
+		this.creationDate = creation;
+		this.expirationDate = Instant.ofEpochMilli(
+				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
 	}
 
 	/** Get the token string.
@@ -40,15 +52,15 @@ public class TemporaryToken {
 	/** Get the date the token was created.
 	 * @return the creation date.
 	 */
-	public Date getCreationDate() {
-		return new Date(creationDate);
+	public Instant getCreationDate() {
+		return creationDate;
 	}
 
 	/** Get the date the token expires.
 	 * @return the expiration date.
 	 */
-	public Date getExpirationDate() {
-		return new Date(expirationDate);
+	public Instant getExpirationDate() {
+		return expirationDate;
 	}
 
 	/** Get the token's ID.
@@ -64,6 +76,6 @@ public class TemporaryToken {
 	 * @return a hashed temporary token.
 	 */
 	public TemporaryHashedToken getHashedToken() {
-		return new TemporaryHashedToken(HashedToken.hash(token), id, creationDate, expirationDate);
+		return new TemporaryHashedToken(id, HashedToken.hash(token), creationDate, expirationDate);
 	}
 }

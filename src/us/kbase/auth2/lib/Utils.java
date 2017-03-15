@@ -28,7 +28,7 @@ public class Utils {
 	}
 	
 	/** Check that a string is non-null, has at least one non-whitespace character, and is below
-	 * a specified length.
+	 * a specified length (not including surrounding whitespace).
 	 * @param s the string to check.
 	 * @param name the name of the string to use in any error messages.
 	 * @param max the maximum number of code points in the string. If 0 or less, the length is not
@@ -46,7 +46,7 @@ public class Utils {
 			throw new MissingParameterException(name);
 		}
 		
-		if (max > 0 && codePoints(s) > max) {
+		if (max > 0 && codePoints(s.trim()) > max) {
 			throw new IllegalParameterException(
 					name + " size greater than limit " + max);
 		}
@@ -86,10 +86,13 @@ public class Utils {
 		return c;
 	}
 	
-	/** Sets all the elements of a byte array to 0.
+	/** Sets all the elements of a byte array to 0. Does nothing if the byte array is null.
 	 * @param bytes the byte array to clear.
 	 */
 	public static void clear(final byte[] bytes) {
+		if (bytes == null) {
+			return;
+		}
 		for (int i = 0; i < bytes.length; i++) {
 			bytes[i] = 0;
 		}
@@ -104,6 +107,12 @@ public class Utils {
 			if (item == null) {
 				throw new NullPointerException(message);
 			}
+		}
+	}
+	
+	public static void nonNull(final Object o, final String message) {
+		if (o == null) {
+			throw new NullPointerException(message);
 		}
 	}
 }

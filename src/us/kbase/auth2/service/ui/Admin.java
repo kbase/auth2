@@ -8,8 +8,8 @@ import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -37,6 +37,7 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.AuthConfig;
@@ -49,6 +50,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -95,13 +97,15 @@ public class Admin {
 			@Context final HttpHeaders headers)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
-		return ImmutableMap.of(
-				"reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD),
-				"revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL),
-				"tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN),
-				"searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH),
-				"croles", auth.getCustomRoles(getTokenFromCookie(
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
+		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
+		ret.put("policyurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
+		ret.put("searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
+		ret.put("croles", auth.getCustomRoles(getTokenFromCookie(
 						headers, cfg.getTokenCookieName()), true));
+		return ret;
 	}
 	
 	@POST
@@ -127,8 +131,7 @@ public class Admin {
 	public Map<String, Object> getUserToken(
 			@Context final UriInfo uriInfo,
 			@FormParam("token") final String token)
-			throws NoTokenProvidedException, MissingParameterException, InvalidTokenException,
-			NoSuchTokenException, UnauthorizedException, AuthStorageException {
+			throws MissingParameterException, InvalidTokenException, AuthStorageException {
 		final IncomingToken t;
 		try {
 			t = getToken(token);
@@ -145,6 +148,17 @@ public class Admin {
 	}
 	
 	@POST
+	@Path(UIPaths.ADMIN_POLICY_ID)
+	public void removePolicyID(
+			@Context final HttpHeaders headers,
+			@FormParam("policy_id") final String policyID)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+				MissingParameterException, IllegalParameterException, AuthStorageException {
+		auth.removePolicyID(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				new PolicyID(policyID));
+	}
+	
+	@POST
 	@Path(UIPaths.ADMIN_SEARCH) 
 	@Template(name = "/adminsearch")
 	public Map<String, Object> searchForUsers(
@@ -154,7 +168,8 @@ public class Admin {
 			throws InvalidTokenException, IllegalParameterException, NoTokenProvidedException,
 			AuthStorageException, UnauthorizedException {
 		final String prefix = form.getFirst("prefix");
-		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
+		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder().withIncludeDisabled(true)
+				.withIncludeRoot(true); // may want to include option to exclude disabled
 		final boolean hasPrefix;
 		if (prefix != null && !prefix.trim().isEmpty()) {
 			build.withSearchPrefix(prefix);
@@ -256,15 +271,16 @@ public class Admin {
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
 		ret.put("local", au.isLocal());
-		ret.put("created", au.getCreated().getTime());
-		final Date lastLogin = au.getLastLogin();
-		ret.put("lastlogin", lastLogin == null ? null : lastLogin.getTime());
+		ret.put("created", au.getCreated().toEpochMilli());
+		final Optional<Instant> lastLogin = au.getLastLogin();
+		ret.put("lastlogin", lastLogin.isPresent() ? lastLogin.get().toEpochMilli() : null);
 		ret.put("disabled", au.isDisabled());
-		ret.put("disabledreason", au.getReasonForDisabled());
-		final Date disabled = au.getEnableToggleDate();
-		ret.put("enabletoggledate", disabled == null ? null : disabled.getTime());
-		final UserName admin = au.getAdminThatToggledEnabledState();
-		ret.put("enabledtoggledby", admin == null ? null : admin.getName());
+		final Optional<String> dis = au.getReasonForDisabled();
+		ret.put("disabledreason", dis.isPresent() ? au.getReasonForDisabled().get() : null);
+		final Optional<Instant> disabled = au.getEnableToggleDate();
+		ret.put("enabletoggledate", disabled.isPresent() ? disabled.get().toEpochMilli() : null);
+		final Optional<UserName> admin = au.getAdminThatToggledEnabledState();
+		ret.put("enabledtoggledby", admin.isPresent() ? admin.get().getName() : null);
 		ret.put(Role.ADMIN.getID(), au.hasRole(Role.ADMIN));
 		ret.put(Role.SERV_TOKEN.getID(), au.hasRole(Role.SERV_TOKEN));
 		ret.put(Role.DEV_TOKEN.getID(), au.hasRole(Role.DEV_TOKEN));
@@ -527,6 +543,7 @@ public class Admin {
 			p.put("name", e.getKey());
 			p.put("enabled", e.getValue().isEnabled());
 			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
+			p.put("forceloginchoice", e.getValue().isForceLoginChoice());
 			prov.add(p);
 		}
 		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponse());

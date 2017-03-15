@@ -4,7 +4,7 @@
       Build file for the second KBase Authentication Service 
   </description>
 	
-  <!-- TODO BUILD switch to gradle or at least ivy -->
+  <!-- TODO ZLATER BUILD switch to gradle or at least ivy -->
 
   <!-- set global properties for this build -->
   <property name="package" value="KBase authentication service"/>
@@ -27,6 +27,7 @@
     <include name="jcommander/jcommander-1.48.jar"/>
     <include name="mongo/mongo-java-driver-3.3.0.jar"/>
     <include name="mustache/compiler-0.9.3.jar"/>
+    <include name="nulab-inc/zxcvbn-1.2.2.jar"/>
   </fileset>
 
   <fileset dir="${jardir}" id="logging">
@@ -83,10 +84,11 @@
   </fileset>
 	
   <fileset dir="${jardir}" id="testlibs">
-    <include name="junit/junit-4.9.jar"/>
+    <include name="junit/junit-4.12.jar"/>
     <include name="apache_commons/commons-lang3-3.1.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
     <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
+    <include name="jsemver/java-semver-0.9.0.jar"/>
     <!-- mockito dependencies -->
     <include name="mockito/mockito-core-2.7.10.jar"/>
     <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
@@ -199,9 +201,17 @@
       <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
+      <test name="us.kbase.test.auth2.kbase.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.kbase.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationGetAvailableUserNameTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationGetUserTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationGetUserDisplayNamesTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
       <test name="us.kbase.test.auth2.lib.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.CollectingExternalConfigTest"/>
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
@@ -213,10 +223,12 @@
       <test name="us.kbase.test.auth2.lib.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
+      <test name="us.kbase.test.auth2.lib.NameTest"/>
       <test name="us.kbase.test.auth2.lib.NewUserTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
+      <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
-      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
+      <test name="us.kbase.test.auth2.lib.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>
@@ -224,10 +236,7 @@
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
       <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GlobusIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.GoogleIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
-      <test name="us.kbase.test.auth2.lib.identity.IdentityProviderSetTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageCustomRoleTest"/>
@@ -242,6 +251,7 @@
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
+      <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

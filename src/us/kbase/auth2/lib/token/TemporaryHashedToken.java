@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.UUID;
 
 /** An hashed temporary token.
@@ -9,16 +9,16 @@ import java.util.UUID;
  */
 public class TemporaryHashedToken {
 	
-	private final String tokenHash;
-	private final long created;
-	private final long expiry;
 	private final UUID id;
+	private final String tokenHash;
+	private final Instant created;
+	private final Instant expiry;
 
 	TemporaryHashedToken(
-			final String tokenHash,
 			final UUID id,
-			final long creationDate,
-			final long expirationDate) {
+			final String tokenHash,
+			final Instant creationDate,
+			final Instant expirationDate) {
 		// since this method is only called by TemporaryToken, we assume the inputs are ok
 		this.tokenHash = tokenHash;
 		this.id = id;
@@ -43,14 +43,14 @@ public class TemporaryHashedToken {
 	/** Get the date the token was created.
 	 * @return the creation date.
 	 */
-	public Date getCreationDate() {
-		return new Date(created);
+	public Instant getCreationDate() {
+		return created;
 	}
 
 	/** Get the date the token expires.
 	 * @return the expiration date.
 	 */
-	public Date getExpirationDate() {
-		return new Date(expiry);
+	public Instant getExpirationDate() {
+		return expiry;
 	}
 }

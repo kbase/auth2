@@ -1,6 +1,10 @@
 package us.kbase.auth2.lib;
 
-import java.util.Date;
+import static us.kbase.auth2.lib.Utils.nonNull;
+
+import java.time.Instant;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -14,9 +18,9 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 public class UserDisabledState {
 	
 	private static final int MAX_DISABLED_REASON_LENGTH = 1000;
-	private final String disabledReason;
-	private final UserName byAdmin;
-	private final Long time;
+	private final Optional<String> disabledReason;
+	private final Optional<UserName> byAdmin;
+	private final Optional<Instant> time;
 	
 	/** Create a state object for a user that is in the disabled state.
 	 * @param disabledReason the reason the user was disabled.
@@ -28,19 +32,14 @@ public class UserDisabledState {
 	public UserDisabledState(
 			final String disabledReason,
 			final UserName byAdmin,
-			final Date time)
+			final Instant time)
 			throws IllegalParameterException, MissingParameterException {
-		super();
 		Utils.checkString(disabledReason, "Disabled reason", MAX_DISABLED_REASON_LENGTH);
-		if (byAdmin == null) {
-			throw new NullPointerException("byAdmin");
-		}
-		if (time == null) {
-			throw new NullPointerException("time");
-		}
-		this.disabledReason = disabledReason.trim();
-		this.byAdmin = byAdmin;
-		this.time = time.getTime();
+		nonNull(byAdmin, "byAdmin");
+		nonNull(time, "time");
+		this.disabledReason = Optional.of(disabledReason.trim());
+		this.byAdmin = Optional.of(byAdmin);
+		this.time = Optional.of(time);
 	}
 	
 	/** Create a state object for a user that has been disabled at least once, but has been
@@ -48,57 +47,53 @@ public class UserDisabledState {
 	 * @param byAdmin the administrator that enabled the user.
 	 * @param time the time at which the user was enabled.
 	 */
-	public UserDisabledState(final UserName byAdmin, final Date time) {
-		if (byAdmin == null) {
-			throw new NullPointerException("byAdmin");
-		}
-		if (time == null) {
-			throw new NullPointerException("time");
-		}
-		this.disabledReason = null;
-		this.byAdmin = byAdmin;
-		this.time = time.getTime();
+	public UserDisabledState(final UserName byAdmin, final Instant time) {
+		nonNull(byAdmin, "byAdmin");
+		nonNull(time, "time");
+		this.disabledReason = Optional.absent();
+		this.byAdmin = Optional.of(byAdmin);
+		this.time = Optional.of(time);
 	}
 	
 	/** Create a state object for a user that has never been disabled. */
 	public UserDisabledState() {
-		disabledReason = null;
-		byAdmin = null;
-		time = null;
+		disabledReason = Optional.absent();
+		byAdmin = Optional.absent();
+		time = Optional.absent();
 	}
 	
 	/** Whether the user is disabled.
 	 * @return true if the user is disabled, false otherwise.
 	 */
 	public boolean isDisabled() {
-		return disabledReason != null;
+		return disabledReason.isPresent();
 	}
 
 	/** Get the reason the user was disabled.
 	 * @return the reason the user was disabled.
 	 */
-	public String getDisabledReason() {
+	public Optional<String> getDisabledReason() {
 		return disabledReason;
 	}
 
 	/** Get the name of the adminstrator that en/disabled the user. 
 	 * @return the name of the administrator.
 	 */
-	public UserName getByAdmin() {
+	public Optional<UserName> getByAdmin() {
 		return byAdmin;
 	}
 
 	/** Get the time the user was en/disabled.
 	 * @return the time of en/disablementation.
 	 */
-	public Date getTime() {
-		return time == null ? null : new Date(time);
+	public Optional<Instant> getTime() {
+		return time;
 	}
 	
 	/** Create the appropriate disabled state object for a set of inputs.
-	 * @param disabledReason the reason the user was disabled - can be null.
-	 * @param byAdmin the administrator that disabled the user - can be null.
-	 * @param time the time at which the user was disabled - can be null.
+	 * @param disabledReason the reason the user was disabled.
+	 * @param byAdmin the administrator that disabled the user.
+	 * @param time the time at which the user was disabled.
 	 * @return the new disabled state object.
 	 * @throws IllegalStateException if the inputs do not correspond to one of the 3 possible
 	 * state permutations (e.g. one of the 3 constructors).
@@ -107,28 +102,32 @@ public class UserDisabledState {
 	 * are supplied.
 	 */
 	public static UserDisabledState create(
-			final String disabledReason,
-			final UserName byAdmin,
-			final Date time)
+			final Optional<String> disabledReason,
+			final Optional<UserName> byAdmin,
+			final Optional<Instant> time)
 			throws IllegalParameterException, MissingParameterException {
-		if (disabledReason == null) {
-			if (byAdmin == null) {
-				if (time != null) {
-					throw new IllegalStateException("If byAdmin is null time must also be null");
+		nonNull(disabledReason, "disabledReason");
+		nonNull(byAdmin, "byAdmin");
+		nonNull(time, "time");
+		if (!disabledReason.isPresent()) {
+			if (!byAdmin.isPresent()) {
+				if (time.isPresent()) {
+					throw new IllegalStateException(
+							"If byAdmin is absent time must also be absent");
 				}
 				return new UserDisabledState();
 			} else {
-				if (time == null) {
-					throw new IllegalStateException("If byAdmin is not null time cannot be null");
+				if (!time.isPresent()) {
+					throw new IllegalStateException("If byAdmin is present time cannot be absent");
 				}
-				return new UserDisabledState(byAdmin, time);
+				return new UserDisabledState(byAdmin.get(), time.get());
 			}
 		} else {
-			if (byAdmin == null || time == null) {
+			if (!byAdmin.isPresent() || !time.isPresent()) {
 				throw new IllegalStateException(
-						"If disabledReason is not null byAdmin and time cannot be null");
+						"If disabledReason is present byAdmin and time cannot be absent");
 			}
-			return new UserDisabledState(disabledReason, byAdmin, time);
+			return new UserDisabledState(disabledReason.get(), byAdmin.get(), time.get());
 		}
 	}
 

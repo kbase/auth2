@@ -1,8 +1,10 @@
 package us.kbase.auth2.lib;
 
+import java.time.Instant;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.Set;
+
+import com.google.common.base.Optional;
 
 /** A local user.
  * 
@@ -14,7 +16,9 @@ public class LocalUser extends AuthUser {
 	private final byte[] passwordHash;
 	private final byte[] salt;
 	private final boolean forceReset;
-	private final Long lastReset;
+	private final Optional<Instant> lastReset;
+	
+	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
 	
 	/** Create a new local user.
 	 * @param userName the name of the user.
@@ -22,6 +26,7 @@ public class LocalUser extends AuthUser {
 	 * @param displayName the display name of the user.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
+	 * @param policyIDs the set of policy IDs associated with the user.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login.
 	 * @param disabledState whether the user account is disabled.
@@ -36,15 +41,16 @@ public class LocalUser extends AuthUser {
 			final DisplayName displayName,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Date created,
-			final Date lastLogin,
+			final Set<PolicyID> policyIDs,
+			final Instant created,
+			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
-			final Date lastReset) {
-		super(userName, email, displayName, null, roles, customRoles, created, lastLogin,
-				disabledState);
+			final Optional<Instant> lastReset) {
+		super(userName, email, displayName, null, roles, customRoles, policyIDs, created,
+				lastLogin, disabledState);
 		// what's the right # here? Have to rely on user to some extent
 		if (passwordHash == null || passwordHash.length < 10) {
 			throw new IllegalArgumentException("passwordHash missing or too small");
@@ -55,7 +61,7 @@ public class LocalUser extends AuthUser {
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
-		this.lastReset = lastReset == null ? null : lastReset.getTime();
+		this.lastReset = lastReset == null ? Optional.absent() : lastReset;
 	}
 
 	/** Get the salted hash of the user's password.
@@ -82,8 +88,8 @@ public class LocalUser extends AuthUser {
 	/** The date of the last password reset.
 	 * @return the last password reset date or null if the password has never been reset.
 	 */
-	public Date getLastPwdReset() {
-		return lastReset == null ? null : new Date(lastReset);
+	public Optional<Instant> getLastPwdReset() {
+		return lastReset;
 	}
 
 	@Override
@@ -127,37 +133,4 @@ public class LocalUser extends AuthUser {
 		}
 		return true;
 	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("LocalUser [passwordHash=");
-		builder.append(Arrays.toString(passwordHash));
-		builder.append(", salt=");
-		builder.append(Arrays.toString(salt));
-		builder.append(", forceReset=");
-		builder.append(forceReset);
-		builder.append(", lastReset=");
-		builder.append(lastReset);
-		builder.append(", getDisplayName()=");
-		builder.append(getDisplayName());
-		builder.append(", getEmail()=");
-		builder.append(getEmail());
-		builder.append(", getUserName()=");
-		builder.append(getUserName());
-		builder.append(", getRoles()=");
-		builder.append(getRoles());
-		builder.append(", getCustomRoles()=");
-		builder.append(getCustomRoles());
-		builder.append(", getCreated()=");
-		builder.append(getCreated());
-		builder.append(", getLastLogin()=");
-		builder.append(getLastLogin());
-		builder.append(", getDisabledState()=");
-		builder.append(getDisabledState());
-		builder.append("]");
-		return builder.toString();
-	}
-	
-	
 }

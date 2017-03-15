@@ -2,8 +2,7 @@ package us.kbase.test.auth2.lib;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-
-import java.util.Map;
+import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
@@ -13,6 +12,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.test.auth2.TestCommon;
 
 public class CollectingExternalConfigTest {
 
@@ -26,9 +26,6 @@ public class CollectingExternalConfigTest {
 		final CollectingExternalConfig cfg = new CollectingExternalConfig(
 				ImmutableMap.of("foo", "bar"));
 		assertThat("incorrect config", cfg.toMap(), is(ImmutableMap.of("foo", "bar")));
-		
-		final CollectingExternalConfig cfg2 = new CollectingExternalConfig(null);
-		assertThat("incorrect config", cfg2.toMap(), is((Map<String, String>) null));
 	}
 	
 	@Test
@@ -36,6 +33,16 @@ public class CollectingExternalConfigTest {
 		final CollectingExternalConfig cfg = new CollectingExternalConfigMapper().fromMap(
 				ImmutableMap.of("baz", "bat"));
 		assertThat("incorrect config", cfg.toMap(), is(ImmutableMap.of("baz", "bat")));
+	}
+	
+	@Test
+	public void failConstruct() {
+		try {
+			new CollectingExternalConfig(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("map"));
+		}
 	}
 	
 }

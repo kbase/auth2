@@ -1,10 +1,14 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
+import java.time.Instant;
 import java.util.Collections;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
@@ -27,9 +31,12 @@ public class AuthUser {
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
 	private final Set<RemoteIdentityWithLocalID> identities;
-	private final long created;
-	private final Long lastLogin;
+	private final Set<PolicyID> policyIDs;
+	private final Instant created;
+	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
+	
+	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
 	
 	/** Create a new user.
 	 * @param userName the name of the user.
@@ -39,6 +46,7 @@ public class AuthUser {
 	 * users.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
+	 * @param policyIDs the policy IDs associated with the user.
 	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date it will be silently modified to match the creation date.
@@ -51,21 +59,17 @@ public class AuthUser {
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
 			Set<String> customRoles,
-			final Date created,
-			final Date lastLogin,
+			Set<PolicyID> policyIDs,
+			final Instant created,
+			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
-		super();
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
+		nonNull(userName, "userName");
+		nonNull(email, "email");
+		nonNull(displayName, "displayName");
+		nonNull(created, "created");
+		nonNull(disabledState, "disabledState");
 		this.userName = userName;
-		if (email == null) {
-			throw new NullPointerException("email");
-		}
 		this.email = email;
-		if (displayName == null) {
-			throw new NullPointerException("displayName");
-		}
 		this.displayName = displayName;
 		if (identities == null) {
 			identities = new HashSet<>();
@@ -82,6 +86,11 @@ public class AuthUser {
 		}
 		Utils.noNulls(customRoles, "null item in customRoles");
 		this.customRoles = Collections.unmodifiableSet(new HashSet<>(customRoles));
+		if (policyIDs == null) {
+			policyIDs = new HashSet<>();
+		}
+		Utils.noNulls(policyIDs, "null item in policyIDs");
+		this.policyIDs = Collections.unmodifiableSet(new HashSet<>(policyIDs));
 		/* this is a little worrisome as there are two sources of truth for root. Maybe
 		 * automatically add the role for root? Or have a root user subclass?
 		 * This'll do for now
@@ -98,14 +107,11 @@ public class AuthUser {
 		}
 		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
 				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
-		if (created == null) {
-			throw new NullPointerException("created");
-		}
-		this.created = created.getTime(); // will throw npe
-		this.lastLogin = lastLogin == null ? null :
-			(lastLogin.before(created) ? created.getTime() : lastLogin.getTime());
-		if (disabledState == null) {
-			throw new NullPointerException("disabledState");
+		this.created = created;
+		if (lastLogin == null || !lastLogin.isPresent()) {
+			this.lastLogin = Optional.absent();
+		} else {
+			this.lastLogin = lastLogin.get().isBefore(created) ? Optional.of(created) : lastLogin;
 		}
 		this.disabledState = disabledState;
 	}
@@ -117,7 +123,7 @@ public class AuthUser {
 	 */
 	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
 		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
-				user.getCustomRoles(), user.getCreated(), user.getLastLogin(),
+				user.getCustomRoles(), user.getPolicyIDs(), user.getCreated(), user.getLastLogin(),
 				user.getDisabledState());
 	}
 
@@ -192,18 +198,25 @@ public class AuthUser {
 		return identities;
 	}
 	
+	/** Get the set of policyIDs associated with this user.
+	 * @return the policy IDs.
+	 */
+	public Set<PolicyID> getPolicyIDs() {
+		return policyIDs;
+	}
+	
 	/** Get this user's creation date.
 	 * @return the creation date.
 	 */
-	public Date getCreated() {
-		return new Date(created);
+	public Instant getCreated() {
+		return created;
 	}
 
 	/** Get the date of the last login for this user.
 	 * @return the last login date, or null if the user has never logged in.
 	 */
-	public Date getLastLogin() {
-		return lastLogin == null ? null : new Date(lastLogin);
+	public Optional<Instant> getLastLogin() {
+		return lastLogin;
 	}
 	
 	/** Returns true if the account for this user is disabled.
@@ -214,25 +227,25 @@ public class AuthUser {
 	}
 	
 	/** Get the reason the account for this user was disabled.
-	 * @return the reason the user account was disabled, or null if the account is not disabled.
+	 * @return the reason the user account was disabled, or absent if the account is not disabled.
 	 */
-	public String getReasonForDisabled() {
+	public Optional<String> getReasonForDisabled() {
 		return disabledState.getDisabledReason();
 	}
 	
 	/** Get the user name of the administrator that enabled or disabled the user account.
-	 * @return the administrator that disabled or enabled the account, or null if the account has
+	 * @return the administrator that disabled or enabled the account, or absent if the account has
 	 * never been disabled.
 	 */
-	public UserName getAdminThatToggledEnabledState() {
+	public Optional<UserName> getAdminThatToggledEnabledState() {
 		return disabledState.getByAdmin();
 	}
 	
 	/** Get the date of the last time the user account was disabled or enabled.
-	 * @return the date of the laste time the user account was disabled or enabled, or null if the
-	 * account has never been disabled.
+	 * @return the date of the laste time the user account was disabled or enabled, or absent if
+	 * the account has never been disabled.
 	 */
-	public Date getEnableToggleDate() {
+	public Optional<Instant> getEnableToggleDate() {
 		return disabledState.getTime();
 	}
 	
@@ -264,13 +277,14 @@ public class AuthUser {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + (int) (created ^ (created >>> 32));
+		result = prime * result + ((created == null) ? 0 : created.hashCode());
 		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
 		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
 		result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
 		result = prime * result + ((lastLogin == null) ? 0 : lastLogin.hashCode());
+		result = prime * result + ((policyIDs == null) ? 0 : policyIDs.hashCode());
 		result = prime * result + ((roles == null) ? 0 : roles.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
 		return result;
@@ -288,7 +302,11 @@ public class AuthUser {
 			return false;
 		}
 		AuthUser other = (AuthUser) obj;
-		if (created != other.created) {
+		if (created == null) {
+			if (other.created != null) {
+				return false;
+			}
+		} else if (!created.equals(other.created)) {
 			return false;
 		}
 		if (customRoles == null) {
@@ -333,6 +351,13 @@ public class AuthUser {
 		} else if (!lastLogin.equals(other.lastLogin)) {
 			return false;
 		}
+		if (policyIDs == null) {
+			if (other.policyIDs != null) {
+				return false;
+			}
+		} else if (!policyIDs.equals(other.policyIDs)) {
+			return false;
+		}
 		if (roles == null) {
 			if (other.roles != null) {
 				return false;
@@ -349,6 +374,4 @@ public class AuthUser {
 		}
 		return true;
 	}
-	
-	
 }

@@ -41,6 +41,8 @@ public class UtilsTest {
 		final byte[] b = "foobar".getBytes();
 		Utils.clear(b);
 		assertThat("clear failed", b, is(new byte[6]));
+		
+		Utils.clear(null); // noop
 	}
 	
 	@Test
@@ -48,6 +50,7 @@ public class UtilsTest {
 		Utils.checkString(TestCommon.LONG1001, "name");
 		Utils.checkStringNoCheckedException(TestCommon.LONG1001, "name");
 		Utils.checkString("ok", "name", 2);
+		Utils.checkString(" \n  ok   \t", "name", 2);
 	}
 	
 	@Test
@@ -129,6 +132,21 @@ public class UtilsTest {
 			fail("expected exception");
 		} catch (NullPointerException npe) {
 			assertThat("incorrect exception message", npe.getMessage(), is(message));
+		}
+	}
+	
+	@Test
+	public void nonNull() {
+		Utils.nonNull(new Object(), "foo"); // should work
+	}
+	
+	@Test
+	public void failNonNull() {
+		try {
+			Utils.nonNull(null, "foo");
+			fail("expected exception");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception message", e.getMessage(), is("foo"));
 		}
 	}
 	

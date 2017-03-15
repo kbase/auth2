@@ -1,10 +1,12 @@
 package us.kbase.auth2.service.exceptions;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 import javax.ws.rs.WebApplicationException;
@@ -33,7 +35,7 @@ public class ErrorMessage {
 	private final String message;
 	private final String exception;
 	private final String callID;
-	private final long time = new Date().getTime();
+	private final long time = Instant.now().toEpochMilli();
 	@JsonIgnore
 	private final List<String> exceptionLines;
 	@JsonIgnore
@@ -43,9 +45,7 @@ public class ErrorMessage {
 			final Throwable ex,
 			final String callID,
 			final boolean includeTrace) {
-		if (ex == null) {
-			throw new NullPointerException("ex");
-		}
+		nonNull(ex, "ex");
 		this.callID = callID; // null ok
 		if (includeTrace) {
 			final StringWriter st = new StringWriter();

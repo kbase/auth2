@@ -4,10 +4,13 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
-import java.util.Date;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.UUID;
 
 import org.junit.Test;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
@@ -33,7 +36,7 @@ public class LinkTokenTest {
 	static {
 		try {
 			AUTH_USER = new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-					new DisplayName("bar"), REMOTE1, null);
+					new DisplayName("bar"), REMOTE1, Collections.emptySet(), Instant.now(), null);
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
@@ -50,7 +53,8 @@ public class LinkTokenTest {
 	@Test
 	public void tokenConstructor() throws Exception {
 		final LinkIdentities linkids = new LinkIdentities(AUTH_USER, "foobar");
-		final TemporaryToken tt = new TemporaryToken("foo", 10000);
+		final TemporaryToken tt = new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.now(), 10000);
 		final LinkToken lt = new LinkToken(tt, linkids);
 		assertThat("incorrect isLinked()", lt.isLinked(), is(false));
 		assertThat("incorrect token id", lt.getTemporaryToken().getId(), is(tt.getId()));
@@ -80,14 +84,14 @@ public class LinkTokenTest {
 		assertThat("incorrect creation date", lt.getLinkIdentities().getUser().getCreated(),
 				is(AUTH_USER.getCreated()));
 		assertThat("incorrect login date", lt.getLinkIdentities().getUser().getLastLogin(),
-				is((Date) null));
+				is(Optional.absent()));
 	}
 	
 	@Test
 	public void constructFail() throws Exception {
 		failConstruct(null, new LinkIdentities(AUTH_USER, "foo"),
 				new NullPointerException("token"));
-		failConstruct(new TemporaryToken("foo", 10000), null,
+		failConstruct(new TemporaryToken(UUID.randomUUID(), "foo", Instant.now(), 10000), null,
 				new NullPointerException("linkIdentities"));
 	}
 	

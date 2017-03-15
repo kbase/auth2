@@ -9,11 +9,15 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -45,6 +49,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -118,61 +123,16 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException {
 		
-		return loginStart(provider, redirect, stayLoggedIn == null);
-	}
-
-	private Response loginStart(
-			final String provider,
-			final String redirect,
-			final boolean session)
-			throws AuthStorageException, IllegalParameterException,
-			NoSuchIdentityProviderException {
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
-
+		
 		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(session));
+				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect));
 		}
 		return r.build();
-	}
-	
-	private static class LoginStart extends IncomingJSON {
-		
-		public String provider;
-		public String redirect;
-		private Object stayLoggedIn;
-		
-		@JsonCreator
-		public LoginStart(
-				@JsonProperty("provider") final String provider,
-				@JsonProperty("redirect") final String redirect,
-				@JsonProperty("stay_logged_in") final Object stayLoggedIn) {
-			super();
-			this.provider = provider;
-			this.redirect = redirect;
-			this.stayLoggedIn = stayLoggedIn;
-		}
-		
-		public boolean isStayLoggedIn() throws IllegalParameterException {
-			return getBoolean(stayLoggedIn, "stay_logged_in");
-		}
-	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Path(UIPaths.LOGIN_START)
-	public Response loginStart(final LoginStart login)
-			throws IllegalParameterException, AuthStorageException,
-			NoSuchIdentityProviderException, MissingParameterException {
-		if (login == null) {
-			throw new MissingParameterException("JSON body missing");
-		}
-		
-		login.exceptOnAdditionalProperties();
-		return loginStart(login.provider, login.redirect, !login.isStayLoggedIn());
 	}
 
 	private URL getRedirectURL(final String redirect)
@@ -255,8 +215,6 @@ public class Login {
 		}
 		return r;
 	}
-	
-	//TODO CODE recheck how state var is supposed to work.
 	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -443,6 +401,8 @@ public class Login {
 			l.put("disabled", user.isDisabled());
 			l.put("adminonly", loginRestricted);
 			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
+			l.put("policy_ids", user.getPolicyIDs().stream().map(id -> id.getName())
+					.collect(Collectors.toSet()));
 			final List<String> remoteIDs = new LinkedList<>();
 			for (final RemoteIdentityWithLocalID id: loginState.getIdentities(userName)) {
 				remoteIDs.add(id.getDetails().getUsername());
@@ -472,32 +432,63 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final UUID identityID,
+			@FormParam("policy_ids") final String policyIDs,
 			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
-			LinkFailedException {
+			LinkFailedException, MissingParameterException {
 		
-		final NewToken newtoken = auth.login(
-				getLoginInProcessToken(token), identityID, linkAll != null);
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token), identityID,
+				PickChoice.getPolicyIDs(policyIDs), linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
 	
 	private static class PickChoice extends IncomingJSON {
 		
 		private final String id;
+		private final List<String> policyIDs;
 		private final Object linkAll;
-
+		
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
 		public PickChoice(
 				@JsonProperty("id") final String id,
+				@JsonProperty("policy_ids") final List<String> policyIDs,
 				@JsonProperty("linkall") final Object linkAll) {
 			this.id = id;
+			this.policyIDs = policyIDs;
 			this.linkAll = linkAll;
 		}
 		
 		public UUID getID() throws IllegalParameterException, MissingParameterException {
 			return getUUID(id, "id");
+		}
+		
+		public Set<PolicyID> getPolicyIDs()
+				throws MissingParameterException, IllegalParameterException {
+			return getPolicyIDs(policyIDs);
+		}
+		
+		public static Set<PolicyID> getPolicyIDs(final String policyIDlist)
+				throws MissingParameterException, IllegalParameterException {
+			final Set<PolicyID> ids = new HashSet<>();
+			if (policyIDlist == null) {
+				return ids;
+			}
+			return getPolicyIDs(Arrays.asList(policyIDlist.split(",")));
+			
+		}
+		
+		private static Set<PolicyID> getPolicyIDs(final List<String> policyIDs)
+				throws MissingParameterException, IllegalParameterException {
+			final Set<PolicyID> ret = new HashSet<>(); 
+			if (policyIDs == null || policyIDs.isEmpty()) {
+				return ret;
+			}
+			for (final String id: policyIDs) {
+				ret.add(new PolicyID(id));
+			}
+			return ret;
 		}
 		
 		public boolean isLinkAll() throws IllegalParameterException {
@@ -521,8 +512,8 @@ public class Login {
 		}
 		
 		pick.exceptOnAdditionalProperties();
-		final NewToken newtoken = auth.login(
-				getLoginInProcessToken(token), pick.getID(), pick.isLinkAll());
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
+				pick.getID(), pick.getPolicyIDs(), pick.isLinkAll());
 		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
 	}
 
@@ -537,6 +528,7 @@ public class Login {
 			@FormParam("user") final String userName,
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email,
+			@FormParam("policy_ids") final String policyIDs,
 			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
@@ -552,6 +544,7 @@ public class Login {
 				new UserName(userName),
 				new DisplayName(displayName),
 				new EmailAddress(email),
+				CreateChoice.getPolicyIDs(policyIDs),
 				linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
@@ -569,8 +562,9 @@ public class Login {
 				@JsonProperty("user") final String userName,
 				@JsonProperty("display") final String displayName,
 				@JsonProperty("email") final String email,
+				@JsonProperty("policy_ids") final List<String> policyIDs,
 				@JsonProperty("linkall") final Object linkAll) {
-			super(id, linkAll);
+			super(id, policyIDs, linkAll);
 			this.user = userName;
 			this.displayName = displayName;
 			this.email = email;
@@ -601,6 +595,7 @@ public class Login {
 				new UserName(create.user),
 				new DisplayName(create.displayName),
 				new EmailAddress(create.email),
+				create.getPolicyIDs(),
 				create.isLinkAll());
 		return createLoginResponseJSON(Response.Status.CREATED, redirect, newtoken);
 	}

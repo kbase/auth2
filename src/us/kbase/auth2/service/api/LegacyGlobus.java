@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.api;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
@@ -68,7 +68,7 @@ public class LegacyGlobus {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("access_token", token);
 		ret.put("client_id", ht.getUserName().getName());
-		ret.put("expires_in", expires - dateToSec(new Date()));
+		ret.put("expires_in", expires - dateToSec(Instant.now()));
 		ret.put("expiry", expires);
 		ret.put("issued_on", created);
 		ret.put("lifetime", expires - created);
@@ -93,8 +93,8 @@ public class LegacyGlobus {
 	}
 	
 	
-	private long dateToSec(final Date date) {
-		return (long) Math.floor(date.getTime() / 1000.0);
+	private long dateToSec(final Instant date) {
+		return (long) Math.floor(date.toEpochMilli() / 1000.0);
 	}
 	
 	// note does not return identity_id
@@ -126,7 +126,7 @@ public class LegacyGlobus {
 			throw new UnauthorizedException(
 					e.getErr(), "Authentication failed.");
 		}
-		final String email = u.getEmail() == null ? null : u.getEmail().getAddress(); 
+		final String email = u.getEmail().isPresent() ? u.getEmail().get().getAddress() : null;
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("username", u.getUserName().getName());
 		ret.put("email_validated", false);

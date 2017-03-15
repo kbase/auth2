@@ -1,5 +1,6 @@
 package us.kbase.test.auth2.lib.identity;
 
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -166,7 +167,7 @@ public class RemoteIdentityTest {
 						"details=RemoteIdentityDetails [username=u, fullname=f, email=e]]"));
 		
 		final RemoteIdentityWithLocalID ril = ri.withID();
-		assertThat("incorrect local id class", ril.getID(), is(UUID.class));
+		assertThat("incorrect local id class", ril.getID(), instanceOf(UUID.class));
 		assertThat("incorrect id", ril.getRemoteID(), is(id));
 		assertThat("incorrect details", ril.getDetails(), is(dets));
 		

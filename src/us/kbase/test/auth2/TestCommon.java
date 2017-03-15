@@ -1,6 +1,8 @@
 package us.kbase.test.auth2;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -9,7 +11,6 @@ import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Date;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -20,6 +21,7 @@ import org.ini4j.Ini;
 
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth2.lib.Password;
 import us.kbase.common.test.TestException;
 
 public class TestCommon {
@@ -64,7 +66,14 @@ public class TestCommon {
 			final Exception expected) {
 		assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
 				got.getMessage(), is(expected.getMessage()));
-		assertThat("incorrect exception type", got, is(expected.getClass()));
+		assertThat("incorrect exception type", got, instanceOf(expected.getClass()));
+	}
+	
+	public static void assertExceptionMessageContains(
+			final Exception got,
+			final String expectedMessagePart) {
+		assertThat("incorrect exception message. trace:\n" + ExceptionUtils.getStackTrace(got),
+				got.getMessage(), containsString(expectedMessagePart));
 	}
 	
 	/** See https://gist.github.com/vorburger/3429822
@@ -107,13 +116,6 @@ public class TestCommon {
 		return new HashSet<T>(Arrays.asList(objects));
 	}
 	
-	public static void assertDateNoOlderThan(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		assertThat("date older than expected", (d.getTime() + milliseconds) < now.getTime(),
-				is(false));
-		assertThat("date in the future", d.getTime() > now.getTime(), is(false));
-	}
-	
 	public static void assertClear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			if (bytes[i] != 0) {
@@ -122,12 +124,19 @@ public class TestCommon {
 		}
 	}
 	
-	public static boolean dateWithin(final Date d, final int milliseconds) {
-		final Date now = new Date();
-		return d.getTime() < now.getTime() + milliseconds &&
-				d.getTime() > now.getTime() - milliseconds;
+	public static void assertClear(final Password p) {
+		assertClear(p.getPassword());
 	}
-
+	
+	public static void assertClear(final char[] chars) {
+		for (int i = 0; i < chars.length; i++) {
+			if (chars[i] != '0') {
+				fail(String.format("found char != '0' at postion %s: %s", i, chars[i]));
+			}
+		}
+	}
+	
+	
 	public static Path getMongoExe() {
 		return Paths.get(getTestProperty(MONGOEXE)).toAbsolutePath().normalize();
 	}

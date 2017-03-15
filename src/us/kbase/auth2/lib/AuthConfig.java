@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -32,7 +34,9 @@ public class AuthConfig {
 		m.put(TokenLifetimeType.EXT_CACHE,			   5 * 60 * 1000L);
 		m.put(TokenLifetimeType.LOGIN,		14 * 24 * 60 * 60 * 1000L);
 		m.put(TokenLifetimeType.DEV,		90 * 24 * 60 * 60 * 1000L);
-		m.put(TokenLifetimeType.SERV, 99_999_999_999L * 24 * 60 * 60 * 1000L);
+		// this is set so absurdly low because some other, lesser languages can't represent
+		// anything much bigger
+		m.put(TokenLifetimeType.SERV, 100_000_000L * 24 * 60 * 60 * 1000L);
 		DEFAULT_TOKEN_LIFETIMES_MS = Collections.unmodifiableMap(m);
 	}
 
@@ -198,22 +202,14 @@ public class AuthConfig {
 			if (p == null || p.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider names cannot be null or empty");
 			}
-			if (providers.get(p) == null) {
-				throw new NullPointerException(String.format(
-						"provider config for provider %s is null", p));
-			}
+			nonNull(providers.get(p), String.format("provider config for provider %s is null", p));
 		}
 		if (tokenLifetimeMS == null) {
 			tokenLifetimeMS = new HashMap<>();
 		}
 		for (final TokenLifetimeType t: tokenLifetimeMS.keySet()) {
-			if (t == null) {
-				throw new NullPointerException("null key in token life time map");
-			}
-			final Long time = tokenLifetimeMS.get(t);
-			if (time == null) {
-				throw new NullPointerException(String.format("lifetime for key %s is null", t));
-			}
+			nonNull(t, "null key in token life time map");
+			nonNull(tokenLifetimeMS.get(t), String.format("lifetime for key %s is null", t));
 			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE) {
 				throw new IllegalArgumentException(String.format(
 						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE));

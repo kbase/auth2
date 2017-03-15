@@ -1,7 +1,11 @@
 package us.kbase.auth2.service;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import org.slf4j.LoggerFactory;
 
@@ -13,11 +17,13 @@ import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
+import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
+import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 
 public class AuthBuilder {
@@ -29,41 +35,29 @@ public class AuthBuilder {
 	private Authentication auth;
 	
 	public AuthBuilder(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
-		if (cfg == null) {
-			throw new NullPointerException("cfg");
-		}
-		if (defaultExternalConfig == null) {
-			throw new NullPointerException("defaultExternalConfig");
-		}
+		nonNull(cfg, "cfg");
+		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		mc = buildMongo(cfg);
-		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
 	public AuthBuilder(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig,
 			final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
-		if (cfg == null) {
-			throw new NullPointerException("cfg");
-		}
-		if (mc == null) {
-			throw new NullPointerException("mc");
-		}
-		if (defaultExternalConfig == null) {
-			throw new NullPointerException("defaultExternalConfig");
-		}
+		nonNull(cfg, "cfg");
+		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		nonNull(mc, "mc");
 		this.mc = mc;
-		auth = buildAuth(identities, cfg, mc, defaultExternalConfig);
+		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
-		//TODO ZLATER handle shards & replica sets
+		//TODO ZLATER MONGO handle shards & replica sets
 		try {
 			if (c.getMongoUser().isPresent()) {
 				final List<MongoCredential> creds = Arrays.asList(MongoCredential.createCredential(
@@ -81,7 +75,6 @@ public class AuthBuilder {
 	}
 	
 	private Authentication buildAuth(
-			final IdentityProviderSet identities,
 			final AuthStartupConfig c,
 			final MongoClient mc,
 			final ExternalConfig defaultExternalConfig)
@@ -97,25 +90,16 @@ public class AuthBuilder {
 		}
 		//TODO TEST authenticate to db, write actual test with authentication
 		final AuthStorage s = new MongoStorage(db);
-		configureIdentityProviders(identities, c);
-		return new Authentication(s, identities, defaultExternalConfig);
+		
+		final Set<IdentityProvider> providers = new HashSet<>();
+		for (final IdentityProviderConfig idc: c.getIdentityProviderConfigs()) {
+			final IdentityProviderFactory fac = ServiceCommon.loadClassWithInterface(
+					idc.getIdentityProviderFactoryClassName(), IdentityProviderFactory.class);
+			providers.add(fac.configure(idc));
+		}
+		return new Authentication(s, providers, defaultExternalConfig);
 	}
 	
-	private void configureIdentityProviders(
-			final IdentityProviderSet identities,
-			final AuthStartupConfig c)
-			throws AuthConfigurationException {
-		for (final IdentityProviderConfig idc: c.getIdentityProviderConfigs()) {
-			try {
-				identities.configure(idc);
-			} catch (IllegalArgumentException e) {
-				throw new AuthConfigurationException(String.format(
-						"Error registering identity provider %s: %s",
-						idc.getIdentityProviderName(),  e.getMessage()), e);
-			}
-		}
-	}
-
 	public MongoClient getMongoClient() {
 		return mc;
 	}

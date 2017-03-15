@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.storage;
 
-import java.util.Date;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -15,6 +15,7 @@ import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -24,6 +25,7 @@ import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -37,6 +39,9 @@ import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 
 /** A storage system for the auth server.
+ * 
+ * Note that although inputs and outputs from the storage system are or may contain Instants, only
+ * millisecond accuracy is guaranteed.
  * 
  * @author gaprice@lbl.gov
  *
@@ -132,7 +137,7 @@ public interface AuthStorage {
 	Optional<AuthUser> getUser(RemoteIdentity remoteID) throws AuthStorageException;
 	
 	/** Get the display names for a set of users. Any non-existent users are left out of the
-	 * returned map.
+	 * returned map. Disabled users are never returned.
 	 * @param usernames the usernames for which to get display names.
 	 * @return a mapping of username to display name.
 	 * @throws AuthStorageException if a problem connecting with the storage
@@ -141,7 +146,12 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
 			throws AuthStorageException;
 	
-	/** Search for users based on a prefix of the user and display names and the user's roles.
+	//TODO ZLATER CODE could make a wrapper class for UserSearchSpec that doesn't include the root user stuff.
+	/** Search for users based on a search specification.
+	 * 
+	 * Note that auth storage implementations have no knowledge of root users and therefore
+	 * ignore the root user selection in the search specification.
+	 * 
 	 * @param spec the specification for the search.
 	 * @param maxReturnedUsers the maximum number of users to return.
 	 * @return a mapping of user name to display name for the discovered users.
@@ -160,8 +170,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	LocalUser getLocalUser(UserName userName)
-			throws AuthStorageException, NoSuchUserException;
+	LocalUser getLocalUser(UserName userName) throws AuthStorageException, NoSuchUserException;
 	
 	/** Update the display name and/or email address for a user.
 	 * @param userName the user to update.
@@ -180,8 +189,25 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void setLastLogin(UserName userName, Date lastLogin)
+	void setLastLogin(UserName userName, Instant lastLogin)
 			throws NoSuchUserException, AuthStorageException;
+	
+	/** Add policy IDs to the set of policy IDs already associated with a user.
+	 * @param userName the name of the user to modify.
+	 * @param policyIDs the policy IDs to add to the user.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void addPolicyIDs(UserName userName, Set<PolicyID> policyIDs)
+			throws NoSuchUserException, AuthStorageException;
+	
+	/** Remove a policy ID from all users in the database.
+	 * @param policyID the policy ID to remove.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void removePolicyID(PolicyID policyID) throws AuthStorageException;
 	
 	/** Store a token in the database. No checking is done on the validity
 	 * of the token - passing in tokens with bad data is a programming error.
@@ -334,13 +360,14 @@ public interface AuthStorage {
 	 * @param userName the user.
 	 * @param id the remote identity to remove from the user.
 	 * @throws NoSuchUserException if the user does not exist.
-	 * @throws UnLinkFailedException if the user only has one identity
-	 * or the user does not possess the specified identity.
+	 * @throws UnLinkFailedException if the user only has one identity or is a local user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
+	 * @throws NoSuchIdentityException if the user does not possess the identity.
 	 */
 	void unlink(UserName userName, UUID id)
-			throws AuthStorageException, UnLinkFailedException, NoSuchUserException;
+			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
+			NoSuchIdentityException;
 
 	/** Update the system configuration.
 	 * @param authConfigSet the configuration to set. Null values are ignored.

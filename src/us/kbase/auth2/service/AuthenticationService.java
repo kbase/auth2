@@ -1,5 +1,7 @@
 package us.kbase.auth2.service;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+
 import java.nio.file.Paths;
 
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
@@ -14,44 +16,39 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.identity.IdentityProviderSet;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
+import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.auth2.service.exceptions.ExceptionHandler;
 import us.kbase.auth2.service.template.TemplateProcessor;
 import us.kbase.auth2.service.template.mustache.MustacheProcessor;
-
-//TODO WAIT accept json in text/plain and application/x-www-form-urlencoded or manually handle it
 
 public class AuthenticationService extends ResourceConfig {
 	
 	//TODO TEST
 	//TODO JAVADOC
 	
-	private static AuthStartupConfig cfg = null;
+	private static String cfgClass = null;
 	private static MongoClient mc;
-	private static IdentityProviderSet identities = new IdentityProviderSet();
 	@SuppressWarnings("unused")
 	private final SLF4JAutoLogger logger; //keep a reference to prevent GC
 	
-	public static void setConfig(final AuthStartupConfig config) {
-		if (config == null) {
-			throw new NullPointerException("cfg");
-		}
-		cfg = config;
-	}
-	
-	public static IdentityProviderSet getIdentitySet() {
-		return identities;
+	public static void setConfig(final String config) {
+		checkStringNoCheckedException(config, "config");
+		cfgClass = config;
 	}
 	
 	public AuthenticationService()
 			throws StorageInitException, AuthConfigurationException {
-		if (cfg == null) {
+		if (cfgClass == null) {
 			throw new IllegalStateException("Call setConfig() before " +
 					"starting the server ya daft numpty");
 		}
+		//TODO ZLATER CONFIG Get the class name from environment if we need alternate config mechanism
+		final AuthStartupConfig cfg = ServiceCommon.loadClassWithInterface(
+				cfgClass, AuthStartupConfig.class);
+		
 		quietLogger();
 		logger = cfg.getLogger();
 		try {
@@ -80,10 +77,10 @@ public class AuthenticationService extends ResourceConfig {
 		final AuthBuilder ab;
 		synchronized(this) {
 			if (mc == null) {
-				ab = new AuthBuilder(identities, c, defaultExternalConfig);
+				ab = new AuthBuilder(c, defaultExternalConfig);
 				mc = ab.getMongoClient();
 			} else {
-				ab = new AuthBuilder(identities, c, defaultExternalConfig, mc);
+				ab = new AuthBuilder(c, defaultExternalConfig, mc);
 			}
 		}
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");
