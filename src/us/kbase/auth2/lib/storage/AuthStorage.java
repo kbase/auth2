@@ -202,6 +202,13 @@ public interface AuthStorage {
 	void addPolicyIDs(UserName userName, Set<PolicyID> policyIDs)
 			throws NoSuchUserException, AuthStorageException;
 	
+	/** Remove a policy ID from all users in the database.
+	 * @param policyID the policy ID to remove.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void removePolicyID(PolicyID policyID) throws AuthStorageException;
+	
 	/** Store a token in the database. No checking is done on the validity
 	 * of the token - passing in tokens with bad data is a programming error.
 	 * @param token the token to store.

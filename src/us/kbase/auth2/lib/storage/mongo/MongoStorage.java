@@ -1443,6 +1443,18 @@ public class MongoStorage implements AuthStorage {
 						policyIDs.stream().map(id -> id.getName()).collect(Collectors.toSet()))));
 		updateUserAnyUpdate(userName, update);
 	}
+	
+	@Override
+	public void removePolicyID(final PolicyID policyID) throws AuthStorageException {
+		nonNull(policyID, "policyID");
+		try {
+			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull",
+					new Document(Fields.USER_POLICY_IDS, policyID.getName())));
+			// don't care if nothing happened, just means no one had the role
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
 
 	private void updateConfig(
 			final String collection,
