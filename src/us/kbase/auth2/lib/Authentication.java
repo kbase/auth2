@@ -1481,7 +1481,6 @@ public class Authentication {
 			LinkFailedException {
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
-		//TODO NOW handle policy IDs
 		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
