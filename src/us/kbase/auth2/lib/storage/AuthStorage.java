@@ -15,6 +15,7 @@ import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -169,8 +170,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	LocalUser getLocalUser(UserName userName)
-			throws AuthStorageException, NoSuchUserException;
+	LocalUser getLocalUser(UserName userName) throws AuthStorageException, NoSuchUserException;
 	
 	/** Update the display name and/or email address for a user.
 	 * @param userName the user to update.
@@ -190,6 +190,16 @@ public interface AuthStorage {
 	 * system occurs.
 	 */
 	void setLastLogin(UserName userName, Instant lastLogin)
+			throws NoSuchUserException, AuthStorageException;
+	
+	/** Add policy IDs to the set of policy IDs already associated with a user.
+	 * @param userName the name of the user to modify.
+	 * @param policyIDs the policy IDs to add to the user.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void addPolicyIDs(UserName userName, Set<PolicyID> policyIDs)
 			throws NoSuchUserException, AuthStorageException;
 	
 	/** Store a token in the database. No checking is done on the validity

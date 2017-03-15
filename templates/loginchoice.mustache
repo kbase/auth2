@@ -15,6 +15,7 @@ Policy IDs: {{policy_ids}}<br/>
 {{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
+	Add policy IDs: <input type="text" name="policy_ids"/><br>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="submit" value="Login"/>
 </form>

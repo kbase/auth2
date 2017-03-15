@@ -4,6 +4,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import static us.kbase.test.auth2.TestCommon.set;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
@@ -137,6 +139,74 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	private void failLastLogin(final UserName name, final Instant d, final Exception e) {
 		try {
 			storage.setLastLogin(name, d);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void addPolicyIDsEmpty() throws Exception {
+		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
+		storage.createUser(nu);
+		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
+		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
+				is(Collections.emptySet()));
+	}
+	
+	@Test
+	public void addPolicyIDs() throws Exception {
+		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
+		storage.createUser(nu);
+		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
+		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
+				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+	}
+	
+	@Test
+	public void addPolicyIDsOverwrite() throws Exception {
+		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
+		storage.createUser(nu);
+		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
+		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("bar"), new PolicyID("baz")));
+		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
+				is(set(new PolicyID("bar"), new PolicyID("foo"), new PolicyID("baz"))));
+	}
+	
+	@Test
+	public void addPolicyIDsOverwriteEmpty() throws Exception {
+		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
+				new DisplayName("bar1"), REMOTE, MTPID, NOW, null);
+		storage.createUser(nu);
+		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
+		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
+		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
+				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+	}
+	
+	@Test
+	public void addPolicyIDsFailNulls() throws Exception {
+		failAddPolicyIDs(null, Collections.emptySet(), new NullPointerException("userName"));
+		failAddPolicyIDs(new UserName("foo"), null, new NullPointerException("policyIDs"));
+		failAddPolicyIDs(new UserName("foo"), set(new PolicyID("foo"), null),
+				new NullPointerException("null item in policyIDs"));
+	}
+	
+	@Test
+	public void addPolicyIDsFailNoSuchUser() throws Exception {
+		failAddPolicyIDs(new UserName("foo"), set(new PolicyID("foo")),
+				new NoSuchUserException("foo"));
+	}
+	
+	private void failAddPolicyIDs(
+			final UserName userName,
+			final Set<PolicyID> policyIDs,
+			final Exception e) {
+		try {
+			storage.addPolicyIDs(userName, policyIDs);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

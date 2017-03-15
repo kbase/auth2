@@ -1502,12 +1502,25 @@ public class Authentication {
 		if (u.get().isDisabled()) {
 			throw new DisabledUserException("This account is disabled");
 		}
+		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
 			ids.remove(ri);
 			filterLinkCandidates(ids);
 			link(u.get().getUserName(), ids);
 		}
 		return login(u.get().getUserName());
+	}
+	
+	// assumes inputs have been checked and the user exists
+	private void addPolicyIDs(final UserName user, final Set<PolicyID> pids)
+			throws AuthStorageException {
+		try {
+			storage.addPolicyIDs(user, pids);
+		} catch (NoSuchUserException e) {
+			throw new AuthStorageException(
+					"Something is very broken. User should exist but doesn't: "
+							+ e.getMessage(), e);
+		}
 	}
 	
 	private Optional<RemoteIdentityWithLocalID> getIdentity(

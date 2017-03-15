@@ -1,6 +1,7 @@
 package us.kbase.auth2.lib.storage.mongo;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -1175,7 +1176,7 @@ public class MongoStorage implements AuthStorage {
 		nonNull(token, "token");
 		nonNull(identitySet, "identitySet");
 		// ok for the set to be empty
-		Utils.noNulls(identitySet, "Null value in identitySet");
+		noNulls(identitySet, "Null value in identitySet");
 		final Set<Document> ids = toDocument(identitySet);
 		final Document td = new Document(
 				Fields.TOKEN_TEMP_ID, token.getId().toString())
@@ -1400,16 +1401,22 @@ public class MongoStorage implements AuthStorage {
 		updateUser(userName, d);
 	}
 
-	private void updateUser(
-			final UserName userName,
-			final Document update)
+	// wraps update in a $set
+	// assume coders are not stupid enough to pass in a null document
+	private void updateUser(final UserName userName, final Document update)
+			throws NoSuchUserException, AuthStorageException {
+		final Document u = new Document("$set", update);
+		updateUserAnyUpdate(userName, u);
+	}
+
+	// applies the update directly
+	// assume coders are stupid enough to pass in null documents
+	private void updateUserAnyUpdate(final UserName userName, final Document update)
 			throws NoSuchUserException, AuthStorageException {
 		nonNull(userName, "userName");
-		// assume coders are not stupid enough to pass in a null document
-		final Document q = new Document(Fields.USER_NAME, userName.getName());
-		final Document u = new Document("$set", update);
+		final Document query = new Document(Fields.USER_NAME, userName.getName());
 		try {
-			final UpdateResult r = db.getCollection(COL_USERS).updateOne(q, u);
+			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query, update);
 			if (r.getMatchedCount() != 1) {
 				throw new NoSuchUserException(userName.getName());
 			}
@@ -1424,6 +1431,17 @@ public class MongoStorage implements AuthStorage {
 			throws NoSuchUserException, AuthStorageException {
 		nonNull(lastLogin, "lastLogin");
 		updateUser(user, new Document(Fields.USER_LAST_LOGIN, Date.from(lastLogin)));
+	}
+	
+	@Override
+	public void addPolicyIDs(final UserName userName, final Set<PolicyID> policyIDs)
+			throws NoSuchUserException, AuthStorageException {
+		nonNull(policyIDs, "policyIDs");
+		noNulls(policyIDs, "null item in policyIDs");
+		final Document update = new Document("$addToSet",
+				new Document(Fields.USER_POLICY_IDS, new Document("$each",
+						policyIDs.stream().map(id -> id.getName()).collect(Collectors.toSet()))));
+		updateUserAnyUpdate(userName, update);
 	}
 
 	private void updateConfig(
