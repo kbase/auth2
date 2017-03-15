@@ -64,6 +64,8 @@ public class AuthCLI {
 	
 	private static final String NAME = "manageauth";
 	private static final String GLOBUS = "Globus";
+	private static final String GLOBUS_CLASS =
+			"us.kbase.auth2.kbase.GlobusIdentityProviderFactory";
 	
 	private static final String GLOBUS_USER_URL = "https://nexus.api.globusonline.org/users/";
 	private static final String GLOBUS_IDENTITES_PATH  = "/v2/api/identities";
@@ -113,7 +115,7 @@ public class AuthCLI {
 		if (a.globus_users != null && !a.globus_users.trim().isEmpty()) {
 			URL globusAPIURL = null;
 			for (final IdentityProviderConfig idc: cfg.getIdentityProviderConfigs()) {
-				if (idc.getIdentityProviderFactoryClassName().equals(GLOBUS)) {
+				if (idc.getIdentityProviderFactoryClassName().equals(GLOBUS_CLASS)) {
 					globusAPIURL = idc.getApiURL();
 				}
 			}
@@ -442,7 +444,7 @@ public class AuthCLI {
 				"separated Globus user names in the Nexus format " +
 				"(for example, kbasetest). A Nexus Globus token for " +
 				"an admin of the kbase_users group must be provided in the " +
-				"-t option, and a OAuth2 Globus token in the -g option. " +
+				"-n option, and a OAuth2 Globus token in the -g option. " +
 				"Globus must be configured as an identity provider in the deploy.cfg file.")
 		private String globus_users;
 	}
