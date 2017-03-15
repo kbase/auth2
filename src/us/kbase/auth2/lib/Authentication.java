@@ -1511,6 +1511,19 @@ public class Authentication {
 		return login(u.get().getUserName());
 	}
 	
+	private Optional<RemoteIdentityWithLocalID> getIdentity(
+			final UUID identityID,
+			final Set<RemoteIdentityWithLocalID> identities)
+					throws AuthStorageException, InvalidTokenException {
+		nonNull(identityID, "identityID");
+		for (final RemoteIdentityWithLocalID ri: identities) {
+			if (ri.getID().equals(identityID)) {
+				return Optional.of(ri);
+			}
+		}
+		return Optional.absent();
+	}
+
 	// assumes inputs have been checked and the user exists
 	private void addPolicyIDs(final UserName user, final Set<PolicyID> pids)
 			throws AuthStorageException {
@@ -1523,17 +1536,19 @@ public class Authentication {
 		}
 	}
 	
-	private Optional<RemoteIdentityWithLocalID> getIdentity(
-			final UUID identityID,
-			final Set<RemoteIdentityWithLocalID> identities)
-			throws AuthStorageException, InvalidTokenException {
-		nonNull(identityID, "identityID");
-		for (final RemoteIdentityWithLocalID ri: identities) {
-			if (ri.getID().equals(identityID)) {
-				return Optional.of(ri);
-			}
-		}
-		return Optional.absent();
+	/** Remove a policy ID from all users. Primarily used to remove policy IDs that may have been
+	 * added in error.
+	 * @param token the user's token
+	 * @param policyID the policyID to remove.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user is not authorized to remove policy IDs.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		nonNull(policyID, "policyID");
+		getUser(token, Role.ADMIN);
+		storage.removePolicyID(policyID);
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
