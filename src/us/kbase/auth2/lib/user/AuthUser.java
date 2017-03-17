@@ -329,17 +329,27 @@ public class AuthUser {
 		return true;
 	}
 	
+	/** Get a builder for an AuthUser. This builder can be used to build either local users
+	 * or standard users, but the local users will not include password related information.
+	 * @param userName the user's user name.
+	 * @param displayName the users's display name.
+	 * @param creationDate the user's creation date.
+	 * @return a builder.
+	 */
 	public static Builder getBuilder(
-
-			//TODO NOW JAVADOC
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant creationDate) {
 		return new Builder(userName, displayName, creationDate);
 	}
 	
+	/** Get a builder for an AuthUser based on a previous AuthUser, but without the latter's
+	 * remote identities. This builder can be used to build either local users
+	 * or standard users, but the local users will not include password related information.
+	 * @param user the user with which to populate the builder.
+	 * @return a builder.
+	 */
 	public static Builder getBuilderWithoutIdentities(final AuthUser user) {
-		//TODO NOW JAVADOC
 		final Builder b = getBuilder(user.getUserName(), user.getDisplayName(), user.getCreated())
 				.withUserDisabledState(user.getDisabledState())
 				.withEmailAddress(user.getEmail());
@@ -358,9 +368,13 @@ public class AuthUser {
 		return b;
 	}
 	
+	/** An AuthUser builder. This builder can be used to build either local users
+	 * or standard users, but the local users will not include password related information.
+	 * @param userName the user's user name.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder extends AbstractBuilder<Builder> {
-		
-		//TODO NOW JAVADOC
 		
 		private final Set<RemoteIdentityWithLocalID> identities = new HashSet<>();
 		
@@ -376,6 +390,10 @@ public class AuthUser {
 			return this;
 		}
 		
+		/** Add a remote identity to the user.
+		 * @param remoteIdentity a remote identity.
+		 * @return this builder.
+		 */
 		public Builder withIdentity(final RemoteIdentityWithLocalID remoteIdentity) {
 			if (userName.equals(UserName.ROOT)) {
 				throw new IllegalStateException("Root user cannot have identities");
@@ -385,16 +403,22 @@ public class AuthUser {
 			return this;
 		}
 		
+		/** Build the user.
+		 * @return the user.
+		 */
 		public AuthUser build() {
 			return new AuthUser(userName, displayName, created, identities, email, roles,
 					customRoles, policyIDs, lastLogin, disabledState);
 		}
 	}
 	
-	// a superclass for LocalUser and AuthUser builders.
+	/** A superclass for user builders. This class only implements methods to add values common to
+	 *  all users.
+	 * @author gaprice@lbl.gov
+	 *
+	 * @param <T> the type of the builder extending this AbstractBuilder.
+	 */
 	public abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
-		
-		//TODO NOW JAVADOC
 		
 		final UserName userName;
 		final DisplayName displayName;
@@ -423,12 +447,23 @@ public class AuthUser {
 		
 		abstract T getThis();
 		
+		/** Add an email address to the user. Defaults to an unknown email address.
+		 * @param email the email address.
+		 * @return this builder.
+		 */
 		public T withEmailAddress(final EmailAddress email) {
 			nonNull(email, "email");
 			this.email = email;
 			return getThis();
 		}
 		
+		/** Add a role to the user.
+		 * 
+		 * Note that only the root user (signified by the root user name) can possess the ROOT
+		 * role, and the root user can possess no other roles. 
+		 * @param role the role.
+		 * @return this builder.
+		 */
 		public T withRole(final Role role) {
 			nonNull(role, "role");
 			if (UserName.ROOT.equals(userName) && !Role.ROOT.equals(role)) {
@@ -441,6 +476,10 @@ public class AuthUser {
 			return getThis();
 		}
 		
+		/** Add a custom role to the user.
+		 * @param customRole the custom role.
+		 * @return this class.
+		 */
 		public T withCustomRole(final String customRole) {
 			//TODO NOW CustomRoleID class
 			nonNull(customRole, "customRole");
@@ -448,12 +487,20 @@ public class AuthUser {
 			return getThis();
 		}
 		
+		/** Add a policy ID to the user.
+		 * @param policyID the policy ID.
+		 * @return this builder.
+		 */
 		public T withPolicyID(final PolicyID policyID) {
 			nonNull(policyID, "policyID");
 			policyIDs.add(policyID);
 			return getThis();
 		}
 		
+		/** Add the time of the last login to the user.
+		 * @param lastLogin the last login time.
+		 * @return this builder.
+		 */
 		public T withLastLogin(final Instant lastLogin) {
 			nonNull(lastLogin, "lastLogin");
 			if (created.isAfter(lastLogin)) {
@@ -464,6 +511,10 @@ public class AuthUser {
 			return getThis();
 		}
 		
+		/** Add a disabled state indicator to the user. 
+		 * @param disabledState the disabled state indicator.
+		 * @return this builder.
+		 */
 		public T withUserDisabledState(final UserDisabledState disabledState) {
 			nonNull(disabledState, "disabledState");
 			this.disabledState = disabledState;
