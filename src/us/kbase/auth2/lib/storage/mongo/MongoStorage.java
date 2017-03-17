@@ -561,7 +561,8 @@ public class MongoStorage implements AuthStorage {
 					// either the provider / prov id combo or the local identity uuid are already
 					// in the db
 					final RemoteIdentityID ri = newUser.getIdentity().getRemoteID();
-					throw new IdentityLinkedException(ri.getProvider() + " : " + ri.getId());
+					throw new IdentityLinkedException(
+							ri.getProviderName() + " : " + ri.getProviderIdentityId());
 				} // otherwise throw next exception
 			}
 			throw new AuthStorageException("Database write failed", mwe);
@@ -1099,8 +1100,8 @@ public class MongoStorage implements AuthStorage {
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {
 		return new Document(Fields.USER_IDENTITIES, new Document("$elemMatch",
-				new Document(Fields.IDENTITIES_PROVIDER, remoteID.getRemoteID().getProvider())
-				.append(Fields.IDENTITIES_PROV_ID, remoteID.getRemoteID().getId())));
+				new Document(Fields.IDENTITIES_PROVIDER, remoteID.getRemoteID().getProviderName())
+				.append(Fields.IDENTITIES_PROV_ID, remoteID.getRemoteID().getProviderIdentityId())));
 	}
 	
 	private void updateIdentity(final RemoteIdentity remoteID)
@@ -1245,8 +1246,8 @@ public class MongoStorage implements AuthStorage {
 	private Document toDocument(final RemoteIdentityWithLocalID id) {
 		final RemoteIdentityDetails rid = id.getDetails();
 		return new Document(Fields.IDENTITIES_ID, id.getID().toString())
-				.append(Fields.IDENTITIES_PROVIDER, id.getRemoteID().getProvider())
-				.append(Fields.IDENTITIES_PROV_ID, id.getRemoteID().getId())
+				.append(Fields.IDENTITIES_PROVIDER, id.getRemoteID().getProviderName())
+				.append(Fields.IDENTITIES_PROV_ID, id.getRemoteID().getProviderIdentityId())
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
 				.append(Fields.IDENTITIES_EMAIL, rid.getEmail());
@@ -1348,6 +1349,10 @@ public class MongoStorage implements AuthStorage {
 				return true; // update complete
 			}
 		}
+		//TODO CODE LINK1 could simplify query and update by using $not $elemMatch.
+		//TODO CODE LINK2 Might need new tests to handle the case where id is added between code above and code below
+		//TODO CODE LINK3 Need to ensure that prov + provid aren't in the doc and the local id isn't in the doc
+		
 		/* ok, we need to link. To ensure we don't add the identity twice, we search for a user
 		 * that has the *exact* identity linkages as the current user, and then add one more. If
 		 * another ID has been linked since we pulled the user from the DB, the update will fail

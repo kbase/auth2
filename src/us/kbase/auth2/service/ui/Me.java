@@ -120,7 +120,7 @@ public class Me {
 		ret.put("idents", idents);
 		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
-			i.put("provider", ri.getRemoteID().getProvider());
+			i.put("provider", ri.getRemoteID().getProviderName());
 			i.put("username", ri.getDetails().getUsername());
 			i.put("id", ri.getID().toString());
 			idents.add(i);

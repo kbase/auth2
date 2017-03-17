@@ -1370,7 +1370,7 @@ public class Authentication {
 
 	private LoginState getLoginState(final Set<RemoteIdentityWithLocalID> ids)
 			throws AuthStorageException {
-		final String provider = ids.iterator().next().getRemoteID().getProvider();
+		final String provider = ids.iterator().next().getRemoteID().getProviderName();
 		final LoginState.Builder builder = new LoginState.Builder(provider,
 				cfg.getAppConfig().isLoginAllowed());
 		for (final RemoteIdentityWithLocalID ri: ids) {

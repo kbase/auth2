@@ -9,6 +9,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -65,51 +66,14 @@ public class RemoteIdentityTest {
 	
 	@Test
 	public void remoteDetailsEquals() throws Exception {
-		final RemoteIdentityDetails dets = new RemoteIdentityDetails(" foo", "bar ", "\nbaz");
-		final RemoteIdentityDetails nulldets = new RemoteIdentityDetails("foo", null, null);
-		
-		//identity
-		assertThat("incorrect equals", dets.equals(dets), is(true));
-		//equal
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("foo", "bar", "baz")), is(true));
-		assertThat("incorrect equals", nulldets.equals(
-				new RemoteIdentityDetails("foo", null, null)), is(true));
-		//null obj
-		assertThat("incorrect equals", dets.equals(null), is(false));
-		//class
-		assertThat("incorrect equals", dets.equals(new Object()), is(false));
-
-		//unequal user
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("fo", "bar", "baz")), is(false));
-		
-		//null full 1
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("foo", null, "baz")), is(false));
-		//null full 2
-		assertThat("incorrect equals", nulldets.equals(
-				new RemoteIdentityDetails("foo", "bar", null)), is(false));
-		//unequal full
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("foo", "bad", "baz")), is(false));
-		
-		//null email 1
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("foo", "bar", null)), is(false));
-		//null email 2
-		assertThat("incorrect equals", nulldets.equals(
-				new RemoteIdentityDetails("foo", null, "baz")), is(false));
-		//unequal email
-		assertThat("incorrect equals", dets.equals(
-				new RemoteIdentityDetails("foo", "bar", "bad")), is(false));
+		EqualsVerifier.forClass(RemoteIdentityDetails.class).usingGetClass().verify();
 	}
 
 	@Test
 	public void remoteId() throws Exception {
 		final RemoteIdentityID id = new RemoteIdentityID("foo", "bar");
-		assertThat("incorrect provider name", id.getProvider(), is("foo"));
-		assertThat("incorrect provider id", id.getId(), is("bar"));
+		assertThat("incorrect provider name", id.getProviderName(), is("foo"));
+		assertThat("incorrect provider id", id.getProviderIdentityId(), is("bar"));
 		assertThat("incorrect hashcode", id.hashCode(), is(3118804));
 		assertThat("incorrect toString()", id.toString(),
 				is("RemoteIdentityID [provider=foo, id=bar]"));
@@ -117,20 +81,7 @@ public class RemoteIdentityTest {
 	
 	@Test
 	public void remoteIdEquals() throws Exception {
-		final RemoteIdentityID id = new RemoteIdentityID("whee", "whoo");
-		
-		//identity
-		assertThat("incorrect equals", id.equals(id), is(true));
-		//equal
-		assertThat("incorrect equals", id.equals(new RemoteIdentityID("whee", "whoo")), is(true));
-		//null obj
-		assertThat("incorrect equals", id.equals(null), is(false));
-		//class
-		assertThat("incorrect equals", id.equals(new Object()), is(false));
-		//unequal provider
-		assertThat("incorrect equals", id.equals(new RemoteIdentityID("wheo", "whoo")), is(false));
-		//unequal id
-		assertThat("incorrect equals", id.equals(new RemoteIdentityID("whee", "whoe")), is(false));
+		EqualsVerifier.forClass(RemoteIdentityID.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -191,25 +142,7 @@ public class RemoteIdentityTest {
 	
 	@Test
 	public void identityEquals() throws Exception {
-		final RemoteIdentityID id = new RemoteIdentityID("p", "i");
-		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
-		final RemoteIdentity ri = new RemoteIdentity(id, dets);
-		
-		//identity
-		assertThat("incorrect equals", ri.equals(ri), is(true));
-		//equal
-		assertThat("incorrect equals", ri.equals(new RemoteIdentity(new RemoteIdentityID("p", "i"),
-				new RemoteIdentityDetails("u", "f", "e"))), is(true));
-		//null obj
-		assertThat("incorrect equals", ri.equals(null), is(false));
-		//class
-		assertThat("incorrect equals", ri.equals(new Object()), is(false));
-		//id
-		assertThat("incorrect equals", ri.equals(new RemoteIdentity(
-				new RemoteIdentityID("q", "i"), dets)), is(false));
-		//details
-		assertThat("incorrect equals", ri.equals(new RemoteIdentity(
-				id, new RemoteIdentityDetails("t", "f", "e"))), is(false));
+		EqualsVerifier.forClass(RemoteIdentity.class).usingGetClass().verify();
 	}
 	
 	@Test

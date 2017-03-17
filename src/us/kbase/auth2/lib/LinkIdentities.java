@@ -34,7 +34,7 @@ public class LinkIdentities {
 		Utils.noNulls(ids, "null item in ids");
 		this.user = user;
 		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
-		this.provider = ids.iterator().next().getRemoteID().getProvider();
+		this.provider = ids.iterator().next().getRemoteID().getProviderName();
 	}
 	
 	/** Create an empty identity set, implying that no identities were available for linking

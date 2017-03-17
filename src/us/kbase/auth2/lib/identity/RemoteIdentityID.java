@@ -28,14 +28,14 @@ public class RemoteIdentityID {
 	/** Get the provider name.
 	 * @return the provider name.
 	 */
-	public String getProvider() {
+	public String getProviderName() {
 		return provider;
 	}
 	
-	/** Get the identity ID.
+	/** Get the provider's ID for the identity.
 	 * @return the identity ID.
 	 */
-	public String getId() {
+	public String getProviderIdentityId() {
 		return id;
 	}
 	
@@ -43,8 +43,8 @@ public class RemoteIdentityID {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + id.hashCode();
-		result = prime * result + provider.hashCode();
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
 		return result;
 	}
 	
@@ -60,10 +60,18 @@ public class RemoteIdentityID {
 			return false;
 		}
 		RemoteIdentityID other = (RemoteIdentityID) obj;
-		if (!id.equals(other.id)) {
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
 			return false;
 		}
-		if (!provider.equals(other.provider)) {
+		if (provider == null) {
+			if (other.provider != null) {
+				return false;
+			}
+		} else if (!provider.equals(other.provider)) {
 			return false;
 		}
 		return true;

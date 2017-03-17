@@ -144,7 +144,7 @@ public class LoginState {
 		}
 
 		private void checkProvider(final RemoteIdentityWithLocalID remoteID) {
-			if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
+			if (!ls.provider.equals(remoteID.getRemoteID().getProviderName())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}

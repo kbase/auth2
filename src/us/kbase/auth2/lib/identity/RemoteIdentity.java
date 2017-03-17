@@ -61,8 +61,8 @@ public class RemoteIdentity {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + details.hashCode();
-		result = prime * result + remoteID.hashCode();
+		result = prime * result + ((details == null) ? 0 : details.hashCode());
+		result = prime * result + ((remoteID == null) ? 0 : remoteID.hashCode());
 		return result;
 	}
 
@@ -78,10 +78,18 @@ public class RemoteIdentity {
 			return false;
 		}
 		RemoteIdentity other = (RemoteIdentity) obj;
-		if (!details.equals(other.details)) {
+		if (details == null) {
+			if (other.details != null) {
+				return false;
+			}
+		} else if (!details.equals(other.details)) {
 			return false;
 		}
-		if (!remoteID.equals(other.remoteID)) {
+		if (remoteID == null) {
+			if (other.remoteID != null) {
+				return false;
+			}
+		} else if (!remoteID.equals(other.remoteID)) {
 			return false;
 		}
 		return true;
