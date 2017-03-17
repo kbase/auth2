@@ -30,12 +30,12 @@ public class LocalUser extends AuthUser {
 	
 	/** Create a new local user.
 	 * @param userName the name of the user.
-	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
+	 * @param created the date the user account was created.
+	 * @param email the email address of the user.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
 	 * @param policyIDs the set of policy IDs associated with the user.
-	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login.
 	 * @param disabledState whether the user account is disabled.
 	 * @param passwordHash a salted, hashed password for the user.
@@ -44,22 +44,21 @@ public class LocalUser extends AuthUser {
 	 * @param lastReset the date of the last password reset.
 	 */
 	private LocalUser(
-			//TODO NOW move args around
 			final UserName userName,
-			final EmailAddress email,
 			final DisplayName displayName,
+			final Instant created,
+			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
 			final Set<PolicyID> policyIDs,
-			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
-		super(userName, email, displayName, Collections.emptySet(), roles, customRoles, policyIDs,
-				created, lastLogin, disabledState);
+		super(userName, displayName, created, Collections.emptySet(), email, roles, customRoles,
+				policyIDs, lastLogin, disabledState);
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
@@ -192,8 +191,8 @@ public class LocalUser extends AuthUser {
 		}
 		
 		public LocalUser build() {
-			return new LocalUser(userName, email, displayName, roles, customRoles, policyIDs,
-					created, lastLogin, disabledState, passwordHash, salt, forceReset, lastReset);
+			return new LocalUser(userName, displayName, created, email, roles, customRoles,
+					policyIDs, lastLogin, disabledState, passwordHash, salt, forceReset, lastReset);
 		}
 		
 	}

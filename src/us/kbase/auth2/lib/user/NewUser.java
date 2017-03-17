@@ -26,29 +26,28 @@ public class NewUser extends AuthUser {
 	
 	/** Create a new user.
 	 * @param userName the name of the user.
-	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
-	 * @param remoteIdentity the 3rd party identity associated with this user.
-	 * @param policyIDs the policy IDs associated with this user.
 	 * @param created the date the user was created.
+	 * @param remoteIdentity the 3rd party identity associated with this user.
+	 * @param email the email address of the user.
+	 * @param policyIDs the policy IDs associated with this user.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date (e.g. the time this constructor is called) it will be silently modified to match
 	 * the creation date.
 	 */
 	private NewUser(
-			//TODO NOW move args around
 			final UserName userName,
-			final EmailAddress email,
 			final DisplayName displayName,
+			final Instant created,
 			final RemoteIdentityWithLocalID remoteIdentity,
+			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
 			final Set<PolicyID> policyIDs,
-			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
-		super(userName, email, displayName, new HashSet<>(Arrays.asList(remoteIdentity)), roles,
-				customRoles, policyIDs, created, lastLogin, disabledState);
+		super(userName, displayName, created, new HashSet<>(Arrays.asList(remoteIdentity)), email,
+				roles, customRoles, policyIDs, lastLogin, disabledState);
 	}
 
 	public RemoteIdentityWithLocalID getIdentity() {
@@ -92,8 +91,8 @@ public class NewUser extends AuthUser {
 		}
 		
 		public NewUser build() {
-			return new NewUser(userName, email, displayName, remoteIdentity, roles, customRoles,
-					policyIDs, created, lastLogin, disabledState);
+			return new NewUser(userName, displayName, created, remoteIdentity, email, roles,
+					customRoles, policyIDs, lastLogin, disabledState);
 		}
 		
 	}

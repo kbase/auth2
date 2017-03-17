@@ -44,27 +44,27 @@ public class AuthUser {
 	
 	/** Create a new user.
 	 * @param userName the name of the user.
-	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
+	 * @param created the date the user account was created.
 	 * @param identities any 3rd party identities associated with the user. Empty or null for local
 	 * users.
+	 * @param email the email address of the user.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
 	 * @param policyIDs the policy IDs associated with the user.
-	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login. If this time is before the created
 	 * date it will be silently modified to match the creation date.
 	 * @param disabledState whether the user account is disabled.
 	 */
 	AuthUser(
 			final UserName userName,
-			final EmailAddress email, //TODO NOW move args around
 			final DisplayName displayName,
+			final Instant created,
 			Set<RemoteIdentityWithLocalID> identities,
+			final EmailAddress email,
 			Set<Role> roles,
 			Set<String> customRoles,
 			Set<PolicyID> policyIDs,
-			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
 		this.userName = userName;
@@ -386,8 +386,8 @@ public class AuthUser {
 		}
 		
 		public AuthUser build() {
-			return new AuthUser(userName, email, displayName, identities, roles, customRoles,
-					policyIDs, created, lastLogin, disabledState);
+			return new AuthUser(userName, displayName, created, identities, email, roles,
+					customRoles, policyIDs, lastLogin, disabledState);
 		}
 	}
 	
