@@ -17,7 +17,7 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
-/** A new, non-local user. E.g. the user is associated with at least one 3rd party identity.
+/** A new, non-local user. E.g. the user is associated with exactly one 3rd party identity.
  * 
  * @author gaprice@lbl.gov
  *
@@ -50,6 +50,9 @@ public class NewUser extends AuthUser {
 				roles, customRoles, policyIDs, lastLogin, disabledState);
 	}
 
+	/** Get the user's remote identity.
+	 * @return the identity.
+	 */
 	public RemoteIdentityWithLocalID getIdentity() {
 		if (getIdentities().size() != 1) {
 			// this is untestable without some nutty reflection stuff, look into it later
@@ -59,15 +62,25 @@ public class NewUser extends AuthUser {
 		return getIdentities().iterator().next();
 	}
 	
+	/** Get a builder for a new standard user.
+	 * @param userName the user's user name.
+	 * @param displayName the user's display name.
+	 * @param created the user's creation date.
+	 * @param remoteIdentity the remote identity associated with the user.
+	 * @return a builder.
+	 */
 	public static Builder getBuilder(
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant created,
 			final RemoteIdentityWithLocalID remoteIdentity) {
-		//TODO NOW JAVADOC
 		return new Builder(userName, displayName, created, remoteIdentity);
 	}
 	
+	/** A NewUser builder.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class Builder extends AbstractBuilder<Builder> {
 
 		private final RemoteIdentityWithLocalID remoteIdentity;
@@ -77,7 +90,6 @@ public class NewUser extends AuthUser {
 				final DisplayName displayName,
 				final Instant created,
 				final RemoteIdentityWithLocalID remoteIdentity) {
-			//TODO NOW JAVADOC
 			super(userName, displayName, created);
 			if (UserName.ROOT.equals(userName)) {
 				throw new IllegalArgumentException("Standard users cannot be root");
@@ -90,6 +102,9 @@ public class NewUser extends AuthUser {
 			return this;
 		}
 		
+		/** Build the user.
+		 * @return the user.
+		 */
 		public NewUser build() {
 			return new NewUser(userName, displayName, created, remoteIdentity, email, roles,
 					customRoles, policyIDs, lastLogin, disabledState);
