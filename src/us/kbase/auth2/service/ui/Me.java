@@ -13,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -50,7 +49,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -118,11 +117,11 @@ public class Me {
 		ret.put("hasRoles", !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put("idents", idents);
-		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
+		for (final RemoteIdentity ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
 			i.put("provider", ri.getRemoteID().getProviderName());
 			i.put("username", ri.getDetails().getUsername());
-			i.put("id", ri.getID().toString());
+			i.put("id", ri.getRemoteID().getID());
 			idents.add(i);
 		}
 		return ret;
@@ -174,7 +173,7 @@ public class Me {
 	public void unlink(
 			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
-			@PathParam("id") final UUID id)
+			@PathParam("id") final String id)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
 		// id can't be null

@@ -9,7 +9,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
-import java.util.UUID;
 
 import org.junit.Test;
 
@@ -29,7 +28,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -43,13 +42,11 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
 	private static final Instant NOW = Instant.now();
 	
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891d56715d8"),
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar2"),
 			new RemoteIdentityDetails("user2", "full2", "email2"));
 
@@ -387,8 +384,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		
-		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d9"),
+		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov2", "bar1"),
 				new RemoteIdentityDetails("user1", "full1", "email1"));
 		
@@ -407,8 +403,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		
-		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d9"),
+		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar1"),
 				new RemoteIdentityDetails("user1", "full1", "email1"));
 		
@@ -420,25 +415,6 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		failCreateUser(nu2, new IdentityLinkedException("prov : bar1"));
 	}
 	
-	@Test
-	public void createUserWithExistingIdentityLocalID() throws Exception {
-		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
-				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.build());
-		
-		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
-				new RemoteIdentityID("prov2", "bar1"),
-				new RemoteIdentityDetails("user1", "full1", "email1"));
-		
-		final NewUser nu2 = NewUser.getBuilder(
-				new UserName("user2"), new DisplayName("bar1"), NOW, ri)
-				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.build();
-		
-		failCreateUser(nu2, new IdentityLinkedException("prov2 : bar1"));
-	}
 	private void failCreateUser(final NewUser user, final Exception e)
 			throws UserExistsException, AuthStorageException {
 		try {
@@ -543,14 +519,11 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.build());
 		storage.link(new UserName("user1"), REMOTE2);
 		
-		final RemoteIdentityWithLocalID ri3 = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891d57715d8"),
+		final RemoteIdentity ri3 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user3", "full3", "email3"));
 		
-		// note UUID is not updated
-		final RemoteIdentityWithLocalID expected = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891d56715d8"),
+		final RemoteIdentity expected = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user3", "full3", "email3"));
 		

@@ -1,8 +1,9 @@
 package us.kbase.auth2.service.common;
 
+import static us.kbase.auth2.lib.Utils.checkString;
+
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -20,29 +21,18 @@ public class IncomingJSON {
 
 	// don't throw error from constructor, doesn't get picked up by the custom error handler 
 	protected IncomingJSON() {}
-
-	protected UUID getUUID(final String uuid, final String fieldName)
-			throws IllegalParameterException, MissingParameterException {
-		if (uuid == null) {
-			throw new MissingParameterException(fieldName + " field is required");
-		}
-		try {
-			return UUID.fromString(uuid);
-		} catch (IllegalArgumentException e) {
-			throw new IllegalParameterException(fieldName + " is not a valid UUID: " + uuid);
-		}
-	}
 	
-	protected Optional<UUID> getOptionalUUID(final String uuid, final String fieldName)
-			throws IllegalParameterException {
-		if (uuid == null || uuid.trim().isEmpty()) {
+	public static String getString(final String string, final String field)
+			throws MissingParameterException {
+		checkString(string, field);
+		return string.trim();
+	}
+
+	protected Optional<String> getOptionalString(final String string) {
+		if (string == null || string.trim().isEmpty()) {
 			return Optional.absent();
 		}
-		try {
-			return Optional.of(UUID.fromString(uuid));
-		} catch (IllegalArgumentException e) {
-			throw new IllegalParameterException(fieldName + " is not a valid UUID: " + uuid);
-		}
+		return Optional.of(string);
 	}
 
 	protected boolean getBoolean(final Object b, final String fieldName)

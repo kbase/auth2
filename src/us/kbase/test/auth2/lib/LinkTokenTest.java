@@ -16,17 +16,16 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LinkTokenTest {
 
-	private final static RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+	private final static RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("foo", "bar"),
 			new RemoteIdentityDetails("user", "full", "email"));
 	
@@ -77,8 +76,7 @@ public class LinkTokenTest {
 				lt.getLinkIdentities().getUser().getIdentities().size(), is(1));
 		assertThat("incorrect user identity",
 				lt.getLinkIdentities().getUser().getIdentities().iterator().next(), is(
-				new RemoteIdentityWithLocalID(
-						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+				new RemoteIdentity(
 						new RemoteIdentityID("foo", "bar"),
 						new RemoteIdentityDetails("user", "full", "email"))));
 		assertThat("incorrect creation date", lt.getLinkIdentities().getUser().getCreated(),

@@ -17,7 +17,6 @@ import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 /** A user in the authentication system.
  * 
@@ -36,7 +35,7 @@ public class AuthUser {
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
-	private final Set<RemoteIdentityWithLocalID> identities;
+	private final Set<RemoteIdentity> identities;
 	private final Set<PolicyID> policyIDs;
 	private final Instant created;
 	private final Optional<Instant> lastLogin;
@@ -60,7 +59,7 @@ public class AuthUser {
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant created,
-			Set<RemoteIdentityWithLocalID> identities,
+			Set<RemoteIdentity> identities,
 			final EmailAddress email,
 			Set<Role> roles,
 			Set<String> customRoles,
@@ -148,7 +147,7 @@ public class AuthUser {
 	/** Get the 3rd party identities associated with this user.
 	 * @return the user's remote identities.
 	 */
-	public Set<RemoteIdentityWithLocalID> getIdentities() {
+	public Set<RemoteIdentity> getIdentities() {
 		return identities;
 	}
 	
@@ -212,14 +211,12 @@ public class AuthUser {
 
 	/** Get a remote identity associated with this user given a remote identity. The remote
 	 * identities are matched based on the identity provider name and account ID. Thus, the two
-	 * identities may differ on identity details (e.g. user name, email, and display name) and the
-	 * local UUID assigned to the remote identity (the incoming remote identity may not have a
-	 * UUID).
+	 * identities may differ on identity details (e.g. user name, email, and display name).
 	 * @param ri the remote identity to match against an identity associated with this user.
 	 * @return the matching identity or null if no identities match.
 	 */
-	public RemoteIdentityWithLocalID getIdentity(final RemoteIdentity ri) {
-		for (final RemoteIdentityWithLocalID rid: identities) {
+	public RemoteIdentity getIdentity(final RemoteIdentity ri) {
+		for (final RemoteIdentity rid: identities) {
 			if (rid.getRemoteID().equals(ri.getRemoteID())) {
 				return rid;
 			}
@@ -376,7 +373,7 @@ public class AuthUser {
 	 */
 	public static class Builder extends AbstractBuilder<Builder> {
 		
-		private final Set<RemoteIdentityWithLocalID> identities = new HashSet<>();
+		private final Set<RemoteIdentity> identities = new HashSet<>();
 		
 		private Builder(
 				final UserName userName,
@@ -394,7 +391,7 @@ public class AuthUser {
 		 * @param remoteIdentity a remote identity.
 		 * @return this builder.
 		 */
-		public Builder withIdentity(final RemoteIdentityWithLocalID remoteIdentity) {
+		public Builder withIdentity(final RemoteIdentity remoteIdentity) {
 			if (userName.equals(UserName.ROOT)) {
 				throw new IllegalStateException("Root user cannot have identities");
 			}

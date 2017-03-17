@@ -9,7 +9,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.UUID;
 
 import org.junit.Test;
 
@@ -25,7 +24,6 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 
@@ -33,8 +31,7 @@ public class AuthUserTest {
 	
 	private static final Instant NOW = Instant.now();
 	
-	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
@@ -151,8 +148,7 @@ public class AuthUserTest {
 				new UserName("whoo"), new DisplayName("bar3"), NOW)
 				.withIdentity(REMOTE).build();
 		
-		final RemoteIdentityWithLocalID ri2 = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+		final RemoteIdentity ri2 = new RemoteIdentity(
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 
@@ -197,8 +193,7 @@ public class AuthUserTest {
 				.withUserDisabledState(new UserDisabledState(new UserName("whee1"), d))
 				.build();
 		
-		final RemoteIdentityWithLocalID ri2 = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+		final RemoteIdentity ri2 = new RemoteIdentity(
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 		
@@ -246,8 +241,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void getIdentity() throws Exception {
-		final RemoteIdentityWithLocalID ri2 = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+		final RemoteIdentity ri2 = new RemoteIdentity(
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 		
@@ -273,7 +267,7 @@ public class AuthUserTest {
 				new RemoteIdentityDetails("user6", "full6", "email6"));
 		
 		assertThat("incorrect identity", u.getIdentity(target3),
-				is((RemoteIdentityWithLocalID) null));
+				is((RemoteIdentity) null));
 	}
 	
 	@Test
@@ -300,7 +294,7 @@ public class AuthUserTest {
 		final UserName un = new UserName("foo");
 		final EmailAddress email = new EmailAddress("f@g.com");
 		final DisplayName dn = new DisplayName("bar");
-		final RemoteIdentityWithLocalID id = REMOTE;
+		final RemoteIdentity id = REMOTE;
 		final Role role = Role.DEV_TOKEN;
 		final String crole = "foobar";
 		final PolicyID pid = new PolicyID("foo");
@@ -353,7 +347,7 @@ public class AuthUserTest {
 			final DisplayName displayName,
 			final Instant created,
 			final EmailAddress email,
-			final RemoteIdentityWithLocalID identity,
+			final RemoteIdentity identity,
 			final Role role,
 			final String customRole,
 			final PolicyID policyID,
@@ -381,8 +375,7 @@ public class AuthUserTest {
 				new UserName("whoo"), new DisplayName("bar3"), NOW)
 				.withIdentity(REMOTE).build();
 		
-		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
-				UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56714d8"),
+		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 		

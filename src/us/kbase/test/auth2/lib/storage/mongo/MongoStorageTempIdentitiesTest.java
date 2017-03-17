@@ -18,7 +18,7 @@ import org.junit.Test;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -28,13 +28,11 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891d56715d8"),
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar2"),
 			new RemoteIdentityDetails("user2", "full2", "email2"));
 	
@@ -117,7 +115,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	private void failStoreTemporaryIdentity(
 			final TemporaryHashedToken token,
-			final Set<RemoteIdentityWithLocalID> ids,
+			final Set<RemoteIdentity> ids,
 			final Exception e) {
 		try {
 			storage.storeIdentitiesTemporarily(token, ids);

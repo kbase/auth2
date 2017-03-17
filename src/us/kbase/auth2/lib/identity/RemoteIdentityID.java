@@ -35,9 +35,9 @@ public class RemoteIdentityID {
 	 *  agent requesting access to the identity is authorized via other means.
 	 *  
 	 *  Currently this ID is implemented per the pseudocode:
-	 *  <code>
+	 *  <p><code>
 	 *  md5(getProviderName() + "_" + getProviderIdentityID())
-	 *  </code>
+	 *  </code></p>
 	 *  
 	 *  The ID is subjected to a MD5 digest to prevent abstraction-challenged programmers from
 	 *  parsing the ID.

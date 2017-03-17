@@ -16,7 +16,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
@@ -61,7 +60,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -380,9 +379,9 @@ public class Login {
 		ret.put("create", create);
 		ret.put("login", login);
 		
-		for (final RemoteIdentityWithLocalID id: loginState.getIdentities()) {
+		for (final RemoteIdentity id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
-			c.put("id", id.getID().toString());
+			c.put("id", id.getRemoteID().getID());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
 			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
 			c.put("usernamesugg", availName.isPresent() ? availName.get().getName() : null);
@@ -400,11 +399,12 @@ public class Login {
 			l.put("loginallowed", !(user.isDisabled() || loginRestricted));
 			l.put("disabled", user.isDisabled());
 			l.put("adminonly", loginRestricted);
-			l.put("id", loginState.getIdentities(userName).iterator().next().getID());
+			l.put("id", loginState.getIdentities(userName).iterator().next()
+					.getRemoteID().getID());
 			l.put("policy_ids", user.getPolicyIDs().stream().map(id -> id.getName())
 					.collect(Collectors.toSet()));
 			final List<String> remoteIDs = new LinkedList<>();
-			for (final RemoteIdentityWithLocalID id: loginState.getIdentities(userName)) {
+			for (final RemoteIdentity id: loginState.getIdentities(userName)) {
 				remoteIDs.add(id.getDetails().getUsername());
 			}
 			l.put("prov_usernames", remoteIDs);
@@ -431,14 +431,15 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			@FormParam("id") final UUID identityID,
+			@FormParam("id") final String identityID,
 			@FormParam("policy_ids") final String policyIDs,
 			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
 		
-		final NewToken newtoken = auth.login(getLoginInProcessToken(token), identityID,
+		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
+				PickChoice.getString(identityID, "id"),
 				PickChoice.getPolicyIDs(policyIDs), linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
@@ -460,8 +461,8 @@ public class Login {
 			this.linkAll = linkAll;
 		}
 		
-		public UUID getID() throws IllegalParameterException, MissingParameterException {
-			return getUUID(id, "id");
+		public String getIdentityID() throws MissingParameterException {
+			return getString(id, "id");
 		}
 		
 		public Set<PolicyID> getPolicyIDs()
@@ -472,7 +473,7 @@ public class Login {
 		public static Set<PolicyID> getPolicyIDs(final String policyIDlist)
 				throws MissingParameterException, IllegalParameterException {
 			final Set<PolicyID> ids = new HashSet<>();
-			if (policyIDlist == null) {
+			if (policyIDlist == null || policyIDlist.trim().isEmpty()) {
 				return ids;
 			}
 			return getPolicyIDs(Arrays.asList(policyIDlist.split(",")));
@@ -513,7 +514,7 @@ public class Login {
 		
 		pick.exceptOnAdditionalProperties();
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
-				pick.getID(), pick.getPolicyIDs(), pick.isLinkAll());
+				pick.getIdentityID(), pick.getPolicyIDs(), pick.isLinkAll());
 		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
 	}
 
@@ -524,7 +525,7 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			@FormParam("id") final UUID identityID,
+			@FormParam("id") final String identityID,
 			@FormParam("user") final String userName,
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email,
@@ -540,7 +541,7 @@ public class Login {
 		}
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
-				identityID,
+				CreateChoice.getString(identityID, "id"),
 				new UserName(userName),
 				new DisplayName(displayName),
 				new EmailAddress(email),
@@ -591,7 +592,7 @@ public class Login {
 		
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
-				create.getID(),
+				create.getIdentityID(),
 				new UserName(create.user),
 				new DisplayName(create.displayName),
 				new EmailAddress(create.email),

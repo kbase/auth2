@@ -8,7 +8,6 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.Test;
 
@@ -18,21 +17,19 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LinkIdentitiesTest {
 	
-	private final static RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+	private final static RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("foo", "bar"),
 			new RemoteIdentityDetails("user", "full", "email"));
 	
-	private final static RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b8"),
+	private final static RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("foo1", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 			
@@ -50,7 +47,7 @@ public class LinkIdentitiesTest {
 	
 	@Test
 	public void constructWithIDsSuccess() throws Exception {
-		final Set<RemoteIdentityWithLocalID> ids = new HashSet<>();
+		final Set<RemoteIdentity> ids = new HashSet<>();
 		ids.add(REMOTE2);
 		
 		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids);
@@ -62,8 +59,7 @@ public class LinkIdentitiesTest {
 				is(new DisplayName("bar")));
 		assertThat("incorrect user id number", li.getUser().getIdentities().size(), is(1));
 		assertThat("incorrect user identity", li.getUser().getIdentities().iterator().next(), is(
-				new RemoteIdentityWithLocalID(
-						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+				new RemoteIdentity(
 						new RemoteIdentityID("foo", "bar"),
 						new RemoteIdentityDetails("user", "full", "email"))));
 		assertThat("incorrect creation date", li.getUser().getCreated(),
@@ -76,8 +72,7 @@ public class LinkIdentitiesTest {
 		//check the identity is correct
 		assertThat("incorrect identity number", li.getIdentities().size(), is(1));
 		assertThat("incorrect identity", li.getIdentities().iterator().next(), is(
-				new RemoteIdentityWithLocalID(
-						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b8"),
+				new RemoteIdentity(
 						new RemoteIdentityID("foo1", "bar1"),
 						new RemoteIdentityDetails("user1", "full1", "email1"))));
 	}
@@ -93,8 +88,7 @@ public class LinkIdentitiesTest {
 				is(new DisplayName("bar")));
 		assertThat("incorrect user id number", li.getUser().getIdentities().size(), is(1));
 		assertThat("incorrect user identity", li.getUser().getIdentities().iterator().next(), is(
-				new RemoteIdentityWithLocalID(
-						UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715b9"),
+				new RemoteIdentity(
 						new RemoteIdentityID("foo", "bar"),
 						new RemoteIdentityDetails("user", "full", "email"))));
 		assertThat("incorrect creation date", li.getUser().getCreated(),
@@ -110,7 +104,7 @@ public class LinkIdentitiesTest {
 	
 	@Test
 	public void identitesAreUnmodifiable() throws Exception {
-		final Set<RemoteIdentityWithLocalID> ids = new HashSet<>();
+		final Set<RemoteIdentity> ids = new HashSet<>();
 		ids.add(REMOTE2);
 		
 		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids);
@@ -128,7 +122,7 @@ public class LinkIdentitiesTest {
 	public void constructFail() throws Exception {
 		failConstruct(null, new HashSet<>(Arrays.asList(REMOTE1)),
 				new NullPointerException("user"));
-		failConstruct(AUTH_USER, (Set<RemoteIdentityWithLocalID>) null,
+		failConstruct(AUTH_USER, (Set<RemoteIdentity>) null,
 				new IllegalArgumentException("No remote IDs provided"));
 		failConstruct(AUTH_USER, new HashSet<>(),
 				new IllegalArgumentException("No remote IDs provided"));
@@ -144,7 +138,7 @@ public class LinkIdentitiesTest {
 	
 	private void failConstruct(
 			final AuthUser au,
-			final Set<RemoteIdentityWithLocalID> ids,
+			final Set<RemoteIdentity> ids,
 			final Exception e) {
 		try {
 			new LinkIdentities(au, ids);

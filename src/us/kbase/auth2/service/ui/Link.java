@@ -14,7 +14,6 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -54,7 +53,7 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
@@ -304,9 +303,9 @@ public class Link {
 		ret.put("provider", ids.getProvider());
 		final List<Map<String, String>> ris = new LinkedList<>();
 		ret.put("ids", ris);
-		for (final RemoteIdentityWithLocalID ri: ids.getIdentities()) {
+		for (final RemoteIdentity ri: ids.getIdentities()) {
 			final Map<String, String> s = new HashMap<>();
-			s.put("id", ri.getID().toString());
+			s.put("id", ri.getRemoteID().getID());
 			s.put("prov_username", ri.getDetails().getUsername());
 			ris.add(s);
 		}
@@ -333,10 +332,12 @@ public class Link {
 	public Response pickAccount(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
-			@FormParam("id") final UUID identityID)
+			@FormParam("id") String identityID)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException, DisabledUserException {
-		
+		if (identityID == null || identityID.trim().isEmpty()) {
+			identityID = null;
+		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		pickAccount(token, linktoken, Optional.fromNullable(identityID));
 		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
@@ -353,8 +354,8 @@ public class Link {
 			this.id = id;
 		}
 		
-		public Optional<UUID> getID() throws IllegalParameterException {
-			return getOptionalUUID(id, "id");
+		public Optional<String> getID() {
+			return getOptionalString(id);
 		}
 	}
 	
@@ -381,7 +382,7 @@ public class Link {
 	private void pickAccount(
 			final IncomingToken token,
 			final String linktoken,
-			final Optional<UUID> id)
+			final Optional<String> id)
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
 			LinkFailedException, DisabledUserException {
 		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
