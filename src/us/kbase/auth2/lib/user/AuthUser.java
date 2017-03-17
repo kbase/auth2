@@ -358,7 +358,7 @@ public class AuthUser {
 		return b;
 	}
 	
-	public static class Builder extends GeneralBuilder<Builder> {
+	public static class Builder extends AbstractBuilder<Builder> {
 		
 		//TODO NOW JAVADOC
 		
@@ -392,8 +392,7 @@ public class AuthUser {
 	}
 	
 	// a superclass for LocalUser and AuthUser builders.
-	//TODO NOW rename to Abstract Builder
-	public abstract static class GeneralBuilder<T extends GeneralBuilder<T>> {
+	public abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
 		
 		//TODO NOW JAVADOC
 		
@@ -407,7 +406,7 @@ public class AuthUser {
 		Optional<Instant> lastLogin = Optional.absent();
 		UserDisabledState disabledState = new UserDisabledState();
 		
-		GeneralBuilder(
+		AbstractBuilder(
 				final UserName userName,
 				final DisplayName displayName,
 				final Instant created) {

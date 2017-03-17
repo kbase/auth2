@@ -379,7 +379,7 @@ public class MongoStorage implements AuthStorage {
 		return b.build();
 	}
 
-	private void addRoles(final AuthUser.GeneralBuilder<?> b, final Document user) {
+	private void addRoles(final AuthUser.AbstractBuilder<?> b, final Document user) {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
@@ -389,7 +389,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private void addCustomRoles(final AuthUser.GeneralBuilder<?> b, final Document user)
+	private void addCustomRoles(final AuthUser.AbstractBuilder<?> b, final Document user)
 			throws AuthStorageException {
 		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
 		@SuppressWarnings("unchecked")
@@ -399,7 +399,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	private void addPolicyIDs(final AuthUser.GeneralBuilder<?> b, final Document user)
+	private void addPolicyIDs(final AuthUser.AbstractBuilder<?> b, final Document user)
 			throws AuthStorageException {
 		try {
 			@SuppressWarnings("unchecked")
@@ -412,7 +412,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	private void addLastLogin(final AuthUser.GeneralBuilder<?> b, final Document user) {
+	private void addLastLogin(final AuthUser.AbstractBuilder<?> b, final Document user) {
 		final Optional<Instant> ll = getOptionalDate(user, Fields.USER_LAST_LOGIN);
 		if (ll.isPresent()) {
 			b.withLastLogin(ll.get());

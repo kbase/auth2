@@ -148,7 +148,7 @@ public class LocalUser extends AuthUser {
 		
 	}
 	
-	public static class Builder extends GeneralBuilder<Builder> {
+	public static class Builder extends AbstractBuilder<Builder> {
 		//TODO NOW JAVADOC
 		
 		private final byte[] passwordHash;

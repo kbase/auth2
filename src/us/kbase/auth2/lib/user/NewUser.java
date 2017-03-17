@@ -69,7 +69,7 @@ public class NewUser extends AuthUser {
 		return new Builder(userName, displayName, created, remoteIdentity);
 	}
 	
-	public static class Builder extends GeneralBuilder<Builder> {
+	public static class Builder extends AbstractBuilder<Builder> {
 
 		private final RemoteIdentityWithLocalID remoteIdentity;
 		
