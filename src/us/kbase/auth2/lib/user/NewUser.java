@@ -1,4 +1,4 @@
-package us.kbase.auth2.lib;
+package us.kbase.auth2.lib.user;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
@@ -9,6 +9,12 @@ import java.util.Set;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
 /** A new, non-local user. E.g. the user is associated with at least one 3rd party identity.

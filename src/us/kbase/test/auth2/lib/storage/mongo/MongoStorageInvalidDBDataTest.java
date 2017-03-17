@@ -12,7 +12,6 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
@@ -23,6 +22,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 /* Tests the case where somehow invalid data gets into the DB and a container class throws an

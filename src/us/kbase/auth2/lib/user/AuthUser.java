@@ -1,4 +1,4 @@
-package us.kbase.auth2.lib;
+package us.kbase.auth2.lib.user;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
@@ -10,6 +10,12 @@ import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 
@@ -36,7 +42,6 @@ public class AuthUser {
 	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
 	
-	//TODO NOW CODE move users into separate package
 	/** Create a new user.
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.

@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.user;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -17,11 +17,11 @@ import com.google.common.base.Optional;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LocalUserTest {

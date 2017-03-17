@@ -30,15 +30,12 @@ import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalLoginResult;
-import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.LocalUser.Builder;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -60,6 +57,8 @@ import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
@@ -365,7 +364,7 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hashnew = AuthenticationTester.fromBase64(
 				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
-		final Builder b = LocalUser.getBuilder(
+		final LocalUser.Builder b = LocalUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now(), hashold, saltold)
 				.withEmailAddress(new EmailAddress("f@g.com"));
 		for (final Role r: roles) {

@@ -13,10 +13,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
@@ -26,6 +23,9 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
+import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.lib.user.LocalUser;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageLinkTest extends MongoStorageTester {
