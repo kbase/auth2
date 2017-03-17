@@ -450,35 +450,78 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void getUserByRemoteId() throws Exception {
+	public void getUserByRemoteIdMinimal() throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
-				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		
-		final AuthUser au = storage.getUser(REMOTE1).get();
-		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
-		assertThat("incorrect identities", au.getIdentities(), is(set(REMOTE1)));
-		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
-		assertThat("incorrect email", au.getEmail(), is(new EmailAddress("e@g1.com")));
-		// ok, thats enough
-		//TODO NOW min and max versions of this test
+		final AuthUser u = storage.getUser(REMOTE1).get();
+		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
+				is(Optional.absent()));
+		assertThat("incorrect creation", u.getCreated(), is(NOW));
+		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar1")));
+		assertThat("incorrect email", u.getEmail(), is(EmailAddress.UNKNOWN));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect grantable roles", u.getGrantableRoles(),
+				is(Collections.emptySet()));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
+		assertThat("incorrect user name", u.getUserName(), is(new UserName("user1")));
+		assertThat("incorrect is disabled", u.isDisabled(), is(false));
+		assertThat("incorrect is local", u.isLocal(), is(false));
+		assertThat("incorrect is root", u.isRoot(), is(false));
 	}
 	
 	@Test
-	public void getUserByRemoteId2() throws Exception {
-		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
-				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.build());
+	public void getUserByRemoteId2Maximal() throws Exception {
+		storage.setCustomRole(new CustomRole("crfoo", "baz"));
+		storage.setCustomRole(new CustomRole("crbar", "baz"));
 		
-		storage.link(new UserName("user1"), REMOTE2);
-		final AuthUser au = storage.getUser(REMOTE2).get();
-		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
-		assertThat("incorrect identities", au.getIdentities(), is(set(REMOTE1, REMOTE2)));
-		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
-		assertThat("incorrect email", au.getEmail(), is(new EmailAddress("e@g1.com")));
-		// ok, thats enough
+		// ensure last login is after creation date
+		final Instant ll = NOW.plusMillis(10000);
+		storage.createUser(NewUser.getBuilder(
+				new UserName("user"), new DisplayName("bar"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g.com"))
+				.withRole(Role.CREATE_ADMIN).withRole(Role.DEV_TOKEN)
+				.withCustomRole("crfoo").withCustomRole("crbar")
+				.withPolicyID(new PolicyID("foo")).withPolicyID(new PolicyID("bar"))
+				.withLastLogin(ll)
+				.withUserDisabledState(new UserDisabledState(
+						"reason", new UserName("baz"), Instant.ofEpochMilli(30000)))
+				.build());
+
+		storage.link(new UserName("user"), REMOTE2);
+
+		final AuthUser u = storage.getUser(REMOTE2).get();
+
+		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
+				is(Optional.of(new UserName("baz"))));
+		assertThat("incorrect creation", u.getCreated(), is(NOW));
+		assertThat("incorrect custom roles", u.getCustomRoles(), is(set("crfoo", "crbar")));
+		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
+				"reason", new UserName("baz"), Instant.ofEpochMilli(30000))));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e@g.com")));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(),
+				is(Optional.of(Instant.ofEpochMilli(30000))));
+		assertThat("incorrect grantable roles", u.getGrantableRoles(),
+				is(set(Role.ADMIN)));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE2)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(),
+				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.of(ll)));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(),
+				is(Optional.of("reason")));
+		assertThat("incorrect roles", u.getRoles(), is(set(Role.CREATE_ADMIN, Role.DEV_TOKEN)));
+		assertThat("incorrect user name", u.getUserName(), is(new UserName("user")));
+		assertThat("incorrect is disabled", u.isDisabled(), is(true));
+		assertThat("incorrect is local", u.isLocal(), is(false));
+		assertThat("incorrect is root", u.isRoot(), is(false));
 	}
 	
 	@Test

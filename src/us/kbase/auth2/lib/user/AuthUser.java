@@ -481,7 +481,6 @@ public class AuthUser {
 		 * @return this class.
 		 */
 		public T withCustomRole(final String customRole) {
-			//TODO NOW CustomRoleID class
 			nonNull(customRole, "customRole");
 			customRoles.add(customRole);
 			return getThis();
