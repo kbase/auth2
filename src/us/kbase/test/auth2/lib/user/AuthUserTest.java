@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.user;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
