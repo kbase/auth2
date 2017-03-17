@@ -74,6 +74,9 @@ public class RemoteIdentityTest {
 		final RemoteIdentityID id = new RemoteIdentityID("foo", "bar");
 		assertThat("incorrect provider name", id.getProviderName(), is("foo"));
 		assertThat("incorrect provider id", id.getProviderIdentityId(), is("bar"));
+		assertThat("incorrect unique id", id.getID(), is("5c7d96a3dd7a87850a2ef34087565a6e"));
+		// check unique id again to check memoization doesn't change result
+		assertThat("incorrect unique id", id.getID(), is("5c7d96a3dd7a87850a2ef34087565a6e"));
 		assertThat("incorrect hashcode", id.hashCode(), is(3118804));
 		assertThat("incorrect toString()", id.toString(),
 				is("RemoteIdentityID [provider=foo, id=bar]"));
@@ -81,7 +84,8 @@ public class RemoteIdentityTest {
 	
 	@Test
 	public void remoteIdEquals() throws Exception {
-		EqualsVerifier.forClass(RemoteIdentityID.class).usingGetClass().verify();
+		EqualsVerifier.forClass(RemoteIdentityID.class).usingGetClass()
+				.withIgnoredFields("memoizedID").verify();
 	}
 	
 	@Test

@@ -1,5 +1,9 @@
 package us.kbase.auth2.lib.identity;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+
 /** An ID for a remote identity, consisting of the identity provider's name and a unique, immutable
  * ID for the identity created by the provider.
  * @author gaprice@lbl.gov
@@ -7,8 +11,9 @@ package us.kbase.auth2.lib.identity;
  */
 public class RemoteIdentityID {
 
+	private String memoizedID = null;
 	private final String provider;
-	private final String id;
+	private final String providerIdentID;
 
 	/** Create a remote identity ID.
 	 * @param provider the name of the provider that is providing the identity.
@@ -22,7 +27,39 @@ public class RemoteIdentityID {
 			throw new IllegalArgumentException("id cannot be null or empty");
 		}
 		this.provider = provider.trim();
-		this.id = id.trim();
+		this.providerIdentID = id.trim();
+	}
+	
+	/** Get a probabilistically unique ID for the combination of the provider name and provider
+	 *  identity id. This id should be not be used for security purposes; always ensure that the
+	 *  agent requesting access to the identity is authorized via other means.
+	 *  
+	 *  Currently this ID is implemented per the pseudocode:
+	 *  <code>
+	 *  md5(getProviderName() + "_" + getProviderIdentityID())
+	 *  </code>
+	 *  
+	 *  The ID is subjected to a MD5 digest to prevent abstraction-challenged programmers from
+	 *  parsing the ID.
+	 */
+	public String getID() {
+		if (memoizedID == null) {
+			final MessageDigest digester;
+			try {
+				digester = MessageDigest.getInstance("MD5");
+			} catch (NoSuchAlgorithmException e) {
+				throw new RuntimeException("This should be impossible", e);
+			}
+			final byte[] digest = digester.digest(
+					(provider + "_" + providerIdentID).getBytes(StandardCharsets.UTF_8));
+			final StringBuilder sb = new StringBuilder();
+			for (final byte b : digest) {
+				sb.append(String.format("%02x", b));
+			}
+			memoizedID = sb.toString();
+		}
+		
+		return memoizedID;
 	}
 	
 	/** Get the provider name.
@@ -36,14 +73,14 @@ public class RemoteIdentityID {
 	 * @return the identity ID.
 	 */
 	public String getProviderIdentityId() {
-		return id;
+		return providerIdentID;
 	}
 	
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((providerIdentID == null) ? 0 : providerIdentID.hashCode());
 		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
 		return result;
 	}
@@ -60,11 +97,11 @@ public class RemoteIdentityID {
 			return false;
 		}
 		RemoteIdentityID other = (RemoteIdentityID) obj;
-		if (id == null) {
-			if (other.id != null) {
+		if (providerIdentID == null) {
+			if (other.providerIdentID != null) {
 				return false;
 			}
-		} else if (!id.equals(other.id)) {
+		} else if (!providerIdentID.equals(other.providerIdentID)) {
 			return false;
 		}
 		if (provider == null) {
@@ -83,7 +120,7 @@ public class RemoteIdentityID {
 		builder.append("RemoteIdentityID [provider=");
 		builder.append(provider);
 		builder.append(", id=");
-		builder.append(id);
+		builder.append(providerIdentID);
 		builder.append("]");
 		return builder.toString();
 	}
