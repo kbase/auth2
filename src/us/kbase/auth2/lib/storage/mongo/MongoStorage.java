@@ -1,5 +1,6 @@
 package us.kbase.auth2.lib.storage.mongo;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
@@ -1382,7 +1383,7 @@ public class MongoStorage implements AuthStorage {
 			final String id)
 			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
 			NoSuchIdentityException {
-		nonNull(id, "id"); // TODO NOW checkstring no checked
+		checkStringNoCheckedException(id, "id");
 		final AuthUser u = getUser(userName);
 		if (u.isLocal()) {
 			throw new UnLinkFailedException("Local users have no identities");

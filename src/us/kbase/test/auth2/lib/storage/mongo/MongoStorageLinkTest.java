@@ -199,9 +199,12 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void unlinkFailNulls() throws Exception {
+	public void unlinkFailInput() throws Exception {
 		failUnlink(null, "foobar", new NullPointerException("userName"));
-		failUnlink(new UserName("foo"), null, new NullPointerException("id"));
+		failUnlink(new UserName("foo"), null,
+				new IllegalArgumentException("Missing argument: id"));
+		failUnlink(new UserName("foo"), "    \t \n   ",
+				new IllegalArgumentException("Missing argument: id"));
 	}
 	
 	@Test

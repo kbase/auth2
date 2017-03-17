@@ -1,5 +1,6 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
@@ -1519,7 +1520,7 @@ public class Authentication {
 			final String identityID,
 			final Set<RemoteIdentity> identities)
 					throws AuthStorageException, InvalidTokenException {
-		nonNull(identityID, "identityID");
+		checkStringNoCheckedException(identityID, "identityID");
 		for (final RemoteIdentity ri: identities) {
 			if (ri.getRemoteID().getID().equals(identityID)) {
 				return Optional.of(ri);
@@ -1816,6 +1817,7 @@ public class Authentication {
 			final String id)
 			throws InvalidTokenException, AuthStorageException,
 			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
+		checkStringNoCheckedException(id, "id");
 		nonNull(id, "id");
 		final AuthUser au = getUser(token);
 		try {
