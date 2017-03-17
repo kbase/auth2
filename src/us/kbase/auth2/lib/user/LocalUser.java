@@ -30,12 +30,12 @@ public class LocalUser extends AuthUser {
 	
 	/** Create a new local user.
 	 * @param userName the name of the user.
-	 * @param email the email address of the user.
 	 * @param displayName the display name of the user.
+	 * @param created the date the user account was created.
+	 * @param email the email address of the user.
 	 * @param roles any roles the user possesses.
 	 * @param customRoles any custom roles the user possesses.
 	 * @param policyIDs the set of policy IDs associated with the user.
-	 * @param created the date the user account was created.
 	 * @param lastLogin the date of the user's last login.
 	 * @param disabledState whether the user account is disabled.
 	 * @param passwordHash a salted, hashed password for the user.
@@ -44,22 +44,21 @@ public class LocalUser extends AuthUser {
 	 * @param lastReset the date of the last password reset.
 	 */
 	private LocalUser(
-			//TODO NOW move args around
 			final UserName userName,
-			final EmailAddress email,
 			final DisplayName displayName,
+			final Instant created,
+			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
 			final Set<PolicyID> policyIDs,
-			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,
 			final byte[] salt,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
-		super(userName, email, displayName, Collections.emptySet(), roles, customRoles, policyIDs,
-				created, lastLogin, disabledState);
+		super(userName, displayName, created, Collections.emptySet(), email, roles, customRoles,
+				policyIDs, lastLogin, disabledState);
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
@@ -136,9 +135,20 @@ public class LocalUser extends AuthUser {
 		return true;
 	}
 	
+	/** Get a builder for a local user.
+	 * 
+	 * Note that the password hash and salt arrays are not copied when building, so any changes
+	 * to those arrays will be reflected in the user class. This can be useful for clearing the
+	 * array data when no longer needed.
+	 * 
+	 * @param userName the users's user name.
+	 * @param displayName the user's display name.
+	 * @param creationDate the user's creation date.
+	 * @param passwordHash the hash of the user's password.
+	 * @param salt the salt used to hash the password.
+	 * @return a builder.
+	 */
 	public static Builder getBuilder(
-
-			//TODO NOW JAVADOC
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant creationDate,
@@ -148,15 +158,17 @@ public class LocalUser extends AuthUser {
 		
 	}
 	
-	public static class Builder extends GeneralBuilder<Builder> {
-		//TODO NOW JAVADOC
+	/** A LocalUser builder.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public static class Builder extends AbstractBuilder<Builder> {
 		
 		private final byte[] passwordHash;
 		private final byte[] salt;
 		private boolean forceReset = false;
 		private Optional<Instant> lastReset = Optional.absent();
 
-		//TODO NOW note passwordhash & salt aren't copied
 		private Builder(
 				final UserName userName,
 				final DisplayName displayName,
@@ -180,20 +192,32 @@ public class LocalUser extends AuthUser {
 			return this;
 		}
 		
+		/** Mark that that user is required to reset their password on the next login.
+		 * @param forceReset true for the user to reset their password.
+		 * @return this builder.
+		 */
 		public Builder withForceReset(final boolean forceReset) {
 			this.forceReset = forceReset;
 			return this;
 		}
 		
+		/** Set the time of the user's last password reset.
+		 * @param lastReset the last time the user reset their password.
+		 * @return this builder.
+		 */
 		public Builder withLastReset(final Instant lastReset) {
 			nonNull(lastReset, "lastReset");
 			this.lastReset = Optional.of(lastReset);
 			return this;
 		}
 		
+		/** Build the user.
+		 * @return the user.
+		 */
 		public LocalUser build() {
-			return new LocalUser(userName, email, displayName, roles, customRoles, policyIDs,
-					created, lastLogin, disabledState, passwordHash, salt, forceReset, lastReset);
+			return new LocalUser(userName, displayName, created, email, roles, customRoles,
+					policyIDs, lastLogin, disabledState, passwordHash, salt, forceReset,
+					lastReset);
 		}
 		
 	}

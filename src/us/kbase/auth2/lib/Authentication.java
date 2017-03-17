@@ -310,7 +310,6 @@ public class Authentication {
 					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
 				}
 			} catch (NoSuchRoleException e) {
-				//TODO NOW TEST
 				throw new RuntimeException("didn't supply any roles", e);
 			}
 		} finally {
@@ -362,7 +361,6 @@ public class Authentication {
 					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu);
 		} catch (NoSuchRoleException e) {
-			//TODO NOW TEST
 			throw new RuntimeException("didn't supply any roles", e);
 		} catch (Throwable t) {
 			if (pwd != null) {

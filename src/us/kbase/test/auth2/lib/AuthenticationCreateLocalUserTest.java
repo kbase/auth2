@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -187,6 +188,43 @@ public class AuthenticationCreateLocalUserTest {
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@g.com"), new UserExistsException("foo"));
+	}
+	
+	@Test
+	public void createFailIllegalRole() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final char[] pwdChar = new char [] {'a', 'a', 'a', 'a', 'a', 'b', 'a', 'a', 'a', 'a'};
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final Instant create = Instant.ofEpochSecond(1000);
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+						new UserName("admin"), NOW, NOW));
+		
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
+		
+		when(rand.getTemporaryPassword(10)).thenReturn(pwdChar);
+		
+		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(clock.instant()).thenReturn(create);
+		
+		doThrow(new NoSuchRoleException("foo")).when(storage)
+				.createLocalUser(any(LocalUser.class));
+		
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new RuntimeException("didn't supply any roles"));
 	}
 	
 	@Test

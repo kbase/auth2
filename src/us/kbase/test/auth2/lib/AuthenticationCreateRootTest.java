@@ -26,6 +26,7 @@ import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -155,6 +156,30 @@ public class AuthenticationCreateRootTest {
 		} catch (RuntimeException e) {
 			TestCommon.assertExceptionCorrect(e,
 					new RuntimeException("OK. This is really bad. I give up."));
+		}
+	}
+	
+	@Test
+	public void catastrophicFailOnRole() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		
+		when(rand.generateSalt()).thenReturn(new byte[8]);
+		
+		when(clock.instant()).thenReturn(Instant.now());
+		
+		doThrow(new NoSuchRoleException("some role"))
+				.when(storage).createLocalUser(any(LocalUser.class));
+		
+		try {
+			auth.createRoot(new Password("foobarbazbat".toCharArray()));
+			fail("expected exception");
+		} catch (RuntimeException e) {
+			TestCommon.assertExceptionCorrect(e,
+					new RuntimeException("didn't supply any roles"));
 		}
 	}
 	
