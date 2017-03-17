@@ -7,6 +7,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.HashMap;
@@ -301,7 +302,7 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public void createLocalUser(final LocalUser local)
-			throws UserExistsException, AuthStorageException {
+			throws UserExistsException, AuthStorageException, NoSuchRoleException {
 		nonNull(local, "local");
 		final String pwdhsh = Base64.getEncoder().encodeToString(
 				local.getPasswordHash());
@@ -309,6 +310,7 @@ public class MongoStorage implements AuthStorage {
 				local.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
+		final Collection<ObjectId> customRoles = getCustomRoleIds(local.getCustomRoles()).values();
 		final Set<String> policyIDs = local.getPolicyIDs().stream().map(id -> id.getName())
 				.collect(Collectors.toSet());
 		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
@@ -323,20 +325,17 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_DISPLAY_NAME_CANONICAL, local.getDisplayName()
 						.getCanonicalDisplayName())
 				.append(Fields.USER_ROLES, roles)
-				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
-				.append(Fields.USER_IDENTITIES, new LinkedList<String>())
+				.append(Fields.USER_CUSTOM_ROLES, customRoles)
+				.append(Fields.USER_IDENTITIES, local.getIdentities()) // better be empty
 				.append(Fields.USER_POLICY_IDS, policyIDs)
 				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
 						Date.from(local.getLastLogin().get()) : null)
-				// admin, time, and reason are always null for new user, but check for safety
 				.append(Fields.USER_DISABLED_ADMIN,
 						admin.isPresent() ? admin.get().getName() : null)
-				.append(Fields.USER_DISABLED_DATE, time.isPresent() ?
-						Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_DATE, time.isPresent() ? Date.from(time.get()) : null)
 				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null)
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
-				// last reset is always null for a new user, but check for safety
 				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ?
 						Date.from(reset.get()) : null)
 				.append(Fields.USER_PWD_HSH, pwdhsh)
@@ -359,41 +358,65 @@ public class MongoStorage implements AuthStorage {
 	public LocalUser getLocalUser(final UserName userName)
 			throws AuthStorageException, NoSuchUserException {
 		final Document user = getUserDoc(userName, true);
+		
+		final LocalUser.Builder b = LocalUser.getBuilder(
+				getUserName(user.getString(Fields.USER_NAME)),
+				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
+				user.getDate(Fields.USER_CREATED).toInstant(),
+				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
+				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)))
+				.withEmailAddress(getEmail(user.getString(Fields.USER_EMAIL)))
+				.withUserDisabledState(getUserDisabledState(user))
+				.withForceReset(user.getBoolean(Fields.USER_RESET_PWD));
+		addRoles(b, user);
+		addCustomRoles(b, user);
+		addPolicyIDs(b, user);
+		addLastLogin(b, user);
+		final Optional<Instant> pwdreset = getOptionalDate(user, Fields.USER_RESET_PWD_LAST);
+		if (pwdreset.isPresent()) {
+			b.withLastReset(pwdreset.get());
+		}
+		return b.build();
+	}
+
+	private void addRoles(final AuthUser.GeneralBuilder<?> b, final Document user) {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
 		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
 				.collect(Collectors.toList());
-		@SuppressWarnings("unchecked")
-		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
-		
-		return new LocalUser(
-				getUserName(user.getString(Fields.USER_NAME)),
-				getEmail(user.getString(Fields.USER_EMAIL)),
-				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
-				new HashSet<>(roles),
-				getCustomRoles(userName, new HashSet<>(custroles)),
-				getPolicyIds(user),
-				user.getDate(Fields.USER_CREATED).toInstant(),
-				getOptionalDate(user, Fields.USER_LAST_LOGIN),
-				getUserDisabledState(user),
-				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
-				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)),
-				user.getBoolean(Fields.USER_RESET_PWD),
-				getOptionalDate(user, Fields.USER_RESET_PWD_LAST));
+		for (final Role r: roles) {
+			b.withRole(r);
+		}
 	}
 
-	private Set<PolicyID> getPolicyIds(final Document user) throws AuthStorageException {
-		final Set<PolicyID> ret = new HashSet<>(); 
+	private void addCustomRoles(final AuthUser.GeneralBuilder<?> b, final Document user)
+			throws AuthStorageException {
+		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
+		@SuppressWarnings("unchecked")
+		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
+		for (final String cr: getCustomRoles(userName, new HashSet<>(custroles))) {
+			b.withCustomRole(cr);
+		}
+	}
+	
+	private void addPolicyIDs(final AuthUser.GeneralBuilder<?> b, final Document user)
+			throws AuthStorageException {
 		try {
 			@SuppressWarnings("unchecked")
 			final List<String> str = (List<String>) user.get(Fields.USER_POLICY_IDS);
 			for (final String id: str) {
-				ret.add(new PolicyID(id));
+				b.withPolicyID(new PolicyID(id));
 			}
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
-		return ret;
+	}
+	
+	private void addLastLogin(final AuthUser.GeneralBuilder<?> b, final Document user) {
+		final Optional<Instant> ll = getOptionalDate(user, Fields.USER_LAST_LOGIN);
+		if (ll.isPresent()) {
+			b.withLastLogin(ll.get());
+		}
 	}
 
 	private UserDisabledState getUserDisabledState(final Document user)
@@ -495,33 +518,36 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void createUser(final NewUser user)
-			throws UserExistsException, AuthStorageException, IdentityLinkedException {
-		nonNull(user, "user");
-		final Optional<UserName> admin = user.getAdminThatToggledEnabledState();
-		final Optional<Instant> time = user.getEnableToggleDate();
-		final Optional<String> reason = user.getReasonForDisabled();
-		final Set<String> policyIDs = user.getPolicyIDs().stream().map(id -> id.getName())
+	public void createUser(final NewUser newUser)
+			throws UserExistsException, AuthStorageException, IdentityLinkedException,
+			NoSuchRoleException {
+		nonNull(newUser, "newUser");
+		final Optional<UserName> admin = newUser.getAdminThatToggledEnabledState();
+		final Optional<Instant> time = newUser.getEnableToggleDate();
+		final Optional<String> reason = newUser.getReasonForDisabled();
+		final Set<String> policyIDs = newUser.getPolicyIDs().stream().map(id -> id.getName())
 				.collect(Collectors.toSet());
+		final Set<String> roles = newUser.getRoles().stream().map(r -> r.getID())
+				.collect(Collectors.toSet());
+		final Collection<ObjectId> customRoles = getCustomRoleIds(
+				newUser.getCustomRoles()).values();
 		final Document u = new Document(
-				Fields.USER_NAME, user.getUserName().getName())
+				Fields.USER_NAME, newUser.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
-				.append(Fields.USER_EMAIL, user.getEmail().getAddress())
-				.append(Fields.USER_DISPLAY_NAME, user.getDisplayName().getName())
-				.append(Fields.USER_DISPLAY_NAME_CANONICAL, user.getDisplayName()
+				.append(Fields.USER_EMAIL, newUser.getEmail().getAddress())
+				.append(Fields.USER_DISPLAY_NAME, newUser.getDisplayName().getName())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, newUser.getDisplayName()
 						.getCanonicalDisplayName())
-				.append(Fields.USER_ROLES, new LinkedList<String>())
-				.append(Fields.USER_CUSTOM_ROLES, new LinkedList<String>())
-				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(user.getIdentity())))
+				.append(Fields.USER_ROLES, roles)
+				.append(Fields.USER_CUSTOM_ROLES, customRoles)
+				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(newUser.getIdentity())))
 				.append(Fields.USER_POLICY_IDS, policyIDs)
-				.append(Fields.USER_CREATED, Date.from(user.getCreated()))
-				.append(Fields.USER_LAST_LOGIN, user.getLastLogin().isPresent() ?
-						Date.from(user.getLastLogin().get()) : null)
-				// admin, time, and reason are always null for new user, but check for safety
+				.append(Fields.USER_CREATED, Date.from(newUser.getCreated()))
+				.append(Fields.USER_LAST_LOGIN, newUser.getLastLogin().isPresent() ?
+						Date.from(newUser.getLastLogin().get()) : null)
 				.append(Fields.USER_DISABLED_ADMIN,
 						admin.isPresent() ? admin.get().getName() : null)
-				.append(Fields.USER_DISABLED_DATE,
-						time.isPresent() ? Date.from(time.get()) : null)
+				.append(Fields.USER_DISABLED_DATE, time.isPresent() ? Date.from(time.get()) : null)
 				.append(Fields.USER_DISABLED_REASON, reason.isPresent() ? reason.get() : null);
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
@@ -530,11 +556,11 @@ public class MongoStorage implements AuthStorage {
 			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
 			if (dk.isDuplicate() && COL_USERS.equals(dk.getCollection().get())) {
 				if ((Fields.USER_NAME + "_1").equals(dk.getIndex().get())) {
-					throw new UserExistsException(user.getUserName().getName());
+					throw new UserExistsException(newUser.getUserName().getName());
 				} else if (dk.getIndex().get().startsWith(Fields.USER_IDENTITIES + ".")) {
 					// either the provider / prov id combo or the local identity uuid are already
 					// in the db
-					final RemoteIdentityID ri = user.getIdentity().getRemoteID();
+					final RemoteIdentityID ri = newUser.getIdentity().getRemoteID();
 					throw new IdentityLinkedException(ri.getProvider() + " : " + ri.getId());
 				} // otherwise throw next exception
 			}
@@ -697,26 +723,22 @@ public class MongoStorage implements AuthStorage {
 
 	private AuthUser toUser(final Document user) throws AuthStorageException {
 		@SuppressWarnings("unchecked")
-		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
-		final List<Role> roles = rolestr.stream().map(s -> Role.getRole(s))
-				.collect(Collectors.toList());
-		@SuppressWarnings("unchecked")
-		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
-		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
-		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
 		
-		return new AuthUser(
-				userName,
-				getEmail(user.getString(Fields.USER_EMAIL)),
+		final AuthUser.Builder b = AuthUser.getBuilder(
+				getUserName(user.getString(Fields.USER_NAME)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
-				toIdentities(ids),
-				new HashSet<>(roles),
-				getCustomRoles(userName, new HashSet<>(custroles)),
-				getPolicyIds(user),
-				user.getDate(Fields.USER_CREATED).toInstant(),
-				getOptionalDate(user, Fields.USER_LAST_LOGIN),
-				getUserDisabledState(user));
+				user.getDate(Fields.USER_CREATED).toInstant())
+				.withEmailAddress(getEmail(user.getString(Fields.USER_EMAIL)))
+				.withUserDisabledState(getUserDisabledState(user));
+		for (final RemoteIdentityWithLocalID ri: toIdentities(ids)) {
+			b.withIdentity(ri);
+		}
+		addRoles(b, user);
+		addCustomRoles(b, user);
+		addPolicyIDs(b, user);
+		addLastLogin(b, user);
+		return b.build();
 	}
 	
 	private Optional<Instant> getOptionalDate(final Document d, final String field) {
@@ -1012,20 +1034,30 @@ public class MongoStorage implements AuthStorage {
 		Utils.noNulls(removeRoles, "Null role in removeRoles");
 		final Set<String> allRoles = new HashSet<>(addRoles);
 		allRoles.addAll(removeRoles);
-		final Map<String, ObjectId> roleIDs =
-				getCustomRoles(new Document(Fields.ROLES_ID, new Document("$in", allRoles)))
-						.stream().collect(Collectors.toMap(
-								d -> d.getString(Fields.ROLES_ID),
-								d -> d.getObjectId(Fields.MONGO_ID)));
-		if (allRoles.size() != roleIDs.size()) {
-			allRoles.removeAll(roleIDs.keySet());
-			throw new NoSuchRoleException(allRoles.iterator().next());
-		}
+		final Map<String, ObjectId> roleIDs = getCustomRoleIds(allRoles);
 		final Set<Object> addRoleIDs = addRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
 		final Set<Object> removeRoleIDs = removeRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
 		setRoles(userName, addRoleIDs, removeRoleIDs, Fields.USER_CUSTOM_ROLES);
+	}
+
+	private Map<String, ObjectId> getCustomRoleIds(final Set<String> roles)
+			throws AuthStorageException, NoSuchRoleException {
+		if (roles.isEmpty()) {
+			return new HashMap<>();
+		}
+		final Map<String, ObjectId> roleIDs =  getCustomRoles(new Document(
+				Fields.ROLES_ID, new Document("$in", roles))).stream()
+						.collect(Collectors.toMap(
+								d -> d.getString(Fields.ROLES_ID),
+								d -> d.getObjectId(Fields.MONGO_ID)));
+		if (roles.size() != roleIDs.size()) {
+			final Set<String> rolescopy = new HashSet<>(roles);
+			rolescopy.removeAll(roleIDs.keySet());
+			throw new NoSuchRoleException(rolescopy.iterator().next());
+		}
+		return roleIDs;
 	}
 
 	@Override
@@ -1055,7 +1087,11 @@ public class MongoStorage implements AuthStorage {
 			final Set<RemoteIdentityWithLocalID> newIDs = new HashSet<>(user.getIdentities());
 			newIDs.remove(update);
 			newIDs.add(remoteID.withID(update.getID()));
-			user = new AuthUser(user, newIDs);
+			final AuthUser.Builder b = AuthUser.getBuilderWithoutIdentities(user);
+			for (final RemoteIdentityWithLocalID ri: newIDs) {
+				b.withIdentity(ri);
+			}
+			user = b.build();
 			updateIdentity(remoteID);
 		}
 		return Optional.of(user);

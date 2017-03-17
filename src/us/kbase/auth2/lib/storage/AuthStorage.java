@@ -53,9 +53,10 @@ public interface AuthStorage {
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
+	 * @throws NoSuchRoleException if a custom role provided with the user doesn't exist.
 	 */
 	void createLocalUser(LocalUser local)
-			throws AuthStorageException, UserExistsException;
+			throws AuthStorageException, UserExistsException, NoSuchRoleException;
 
 	/** Change a local user's password.
 	 * @param name the name of the user.
@@ -85,15 +86,17 @@ public interface AuthStorage {
 	void forcePasswordReset() throws AuthStorageException;
 	
 	/** Create a non-local account.
-	 * @param authUser the user to create.
+	 * @param newUser the user to create.
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 * @throws IdentityLinkedException if the remote identity provided with the user is already
 	 * linked to a different user.
+	 * @throws NoSuchRoleException if a role provided with the user doesn't exist.
 	 */
-	void createUser(NewUser authUser)
-			throws UserExistsException, AuthStorageException, IdentityLinkedException;
+	void createUser(NewUser newUser)
+			throws UserExistsException, AuthStorageException, IdentityLinkedException,
+				NoSuchRoleException;
 	
 	/** Disable a user account.
 	 * @param user the name of the account to be disabled.

@@ -7,7 +7,6 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
-import java.util.Collections;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -18,7 +17,6 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -46,12 +44,15 @@ public class LoginStateTest {
 	private final static AuthUser AUTH_USER2;
 	static {
 		try {
-			AUTH_USER1 = new NewUser(new UserName("foo4"), new EmailAddress("f@g.com"),
-					new DisplayName("bar4"), REMOTE1, Collections.emptySet(), Instant.now(), null);
-			AUTH_USER2 = new AuthUser(new UserName("foo5"),
-					new EmailAddress("f@g5.com"), new DisplayName("bar5"), set(REMOTE2, REMOTE3),
-					set(Role.ADMIN), Collections.emptySet(), Collections.emptySet(),
-					Instant.now(), null, new UserDisabledState());
+			AUTH_USER1 = NewUser.getBuilder(
+					new UserName("foo4"), new DisplayName("bar4"), Instant.now(), REMOTE1)
+					.withEmailAddress(new EmailAddress("f@g.com")).build();
+			AUTH_USER2 = AuthUser.getBuilder(
+					new UserName("foo5"), new DisplayName("bar5"), Instant.now())
+					.withEmailAddress(new EmailAddress("f@g5.com"))
+					.withIdentity(REMOTE2).withIdentity(REMOTE3)
+					.withRole(Role.ADMIN)
+					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}

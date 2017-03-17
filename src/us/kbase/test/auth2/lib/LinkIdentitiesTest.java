@@ -6,7 +6,6 @@ import static org.junit.Assert.fail;
 
 import java.time.Instant;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -19,7 +18,6 @@ import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LinkIdentities;
-import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -41,8 +39,10 @@ public class LinkIdentitiesTest {
 	private final static AuthUser AUTH_USER;
 	static {
 		try {
-			AUTH_USER = new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-					new DisplayName("bar"), REMOTE1, Collections.emptySet(), Instant.now(), null);
+			AUTH_USER = AuthUser.getBuilder(
+					new UserName("foo"), new DisplayName("bar"), Instant.now())
+					.withEmailAddress(new EmailAddress("f@g.com"))
+					.withIdentity(REMOTE1).build();
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
