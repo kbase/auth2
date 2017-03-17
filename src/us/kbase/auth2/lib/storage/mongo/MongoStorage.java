@@ -142,14 +142,7 @@ public class MongoStorage implements AuthStorage {
 		final Map<List<String>, IndexOptions> users = new HashMap<>();
 		//find users and ensure user names are unique
 		users.put(Arrays.asList(Fields.USER_NAME), IDX_UNIQ);
-		//find user by identity provider and identity id and ensure identities
-		//are 1:1 with users
-		//TODO NOW remove. Only need the identity id.
-		users.put(Arrays.asList(
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROVIDER,
-				Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_PROV_ID),
-				IDX_UNIQ_SPARSE);
-		//find user by identity id and ensure unique identities
+		//find user by identity id and ensure identities only possessed by one user
 		users.put(Arrays.asList(Fields.USER_IDENTITIES + Fields.FIELD_SEP +
 				Fields.IDENTITIES_ID), IDX_UNIQ_SPARSE);
 		//find users by display name
@@ -1099,10 +1092,8 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {
-		//TODO NOW query on the unique ID. Then no index is needed for the other ids.
-		return new Document(Fields.USER_IDENTITIES, new Document("$elemMatch",
-				new Document(Fields.IDENTITIES_PROVIDER, remoteID.getRemoteID().getProviderName())
-				.append(Fields.IDENTITIES_PROV_ID, remoteID.getRemoteID().getProviderIdentityId())));
+		return new Document(Fields.USER_IDENTITIES + "." + Fields.IDENTITIES_ID,
+				remoteID.getRemoteID().getID());
 	}
 	
 	private void updateIdentity(final RemoteIdentity remoteID)
