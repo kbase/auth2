@@ -4,6 +4,8 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.user.AuthUser;
+
 /** A minimal view of a user. The view always includes the user and display names, and may or may
  * not include the email address (in most cases, the email address should only be included when
  * the user themself is requesting an instance of this class).

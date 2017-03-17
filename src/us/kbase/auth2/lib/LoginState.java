@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Set;
 
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.user.AuthUser;
 
 /** Represents the state of a user's login request. This state includes:
  * 

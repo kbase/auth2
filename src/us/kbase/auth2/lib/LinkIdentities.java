@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.user.AuthUser;
 
 /** A set of remote identities possessed by a user that may be linked to the user's account.
  * As such, remote identities that are already linked to the user's account should not be included.

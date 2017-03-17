@@ -26,9 +26,9 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.storage.AuthStorage;
+import us.kbase.auth2.lib.user.LocalUser;
 
 public class AuthenticationTester {
 	

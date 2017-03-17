@@ -45,14 +45,11 @@ import us.kbase.auth2.lib.AuthConfig;
 import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.ExternalConfigMapper;
-import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenName;
@@ -84,6 +81,9 @@ import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.lib.user.LocalUser;
+import us.kbase.auth2.lib.user.NewUser;
 
 /** A MongoDB based implementation of the authentication storage system.
  * 

@@ -11,11 +11,11 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
+import us.kbase.auth2.lib.user.AuthUser;
 
 public class ViewableUserTest {
 	
