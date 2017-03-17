@@ -50,7 +50,6 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -1304,10 +1303,7 @@ public class Authentication {
 			throw new MissingParameterException("authorization code");
 		}
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
-		//might be wasting uuids here *shrug*
-		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
-				.collect(Collectors.toSet());
-		final LoginState ls = getLoginState(ids);
+		final LoginState ls = getLoginState(ris);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
 		final LoginToken lr;
 		if (ls.getUsers().size() == 1 &&
@@ -1342,7 +1338,7 @@ public class Authentication {
 
 	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
 			throws AuthStorageException {
-		final Set<RemoteIdentityWithLocalID> store = new HashSet<>(ls.getIdentities());
+		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
 		final TemporaryToken tt = storeIdentitiesTemporarily(store, 30 * 60 * 1000);
 		return new LoginToken(tt, ls);
@@ -1351,8 +1347,8 @@ public class Authentication {
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after {@link #login(String, String)}.
 	 * After user interaction is completed, a new user can be created via
-	 * {@link #createUser(IncomingToken, UUID, UserName, DisplayName, EmailAddress, Set, boolean)}
-	 * or the login can complete via {@link #login(IncomingToken, UUID, Set, boolean)}.
+	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, boolean)}
+	 * or the login can complete via {@link #login(IncomingToken, String, Set, boolean)}.
 	 * @param token the temporary token.
 	 * @return the state of the login process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -1360,7 +1356,7 @@ public class Authentication {
 	 */
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
 		if (ids.isEmpty()) {
 			throw new RuntimeException(
 					"Programming error: temporary login token stored with no identities");
@@ -1368,30 +1364,23 @@ public class Authentication {
 		return getLoginState(ids);
 	}
 
-	private LoginState getLoginState(final Set<RemoteIdentityWithLocalID> ids)
+	private LoginState getLoginState(final Set<RemoteIdentity> ids)
 			throws AuthStorageException {
-		final String provider = ids.iterator().next().getRemoteID().getProvider();
+		final String provider = ids.iterator().next().getRemoteID().getProviderName();
 		final LoginState.Builder builder = new LoginState.Builder(provider,
 				cfg.getAppConfig().isLoginAllowed());
-		for (final RemoteIdentityWithLocalID ri: ids) {
+		for (final RemoteIdentity ri: ids) {
 			final Optional<AuthUser> u = storage.getUser(ri);
 			if (!u.isPresent()) {
 				builder.withIdentity(ri);
 			} else {
-				/* there's a possibility of a race condition here:
-				 * 1) temporary token gets created with a RI with a UUID
-				 * 2) RI gets linked to a user and gets a new UUID
-				 * 3) At this point in the code, the UUIDs will differ for the ri variable
-				 * and the equivalent RI in the user
-				 * So just use ri as is so the temporary token lookup works later 
-				 */
 				builder.withUser(u.get(), ri);
 			}
 		}
 		return builder.build();
 	}
 
-	private Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
+	private Set<RemoteIdentity> getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
 		nonNull(token, "token");
@@ -1425,7 +1414,7 @@ public class Authentication {
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
-			final UUID identityID,
+			final String identityID,
 			final UserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
@@ -1445,8 +1434,8 @@ public class Authentication {
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		final Optional<RemoteIdentityWithLocalID> match = getIdentity(identityID, ids);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to create user with remote identity %s", identityID));
@@ -1490,15 +1479,15 @@ public class Authentication {
 	 */
 	public NewToken login(
 			final IncomingToken token,
-			final UUID identityID,
+			final String identityID,
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
 			LinkFailedException {
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(token);
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
+		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
 					"Not authorized to login to user with remote identity %s", identityID));
@@ -1526,13 +1515,13 @@ public class Authentication {
 		return login(u.get().getUserName());
 	}
 	
-	private Optional<RemoteIdentityWithLocalID> getIdentity(
-			final UUID identityID,
-			final Set<RemoteIdentityWithLocalID> identities)
+	private Optional<RemoteIdentity> getIdentity(
+			final String identityID,
+			final Set<RemoteIdentity> identities)
 					throws AuthStorageException, InvalidTokenException {
 		nonNull(identityID, "identityID");
-		for (final RemoteIdentityWithLocalID ri: identities) {
-			if (ri.getID().equals(identityID)) {
+		for (final RemoteIdentity ri: identities) {
+			if (ri.getRemoteID().getID().equals(identityID)) {
 				return Optional.of(ri);
 			}
 		}
@@ -1600,19 +1589,17 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException,
 			NoSuchIdentityProviderException {
-		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
+		final Set<RemoteIdentity> ids = getLinkCandidates(provider, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
 		 * under the control of the primary auth UI.
 		 */
-		final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
-				.collect(Collectors.toSet());
 		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
 	}
 	
 	private TemporaryToken storeIdentitiesTemporarily(
-			final Set<RemoteIdentityWithLocalID> ids,
+			final Set<RemoteIdentity> ids,
 			final int tokenLifeTimeMS)
 			throws AuthStorageException {
 		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
@@ -1675,7 +1662,7 @@ public class Authentication {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> ris = getLinkCandidates(provider, authcode);
+		final Set<RemoteIdentity> ids = getLinkCandidates(provider, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
@@ -1683,23 +1670,21 @@ public class Authentication {
 		 */
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
-		if (ris.size() == 1 && !pc.isForceLinkChoice()) {
+		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
 				/* throws link failed exception if u is a local user or the id is already linked
 				 * Since we already checked those, only a rare race condition can cause a link
 				 * failed exception, and the consequence is trivial so don't worry about it
 				 */
-				storage.link(u.getUserName(), ris.iterator().next().withID());
+				storage.link(u.getUserName(), ids.iterator().next());
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException(
 						"User unexpectedly disappeared from the database", e);
 			}
 			lt = new LinkToken();
 		} else { // will store an ID set if said set is empty.
-			final Set<RemoteIdentityWithLocalID> ids = ris.stream().map(r -> r.withID())
-					.collect(Collectors.toSet());
 			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
-			if (ris.isEmpty()) {
+			if (ids.isEmpty()) {
 				lt = new LinkToken(tt, new LinkIdentities(u, provider));
 			} else {
 				lt = new LinkToken(tt, new LinkIdentities(u, ids));
@@ -1722,7 +1707,7 @@ public class Authentication {
 	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
 	 * {@link #link(String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
-	 * {@link #link(IncomingToken, IncomingToken, UUID)}.
+	 * {@link #link(IncomingToken, IncomingToken, String)}.
 	 * 
 	 * @param token the user's token.
 	 * @param linktoken the temporary token associated with the link state.
@@ -1742,7 +1727,7 @@ public class Authentication {
 		if (u.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(linktoken);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken);
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
 			throw new LinkFailedException("All provided identities are already linked");
@@ -1768,12 +1753,12 @@ public class Authentication {
 	public void link(
 			final IncomingToken token,
 			final IncomingToken linktoken,
-			final UUID identityID)
+			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 			InvalidTokenException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
-		final Set<RemoteIdentityWithLocalID> ids = getTemporaryIdentities(linktoken);
-		final Optional<RemoteIdentityWithLocalID> ri = getIdentity(identityID, ids);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken);
+		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
 					identityID));
@@ -1799,14 +1784,14 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException, DisabledUserException,
 			LinkFailedException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
-		final Set<RemoteIdentityWithLocalID> identities = getTemporaryIdentities(linkToken);
+		final Set<RemoteIdentity> identities = getTemporaryIdentities(linkToken);
 		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
 	}
 
-	private void link(final UserName userName, final Set<RemoteIdentityWithLocalID> identities)
+	private void link(final UserName userName, final Set<RemoteIdentity> identities)
 			throws AuthStorageException, LinkFailedException {
-		for (final RemoteIdentityWithLocalID ri: identities) {
+		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
 				storage.link(userName, ri);
@@ -1828,7 +1813,7 @@ public class Authentication {
 	 */
 	public void unlink(
 			final IncomingToken token,
-			final UUID id)
+			final String id)
 			throws InvalidTokenException, AuthStorageException,
 			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
 		nonNull(id, "id");
@@ -2022,7 +2007,7 @@ public class Authentication {
 			email = EmailAddress.UNKNOWN;
 		}
 		try {
-			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), ri.withID())
+			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), ri)
 					.withEmailAddress(email).build());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);

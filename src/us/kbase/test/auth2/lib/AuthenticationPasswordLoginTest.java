@@ -48,9 +48,9 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
@@ -67,8 +67,7 @@ public class AuthenticationPasswordLoginTest {
 	
 	/* tests anything to do with passwords, including login. */
 	
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	

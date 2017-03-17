@@ -15,7 +15,7 @@ import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 
 /** A new, non-local user. E.g. the user is associated with exactly one 3rd party identity.
  * 
@@ -39,7 +39,7 @@ public class NewUser extends AuthUser {
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant created,
-			final RemoteIdentityWithLocalID remoteIdentity,
+			final RemoteIdentity remoteIdentity,
 			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
@@ -53,7 +53,7 @@ public class NewUser extends AuthUser {
 	/** Get the user's remote identity.
 	 * @return the identity.
 	 */
-	public RemoteIdentityWithLocalID getIdentity() {
+	public RemoteIdentity getIdentity() {
 		if (getIdentities().size() != 1) {
 			// this is untestable without some nutty reflection stuff, look into it later
 			// should never happen since AuthUser is immutable
@@ -73,7 +73,7 @@ public class NewUser extends AuthUser {
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant created,
-			final RemoteIdentityWithLocalID remoteIdentity) {
+			final RemoteIdentity remoteIdentity) {
 		return new Builder(userName, displayName, created, remoteIdentity);
 	}
 	
@@ -83,13 +83,13 @@ public class NewUser extends AuthUser {
 	 */
 	public static class Builder extends AbstractBuilder<Builder> {
 
-		private final RemoteIdentityWithLocalID remoteIdentity;
+		private final RemoteIdentity remoteIdentity;
 		
 		private Builder(
 				final UserName userName,
 				final DisplayName displayName,
 				final Instant created,
-				final RemoteIdentityWithLocalID remoteIdentity) {
+				final RemoteIdentity remoteIdentity) {
 			super(userName, displayName, created);
 			if (UserName.ROOT.equals(userName)) {
 				throw new IllegalArgumentException("Standard users cannot be root");

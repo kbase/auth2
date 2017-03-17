@@ -178,8 +178,8 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			final List<Map<String, String>> sids =
 					(List<Map<String, String>>) ids.get("identities");
 			final Set<RemoteIdentity> idents = makeIdentities(sids);
-			final Set<String> got = idents.stream().map(i -> i.getRemoteID().getId())
-					.collect(Collectors.toSet());
+			final Set<String> got = idents.stream()
+					.map(i -> i.getRemoteID().getProviderIdentityId()).collect(Collectors.toSet());
 			if (!secondaryIDs.equals(got)) {
 				
 				throw new IdentityRetrievalException(String.format(

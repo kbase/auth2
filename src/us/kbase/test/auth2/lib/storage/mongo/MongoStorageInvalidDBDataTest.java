@@ -17,7 +17,7 @@ import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -36,8 +36,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	
 	private static final Instant NOW = Instant.now();
 	
-	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
@@ -198,7 +197,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 				"Illegal input parameter: Disabled reason size greater than limit 1000"));
 	}
 	
-	private void failGetUser(final RemoteIdentityWithLocalID ri, final Exception e) {
+	private void failGetUser(final RemoteIdentity ri, final Exception e) {
 		try {
 			storage.getUser(ri);
 			fail("expected exception");

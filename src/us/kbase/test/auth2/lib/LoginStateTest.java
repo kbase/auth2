@@ -7,7 +7,6 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
-import java.util.UUID;
 
 import org.junit.Test;
 
@@ -16,27 +15,24 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LoginStateTest {
 	
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715c9"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar"),
 			new RemoteIdentityDetails("user", "full", "email"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d9"),
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE3 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c5671539"),
+	private static final RemoteIdentity REMOTE3 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
 	
@@ -168,7 +164,7 @@ public class LoginStateTest {
 	
 	private void failAddIdentity(
 			final LoginState.Builder b,
-			final RemoteIdentityWithLocalID ri, 
+			final RemoteIdentity ri, 
 			final Exception e) {
 		try {
 			b.withIdentity(ri);
@@ -190,7 +186,7 @@ public class LoginStateTest {
 	private void failAddUser(
 			final LoginState.Builder b,
 			final AuthUser u,
-			final RemoteIdentityWithLocalID ri,
+			final RemoteIdentity ri,
 			final Exception e) {
 		try {
 			b.withUser(u, ri);

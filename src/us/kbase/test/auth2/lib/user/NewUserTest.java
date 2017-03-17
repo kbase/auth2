@@ -8,7 +8,6 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.UUID;
 
 import org.junit.Test;
 
@@ -20,7 +19,7 @@ import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
@@ -28,8 +27,7 @@ public class NewUserTest {
 	
 	/* note that this does not replicate the tests from authuser to test the general builder */
 	
-	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4638-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov42", "bar42"),
 			new RemoteIdentityDetails("user42", "full42", "email42"));
 	
@@ -71,7 +69,7 @@ public class NewUserTest {
 	
 	private void failBuild(
 			final UserName userName,
-			final RemoteIdentityWithLocalID remoteIdentity,
+			final RemoteIdentity remoteIdentity,
 			final Exception e)
 			throws Exception {
 		try {

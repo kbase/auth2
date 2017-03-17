@@ -29,7 +29,6 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
@@ -326,7 +325,7 @@ public interface AuthStorage {
 	 */
 	void storeIdentitiesTemporarily(
 			TemporaryHashedToken token,
-			Set<RemoteIdentityWithLocalID> ids)
+			Set<RemoteIdentity> ids)
 			throws AuthStorageException;
 
 	/** Get a set of identities associated with a token.
@@ -336,16 +335,13 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	Set<RemoteIdentityWithLocalID> getTemporaryIdentities(
+	Set<RemoteIdentity> getTemporaryIdentities(
 			IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
 	/** Link an account to a remote identity.
-	 * If the account is already linked to the identity, the method proceeds without error, but has
-	 * the following effects:
-	 * 1) The UUID of the identity in the database is NOT overwritten by the UUID of the passed in
-	 * identity.
-	 * 2) If the provider details (provider username, email address, and full name) are different,
+	 * If the account is already linked to the identity, the method proceeds without error, but
+	 * if the provider details (provider username, email address, and full name) are different,
 	 * the details in the database are overwritten by the passed in identity details. 
 	 * @param userName the user to which the remote identity will be linked. 
 	 * @param remoteID the remote identity.
@@ -355,7 +351,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void link(UserName userName, RemoteIdentityWithLocalID remoteID)
+	void link(UserName userName, RemoteIdentity remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException;
 
@@ -368,7 +364,7 @@ public interface AuthStorage {
 	 * system occurs.
 	 * @throws NoSuchIdentityException if the user does not possess the identity.
 	 */
-	void unlink(UserName userName, UUID id)
+	void unlink(UserName userName, String id)
 			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
 			NoSuchIdentityException;
 

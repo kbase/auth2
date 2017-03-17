@@ -175,7 +175,7 @@ public class AuthCLI {
 						e, a, true);
 				continue;
 			}
-			System.out.println("\tID       : " + ri.getRemoteID().getId());
+			System.out.println("\tID       : " + ri.getRemoteID().getProviderIdentityId());
 			System.out.println("\tUsername : " + ri.getDetails().getUsername());
 			System.out.println("\tFull name: " + ri.getDetails().getFullname());
 			System.out.println("\tEmail    : " + ri.getDetails().getEmail());

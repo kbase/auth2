@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
 
 /** Represents the state of a user's login request. This state includes:
@@ -27,12 +27,10 @@ public class LoginState {
 	 * 2) depending on the 3rd party account the user logged into, the user may only have access
 	 * to a subset of the AuthUser identities, even if they're all from the same provider (e.g.
 	 * the user account may be linked to multiple different provider accounts).
-	 * 3) Depending on race conditions, it's possible the remote IDs in the AuthUser and
-	 * stored in the temporary storage in the DB might have different UUIDs
 	 */
-	private final Map<UserName, Set<RemoteIdentityWithLocalID>> userIDs = new HashMap<>();
+	private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
 	private final Map<UserName, AuthUser> users = new HashMap<>();
-	private final Set<RemoteIdentityWithLocalID> noUser = new HashSet<>();
+	private final Set<RemoteIdentity> noUser = new HashSet<>();
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
 
@@ -67,7 +65,7 @@ public class LoginState {
 	/** Get the set of identities that are not associated with a user account.
 	 * @return the set of identities that are not associated with a user account.
 	 */
-	public Set<RemoteIdentityWithLocalID> getIdentities() {
+	public Set<RemoteIdentity> getIdentities() {
 		return Collections.unmodifiableSet(noUser);
 	}
 	
@@ -98,13 +96,11 @@ public class LoginState {
 	/** Get the remote identities associated with a given user account that granted access to said
 	 * account.
 	 * 
-	 * Note this may be a subset of the identities associated with the account in general, and the
-	 * identities in this set may have different UUIDs than the corresponding identities in
-	 * the user class.
+	 * Note this may be a subset of the identities associated with the account in general.
 	 * @param name the user name of the user account.
 	 * @return the set of remote identities.
 	 */
-	public Set<RemoteIdentityWithLocalID> getIdentities(final UserName name) {
+	public Set<RemoteIdentity> getIdentities(final UserName name) {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
@@ -134,7 +130,7 @@ public class LoginState {
 		 * @param remoteID the remote identity to add.
 		 * @return this builder.
 		 */
-		public Builder withIdentity(final RemoteIdentityWithLocalID remoteID) {
+		public Builder withIdentity(final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
 			nonNull(remoteID, "remoteID");
@@ -143,8 +139,8 @@ public class LoginState {
 			return this;
 		}
 
-		private void checkProvider(final RemoteIdentityWithLocalID remoteID) {
-			if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
+		private void checkProvider(final RemoteIdentity remoteID) {
+			if (!ls.provider.equals(remoteID.getRemoteID().getProviderName())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}
@@ -155,7 +151,7 @@ public class LoginState {
 		 * @param remoteID the 3rd party identity that grants the user access to the user account.
 		 * @return this builder.
 		 */
-		public Builder withUser(final AuthUser user, final RemoteIdentityWithLocalID remoteID) {
+		public Builder withUser(final AuthUser user, final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
 			nonNull(user, "user");
