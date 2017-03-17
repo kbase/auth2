@@ -9,18 +9,14 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.NewLocalUser;
+import us.kbase.auth2.lib.LocalUser;
 import us.kbase.auth2.lib.NewUser;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
@@ -35,8 +31,6 @@ import us.kbase.test.auth2.TestCommon;
 public class MongoStorageLinkTest extends MongoStorageTester {
 
 	private static final Instant NOW = Instant.now();
-	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
 	
 	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
@@ -55,8 +49,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 
 	@Test
 	public void link() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE2, REMOTE1)));
@@ -64,8 +58,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void unlink() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		storage.unlink(new UserName("foo"), REMOTE1.getID());
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
@@ -74,8 +68,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void linkNoop() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
 				UUID.randomUUID(),
@@ -88,8 +82,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void linkAndUpdateIdentity() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
 				UUID.randomUUID(),
@@ -112,8 +106,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
 		m.setAccessible(true);
 		
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
 		assertThat("expected successful link", p, is(true));
@@ -129,8 +123,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final Method m = MongoStorage.class.getDeclaredMethod(
 				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
 		m.setAccessible(true);
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		storage.link(new UserName("foo"), REMOTE3);
 		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
@@ -147,8 +141,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final Method m = MongoStorage.class.getDeclaredMethod(
 				"addIdentity", AuthUser.class, RemoteIdentityWithLocalID.class);
 		m.setAccessible(true);
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		storage.unlink(new UserName("foo"), REMOTE1.getID());
@@ -160,16 +154,16 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void linkFailNulls() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		failLink(null, REMOTE1, new NullPointerException("userName"));
 		failLink(new UserName("foo"), null, new NullPointerException("remoteID"));
 	}
 	
 	@Test
 	public void linkFailNoUser() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		failLink(new UserName("foo1"), REMOTE2, new NoSuchUserException("foo1"));
 	}
 	
@@ -177,9 +171,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void linkFailLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
-		final NewLocalUser nlu = new NewLocalUser(
-				new UserName("local"), new EmailAddress("e@g.com"), new DisplayName("bar"),
-				MTPID, NOW, pwd, salt, false);
+		final LocalUser nlu = LocalUser.getBuilder(
+				new UserName("local"), new DisplayName("bar"), NOW, pwd, salt).build();
 				
 		storage.createLocalUser(nlu);
 		failLink(new UserName("local"), REMOTE2,
@@ -188,10 +181,10 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void linkFailAlreadyLinked() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("foo2"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo2"), new DisplayName("bar"), NOW, REMOTE1).build());
 		
 		final RemoteIdentityWithLocalID ri = new RemoteIdentityWithLocalID(
 				UUID.randomUUID(),
@@ -221,8 +214,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void unlinkFailNoUser() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		failUnlink(new UserName("foo1"), REMOTE1.getID(), new NoSuchUserException("foo1"));
 	}
@@ -231,9 +224,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void unlinkFailLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
-		final NewLocalUser nlu = new NewLocalUser(
-				new UserName("local"), new EmailAddress("e@g.com"), new DisplayName("bar"),
-				MTPID, NOW, pwd, salt, false);
+		final LocalUser nlu = LocalUser.getBuilder(
+				new UserName("local"), new DisplayName("bar"), NOW, pwd, salt).build();
 				
 		storage.createLocalUser(nlu);
 		failUnlink(new UserName("local"), UUID.randomUUID(),
@@ -242,19 +234,19 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void unlinkFailOneIdentity() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		failUnlink(new UserName("foo"), REMOTE1.getID(),
 				new UnLinkFailedException("The user has only one associated identity"));
 	}
 	
 	@Test
 	public void unlinkFailNoSuchIdentity() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
-		storage.createUser(new NewUser(new UserName("foo1"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo1"), new DisplayName("bar"), NOW, REMOTE3).build());
 		failUnlink(new UserName("foo"), REMOTE3.getID(),
 				new NoSuchIdentityException("The user is not linked to identity " +
 						REMOTE3.getID()));

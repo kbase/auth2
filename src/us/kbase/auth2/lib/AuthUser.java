@@ -36,8 +36,7 @@ public class AuthUser {
 	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
 	
-	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
-	
+	//TODO NOW CODE move users into separate package
 	/** Create a new user.
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.
@@ -52,9 +51,9 @@ public class AuthUser {
 	 * date it will be silently modified to match the creation date.
 	 * @param disabledState whether the user account is disabled.
 	 */
-	public AuthUser(
+	AuthUser(
 			final UserName userName,
-			final EmailAddress email,
+			final EmailAddress email, //TODO NOW move args around
 			final DisplayName displayName,
 			Set<RemoteIdentityWithLocalID> identities,
 			Set<Role> roles,
@@ -63,70 +62,20 @@ public class AuthUser {
 			final Instant created,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
-		nonNull(userName, "userName");
-		nonNull(email, "email");
-		nonNull(displayName, "displayName");
-		nonNull(created, "created");
-		nonNull(disabledState, "disabledState");
 		this.userName = userName;
 		this.email = email;
 		this.displayName = displayName;
-		if (identities == null) {
-			identities = new HashSet<>();
-		}
-		Utils.noNulls(identities, "null item in identities");
-		this.identities = Collections.unmodifiableSet(new HashSet<>(identities));
-		if (roles == null) {
-			roles = new HashSet<>();
-		}
-		Utils.noNulls(roles, "null item in roles");
-		this.roles = Collections.unmodifiableSet(new HashSet<>(roles));
-		if (customRoles == null) {
-			customRoles = new HashSet<>();
-		}
-		Utils.noNulls(customRoles, "null item in customRoles");
-		this.customRoles = Collections.unmodifiableSet(new HashSet<>(customRoles));
-		if (policyIDs == null) {
-			policyIDs = new HashSet<>();
-		}
-		Utils.noNulls(policyIDs, "null item in policyIDs");
-		this.policyIDs = Collections.unmodifiableSet(new HashSet<>(policyIDs));
-		/* this is a little worrisome as there are two sources of truth for root. Maybe
-		 * automatically add the role for root? Or have a root user subclass?
-		 * This'll do for now
-		 */
-		if (userName.equals(UserName.ROOT)) {
-			if (!(roles.size() == 1 && roles.contains(Role.ROOT))) {
-				throw new IllegalStateException("Root username must only have the ROOT role");
-			}
-			if (!identities.isEmpty()) {
-				throw new IllegalStateException("Root user cannot have identities");
-			}
-		} else if (roles.contains(Role.ROOT)) {
-			throw new IllegalStateException("Non-root username with root role");
-		}
+		this.identities = Collections.unmodifiableSet(identities);
+		this.roles = Collections.unmodifiableSet(roles);
+		this.customRoles = Collections.unmodifiableSet(customRoles);
+		this.policyIDs = Collections.unmodifiableSet(policyIDs);
 		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
 				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
 		this.created = created;
-		if (lastLogin == null || !lastLogin.isPresent()) {
-			this.lastLogin = Optional.absent();
-		} else {
-			this.lastLogin = lastLogin.get().isBefore(created) ? Optional.of(created) : lastLogin;
-		}
+		this.lastLogin = lastLogin;
 		this.disabledState = disabledState;
 	}
 	
-	/** Create a new AuthUser identical to the provided AuthUser except with a new set of remote
-	 * identities.
-	 * @param user the AuthUser from which to generate a new AuthUser.
-	 * @param newIDs the new remote IDs for the new AuthUser.
-	 */
-	public AuthUser(final AuthUser user, final Set<RemoteIdentityWithLocalID> newIDs) {
-		this(user.getUserName(), user.getEmail(), user.getDisplayName(), newIDs, user.getRoles(),
-				user.getCustomRoles(), user.getPolicyIDs(), user.getCreated(), user.getLastLogin(),
-				user.getDisabledState());
-	}
-
 	/** Returns whether this user is the root user.
 	 * @return true if the the user is the root user, false otherwise.
 	 */
@@ -373,5 +322,148 @@ public class AuthUser {
 			return false;
 		}
 		return true;
+	}
+	
+	public static Builder getBuilder(
+
+			//TODO NOW JAVADOC
+			final UserName userName,
+			final DisplayName displayName,
+			final Instant creationDate) {
+		return new Builder(userName, displayName, creationDate);
+	}
+	
+	public static Builder getBuilderWithoutIdentities(final AuthUser user) {
+		//TODO NOW JAVADOC
+		final Builder b = getBuilder(user.getUserName(), user.getDisplayName(), user.getCreated())
+				.withUserDisabledState(user.getDisabledState())
+				.withEmailAddress(user.getEmail());
+		if (user.getLastLogin().isPresent()) {
+			b.withLastLogin(user.getLastLogin().get());
+		}
+		for (final Role r: user.getRoles()) {
+			b.withRole(r);
+		}
+		for (final String cr: user.getCustomRoles()) {
+			b.withCustomRole(cr);
+		}
+		for (final PolicyID pid: user.getPolicyIDs()) {
+			b.withPolicyID(pid);
+		}
+		return b;
+	}
+	
+	public static class Builder extends GeneralBuilder<Builder> {
+		
+		//TODO NOW JAVADOC
+		
+		private final Set<RemoteIdentityWithLocalID> identities = new HashSet<>();
+		
+		private Builder(
+				final UserName userName,
+				final DisplayName displayName,
+				final Instant creationDate) {
+			super(userName, displayName, creationDate);
+		}
+		
+		@Override
+		Builder getThis() {
+			return this;
+		}
+		
+		public Builder withIdentity(final RemoteIdentityWithLocalID remoteIdentity) {
+			if (userName.equals(UserName.ROOT)) {
+				throw new IllegalStateException("Root user cannot have identities");
+			}
+			nonNull(remoteIdentity, "remoteIdentity");
+			identities.add(remoteIdentity);
+			return this;
+		}
+		
+		public AuthUser build() {
+			return new AuthUser(userName, email, displayName, identities, roles, customRoles,
+					policyIDs, created, lastLogin, disabledState);
+		}
+	}
+	
+	// a superclass for LocalUser and AuthUser builders.
+	//TODO NOW rename to Abstract Builder
+	public abstract static class GeneralBuilder<T extends GeneralBuilder<T>> {
+		
+		//TODO NOW JAVADOC
+		
+		final UserName userName;
+		final DisplayName displayName;
+		final Instant created;
+		EmailAddress email = EmailAddress.UNKNOWN;
+		final Set<Role> roles = new HashSet<>();
+		final Set<String> customRoles = new HashSet<>();
+		final Set<PolicyID> policyIDs = new HashSet<>();
+		Optional<Instant> lastLogin = Optional.absent();
+		UserDisabledState disabledState = new UserDisabledState();
+		
+		GeneralBuilder(
+				final UserName userName,
+				final DisplayName displayName,
+				final Instant created) {
+			nonNull(userName, "userName");
+			nonNull(displayName, "displayName");
+			nonNull(created, "created");
+			this.userName = userName;
+			this.displayName = displayName;
+			this.created = created;
+			if (userName.equals(UserName.ROOT)) {
+				roles.add(Role.ROOT);
+			}
+		}
+		
+		abstract T getThis();
+		
+		public T withEmailAddress(final EmailAddress email) {
+			nonNull(email, "email");
+			this.email = email;
+			return getThis();
+		}
+		
+		public T withRole(final Role role) {
+			nonNull(role, "role");
+			if (UserName.ROOT.equals(userName) && !Role.ROOT.equals(role)) {
+				throw new IllegalStateException("Root username must only have the ROOT role");
+			}
+			if (Role.ROOT.equals(role) && !UserName.ROOT.equals(userName)) {
+				throw new IllegalStateException("Non-root username with root role");
+			}
+			roles.add(role);
+			return getThis();
+		}
+		
+		public T withCustomRole(final String customRole) {
+			//TODO NOW CustomRoleID class
+			nonNull(customRole, "customRole");
+			customRoles.add(customRole);
+			return getThis();
+		}
+		
+		public T withPolicyID(final PolicyID policyID) {
+			nonNull(policyID, "policyID");
+			policyIDs.add(policyID);
+			return getThis();
+		}
+		
+		public T withLastLogin(final Instant lastLogin) {
+			nonNull(lastLogin, "lastLogin");
+			if (created.isAfter(lastLogin)) {
+				this.lastLogin = Optional.of(created);
+			} else {
+				this.lastLogin = Optional.of(lastLogin);
+			}
+			return getThis();
+		}
+		
+		public T withUserDisabledState(final UserDisabledState disabledState) {
+			nonNull(disabledState, "disabledState");
+			this.disabledState = disabledState;
+			return getThis();
+		}
 	}
 }

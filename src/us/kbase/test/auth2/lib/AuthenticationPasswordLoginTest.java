@@ -38,8 +38,8 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.LocalUser;
+import us.kbase.auth2.lib.LocalUser.Builder;
 import us.kbase.auth2.lib.Password;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -73,8 +73,6 @@ public class AuthenticationPasswordLoginTest {
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-
 	@Test
 	public void loginStdUser() throws Exception {
 		login(true, Collections.emptySet());
@@ -103,10 +101,13 @@ public class AuthenticationPasswordLoginTest {
 		final NewToken expectedToken = new NewToken(id, TokenType.LOGIN, "this is a token",
 				new UserName("foo"), Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000);
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				roles, Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		final LocalUser.Builder b = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com"));
+		for (final Role r: roles) {
+			b.withRole(r);
+		}
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(b.build());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(loginAllowed, null, null),
@@ -146,10 +147,12 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, true, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withForceReset(true).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
@@ -204,10 +207,11 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failLogin(auth, new UserName("foo"), p,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
@@ -228,10 +232,11 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(false, null, null),
@@ -255,12 +260,13 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null,
-				new UserDisabledState("foo", new UserName("foo"), Instant.now()),
-				hash, salt, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
@@ -287,10 +293,11 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		final UUID id = UUID.randomUUID();
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID, 
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
@@ -358,10 +365,13 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hashnew = AuthenticationTester.fromBase64(
 				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				roles, Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hashold, saltold, false, null));
+		final Builder b = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hashold, saltold)
+				.withEmailAddress(new EmailAddress("f@g.com"));
+		for (final Role r: roles) {
+			b.withRole(r);
+		}
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(b.build());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(allowLogin, null, null),
@@ -375,7 +385,7 @@ public class AuthenticationPasswordLoginTest {
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(
 				new UserName("foo"), hashnew, saltnew, false);
-//		
+
 		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
 		
 		assertClear(pwdold);
@@ -444,10 +454,11 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
@@ -468,10 +479,12 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
 				"Old and new passwords are identical."));
@@ -492,10 +505,12 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
 				"Password is not strong enough. A word by itself is easy to guess."));
@@ -517,10 +532,12 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hash, salt, false, null));
+
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(false, null, null),
@@ -546,12 +563,14 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null,
-				new UserDisabledState("foo", new UserName("foo"), Instant.now()),
-				hash, salt, false, null));
+
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
@@ -582,10 +601,11 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hashnew = AuthenticationTester.fromBase64(
 				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(new LocalUser(
-				new UserName("foo"), new EmailAddress("f@g.com"), new DisplayName("foo"),
-				Collections.emptySet(), Collections.emptySet(), MTPID,
-				Instant.now(), null, new UserDisabledState(), hashold, saltold, false, null));
+		final LocalUser exp = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now(), hashold, saltold)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
@@ -618,79 +638,92 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void resetPasswordAdminOnStd() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		resetPassword(admin, user);
 	}
 	
 	@Test
 	public void resetPasswordSelf() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		resetPassword(admin, user);
 	}
 	
 	@Test
 	public void resetPasswordRootOnCreate() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		resetPassword(admin, user);
 	}
 	
 	@Test
 	public void resetPasswordRootOnSelf() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		resetPassword(admin, user);
 	}
 	
 	@Test
 	public void resetPasswordCreateOnAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		resetPassword(admin, user);
 	}
 	
 	@Test
 	public void resetPasswordFailLocalUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), set(REMOTE1), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withIdentity(REMOTE1)
+				.build();
+		
 		failResetPassword(admin, user, new NoSuchUserException(
 				"foo is not a local user and has no password"));
 	}
@@ -698,70 +731,82 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordFailNotAdmin() throws Exception {
 		// shouldn't be able to reset own pwd, can use change pwd for that
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), set(REMOTE1), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		failResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void resetPasswordFailCreateOnRoot() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		failResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Only root can reset root password"));
 	}
 	
 	@Test
 	public void resetPasswordFailCreateOnCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Cannot reset password of user with create administrator role"));
 	}
 	
 	@Test
 	public void resetPasswordFailAdminOnAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		failResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Cannot reset password of user with administrator role"));
 	}
 	
 	@Test
 	public void resetPasswordFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("admin2"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("admin2"), Instant.now()))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.DEV_TOKEN).build();
+		
 		failResetPassword(admin, user, new DisabledUserException());
 	}
 	
@@ -818,9 +863,10 @@ public class AuthenticationPasswordLoginTest {
 		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		
@@ -834,13 +880,15 @@ public class AuthenticationPasswordLoginTest {
 	public void resetPasswordFailPasswordGen() throws Exception {
 		// mostly to exercise the password clearing code, although there's no way to check the
 		// clearing occurred
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -867,13 +915,15 @@ public class AuthenticationPasswordLoginTest {
 	public void resetPasswordFailLateNoSuchUser() throws Exception {
 		// mostly to exercise the password clearing code, although there's no way to check the
 		// clearing occurred
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -988,79 +1038,91 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetPasswordAdminOnStd() throws Exception {
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		forceResetPassword(admin, user);
 	}
 	
 	@Test
 	public void forceResetPasswordSelf() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		forceResetPassword(admin, user);
 	}
 	
 	@Test
 	public void forceResetPasswordRootOnCreate() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		forceResetPassword(admin, user);
 	}
 	
 	@Test
 	public void forceResetPasswordRootOnSelf() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		forceResetPassword(admin, user);
 	}
 	
 	@Test
 	public void forceResetPasswordCreateOnAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		forceResetPassword(admin, user);
 	}
 	
 	@Test
 	public void forceResetPasswordFailLocalUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), set(REMOTE1), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withIdentity(REMOTE1).build();
+		
 		failForceResetPassword(admin, user, new NoSuchUserException(
 				"foo is not a local user and has no password"));
 	}
@@ -1068,70 +1130,82 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordFailNotAdmin() throws Exception {
 		// shouldn't be able to reset own pwd, can use change pwd for that
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), set(REMOTE1), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		failForceResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void forceResetPasswordFailCreateOnRoot() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
+		
 		failForceResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Only root can reset root password"));
 	}
 	
 	@Test
 	public void forceResetPasswordFailCreateOnCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failForceResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Cannot reset password of user with create administrator role"));
 	}
 	
 	@Test
 	public void forceResetPasswordFailAdminOnAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.ADMIN).build();
+		
 		failForceResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Cannot reset password of user with administrator role"));
 	}
 	
 	@Test
 	public void forceResetPasswordFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("admin2"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("admin2"), Instant.now()))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("bar"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.withRole(Role.DEV_TOKEN).build();
+		
 		failForceResetPassword(admin, user, new DisabledUserException());
 	}
 	
@@ -1188,9 +1262,10 @@ public class AuthenticationPasswordLoginTest {
 		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		
@@ -1257,34 +1332,42 @@ public class AuthenticationPasswordLoginTest {
 	
 	@Test
 	public void forceResetAllPasswordsCreateAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		forceResetAllPasswords(admin);
 	}
 	
 	@Test
 	public void forceResetAllPasswordsRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
 		forceResetAllPasswords(admin);
 	}
 	
 	@Test
 	public void forceResetAllPasswordsFailStdAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
+		
 		failForceResetAllPasswords(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void forceResetAllPasswordsFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		failForceResetAllPasswords(admin, new DisabledUserException());
 	}
 	

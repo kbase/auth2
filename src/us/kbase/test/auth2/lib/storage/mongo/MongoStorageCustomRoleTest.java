@@ -16,9 +16,7 @@ import org.junit.Test;
 
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -33,8 +31,6 @@ import us.kbase.test.auth2.TestCommon;
 public class MongoStorageCustomRoleTest extends MongoStorageTester {
 
 	private static final Instant NOW = Instant.now();
-	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
 	
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
@@ -133,8 +129,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void addAndRemoveRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -152,8 +148,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void addRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -165,8 +161,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void removeRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -179,8 +175,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void removeNonExistentRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -193,8 +189,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void addAndRemoveSameRole() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -206,8 +202,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void noop() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		
@@ -228,8 +224,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 		 * progress and the role re-added to a user by another call before the role document is
 		 * deleted.
 		 */
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -269,8 +265,8 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void updateFailNoSuchRole() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		failUpdateRoles(new UserName("foo"), set("foo"), set("bar"),
 				new NoSuchRoleException("bar"));

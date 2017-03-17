@@ -7,23 +7,17 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -43,25 +37,24 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserTest {
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-	
 	@Test
 	public void getUser() throws Exception {
-		
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		getUser(user);
 	}
 	
 	@Test
 	public void getUserFailDisabled() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		
 		failGetUser(user, new DisabledUserException());
 	}
@@ -154,40 +147,44 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getOtherUserSameUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		getOtherUser(user, new UserName("admin"), true);
 	}
 	
 	@Test
 	public void getOtherUserDiffUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		getOtherUser(user, new UserName("foo"), false);
 	}
 	
 	@Test
 	public void getOtherUserFailDisabledSameUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
 		failGetOtherUser(user, new UserName("admin"), new NoSuchUserException("admin"));
 	}
 	
 	@Test
 	public void getOtherUserFailDisabledDiffUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
 		failGetOtherUser(user, new UserName("foo"), new NoSuchUserException("admin"));
 	}
@@ -291,26 +288,30 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getUserAsAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
 	public void getUserAsAdminSelf() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -318,53 +319,62 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getUserAsAdminCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
 	public void getUserAsAdminRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
 	public void getUserAsAdminFailNotAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		failGetUserAsAdmin(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void getUserAsAdminFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("baz", new UserName("whee"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("baz", new UserName("whee"), Instant.now())).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		failGetUserAsAdmin(admin, user, new DisabledUserException());
 	}
@@ -422,9 +432,10 @@ public class AuthenticationGetUserTest {
 		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", new UserName("admin"), Instant.now(), Instant.now());
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
 		

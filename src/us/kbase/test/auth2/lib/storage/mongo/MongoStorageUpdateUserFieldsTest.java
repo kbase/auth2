@@ -33,8 +33,6 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 
 	private static final Instant NOW = Instant.now();
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-	
 	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
 			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
 			new RemoteIdentityID("prov", "bar1"),
@@ -47,8 +45,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void updateNoop() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"), new UserUpdate());
 		final AuthUser au = storage.getUser(new UserName("user1"));
@@ -59,8 +58,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void updateDisplay() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withDisplayName(new DisplayName("whee")));
@@ -72,8 +72,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void updateEmail() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com")));
@@ -85,8 +86,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void updateBoth() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
 				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com"))
@@ -121,8 +123,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void lastLogin() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		final Instant d = NOW.plus(Duration.ofHours(2));
 		storage.setLastLogin(new UserName("user1"), d);
@@ -152,8 +155,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void addPolicyIDsEmpty() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
@@ -162,8 +166,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void addPolicyIDs() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
@@ -172,8 +177,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void addPolicyIDsOverwrite() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("bar"), new PolicyID("baz")));
@@ -183,8 +189,9 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void addPolicyIDsOverwriteEmpty() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, MTPID, NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
@@ -220,13 +227,19 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void removePolicyID() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, set(new PolicyID("foo"), new PolicyID("bar")),
-				NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com"))
+				.withPolicyID(new PolicyID("foo"))
+				.withPolicyID(new PolicyID("bar"))
+				.build();
 		storage.createUser(nu);
-		final NewUser nu2 = new NewUser(new UserName("user2"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE2, set(new PolicyID("foo"), new PolicyID("baz")),
-				NOW, null);
+		final NewUser nu2 = NewUser.getBuilder(
+				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
+				.withEmailAddress(new EmailAddress("e@g1.com"))
+				.withPolicyID(new PolicyID("foo"))
+				.withPolicyID(new PolicyID("baz"))
+				.build();
 		storage.createUser(nu2);
 		
 		storage.removePolicyID(new PolicyID("foo"));
@@ -239,13 +252,19 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void removeUnusedPolicyID() throws Exception {
-		final NewUser nu = new NewUser(new UserName("user1"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE1, set(new PolicyID("foo"), new PolicyID("bar")),
-				NOW, null);
+		final NewUser nu = NewUser.getBuilder(
+				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("e@g1.com"))
+				.withPolicyID(new PolicyID("foo"))
+				.withPolicyID(new PolicyID("bar"))
+				.build();
 		storage.createUser(nu);
-		final NewUser nu2 = new NewUser(new UserName("user2"), new EmailAddress("e@g1.com"),
-				new DisplayName("bar1"), REMOTE2, set(new PolicyID("foo"), new PolicyID("baz")),
-				NOW, null);
+		final NewUser nu2 = NewUser.getBuilder(
+				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
+				.withEmailAddress(new EmailAddress("e@g1.com"))
+				.withPolicyID(new PolicyID("foo"))
+				.withPolicyID(new PolicyID("baz"))
+				.build();
 		storage.createUser(nu2);
 		
 		storage.removePolicyID(new PolicyID("bat"));

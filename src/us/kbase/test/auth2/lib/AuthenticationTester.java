@@ -83,20 +83,20 @@ public class AuthenticationTester {
 	 * The references to the user's password hash and salt are saved so that tests can check
 	 * the data is cleared in the creation method.
 	 */
-	public static class LocalUserAnswerMatcher<T extends LocalUser> implements Answer<Void> {
+	public static class LocalUserAnswerMatcher implements Answer<Void> {
 
-		private final T user;
+		private final LocalUser user;
 		public byte[] savedSalt;
 		public byte[] savedHash;
 		
 		
-		public LocalUserAnswerMatcher(final T user) {
+		public LocalUserAnswerMatcher(final LocalUser user) {
 			this.user = user;
 		}
 		
 		@Override
 		public Void answer(final InvocationOnMock inv) throws Throwable {
-			final T user = inv.getArgument(0);
+			final LocalUser user = inv.getArgument(0);
 			savedSalt = user.getSalt();
 			savedHash = user.getPasswordHash();
 
