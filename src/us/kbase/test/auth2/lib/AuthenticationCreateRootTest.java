@@ -12,24 +12,18 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import static us.kbase.test.auth2.lib.AuthenticationTester.fromBase64;
 import static us.kbase.test.auth2.TestCommon.assertClear;
-import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Collections;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewRootUser;
 import us.kbase.auth2.lib.Password;
-import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
@@ -64,19 +58,17 @@ public class AuthenticationCreateRootTest {
 				"0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		final Instant create = Instant.ofEpochMilli(1000000006);
 		
+		final LocalUser exp = LocalUser.getBuilder(
+				UserName.ROOT, new DisplayName("root"), create, hash, salt).build();
 		
-		final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
-				create, hash, salt);
-		
-		final LocalUserAnswerMatcher<NewRootUser> matcher =
-				new LocalUserAnswerMatcher<NewRootUser>(exp);
+		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(exp);
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
 		when(clock.instant()).thenReturn(create);
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).createLocalUser(any(NewRootUser.class));
+		doAnswer(matcher).when(storage).createLocalUser(any(LocalUser.class));
 		
 		auth.createRoot(pwd);
 		
@@ -103,8 +95,9 @@ public class AuthenticationCreateRootTest {
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
 		final byte[] hash = fromBase64("0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		
-		final NewRootUser exp = new NewRootUser(EmailAddress.UNKNOWN, new DisplayName("root"),
-				Instant.ofEpochMilli(1000), hash, salt);
+		final LocalUser exp = LocalUser.getBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.ofEpochMilli(1000), hash, salt)
+				.build();
 		
 		final ChangePasswordAnswerMatcher matcher =
 				new ChangePasswordAnswerMatcher(UserName.ROOT, hash, salt, false);
@@ -119,8 +112,9 @@ public class AuthenticationCreateRootTest {
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
 		
-		when(storage.getUser(UserName.ROOT)).thenReturn(new NewRootUser(EmailAddress.UNKNOWN,
-				new DisplayName("root"), Instant.now(), new byte[10], new byte[8]));
+		when(storage.getUser(UserName.ROOT)).thenReturn(LocalUser.getBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.now(), new byte[10], new byte[8])
+				.build());
 		
 		auth.createRoot(pwd);
 		
@@ -149,7 +143,7 @@ public class AuthenticationCreateRootTest {
 		when(clock.instant()).thenReturn(Instant.now());
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(any(NewRootUser.class));
+				.when(storage).createLocalUser(any(LocalUser.class));
 		
 		// ignore the change password call, tested elsewhere
 		when(storage.getUser(UserName.ROOT)).thenThrow(
@@ -186,17 +180,15 @@ public class AuthenticationCreateRootTest {
 		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(any(NewRootUser.class));
+				.when(storage).createLocalUser(any(LocalUser.class));
 		
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
 		
-		final LocalUser disabled = new LocalUser(UserName.ROOT, EmailAddress.UNKNOWN,
-				new DisplayName("root"), set(Role.ROOT), Collections.emptySet(),
-				Collections.emptySet(),
-				Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", UserName.ROOT, Instant.now()),
-				new byte[10], new byte[8], false, null);
+		final LocalUser disabled = LocalUser.getBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.now(), new byte[10], new byte[8])
+				.withUserDisabledState(new UserDisabledState("foo", UserName.ROOT, Instant.now()))
+				.build();
 		
 		when(storage.getUser(UserName.ROOT)).thenReturn(disabled);
 		

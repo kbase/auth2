@@ -291,8 +291,8 @@ public class Authentication {
 			} catch (IllegalParameterException | MissingParameterException e) {
 				throw new RuntimeException("This is impossible", e);
 			}
-			final NewRootUser root = new NewRootUser(
-					EmailAddress.UNKNOWN, dn, clock.instant(), passwordHash, salt);
+			final LocalUser root = LocalUser.getBuilder(
+					UserName.ROOT, dn, clock.instant(), passwordHash, salt).build();
 			try {
 				storage.createLocalUser(root);
 				// only way to avoid a race condition. Checking existence before creating user
@@ -306,6 +306,9 @@ public class Authentication {
 				} catch (NoSuchUserException nsue) {
 					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
 				}
+			} catch (NoSuchRoleException e) {
+				//TODO NOW TEST
+				throw new RuntimeException("didn't supply any roles", e);
 			}
 		} finally {
 			pwd.clear();
@@ -351,9 +354,13 @@ public class Authentication {
 			salt = randGen.generateSalt();
 			pwd_copy = pwd.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
-			final NewLocalUser lu = new NewLocalUser(userName, email, displayName,
-					Collections.emptySet(), clock.instant(), passwordHash, salt, true);
+			final LocalUser lu = LocalUser.getBuilder(
+					userName, displayName, clock.instant(), passwordHash, salt)
+					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu);
+		} catch (NoSuchRoleException e) {
+			//TODO NOW TEST
+			throw new RuntimeException("didn't supply any roles", e);
 		} catch (Throwable t) {
 			if (pwd != null) {
 				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
@@ -1444,8 +1451,16 @@ public class Authentication {
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		final Instant now = clock.instant();
-		storage.createUser(new NewUser(
-				userName, email, displayName, match.get(), policyIDs, now, Optional.of(now)));
+		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
+				.withEmailAddress(email).withLastLogin(now);
+		for (final PolicyID pid: policyIDs) {
+			b.withPolicyID(pid);
+		}
+		try {
+			storage.createUser(b.build());
+		} catch (NoSuchRoleException e) {
+			throw new RuntimeException("Didn't supply any roles", e);
+		}
 		if (linkAll) {
 			ids.remove(match);
 			filterLinkCandidates(ids);
@@ -2005,8 +2020,11 @@ public class Authentication {
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
-		storage.createUser(new NewUser(
-				userName, email, dn, ri.withID(), Collections.emptySet(),
-				clock.instant(), Optional.absent()));
+		try {
+			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), ri.withID())
+					.withEmailAddress(email).build());
+		} catch (NoSuchRoleException e) {
+			throw new RuntimeException("didn't supply any roles", e);
+		}
 	}
 }

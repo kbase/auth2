@@ -29,23 +29,22 @@ public class NewUser extends AuthUser {
 	 * date (e.g. the time this constructor is called) it will be silently modified to match
 	 * the creation date.
 	 */
-	public NewUser(
+	private NewUser(
+			//TODO NOW move args around
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
 			final RemoteIdentityWithLocalID remoteIdentity,
+			final Set<Role> roles,
+			final Set<String> customRoles,
 			final Set<PolicyID> policyIDs,
 			final Instant created,
-			final Optional<Instant> lastLogin) {
-		super(userName, email, displayName, set(remoteIdentity), null, null, policyIDs,
-				created, lastLogin, new UserDisabledState());
+			final Optional<Instant> lastLogin,
+			final UserDisabledState disabledState) {
+		super(userName, email, displayName, new HashSet<>(Arrays.asList(remoteIdentity)), roles,
+				customRoles, policyIDs, created, lastLogin, disabledState);
 	}
 
-	private static Set<RemoteIdentityWithLocalID> set(final RemoteIdentityWithLocalID id) {
-		nonNull(id, "remoteIdentity");
-		return new HashSet<>(Arrays.asList(id));
-	}
-	
 	public RemoteIdentityWithLocalID getIdentity() {
 		if (getIdentities().size() != 1) {
 			// this is untestable without some nutty reflection stuff, look into it later
@@ -54,4 +53,43 @@ public class NewUser extends AuthUser {
 		}
 		return getIdentities().iterator().next();
 	}
+	
+	public static Builder getBuilder(
+			final UserName userName,
+			final DisplayName displayName,
+			final Instant created,
+			final RemoteIdentityWithLocalID remoteIdentity) {
+		//TODO NOW JAVADOC
+		return new Builder(userName, displayName, created, remoteIdentity);
+	}
+	
+	public static class Builder extends GeneralBuilder<Builder> {
+
+		private final RemoteIdentityWithLocalID remoteIdentity;
+		
+		private Builder(
+				final UserName userName,
+				final DisplayName displayName,
+				final Instant created,
+				final RemoteIdentityWithLocalID remoteIdentity) {
+			//TODO NOW JAVADOC
+			super(userName, displayName, created);
+			if (UserName.ROOT.equals(userName)) {
+				throw new IllegalArgumentException("Standard users cannot be root");
+			}
+			nonNull(remoteIdentity, "remoteIdentity");
+			this.remoteIdentity = remoteIdentity;
+		}
+		
+		Builder getThis() {
+			return this;
+		}
+		
+		public NewUser build() {
+			return new NewUser(userName, email, displayName, remoteIdentity, roles, customRoles,
+					policyIDs, created, lastLogin, disabledState);
+		}
+		
+	}
+	
 }

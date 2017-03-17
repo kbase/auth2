@@ -13,7 +13,6 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -32,7 +31,6 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CollectingExternalConfig;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -71,8 +69,6 @@ public class AuthenticationTokenTest {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
 	}
-	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
 	
 	@Test
 	public void getToken() throws Exception {
@@ -183,42 +179,53 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void getTokensUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
+		
 		getTokensUser(admin);
 	}
 	
 	@Test
 	public void getTokensUserFailNonAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
+		
 		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void getTokensUserFailCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void getTokensUserFailRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
 		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void getTokensUserFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
+		
 		failGetTokensUser(admin, new DisabledUserException());
 	}
 	
@@ -449,47 +456,53 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeTokenAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 
 		revokeTokenAdmin(admin);
 	}
 	
 	@Test
 	public void revokeTokenAdminFailStdUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
+		
 		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeTokenAdminFailCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeTokenAdminFailRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
 		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeTokenAdminFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
+		
 		failRevokeTokenAdmin(admin, new DisabledUserException());
 	}
 	
@@ -552,9 +565,10 @@ public class AuthenticationTokenTest {
 		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
 		
@@ -671,47 +685,53 @@ public class AuthenticationTokenTest {
 
 	@Test
 	public void revokeAllTokensAdminAll() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		revokeAllTokensAdminAll(admin);
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailStdUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
+		
 		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
 		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
+		
 		failRevokeAllTokensAdminAll(admin, new DisabledUserException());
 	}
 	
@@ -805,47 +825,53 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void revokeAllTokensAdminUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		revokeAllTokensAdminUser(admin);
 	}
 	
 	@Test
 	public void revokeAllTokensAdminUserFailStdUser() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
+		
 		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminUserFailCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
+		
 		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminUserFailRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
 		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminUserFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
-
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
+		
 		failRevokeAllTokensAdminUser(admin, new DisabledUserException());
 	}
 	
@@ -943,18 +969,20 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createDevToken() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
 	}
 	
 	@Test
 	public void createDevTokenAltLifetime() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
 		lifetimes.put(TokenLifetimeType.DEV, 42 * 24 * 3600 * 1000L);
@@ -963,36 +991,40 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createDevTokenWithServRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
 	}
 	
 	@Test
 	public void createServToken() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
 	}
 	
 	@Test
 	public void createServTokenWithAdminRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
 	}
 	
 	@Test
 	public void createServTokenWithAltLifetime() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
 		lifetimes.put(TokenLifetimeType.SERV, 24 * 24 * 3600 * 1000L);
@@ -1001,19 +1033,22 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailDisabledUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
 		failCreateToken(user, false, new DisabledUserException());
 	}
 	
 	@Test
 	public void createTokenFailNoDevRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
 		failCreateToken(user, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"User foo is not authorized to create this token type."));
@@ -1021,10 +1056,11 @@ public class AuthenticationTokenTest {
 	
 	@Test
 	public void createTokenFailNoServRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(),
-				set(Role.CREATE_ADMIN, Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN)
+				.withRole(Role.CREATE_ADMIN).build();
 		
 		failCreateToken(user, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"User foo is not authorized to create this token type."));
@@ -1076,18 +1112,13 @@ public class AuthenticationTokenTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
-		
 		final IncomingToken t = new IncomingToken("foobar");
 		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
-				user.getUserName(), Instant.now(), Instant.now());
+				new UserName("foo"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
 		
-		when(storage.getUser(user.getUserName())).thenThrow(new NoSuchUserException("foo"));
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
 		failCreateToken(auth, t, new TokenName("baz"), false, new RuntimeException(
 				"There seems to be an error in the storage system. Token was valid, but no user"));

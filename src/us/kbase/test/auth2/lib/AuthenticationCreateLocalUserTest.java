@@ -10,18 +10,14 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
-import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.AuthUser;
@@ -29,9 +25,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalUser;
-import us.kbase.auth2.lib.NewLocalUser;
 import us.kbase.auth2.lib.Password;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -61,43 +55,42 @@ public class AuthenticationCreateLocalUserTest {
 	
 	private final static Instant NOW = Instant.now();
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
 	@Test
 	public void createWithAdminUser() throws Exception {
-		final Instant now = Instant.now();
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
-		
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
+				
 		create(admin);
 	}
 	
 	@Test
 	public void createWithCreateAdminUser() throws Exception {
-		final Instant now = Instant.now();
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
 		create(admin);
 	}
 	
 	@Test
 	public void createWithRootUser() throws Exception {
-		final Instant now = Instant.now();
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com")).build();
 		
 		create(admin);
 	}
 	
 	@Test
 	public void createFailWithoutAdminUser() throws Exception {
-		final Instant now = Instant.now();
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, now, Optional.of(now), new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN).build();
+		
 		createFail(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
@@ -136,12 +129,12 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(clock.instant()).thenReturn(create);
 		
-		final NewLocalUser expected = new NewLocalUser(new UserName("foo"),
-				new EmailAddress("f@g.com"), new DisplayName("bar"), MTPID,
-				create, hash, salt, true);
+		final LocalUser expected = LocalUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), create, hash, salt)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withForceReset(true).build();
 		
-		final LocalUserAnswerMatcher<NewLocalUser> matcher =
-				new LocalUserAnswerMatcher<>(expected);
+		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(expected);
 		
 		doAnswer(matcher).when(storage).createLocalUser(any(LocalUser.class));
 		
@@ -176,10 +169,10 @@ public class AuthenticationCreateLocalUserTest {
 				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		
@@ -210,10 +203,10 @@ public class AuthenticationCreateLocalUserTest {
 				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		
@@ -235,10 +228,13 @@ public class AuthenticationCreateLocalUserTest {
 				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
 						new UserName("admin"), NOW, NOW));
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("disabled", new UserName("foo"), Instant.now()));
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.SERV_TOKEN)
+				.withUserDisabledState(
+						new UserDisabledState("disabled", new UserName("foo"), Instant.now()))
+				.build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		

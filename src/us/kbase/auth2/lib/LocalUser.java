@@ -1,7 +1,10 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -18,8 +21,6 @@ public class LocalUser extends AuthUser {
 	private final boolean forceReset;
 	private final Optional<Instant> lastReset;
 	
-	//TODO ZLATER CODE should really consider a builder for this, although the constructor is only used in storage implementations and tests
-	
 	/** Create a new local user.
 	 * @param userName the name of the user.
 	 * @param email the email address of the user.
@@ -35,7 +36,8 @@ public class LocalUser extends AuthUser {
 	 * @param forceReset whether the user is required to reset their password on the next login.
 	 * @param lastReset the date of the last password reset.
 	 */
-	public LocalUser(
+	private LocalUser(
+			//TODO NOW move args around
 			final UserName userName,
 			final EmailAddress email,
 			final DisplayName displayName,
@@ -49,19 +51,12 @@ public class LocalUser extends AuthUser {
 			final byte[] salt,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
-		super(userName, email, displayName, null, roles, customRoles, policyIDs, created,
-				lastLogin, disabledState);
-		// what's the right # here? Have to rely on user to some extent
-		if (passwordHash == null || passwordHash.length < 10) {
-			throw new IllegalArgumentException("passwordHash missing or too small");
-		}
-		if (salt == null || salt.length < 2) {
-			throw new IllegalArgumentException("salt missing or too small");
-		}
+		super(userName, email, displayName, Collections.emptySet(), roles, customRoles, policyIDs,
+				created, lastLogin, disabledState);
 		this.passwordHash = passwordHash;
 		this.salt = salt;
 		this.forceReset = forceReset;
-		this.lastReset = lastReset == null ? Optional.absent() : lastReset;
+		this.lastReset = lastReset;
 	}
 
 	/** Get the salted hash of the user's password.
@@ -132,5 +127,67 @@ public class LocalUser extends AuthUser {
 			return false;
 		}
 		return true;
+	}
+	
+	public static Builder getBuilder(
+
+			//TODO NOW JAVADOC
+			final UserName userName,
+			final DisplayName displayName,
+			final Instant creationDate,
+			final byte[] passwordHash,
+			final byte[] salt) {
+		return new Builder(userName, displayName, creationDate, passwordHash, salt);
+		
+	}
+	
+	public static class Builder extends GeneralBuilder<Builder> {
+		//TODO NOW JAVADOC
+		
+		private final byte[] passwordHash;
+		private final byte[] salt;
+		private boolean forceReset = false;
+		private Optional<Instant> lastReset = Optional.absent();
+
+		//TODO NOW note passwordhash & salt aren't copied
+		private Builder(
+				final UserName userName,
+				final DisplayName displayName,
+				final Instant creationDate,
+				final byte[] passwordHash,
+				final byte[] salt) {
+			super(userName, displayName, creationDate);
+			// what's the right # here? Have to rely on user to some extent
+			if (passwordHash == null || passwordHash.length < 10) {
+				throw new IllegalArgumentException("passwordHash missing or too small");
+			}
+			if (salt == null || salt.length < 2) {
+				throw new IllegalArgumentException("salt missing or too small");
+			}
+			this.passwordHash = passwordHash;
+			this.salt = salt;
+		}
+
+		@Override
+		Builder getThis() {
+			return this;
+		}
+		
+		public Builder withForceReset(final boolean forceReset) {
+			this.forceReset = forceReset;
+			return this;
+		}
+		
+		public Builder withLastReset(final Instant lastReset) {
+			nonNull(lastReset, "lastReset");
+			this.lastReset = Optional.of(lastReset);
+			return this;
+		}
+		
+		public LocalUser build() {
+			return new LocalUser(userName, email, displayName, roles, customRoles, policyIDs,
+					created, lastLogin, disabledState, passwordHash, salt, forceReset, lastReset);
+		}
+		
 	}
 }

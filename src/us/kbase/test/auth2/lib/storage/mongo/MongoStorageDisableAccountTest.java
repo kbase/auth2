@@ -6,8 +6,6 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -15,9 +13,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.NewUser;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -28,8 +24,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-	
 	private static final Instant NOW = Instant.now();
 
 	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
@@ -39,8 +33,8 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	
 	@Test
 	public void disableAccountTwice() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -110,8 +104,8 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	
 	@Test
 	public void enableAccountTwice() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -168,8 +162,8 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 
 	@Test
 	public void disableEnableDisable() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
