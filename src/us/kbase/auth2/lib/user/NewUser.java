@@ -5,6 +5,7 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -24,17 +25,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
  */
 public class NewUser extends AuthUser {
 	
-	/** Create a new user.
-	 * @param userName the name of the user.
-	 * @param displayName the display name of the user.
-	 * @param created the date the user was created.
-	 * @param remoteIdentity the 3rd party identity associated with this user.
-	 * @param email the email address of the user.
-	 * @param policyIDs the policy IDs associated with this user.
-	 * @param lastLogin the date of the user's last login. If this time is before the created
-	 * date (e.g. the time this constructor is called) it will be silently modified to match
-	 * the creation date.
-	 */
 	private NewUser(
 			final UserName userName,
 			final DisplayName displayName,
@@ -43,7 +33,7 @@ public class NewUser extends AuthUser {
 			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Set<PolicyID> policyIDs,
+			final Map<PolicyID, Instant> policyIDs,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
 		super(userName, displayName, created, new HashSet<>(Arrays.asList(remoteIdentity)), email,

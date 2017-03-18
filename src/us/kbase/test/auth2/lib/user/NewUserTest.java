@@ -50,7 +50,7 @@ public class NewUserTest {
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
 		assertThat("incorrect identity", u.getIdentity(), is(REMOTE));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));

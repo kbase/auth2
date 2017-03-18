@@ -5,6 +5,7 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -28,21 +29,6 @@ public class LocalUser extends AuthUser {
 	private final boolean forceReset;
 	private final Optional<Instant> lastReset;
 	
-	/** Create a new local user.
-	 * @param userName the name of the user.
-	 * @param displayName the display name of the user.
-	 * @param created the date the user account was created.
-	 * @param email the email address of the user.
-	 * @param roles any roles the user possesses.
-	 * @param customRoles any custom roles the user possesses.
-	 * @param policyIDs the set of policy IDs associated with the user.
-	 * @param lastLogin the date of the user's last login.
-	 * @param disabledState whether the user account is disabled.
-	 * @param passwordHash a salted, hashed password for the user.
-	 * @param salt the salt for the hashed password. 
-	 * @param forceReset whether the user is required to reset their password on the next login.
-	 * @param lastReset the date of the last password reset.
-	 */
 	private LocalUser(
 			final UserName userName,
 			final DisplayName displayName,
@@ -50,7 +36,7 @@ public class LocalUser extends AuthUser {
 			final EmailAddress email,
 			final Set<Role> roles,
 			final Set<String> customRoles,
-			final Set<PolicyID> policyIDs,
+			final Map<PolicyID, Instant> policyIDs,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
 			final byte[] passwordHash,

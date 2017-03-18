@@ -11,7 +11,10 @@ accounts:</p>
 {{#login}}
 Username: {{username}} {{#disabled}}DISABLED{{/disabled}} {{#adminonly}}***Currently only admin accounts can log in***{{/adminonly}}<br/>
 Provider usernames: {{prov_usernames}}<br/>
-Policy IDs: {{policy_ids}}<br/>
+Policy IDs:</br>
+{{#policy_ids}}
+{{id}}: {{agreed_on}}</br>
+{{/policy_ids}}
 {{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>

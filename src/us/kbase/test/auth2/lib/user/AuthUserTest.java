@@ -13,6 +13,7 @@ import java.util.Collections;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
@@ -56,7 +57,7 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -91,7 +92,7 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(),
 				is(Optional.of("reason")));
@@ -114,8 +115,8 @@ public class AuthUserTest {
 				.withRole(Role.SERV_TOKEN)
 				.withCustomRole("foo1")
 				.withCustomRole("bar1")
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(30000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(40000))
 				.withLastLogin(ll.get())
 				.withUserDisabledState(new UserDisabledState(new UserName("whee1"), d))
 				.build();
@@ -131,8 +132,9 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(ImmutableMap.of(
+				new PolicyID("bar"), Instant.ofEpochMilli(40000),
+				new PolicyID("foo"), Instant.ofEpochMilli(30000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
@@ -165,7 +167,7 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -187,8 +189,8 @@ public class AuthUserTest {
 				.withRole(Role.SERV_TOKEN)
 				.withCustomRole("foo1")
 				.withCustomRole("bar1")
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(30000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(40000))
 				.withLastLogin(ll.get())
 				.withUserDisabledState(new UserDisabledState(new UserName("whee1"), d))
 				.build();
@@ -211,8 +213,9 @@ public class AuthUserTest {
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
-		assertThat("incorrect policy IDs", u.getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(ImmutableMap.of(
+				new PolicyID("bar"), Instant.ofEpochMilli(40000),
+				new PolicyID("foo"), Instant.ofEpochMilli(30000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
@@ -298,32 +301,35 @@ public class AuthUserTest {
 		final Role role = Role.DEV_TOKEN;
 		final String crole = "foobar";
 		final PolicyID pid = new PolicyID("foo");
+		final Instant pidt = Instant.now();
 		final Instant created = Instant.now();
 		final Instant ll = Instant.now();
 		final UserDisabledState ds = new UserDisabledState();
-		failBuild(null, dn, created, email, id, role, crole, pid, ll, ds,
+		failBuild(null, dn, created, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("userName"));
-		failBuild(un, null, created, email, id, role, crole, pid, ll, ds,
+		failBuild(un, null, created, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("displayName"));
-		failBuild(un, dn, null, email, id, role, crole, pid, ll, ds,
+		failBuild(un, dn, null, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("created"));
-		failBuild(un, dn, created, null, id, role, crole, pid, ll, ds,
+		failBuild(un, dn, created, null, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("email"));
-		failBuild(un, dn, created, email, null, role, crole, pid, ll, ds,
+		failBuild(un, dn, created, email, null, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("remoteIdentity"));
-		failBuild(un, dn, created, email, id, null, crole, pid, ll, ds,
+		failBuild(un, dn, created, email, id, null, crole, pid, pidt, ll, ds,
 				new NullPointerException("role"));
-		failBuild(un, dn, created, email, id, role, null, pid, ll, ds,
+		failBuild(un, dn, created, email, id, role, null, pid, pidt, ll, ds,
 				new NullPointerException("customRole"));
-		failBuild(un, dn, created, email, id, role, crole, null, ll, ds,
+		failBuild(un, dn, created, email, id, role, crole, null, pidt, ll, ds,
 				new NullPointerException("policyID"));
-		failBuild(un, dn, created, email, id, role, crole, pid, null, ds,
+		failBuild(un, dn, created, email, id, role, crole, pid, null, ll, ds,
+				new NullPointerException("agreedOn"));
+		failBuild(un, dn, created, email, id, role, crole, pid, pidt, null, ds,
 				new NullPointerException("lastLogin"));
-		failBuild(un, dn, ll, email, id, role, crole, pid, created, null,
+		failBuild(un, dn, ll, email, id, role, crole, pid, pidt, created, null,
 				new NullPointerException("disabledState"));
-		failBuild(UserName.ROOT, dn, created, email, id, Role.ROOT, crole, pid, ll, ds,
+		failBuild(UserName.ROOT, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
 				new IllegalStateException("Root user cannot have identities"));
-		failBuild(un, dn, created, email, id, Role.ROOT, crole, pid, ll, ds,
+		failBuild(un, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
 				new IllegalStateException("Non-root username with root role"));
 	}
 	
@@ -351,6 +357,7 @@ public class AuthUserTest {
 			final Role role,
 			final String customRole,
 			final PolicyID policyID,
+			final Instant policyTime,
 			final Instant lastLogin,
 			final UserDisabledState disabledState,
 			final Exception e) {
@@ -360,7 +367,7 @@ public class AuthUserTest {
 					.withIdentity(identity)
 					.withRole(role)
 					.withCustomRole(customRole)
-					.withPolicyID(policyID)
+					.withPolicyID(policyID, policyTime)
 					.withLastLogin(lastLogin)
 					.withUserDisabledState(disabledState).build();
 			fail("expected exception");
@@ -433,10 +440,10 @@ public class AuthUserTest {
 	public void immutablePolicyIDs() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("whoo"), new DisplayName("bar3"), NOW)
-				.withPolicyID(new PolicyID("foo")).build();
+				.withPolicyID(new PolicyID("foo"), Instant.now()).build();
 		
 		try {
-			u.getPolicyIDs().add(new PolicyID("bar"));
+			u.getPolicyIDs().put(new PolicyID("bar"), Instant.now());
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passed
