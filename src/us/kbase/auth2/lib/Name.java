@@ -100,4 +100,13 @@ public class Name {
 		}
 		return true;
 	}
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append(getClass().getSimpleName() + " [name=");
+		builder.append(name);
+		builder.append("]");
+		return builder.toString();
+	}
 }

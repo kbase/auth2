@@ -4,7 +4,10 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -36,34 +39,20 @@ public class AuthUser {
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
 	private final Set<RemoteIdentity> identities;
-	private final Set<PolicyID> policyIDs;
+	private final Map<PolicyID, Instant> policyIDs;
 	private final Instant created;
 	private final Optional<Instant> lastLogin;
 	private final UserDisabledState disabledState;
 	
-	/** Create a new user.
-	 * @param userName the name of the user.
-	 * @param displayName the display name of the user.
-	 * @param created the date the user account was created.
-	 * @param identities any 3rd party identities associated with the user. Empty or null for local
-	 * users.
-	 * @param email the email address of the user.
-	 * @param roles any roles the user possesses.
-	 * @param customRoles any custom roles the user possesses.
-	 * @param policyIDs the policy IDs associated with the user.
-	 * @param lastLogin the date of the user's last login. If this time is before the created
-	 * date it will be silently modified to match the creation date.
-	 * @param disabledState whether the user account is disabled.
-	 */
 	AuthUser(
 			final UserName userName,
 			final DisplayName displayName,
 			final Instant created,
-			Set<RemoteIdentity> identities,
+			final Set<RemoteIdentity> identities,
 			final EmailAddress email,
-			Set<Role> roles,
-			Set<String> customRoles,
-			Set<PolicyID> policyIDs,
+			final Set<Role> roles,
+			final Set<String> customRoles,
+			final Map<PolicyID, Instant> policyIDs,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
 		this.userName = userName;
@@ -72,7 +61,7 @@ public class AuthUser {
 		this.identities = Collections.unmodifiableSet(identities);
 		this.roles = Collections.unmodifiableSet(roles);
 		this.customRoles = Collections.unmodifiableSet(customRoles);
-		this.policyIDs = Collections.unmodifiableSet(policyIDs);
+		this.policyIDs = Collections.unmodifiableMap(policyIDs);
 		this.canGrantRoles = Collections.unmodifiableSet(getRoles().stream()
 				.flatMap(r -> r.canGrant().stream()).collect(Collectors.toSet()));
 		this.created = created;
@@ -152,9 +141,9 @@ public class AuthUser {
 	}
 	
 	/** Get the set of policyIDs associated with this user.
-	 * @return the policy IDs.
+	 * @return the policy IDs mapped to the time the user agreed to the policy.
 	 */
-	public Set<PolicyID> getPolicyIDs() {
+	public Map<PolicyID, Instant> getPolicyIDs() {
 		return policyIDs;
 	}
 	
@@ -359,8 +348,8 @@ public class AuthUser {
 		for (final String cr: user.getCustomRoles()) {
 			b.withCustomRole(cr);
 		}
-		for (final PolicyID pid: user.getPolicyIDs()) {
-			b.withPolicyID(pid);
+		for (final Entry<PolicyID, Instant> pid: user.getPolicyIDs().entrySet()) {
+			b.withPolicyID(pid.getKey(), pid.getValue());
 		}
 		return b;
 	}
@@ -423,7 +412,7 @@ public class AuthUser {
 		EmailAddress email = EmailAddress.UNKNOWN;
 		final Set<Role> roles = new HashSet<>();
 		final Set<String> customRoles = new HashSet<>();
-		final Set<PolicyID> policyIDs = new HashSet<>();
+		final Map<PolicyID, Instant> policyIDs = new HashMap<>();
 		Optional<Instant> lastLogin = Optional.absent();
 		UserDisabledState disabledState = new UserDisabledState();
 		
@@ -485,11 +474,13 @@ public class AuthUser {
 		
 		/** Add a policy ID to the user.
 		 * @param policyID the policy ID.
+		 * @param agreedOn the time at which the policy was agreed to by the user.
 		 * @return this builder.
 		 */
-		public T withPolicyID(final PolicyID policyID) {
+		public T withPolicyID(final PolicyID policyID, final Instant agreedOn) {
 			nonNull(policyID, "policyID");
-			policyIDs.add(policyID);
+			nonNull(agreedOn, "agreedOn");
+			policyIDs.put(policyID, agreedOn);
 			return getThis();
 		}
 		

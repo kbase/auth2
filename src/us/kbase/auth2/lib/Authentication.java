@@ -1445,7 +1445,7 @@ public class Authentication {
 		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
 				.withEmailAddress(email).withLastLogin(now);
 		for (final PolicyID pid: policyIDs) {
-			b.withPolicyID(pid);
+			b.withPolicyID(pid, clock.instant());
 		}
 		try {
 			storage.createUser(b.build());

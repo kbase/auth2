@@ -13,6 +13,7 @@ import java.util.Collections;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
@@ -80,7 +81,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy ids", lu.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy ids", lu.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", lu.getRoles(), is(Collections.emptySet()));
@@ -101,7 +102,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("foo").withCustomRole("bar")
-				.withPolicyID(new PolicyID("pfoo")).withPolicyID(new PolicyID("pbar"))
+				.withPolicyID(new PolicyID("pfoo"), Instant.ofEpochMilli(4000))
+				.withPolicyID(new PolicyID("pbar"), Instant.ofEpochMilli(6000))
 				.withLastLogin(Instant.ofEpochMilli(10000))
 				.withUserDisabledState(new UserDisabledState("reason", new UserName("bap"),
 						Instant.ofEpochMilli(20000)))
@@ -137,7 +139,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				is(set(Role.DEV_TOKEN, Role.SERV_TOKEN)));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect policy ids", lu.getPolicyIDs(),
-				is(set(new PolicyID("pfoo"), new PolicyID("pbar"))));
+				is(ImmutableMap.of(new PolicyID("pfoo"), Instant.ofEpochMilli(4000),
+						new PolicyID("pbar"), Instant.ofEpochMilli(6000))));
 		assertThat("incorrect last login", lu.getLastLogin(),
 				is(Optional.of(Instant.ofEpochMilli(10000))));
 		assertThat("incorrect disabled reason", lu.getReasonForDisabled(),
@@ -235,7 +238,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final LocalUser nlu = LocalUser.getBuilder(
 				new UserName("baz"), new DisplayName("bang"), create, pwd, salt)
 				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withPolicyID(new PolicyID("baz"))
+				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(5000))
 				.withForceReset(true)
 				.build();
 				
@@ -254,7 +257,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy ids", u.getPolicyIDs(), is(set(new PolicyID("baz"))));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(ImmutableMap.of(
+				new PolicyID("baz"), Instant.ofEpochMilli(5000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -282,7 +286,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
-		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -305,7 +309,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withRole(Role.CREATE_ADMIN)
 				.withRole(Role.DEV_TOKEN)
 				.withCustomRole("crfoo").withCustomRole("crbar")
-				.withPolicyID(new PolicyID("foo")).withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000))
 				.withLastLogin(ll)
 				.withUserDisabledState(new UserDisabledState(
 						"reason", new UserName("baz"), Instant.ofEpochMilli(30000)))
@@ -326,8 +331,9 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(set(Role.ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
-		assertThat("incorrect policy ids", u.getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(ImmutableMap.of(
+				new PolicyID("bar"), Instant.ofEpochMilli(70000),
+				new PolicyID("foo"), Instant.ofEpochMilli(60000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.of(ll)));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(),
 				is(Optional.of("reason")));
@@ -443,7 +449,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
-		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
@@ -465,7 +471,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g.com"))
 				.withRole(Role.CREATE_ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("crfoo").withCustomRole("crbar")
-				.withPolicyID(new PolicyID("foo")).withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000))
 				.withLastLogin(ll)
 				.withUserDisabledState(new UserDisabledState(
 						"reason", new UserName("baz"), Instant.ofEpochMilli(30000)))
@@ -488,8 +495,9 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(set(Role.ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE2)));
-		assertThat("incorrect policy ids", u.getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+		assertThat("incorrect policy ids", u.getPolicyIDs(),is(ImmutableMap.of(
+				new PolicyID("bar"), Instant.ofEpochMilli(70000),
+				new PolicyID("foo"), Instant.ofEpochMilli(60000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(Optional.of(ll)));
 		assertThat("incorrect disabled reason", u.getReasonForDisabled(),
 				is(Optional.of("reason")));

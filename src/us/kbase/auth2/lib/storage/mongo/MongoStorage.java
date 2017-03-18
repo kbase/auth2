@@ -305,8 +305,6 @@ public class MongoStorage implements AuthStorage {
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		final Collection<ObjectId> customRoles = getCustomRoleIds(local.getCustomRoles()).values();
-		final Set<String> policyIDs = local.getPolicyIDs().stream().map(id -> id.getName())
-				.collect(Collectors.toSet());
 		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = local.getEnableToggleDate();
 		final Optional<String> reason = local.getReasonForDisabled();
@@ -321,7 +319,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, customRoles)
 				.append(Fields.USER_IDENTITIES, local.getIdentities()) // better be empty
-				.append(Fields.USER_POLICY_IDS, policyIDs)
+				.append(Fields.USER_POLICY_IDS, toDocument(local.getPolicyIDs()))
 				.append(Fields.USER_CREATED, Date.from(local.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, local.getLastLogin().isPresent() ?
 						Date.from(local.getLastLogin().get()) : null)
@@ -397,9 +395,10 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException {
 		try {
 			@SuppressWarnings("unchecked")
-			final List<String> str = (List<String>) user.get(Fields.USER_POLICY_IDS);
-			for (final String id: str) {
-				b.withPolicyID(new PolicyID(id));
+			final List<Document> policies = (List<Document>) user.get(Fields.USER_POLICY_IDS);
+			for (final Document policy: policies) {
+				b.withPolicyID(new PolicyID(policy.getString(Fields.POLICY_ID)),
+						policy.getDate(Fields.POLICY_AGREED_ON).toInstant());
 			}
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
@@ -519,8 +518,6 @@ public class MongoStorage implements AuthStorage {
 		final Optional<UserName> admin = newUser.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = newUser.getEnableToggleDate();
 		final Optional<String> reason = newUser.getReasonForDisabled();
-		final Set<String> policyIDs = newUser.getPolicyIDs().stream().map(id -> id.getName())
-				.collect(Collectors.toSet());
 		final Set<String> roles = newUser.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		final Collection<ObjectId> customRoles = getCustomRoleIds(
@@ -535,7 +532,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_ROLES, roles)
 				.append(Fields.USER_CUSTOM_ROLES, customRoles)
 				.append(Fields.USER_IDENTITIES, Arrays.asList(toDocument(newUser.getIdentity())))
-				.append(Fields.USER_POLICY_IDS, policyIDs)
+				.append(Fields.USER_POLICY_IDS, toDocument(newUser.getPolicyIDs()))
 				.append(Fields.USER_CREATED, Date.from(newUser.getCreated()))
 				.append(Fields.USER_LAST_LOGIN, newUser.getLastLogin().isPresent() ?
 						Date.from(newUser.getLastLogin().get()) : null)
@@ -551,7 +548,8 @@ public class MongoStorage implements AuthStorage {
 			if (dk.isDuplicate() && COL_USERS.equals(dk.getCollection().get())) {
 				if ((Fields.USER_NAME + "_1").equals(dk.getIndex().get())) {
 					throw new UserExistsException(newUser.getUserName().getName());
-				} else if (dk.getIndex().get().startsWith(Fields.USER_IDENTITIES + ".")) {
+				} else if (dk.getIndex().get().startsWith(Fields.USER_IDENTITIES + 
+						Fields.FIELD_SEP)) {
 					// either the provider / prov id combo or the local identity uuid are already
 					// in the db
 					final RemoteIdentityID ri = newUser.getIdentity().getRemoteID();
@@ -563,6 +561,14 @@ public class MongoStorage implements AuthStorage {
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
+	}
+
+	private List<Document> toDocument(final Map<PolicyID, Instant> policyIDs) {
+		final List<Document> ret = new LinkedList<>();
+		for (final Entry<PolicyID, Instant> policy: policyIDs.entrySet())
+			ret.add(new Document(Fields.POLICY_ID, policy.getKey().getName())
+					.append(Fields.POLICY_AGREED_ON, Date.from(policy.getValue())));
+		return ret;
 	}
 
 	private Document getUserDoc(final UserName userName, final boolean local)
@@ -1093,7 +1099,7 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	private Document makeUserQuery(final RemoteIdentity remoteID) {
-		return new Document(Fields.USER_IDENTITIES + "." + Fields.IDENTITIES_ID,
+		return new Document(Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_ID,
 				remoteID.getRemoteID().getID());
 	}
 	
@@ -1468,21 +1474,52 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void addPolicyIDs(final UserName userName, final Set<PolicyID> policyIDs)
 			throws NoSuchUserException, AuthStorageException {
+		nonNull(userName, "userName");
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
-		final Document update = new Document("$addToSet",
-				new Document(Fields.USER_POLICY_IDS, new Document("$each",
-						policyIDs.stream().map(id -> id.getName()).collect(Collectors.toSet()))));
-		updateUserAnyUpdate(userName, update);
+		if (!userExists(userName)) {
+			throw new NoSuchUserException(userName.getName());
+		}
+		for (final PolicyID pid: policyIDs) {
+			setPolicyID(userName, pid);
+		}
 	}
 	
+	//assumes user exists
+	private void setPolicyID(final UserName userName, final PolicyID pid)
+			throws AuthStorageException, NoSuchUserException {
+		final Document query = new Document(Fields.USER_NAME, userName.getName())
+				.append(Fields.USER_POLICY_IDS + Fields.FIELD_SEP + Fields.POLICY_ID,
+						new Document("$ne", pid.getName()));
+		final Document update = new Document("$addToSet", new Document(Fields.USER_POLICY_IDS,
+				new Document(Fields.POLICY_ID, pid.getName())
+						.append(Fields.POLICY_AGREED_ON, Date.from(clock.instant()))));
+		try {
+			db.getCollection(COL_USERS).updateOne(query, update);
+			// either nothing happened, in which case the user already had the policy, or
+			// the policy was updated, so done
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	private boolean userExists(final UserName userName) throws AuthStorageException {
+		try {
+			return db.getCollection(COL_USERS).count(
+					new Document(Fields.USER_NAME, userName.getName())) == 1;
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+
 	@Override
 	public void removePolicyID(final PolicyID policyID) throws AuthStorageException {
 		nonNull(policyID, "policyID");
 		try {
 			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull",
-					new Document(Fields.USER_POLICY_IDS, policyID.getName())));
-			// don't care if nothing happened, just means no one had the role
+					new Document(Fields.USER_POLICY_IDS, new Document(Fields.POLICY_ID,
+							policyID.getName()))));
+			// don't care if nothing happened, just means no one had the policy
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}

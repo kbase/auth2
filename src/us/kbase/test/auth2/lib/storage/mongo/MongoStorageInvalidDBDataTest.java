@@ -4,6 +4,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -111,9 +112,10 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	public void missingPolicyID() throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE)
-				.withPolicyID(new PolicyID("foo")).build());
+				.withPolicyID(new PolicyID("foo"), Instant.now()).build());
 		db.getCollection("users").updateOne(new Document("user", "foo"),
-				new Document("$addToSet", new Document("policyids", "       ")));
+				new Document("$addToSet", new Document("policyids", new Document("id", "       ")
+						.append("agreed", new Date()))));
 		
 		failGetUser(new UserName("foo"), new AuthStorageException(
 				"Illegal value stored in db: 30000 Missing input parameter: policy id"));
@@ -123,9 +125,10 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	public void illegalPolicyID() throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE)
-				.withPolicyID(new PolicyID("foo")).build());
+				.withPolicyID(new PolicyID("foo"), Instant.now()).build());
 		db.getCollection("users").updateOne(new Document("user", "foo"),
-				new Document("$addToSet", new Document("policyids", "foo\nbar")));
+				new Document("$addToSet", new Document("policyids", new Document("id", "foo\nbar")
+						.append("agreed", new Date()))));
 		
 		failGetUser(new UserName("foo"), new AuthStorageException(
 				"Illegal value stored in db: 30001 Illegal input parameter: " +

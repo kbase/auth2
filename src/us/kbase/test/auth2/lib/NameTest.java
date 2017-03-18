@@ -38,6 +38,22 @@ public class NameTest {
 		assertThat("incorrect name", Name.checkValidName("     𐎣foo     ", "bar", 0), is("𐎣foo"));
 	}
 	
+	private static class SubName extends Name {
+		
+		public SubName(final String n)
+				throws MissingParameterException, IllegalParameterException {
+			super(n, "n", 20);
+		}
+	}
+	
+	@Test
+	public void tostring() throws Exception {
+		assertThat("incorrect toString()", new Name("foo", "a",  4).toString(),
+				is("Name [name=foo]"));
+		assertThat("incorrect toString()", new SubName("bar").toString(),
+				is("SubName [name=bar]"));
+	}
+	
 	@Test
 	public void constructFail() {
 		failConstruct("foo", null, 3, new IllegalArgumentException("Missing argument: type"));

@@ -13,6 +13,7 @@ import java.util.Collections;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
@@ -61,7 +62,7 @@ public class LocalUserTest {
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy IDs", lu.getPolicyIDs(), is(Collections.emptySet()));
+		assertThat("incorrect policy IDs", lu.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.absent()));
 		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
 		assertThat("incorrect roles", lu.getRoles(), is(Collections.emptySet()));
@@ -80,7 +81,7 @@ public class LocalUserTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.CREATE_ADMIN)
 				.withCustomRole("foobar")
-				.withPolicyID(new PolicyID("foo"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(70000))
 				.withLastLogin(Instant.ofEpochMilli(6000))
 				.withUserDisabledState(new UserDisabledState(new UserName("who"),
 						Instant.ofEpochMilli(10000)))
@@ -108,7 +109,8 @@ public class LocalUserTest {
 				is(Optional.of(Instant.ofEpochMilli(10000))));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(), is(set(Role.ADMIN)));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
-		assertThat("incorrect policy IDs", lu.getPolicyIDs(), is(set(new PolicyID("foo"))));
+		assertThat("incorrect policy IDs", lu.getPolicyIDs(), is(ImmutableMap.of(
+				new PolicyID("foo"), Instant.ofEpochMilli(70000))));
 		assertThat("incorrect last login", lu.getLastLogin(),
 				is(Optional.of(Instant.ofEpochMilli(6000))));
 		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));

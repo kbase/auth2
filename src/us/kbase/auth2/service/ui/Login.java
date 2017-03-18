@@ -41,6 +41,7 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -401,7 +402,9 @@ public class Login {
 			l.put("adminonly", loginRestricted);
 			l.put("id", loginState.getIdentities(userName).iterator().next()
 					.getRemoteID().getID());
-			l.put("policy_ids", user.getPolicyIDs().stream().map(id -> id.getName())
+			l.put("policy_ids", user.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
+					"id", id.getName(),
+					"agreed_on", user.getPolicyIDs().get(id).toEpochMilli()))
 					.collect(Collectors.toSet()));
 			final List<String> remoteIDs = new LinkedList<>();
 			for (final RemoteIdentity id: loginState.getIdentities(userName)) {

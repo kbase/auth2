@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
@@ -14,6 +15,7 @@ import java.util.Set;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -158,7 +160,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(Collections.emptySet()));
+				is(Collections.emptyMap()));
 	}
 	
 	@Test
@@ -167,9 +169,11 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
+		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+				is(ImmutableMap.of(new PolicyID("bar"), Instant.ofEpochMilli(10000),
+						new PolicyID("foo"), Instant.ofEpochMilli(10000))));
 	}
 	
 	@Test
@@ -178,10 +182,16 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
+		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000),
+				Instant.ofEpochMilli(10000),
+				Instant.ofEpochMilli(20000),
+				Instant.ofEpochMilli(20000));
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("bar"), new PolicyID("baz")));
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"), new PolicyID("baz"))));
+				is(ImmutableMap.of(new PolicyID("bar"), Instant.ofEpochMilli(10000),
+						new PolicyID("foo"), Instant.ofEpochMilli(10000),
+						new PolicyID("baz"), Instant.ofEpochMilli(20000))));
 	}
 	
 	@Test
@@ -190,10 +200,12 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
+		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		storage.addPolicyIDs(new UserName("user1"), set(new PolicyID("foo"), new PolicyID("bar")));
 		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+				is(ImmutableMap.of(new PolicyID("bar"), Instant.ofEpochMilli(10000),
+						new PolicyID("foo"), Instant.ofEpochMilli(10000))));
 	}
 	
 	@Test
@@ -206,6 +218,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void addPolicyIDsFailNoSuchUser() throws Exception {
+		when(mockClock.instant()).thenReturn(NOW);
 		failAddPolicyIDs(new UserName("foo"), set(new PolicyID("foo")),
 				new NoSuchUserException("foo"));
 	}
@@ -227,49 +240,50 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 		final NewUser nu = NewUser.getBuilder(
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.now())
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(30000))
 				.build();
 		storage.createUser(nu);
 		final NewUser nu2 = NewUser.getBuilder(
 				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("baz"))
+				.withPolicyID(new PolicyID("foo"), Instant.now())
+				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(40000))
 				.build();
 		storage.createUser(nu2);
 		
 		storage.removePolicyID(new PolicyID("foo"));
 
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(set(new PolicyID("bar"))));
+				is(ImmutableMap.of(new PolicyID("bar"), Instant.ofEpochMilli(30000))));
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user2")).getPolicyIDs(),
-				is(set(new PolicyID("baz"))));
+				is(ImmutableMap.of(new PolicyID("baz"), Instant.ofEpochMilli(40000))));
 	}
 	
 	@Test
 	public void removeUnusedPolicyID() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
-				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("bar"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(20000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(30000))
 				.build();
 		storage.createUser(nu);
 		final NewUser nu2 = NewUser.getBuilder(
 				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
-				.withPolicyID(new PolicyID("foo"))
-				.withPolicyID(new PolicyID("baz"))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(35000))
+				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(40000))
 				.build();
 		storage.createUser(nu2);
 		
 		storage.removePolicyID(new PolicyID("bat"));
 
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user1")).getPolicyIDs(),
-				is(set(new PolicyID("bar"), new PolicyID("foo"))));
+				is(ImmutableMap.of(new PolicyID("bar"), Instant.ofEpochMilli(30000),
+						new PolicyID("foo"), Instant.ofEpochMilli(20000))));
 		assertThat("incorrect policyIDs", storage.getUser(new UserName("user2")).getPolicyIDs(),
-				is(set(new PolicyID("baz"), new PolicyID("foo"))));
+				is(ImmutableMap.of(new PolicyID("baz"), Instant.ofEpochMilli(40000),
+						new PolicyID("foo"), Instant.ofEpochMilli(35000))));
 	}
 	
 	@Test

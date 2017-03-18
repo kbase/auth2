@@ -64,6 +64,16 @@ public class Fields {
 	 */
 	public static final String USER_RESET_PWD_LAST = "lastrst";
 	
+	/* *****************
+	 * Policy ID fields
+	 * *****************
+	 */
+	
+	/** The ID of a policy document to which a user has agreed. */
+	public static final String POLICY_ID = "id";
+	/** The time the user agreed to the document. */
+	public static final String POLICY_AGREED_ON = "agreed";
+	
 	/* ****************
 	 * identity fields
 	 * ****************
