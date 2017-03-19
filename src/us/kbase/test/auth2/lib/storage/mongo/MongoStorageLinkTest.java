@@ -42,6 +42,10 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	private static final RemoteIdentity REMOTE3 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
+	
+	private static final RemoteIdentity REMOTE4 = new RemoteIdentity(
+			new RemoteIdentityID("prov", "bar4"),
+			new RemoteIdentityDetails("user4", "full4", "email4"));
 
 	@Test
 	public void link() throws Exception {
@@ -100,6 +104,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		m.setAccessible(true);
 		
 		storage.createUser(NewUser.getBuilder(
+				new UserName("foo1"), new DisplayName("bar"), NOW, REMOTE4).build());
+		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
@@ -110,39 +116,68 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	
 	@Test
 	public void linkReflectionAddIDFail() throws Exception {
-		/* This tests the case where a user's identities are changed between pulling the user from
-		 * the db and running the link.
+		/* This tests the case where an id to be linked is added after pulling the user but before
+		 * the target id is linked. The link should therefore fail.
 		 */
 		final Method m = MongoStorage.class.getDeclaredMethod(
 				"addIdentity", AuthUser.class, RemoteIdentity.class);
 		m.setAccessible(true);
 		storage.createUser(NewUser.getBuilder(
+				new UserName("foo1"), new DisplayName("bar"), NOW, REMOTE4).build());
+		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		final AuthUser au = storage.getUser(new UserName("foo"));
-		storage.link(new UserName("foo"), REMOTE3);
-		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
+		storage.link(new UserName("foo"), REMOTE2);
+		
+		final RemoteIdentity ri = new RemoteIdentity(REMOTE2.getRemoteID(),
+				new RemoteIdentityDetails("reflectfail1", "reflectfail2", "fail@fail.com"));
+		
+		final boolean p = (boolean) m.invoke(storage, au, ri);
 		assertThat("expected failed link", p, is(false));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
-				is(set(REMOTE1, REMOTE3)));
+				is(set(REMOTE1, REMOTE2)));
 	}
 	
 	@Test
-	public void linkReflectionRemoveIDFail() throws Exception {
-		/* This tests the case where a user's identities are changed between pulling the user from
-		 * the db and running the link.
+	public void linkReflectionAddIDPass() throws Exception {
+		/* This tests the case where a different id is linked after pulling the user but before
+		 * the target id is linked. The link should therefore succeed.
 		 */
 		final Method m = MongoStorage.class.getDeclaredMethod(
 				"addIdentity", AuthUser.class, RemoteIdentity.class);
 		m.setAccessible(true);
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo1"), new DisplayName("bar"), NOW, REMOTE4).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
+		final AuthUser au = storage.getUser(new UserName("foo"));
+		storage.link(new UserName("foo"), REMOTE2);
+		
+		final boolean p = (boolean) m.invoke(storage, au, REMOTE3);
+		assertThat("expected failed link", p, is(true));
+		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
+				is(set(REMOTE1, REMOTE2, REMOTE3)));
+	}
+	
+	@Test
+	public void linkReflectionRemoveID() throws Exception {
+		/* This tests the case where a user's identities are changed between pulling the user from
+		 * the db and running the link. Expected to pass if an ID is removed.
+		 */
+		final Method m = MongoStorage.class.getDeclaredMethod(
+				"addIdentity", AuthUser.class, RemoteIdentity.class);
+		m.setAccessible(true);
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo1"), new DisplayName("bar"), NOW, REMOTE4).build());
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		storage.link(new UserName("foo"), REMOTE2);
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		storage.unlink(new UserName("foo"), REMOTE1.getRemoteID().getID());
 		final boolean p = (boolean) m.invoke(storage, au, REMOTE3);
-		assertThat("expected failed link", p, is(false));
+		assertThat("expected failed link", p, is(true));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
-				is(set(REMOTE2)));
+				is(set(REMOTE2, REMOTE3)));
 	}
 	
 	@Test
