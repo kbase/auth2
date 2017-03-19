@@ -1311,7 +1311,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	/* The method above and below are split for two reasons: 1) readability, and 2) so that
+	/* The methods above and below are split for two reasons: 1) readability, and 2) so that
 	 * tests can use reflection to exercise the method below with the case where the user 
 	 * identities change between getting the user and updating the identities.
 	 */
@@ -1324,11 +1324,6 @@ public class MongoStorage implements AuthStorage {
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
 		 * documents, adding the same provider ID to a single document twice is possible without
 		 * careful db updates.
-		 * Other alternatives were explored:
-		 * $addToSet will add the same provider /user id combo to an array if the email etc. is
-		 * different
-		 * Splitting the user doc from the provider docs has a whole host of other issues, mostly
-		 * wrt deletion
 		 */
 		nonNull(remoteID, "remoteID");
 		if (user.isLocal()) {
@@ -1346,28 +1341,21 @@ public class MongoStorage implements AuthStorage {
 				return true; // update complete
 			}
 		}
-		//TODO CODE LINK1 could simplify query and update by using $not $elemMatch.
-		//TODO CODE LINK2 Might need new tests to handle the case where id is added between code above and code below
-		//TODO CODE LINK3 Need to ensure that prov + provid aren't in the doc and the local id isn't in the doc
 		
 		/* ok, we need to link. To ensure we don't add the identity twice, we search for a user
-		 * that has the *exact* identity linkages as the current user, and then add one more. If
-		 * another ID has been linked since we pulled the user from the DB, the update will fail
-		 * and we try again by calling this function again.
+		 * that does not have an identity ID matching the new remote identity ID, and if so add
+		 * the new id. If a remote identity with the same identity ID (e.g. the provider and
+		 * provider account id are the same) has been linked in the time since pulling the user
+		 * from the database the update will fail and we try again by calling this function again.
 		 */
-		final Set<Document> oldIDs = toDocument(user.getIdentities()); // current ID linkages
-		final Set<Document> newIDs = new HashSet<>(oldIDs);
-		newIDs.add(toDocument(remoteID));
-		
-		final List<Document> idQuery = oldIDs.stream().map(d -> new Document("$elemMatch", d))
-				.collect(Collectors.toList());
+
 		final Document query = new Document(Fields.USER_NAME, user.getUserName().getName())
-				.append(Fields.USER_IDENTITIES, new Document("$all", idQuery))
-				.append(Fields.USER_IDENTITIES, new Document("$size", idQuery.size()));
-		
+				.append(Fields.USER_IDENTITIES + Fields.FIELD_SEP + Fields.IDENTITIES_ID,
+						new Document("$ne", remoteID.getRemoteID().getID()));
+		final Document update = new Document("$addToSet",
+				new Document(Fields.USER_IDENTITIES, toDocument(remoteID)));
 		try {
-			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query,
-					new Document("$set", new Document(Fields.USER_IDENTITIES, newIDs)));
+			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query, update);
 			// return true if the user was updated, false otherwise (meaning retry and call this
 			// method again)
 			return r.getModifiedCount() == 1;
