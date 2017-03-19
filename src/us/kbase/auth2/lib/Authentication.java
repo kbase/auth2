@@ -107,6 +107,7 @@ public class Authentication {
 	//TODO ZLATER USER_INPUT check for obscene/offensive content and reject
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
+	//TODO ZLATER POLICYIDS maintain admin settable list of required policy IDs, check on login & force choice page if missing. fail login or create if missing. Return missing with choice data
 	
 	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
