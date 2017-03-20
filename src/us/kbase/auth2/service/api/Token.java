@@ -39,7 +39,7 @@ public class Token {
 		ret.put("type", ht.getTokenType().getID());
 		ret.put("created", ht.getCreationDate().toEpochMilli());
 		ret.put("expires", ht.getExpirationDate().toEpochMilli());
-		ret.put("name", ht.getTokenName());
+		ret.put("name", ht.getTokenName().isPresent() ? ht.getTokenName().get().getName() : null);
 		ret.put("id", ht.getId().toString());
 		return ret;
 	}
