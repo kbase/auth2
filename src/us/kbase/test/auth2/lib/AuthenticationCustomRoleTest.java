@@ -23,6 +23,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -38,8 +39,7 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void createRole() throws Exception {
-		final Role adminRole = Role.ADMIN;
-		successCreateRole(new UserName("admin"), adminRole);
+		successCreateRole(new UserName("admin"), Role.ADMIN);
 	}
 	
 	@Test
@@ -52,7 +52,7 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void createRoleFailRoot() throws Exception {
-		failCreateRole(UserName.ROOT , Role.ROOT,
+		failCreateRole(UserName.ROOT, Role.ROOT,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
@@ -97,7 +97,7 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
-	public void updateRolesFailDisabled() throws Exception {
+	public void createRoleFailDisabled() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -166,6 +166,144 @@ public class AuthenticationCustomRoleTest {
 			final Exception e) {
 		try {
 			auth.setCustomRole(token, role);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void deleteRole() throws Exception {
+		successDeleteRole(new UserName("admin"), Role.ADMIN);
+	}
+	
+	@Test
+	public void deleteRoleFailAdmin() throws Exception {
+		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
+			failDeleteRole(new UserName("admin"), r,
+					new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		}
+	}
+	
+	@Test
+	public void deleteRoleFailRoot() throws Exception {
+		failDeleteRole(UserName.ROOT, Role.ROOT,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	}
+	
+	@Test
+	public void deleteRoleFailNulls() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failDeleteRole(auth, null, "foo", new NullPointerException("token"));
+	
+		failDeleteRole(auth, new IncomingToken("foo"), null,
+				new MissingParameterException("roleId cannot be null or empty"));
+		failDeleteRole(auth, new IncomingToken("foo"), "   \t   ",
+				new MissingParameterException("roleId cannot be null or empty"));
+	}
+	
+	@Test
+	public void deleteRoleFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		
+		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+			
+		failDeleteRole(auth, token, "foo", new InvalidTokenException());
+	}
+	
+	@Test
+	public void deleteRoleFailCatastrophic() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
+		
+		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
+			
+		failDeleteRole(auth, token, "foo", new RuntimeException(
+				"There seems to be an error in the " +
+				"storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void deleteRoleFailDisabled() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
+				.build();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(u);
+		
+		failDeleteRole(auth, token, "foo", new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("baz"));
+	}
+	
+	private void successDeleteRole(final UserName adminName, final Role adminRole)
+			throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", adminName, Instant.now(), Instant.now());
+		
+		final AuthUser u = AuthUser.getBuilder(
+				adminName, new DisplayName("foobar"), Instant.now())
+				.withRole(adminRole).build();
+
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		
+		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
+		
+		auth.deleteCustomRole(token, "someRole");
+
+		verify(storage).deleteCustomRole("someRole");
+	}
+	
+	private void failDeleteRole(
+			final UserName adminName,
+			final Role adminRole,
+			final Exception e) {
+		try {
+			successDeleteRole(adminName, adminRole);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failDeleteRole(
+			final Authentication auth,
+			final IncomingToken token,
+			final String role,
+			final Exception e) {
+		try {
+			auth.deleteCustomRole(token, role);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
