@@ -1067,9 +1067,8 @@ public class Authentication {
 		try {
 			updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
 		} catch (NoSuchUserException e) {
-			throw new AuthStorageException(String.format(
-					"Token %s for user %s exists in the database, but no user record can be found",
-					ht.getId(), ht.getUserName()));
+			throw new RuntimeException("There seems to be an error in the " +
+					"storage system. Token was valid, but no user", e);
 		} catch (IllegalParameterException e) {
 			throw new RuntimeException(
 					"Reality appears to be broken. Please turn it off and then back on again");
