@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.config;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -12,11 +12,11 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import us.kbase.auth2.lib.AuthConfig;
-import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
-import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.config.AuthConfig;
+import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.test.auth2.TestCommon;
 
 public class AuthConfigTest {

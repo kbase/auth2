@@ -1,10 +1,10 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.config;
 
 import java.util.HashMap;
 import java.util.Map;
 
-import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.ExternalConfigMapper;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 
 public class TestExternalConfig implements ExternalConfig {

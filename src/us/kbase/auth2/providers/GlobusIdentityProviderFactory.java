@@ -1,4 +1,4 @@
-package us.kbase.auth2.kbase;
+package us.kbase.auth2.providers;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 

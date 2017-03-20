@@ -27,15 +27,20 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
-import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
-import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
-import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.config.AuthConfig;
+import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.CollectingExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfigMapper;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -369,8 +374,9 @@ public class Authentication {
 			}
 			throw t;
 		} finally {
-			// at least with mockito I don't see how to capture these either, since the create
-			// user storage call needs to throw an exception so can't use an Answer
+			// at least with mockito I don't see how to capture these in an error condition,
+			// since the create user storage call needs to throw an exception so can't use an
+			// Answer
 			clear(passwordHash);
 			clear(salt);
 			Password.clearPasswordArray(pwd_copy);
@@ -472,8 +478,9 @@ public class Authentication {
 			if (pwdnew != null) {
 				pwdnew.clear();
 			}
-			// at least with mockito I don't see how to test these are actually cleared, since the
-			// change password storage call needs to throw an exception so can't use an Answer
+			// at least with mockito I don't see how to capture these in an error condition,
+			// since the create user storage call needs to throw an exception so can't use an
+			// Answer
 			clear(passwordHash);
 			clear(salt);
 		}
@@ -507,8 +514,9 @@ public class Authentication {
 			}
 			throw t;
 		} finally {
-			// at least with mockito I don't see how to capture these either, since the change
-			// password storage call needs to throw an exception so can't use an Answer
+			// at least with mockito I don't see how to capture these in an error condition,
+			// since the create user storage call needs to throw an exception so can't use an
+			// Answer
 			clear(passwordHash);
 			clear(salt);
 		}

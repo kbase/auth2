@@ -1,4 +1,4 @@
-package us.kbase.auth2.lib;
+package us.kbase.auth2.lib.config;
 
 import java.util.Map;
 

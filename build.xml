@@ -201,9 +201,6 @@
       <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
-      <test name="us.kbase.test.auth2.kbase.GlobusIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.kbase.GoogleIdentityProviderTest"/>
-      <test name="us.kbase.test.auth2.lib.AuthConfigTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>
@@ -212,7 +209,6 @@
       <test name="us.kbase.test.auth2.lib.AuthenticationGetUserDisplayNamesTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
-      <test name="us.kbase.test.auth2.lib.CollectingExternalConfigTest"/>
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
@@ -232,6 +228,8 @@
       <test name="us.kbase.test.auth2.lib.UserUpdateTest"/>
       <test name="us.kbase.test.auth2.lib.UtilsTest"/>
       <test name="us.kbase.test.auth2.lib.ViewableUserTest"/>
+      <test name="us.kbase.test.auth2.lib.config.AuthConfigTest"/>
+      <test name="us.kbase.test.auth2.lib.config.CollectingExternalConfigTest"/>
       <test name="us.kbase.test.auth2.lib.exceptions.ExceptionTest"/>
       <test name="us.kbase.test.auth2.lib.identity.IdentityProviderConfigTest"/>
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
@@ -252,6 +250,8 @@
       <test name="us.kbase.test.auth2.lib.user.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.user.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
+      <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>

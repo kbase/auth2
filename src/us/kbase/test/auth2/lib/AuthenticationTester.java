@@ -20,15 +20,16 @@ import org.mockito.stubbing.Answer;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
-import us.kbase.auth2.lib.AuthConfig;
-import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.CollectingExternalConfig;
-import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.ExternalConfig;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.config.AuthConfig;
+import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.CollectingExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.user.LocalUser;
+import us.kbase.test.auth2.lib.config.TestExternalConfig;
 
 public class AuthenticationTester {
 	

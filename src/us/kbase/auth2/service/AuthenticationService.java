@@ -15,7 +15,7 @@ import com.mongodb.MongoClient;
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.common.ServiceCommon;
