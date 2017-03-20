@@ -991,7 +991,6 @@ public class AuthenticationPasswordLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		
 		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				"wubba", admin.getUserName(), Instant.now(), Instant.now());
 		
