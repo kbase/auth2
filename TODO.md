@@ -32,12 +32,19 @@ Auth service work
   * Probably means altering server endpoints in concert with UI development
 * 200 TODOs in the codebase on average
 * Read through all prototype code and convert to production worthy
-* A code review by Steve Chan wouldn't be a bad idea
+* Code review
+  * Mike Sneddon
+  * Steve Chan
+* Code coverage report in travis build
 * Code analysis:
   * https://www.codacy.com/
   * https://find-sec-bugs.github.io/
 * Tests
-  * With mock services for globus and google
+  * Add test targets for mongo tests and other tests
+    * Speed up travis tests by only running the mongo tests against different mongo versions
+    * Only run the non-mongo tests once
+      * Test vs. WiredTiger
+    * When integration tests are added, just run against one mongo version
 * Documentation
   * Code documentation
   * User documentation and education (probably need doc team help here)
