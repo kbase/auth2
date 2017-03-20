@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.config;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -9,8 +9,8 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import us.kbase.auth2.lib.CollectingExternalConfig;
-import us.kbase.auth2.lib.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.CollectingExternalConfig;
+import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.test.auth2.TestCommon;
 

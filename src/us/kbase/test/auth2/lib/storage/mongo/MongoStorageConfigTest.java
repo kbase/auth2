@@ -10,15 +10,15 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.auth2.lib.AuthConfig;
-import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
-import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
-import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.ExternalConfigMapper;
+import us.kbase.auth2.lib.config.AuthConfig;
+import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ExternalConfigMapper;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.test.auth2.TestCommon;
-import us.kbase.test.auth2.lib.TestExternalConfig;
-import us.kbase.test.auth2.lib.TestExternalConfig.TestExternalConfigMapper;
+import us.kbase.test.auth2.lib.config.TestExternalConfig;
+import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMapper;
 
 public class MongoStorageConfigTest extends MongoStorageTester {
 	

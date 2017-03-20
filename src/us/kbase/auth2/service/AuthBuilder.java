@@ -16,7 +16,7 @@ import com.mongodb.ServerAddress;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;

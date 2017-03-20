@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.kbase;
+package us.kbase.test.auth2.providers;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -27,8 +27,6 @@ import org.mockserver.model.ParameterBody;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import us.kbase.auth2.kbase.GoogleIdentityProviderFactory;
-import us.kbase.auth2.kbase.GoogleIdentityProviderFactory.GoogleIdentityProvider;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -36,6 +34,8 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.auth2.providers.GoogleIdentityProviderFactory;
+import us.kbase.auth2.providers.GoogleIdentityProviderFactory.GoogleIdentityProvider;
 import us.kbase.test.auth2.TestCommon;
 
 public class GoogleIdentityProviderTest {

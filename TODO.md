@@ -52,16 +52,12 @@ Auth service work
   * Try swagger again - go from code -> docs vs. other way around
   * Server manual, incl user and admin coverage
 * General
-  * Make server root return version, git hash & endpoints
   * Lock local account for X m after Y failed logins
+  * Make server root return version, git hash & endpoints
   * Check user input for obscene or offensive content and reject, find 3rd party code (?)
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
-* Memory based data storage
-* Test mode
-  * test apis for user creation & admin
-  * auto configure server for ease of use
 
 External dependencies
 ---------------------
@@ -69,6 +65,11 @@ External dependencies
 
 Future work
 -----------
+
+* Memory based data storage
+* Test mode
+  * test apis for user creation & admin
+  * auto configure server for ease of use
 
 ### 3rd party developers acting on behalf of users (e.g. JGI, sequencing centers)
 * OAuth2 endpoint

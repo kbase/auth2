@@ -7,16 +7,16 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 
-import us.kbase.auth2.lib.AuthConfigSet;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.ExternalConfig;
-import us.kbase.auth2.lib.ExternalConfigMapper;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
