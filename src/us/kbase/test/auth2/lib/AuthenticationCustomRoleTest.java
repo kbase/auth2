@@ -1,5 +1,7 @@
 package us.kbase.test.auth2.lib;
 
+import static org.hamcrest.CoreMatchers.is;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
@@ -10,6 +12,7 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
@@ -304,6 +307,147 @@ public class AuthenticationCustomRoleTest {
 			final Exception e) {
 		try {
 			auth.deleteCustomRole(token, role);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getCustomRolesAdmin() throws Exception {
+		succeedGetCustomRoles(UserName.ROOT, Role.ROOT, true);
+		succeedGetCustomRoles(new UserName("foo"), Role.CREATE_ADMIN, true);
+		succeedGetCustomRoles(new UserName("foo"), Role.ADMIN, true);
+	}
+	
+	@Test
+	public void getCustomRolesStdUser() throws Exception {
+		succeedGetCustomRoles(UserName.ROOT, Role.ROOT, true);
+		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.ADMIN, Role.SERV_TOKEN,
+				Role.DEV_TOKEN)) {
+			succeedGetCustomRoles(new UserName("foo"), r, false);
+		}
+	}
+	
+	@Test
+	public void getCustomRolesFailAdmin() throws Exception {
+		failGetCustomRoles(Role.DEV_TOKEN, true,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		failGetCustomRoles(Role.SERV_TOKEN, true,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		
+	}
+	
+	@Test
+	public void getCustomRolesFailNulls() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		failGetCustomRoles(auth, (IncomingToken) null, true, new NullPointerException("token"));
+		failGetCustomRoles(auth, (IncomingToken) null, false, new NullPointerException("token"));
+	}
+	
+	@Test
+	public void getCustomRoleFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		
+		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+			
+		failGetCustomRoles(auth, token, true, new InvalidTokenException());
+		failGetCustomRoles(auth, token, false, new InvalidTokenException());
+	}
+	
+	@Test
+	public void getCustomRoleFailCatastrophic() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
+		
+		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
+			
+		failGetCustomRoles(auth, token, true, new RuntimeException(
+				"There seems to be an error in the " +
+				"storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void getCustomRoleFailDisabled() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+
+		final IncomingToken token = new IncomingToken("foo");
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN)
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
+				.build();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(u);
+		
+		failGetCustomRoles(auth, token, true, new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("baz"));
+	}
+
+	private void succeedGetCustomRoles(final UserName un, final Role r, final boolean forceAdmin)
+			throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				"wubba", un, Instant.now(), Instant.now());
+		
+		final AuthUser u = AuthUser.getBuilder(
+				un, new DisplayName("foobar"), Instant.now())
+				.withRole(r).build();
+
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		
+		when(storage.getUser(un)).thenReturn(u, (AuthUser) null);
+		
+		when(storage.getCustomRoles()).thenReturn(
+				set(new CustomRole("a", "b"), new CustomRole("c", "d")));
+		
+		final Set<CustomRole> roles = auth.getCustomRoles(token, forceAdmin);
+		
+		assertThat("incorrect roles", roles,
+				is(set(new CustomRole("c", "d"), new CustomRole("a", "b"))));
+	}
+	
+	private void failGetCustomRoles(final Role r, final boolean forceAdmin, final Exception e) {
+		try {
+			succeedGetCustomRoles(new UserName("wubba"), r, forceAdmin);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failGetCustomRoles(
+			final Authentication auth,
+			final IncomingToken token,
+			final boolean forceAdmin,
+			final Exception e) {
+		try {
+			auth.getCustomRoles(token, forceAdmin);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
