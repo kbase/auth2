@@ -968,13 +968,33 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
+	public void createAgentToken() throws Exception {
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.build();
+		
+		createToken(user, new HashMap<>(), 7 * 24 * 3600 * 1000L, TokenType.AGENT);
+	}
+	
+	@Test
+	public void createAgentTokenWithAltLifeTime() throws Exception {
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				.build();
+		
+		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
+		lifetimes.put(TokenLifetimeType.AGENT, 3 * 24 * 3600 * 1000L);
+		createToken(user, lifetimes, 3 * 24 * 3600 * 1000L, TokenType.AGENT);
+	}
+	
+	@Test
 	public void createDevToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
-		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
+		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV);
 	}
 	
 	@Test
@@ -986,7 +1006,7 @@ public class AuthenticationTokenTest {
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
 		lifetimes.put(TokenLifetimeType.DEV, 42 * 24 * 3600 * 1000L);
-		createToken(user, lifetimes, 42 * 24 * 3600 * 1000L, false);
+		createToken(user, lifetimes, 42 * 24 * 3600 * 1000L, TokenType.DEV);
 	}
 	
 	@Test
@@ -996,7 +1016,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
-		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, false);
+		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV);
 	}
 	
 	@Test
@@ -1006,7 +1026,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
-		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
+		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, TokenType.SERV);
 	}
 	
 	@Test
@@ -1016,7 +1036,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.ADMIN).build();
 		
-		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, true);
+		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, TokenType.SERV);
 	}
 	
 	@Test
@@ -1028,7 +1048,7 @@ public class AuthenticationTokenTest {
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
 		lifetimes.put(TokenLifetimeType.SERV, 24 * 24 * 3600 * 1000L);
-		createToken(user, lifetimes, 24 * 24 * 3600 * 1000L, true);
+		createToken(user, lifetimes, 24 * 24 * 3600 * 1000L, TokenType.SERV);
 	}
 	
 	@Test
@@ -1040,7 +1060,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
-		failCreateToken(user, false, new DisabledUserException());
+		failCreateToken(user, TokenType.AGENT, new DisabledUserException());
 	}
 	
 	@Test
@@ -1050,7 +1070,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
-		failCreateToken(user, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+		failCreateToken(user, TokenType.DEV, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"User foo is not authorized to create this token type."));
 	}
 	
@@ -1062,7 +1082,7 @@ public class AuthenticationTokenTest {
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.CREATE_ADMIN).build();
 		
-		failCreateToken(user, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+		failCreateToken(user, TokenType.SERV, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"User foo is not authorized to create this token type."));
 	}
 	
@@ -1070,10 +1090,20 @@ public class AuthenticationTokenTest {
 	public void createTokenFailNulls() throws Exception {
 		final Authentication auth = initTestMocks().auth;
 		
-		failCreateToken(auth, null, new TokenName("foo"), false,
+		failCreateToken(auth, null, new TokenName("foo"), TokenType.DEV,
 				new NullPointerException("token"));
-		failCreateToken(auth, new IncomingToken("foo"), null, false,
+		failCreateToken(auth, new IncomingToken("foo"), null, TokenType.DEV,
 				new NullPointerException("tokenName"));
+		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), null,
+				new NullPointerException("tokenType"));
+	}
+	
+	@Test
+	public void createTokenFailCreateLogin() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), TokenType.LOGIN,
+				new IllegalArgumentException(
+						"Cannot create a login token without logging in"));
 	}
 	
 	@Test
@@ -1086,9 +1116,14 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
-		failCreateToken(auth, t, new TokenName("foo"), false, new InvalidTokenException());
+		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, new InvalidTokenException());
 	}
 	
+	@Test
+	public void createTokenFailWithAgentToken() throws Exception {
+		createTokenFailWithNonLoginToken(TokenType.AGENT);
+	}
+
 	@Test
 	public void createTokenFailWithDevToken() throws Exception {
 		createTokenFailWithNonLoginToken(TokenType.DEV);
@@ -1110,7 +1145,7 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
 		
-		failCreateToken(auth, t, new TokenName("foo"), false,
+		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only login tokens may be used to create a token"));
 	}
@@ -1129,7 +1164,7 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
-		failCreateToken(auth, t, new TokenName("baz"), false, new RuntimeException(
+		failCreateToken(auth, t, new TokenName("baz"), TokenType.AGENT, new RuntimeException(
 				"There seems to be an error in the storage system. Token was valid, but no user"));
 	}
 	
@@ -1137,8 +1172,7 @@ public class AuthenticationTokenTest {
 			final AuthUser user,
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final long expectedLifetime,
-			final boolean serverToken) throws Exception {
-		final TokenType tokenType = serverToken ? TokenType.SERV : TokenType.DEV;
+			final TokenType tokenType) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -1166,21 +1200,20 @@ public class AuthenticationTokenTest {
 		when(clock.instant()).thenReturn(time, (Instant) null);
 		
 		try {
-			final NewToken nt = auth.createToken(t, new TokenName("a name"), serverToken);
+			final NewToken nt = auth.createToken(t, new TokenName("a name"), tokenType);
 			
 			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
 					(expectedLifetime));
 			verify(storage).storeToken(new HashedToken(id, tokenType,
 					Optional.of(new TokenName("a name")),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", user.getUserName(),
-					time,
-					expiration));
+					time, expiration));
 			
 			final NewToken expected = new NewToken(id, tokenType,
 					new TokenName("a name"), "this is a token", user.getUserName(), time,
 					expectedLifetime);
 			
-		assertThat("incorrect token", nt, is(expected));
+			assertThat("incorrect token", nt, is(expected));
 		} catch (Throwable th) {
 			if (user.isDisabled()) {
 				verify(storage).deleteTokens(user.getUserName());
@@ -1191,10 +1224,10 @@ public class AuthenticationTokenTest {
 	
 	private void failCreateToken(
 			final AuthUser user,
-			final boolean serverToken,
+			final TokenType tokenType,
 			final Exception e) {
 		try {
-			createToken(user, new HashMap<>(), 3L, serverToken);
+			createToken(user, new HashMap<>(), 3L, tokenType);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -1205,10 +1238,10 @@ public class AuthenticationTokenTest {
 			final Authentication auth,
 			final IncomingToken t,
 			final TokenName name,
-			final boolean serverToken,
+			final TokenType tokenType,
 			final Exception e) {
 		try {
-			auth.createToken(t, name, serverToken);
+			auth.createToken(t, name, tokenType);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

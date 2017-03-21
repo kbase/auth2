@@ -45,6 +45,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenSet;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.common.IncomingJSON;
@@ -182,7 +183,7 @@ public class Tokens {
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException, IllegalParameterException {
 		return new UINewToken(auth.createToken(userToken, new TokenName(tokenName),
-				"server".equals(tokenType)));
+				"server".equals(tokenType) ? TokenType.SERV : TokenType.DEV));
 	}
 
 	private Map<String, Object> getTokens(final IncomingToken token)
