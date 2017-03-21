@@ -62,7 +62,7 @@ public class AuthenticationTokenTest {
 		TOKEN1 = new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
 				Optional.absent(), "whee", new UserName("foo"), Instant.ofEpochMilli(3000),
 				Instant.ofEpochMilli(4000));
-		TOKEN2 = new HashedToken(UUID.randomUUID(), TokenType.EXTENDED_LIFETIME,
+		TOKEN2 = new HashedToken(UUID.randomUUID(), TokenType.DEV,
 				Optional.of(new TokenName("baz")), "whee1", new UserName("foo"), Instant.ofEpochMilli(5000),
 				Instant.ofEpochMilli(6000));
 		} catch (Exception e) {
@@ -1090,13 +1090,22 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void createTokenFailNotLoginToken() throws Exception {
+	public void createTokenFailWithDevToken() throws Exception {
+		createTokenFailWithNonLoginToken(TokenType.DEV);
+	}
+	
+	@Test
+	public void createTokenFailWithServToken() throws Exception {
+		createTokenFailWithNonLoginToken(TokenType.SERV);
+	}
+
+	private void createTokenFailWithNonLoginToken(final TokenType tokenType) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobar");
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.EXTENDED_LIFETIME,
+		final HashedToken ht = new HashedToken(UUID.randomUUID(), tokenType,
 				null, "baz", new UserName("foo"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
@@ -1128,7 +1137,8 @@ public class AuthenticationTokenTest {
 			final AuthUser user,
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final long expectedLifetime,
-			final boolean serverToken) throws Exception { 
+			final boolean serverToken) throws Exception {
+		final TokenType tokenType = serverToken ? TokenType.SERV : TokenType.DEV;
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -1160,14 +1170,13 @@ public class AuthenticationTokenTest {
 			
 			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
 					(expectedLifetime));
-			verify(storage).storeToken(new HashedToken(
-					id,
-					TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("a name")),
+			verify(storage).storeToken(new HashedToken(id, tokenType,
+					Optional.of(new TokenName("a name")),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", user.getUserName(),
 					time,
 					expiration));
 			
-			final NewToken expected = new NewToken(id, TokenType.EXTENDED_LIFETIME,
+			final NewToken expected = new NewToken(id, tokenType,
 					new TokenName("a name"), "this is a token", user.getUserName(), time,
 					expectedLifetime);
 			

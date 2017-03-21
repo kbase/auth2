@@ -703,7 +703,8 @@ public class Authentication {
 		} else {
 			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
 		}
-		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
+		final NewToken nt = new NewToken(randGen.randomUUID(),
+				serverToken ? TokenType.SERV : TokenType.DEV,
 				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;

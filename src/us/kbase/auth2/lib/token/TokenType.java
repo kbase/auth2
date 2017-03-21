@@ -3,8 +3,7 @@ package us.kbase.auth2.lib.token;
 import java.util.HashMap;
 import java.util.Map;
 
-/** An enumeration representing the type of the token, either a standard login token or an 
- * extended lifetime token.
+/** An enumeration representing the type of a token.
  * 
  * @author gaprice@lbl.gov
  *
@@ -16,8 +15,12 @@ public enum TokenType {
 	 */
 	/** A standard login token. */
 	LOGIN				("Login", "Login"),
-	/** An extended lifetype token. */
-	EXTENDED_LIFETIME	("ExtLife", "Extended lifetime");
+	/** An agent token. */
+	AGENT				("Agent", "Agent"),
+	/** A developer token. */
+	DEV					("Dev", "Developer"),
+	/** A service token. */
+	SERV	("Serv", "Service");
 	
 	private static final Map<String, TokenType> TYPE_MAP = new HashMap<>();
 	static {

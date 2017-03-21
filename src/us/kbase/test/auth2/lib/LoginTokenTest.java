@@ -48,11 +48,11 @@ public class LoginTokenTest {
 	@Test
 	public void constructorNewToken() throws Exception {
 		final NewToken nt = new NewToken(UUID.randomUUID(),
-				TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"), Instant.now(), 10000);
+				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 10000);
 		final LoginToken lt = new LoginToken(nt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(true));
 		assertThat("incorrect token type", lt.getToken().getTokenType(),
-				is(TokenType.EXTENDED_LIFETIME));
+				is(TokenType.LOGIN));
 		assertThat("incorrect creation date", lt.getToken().getCreationDate(),
 				is(nt.getCreationDate()));
 		assertThat("incorrect expiration date", lt.getToken().getExpirationDate(),
@@ -87,7 +87,7 @@ public class LoginTokenTest {
 	@Test
 	public void constructFail() throws Exception {
 		final NewToken nt = new NewToken(UUID.randomUUID(), 
-				TokenType.EXTENDED_LIFETIME, "foo", new UserName("bar"), Instant.now(), 10000);
+				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 10000);
 		failConstructToken((NewToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(nt, null, new NullPointerException("loginState"));
 		
