@@ -7,6 +7,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.TreeMap;
 
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+
 /** Contains the configuration of the authentication instance. This class can be used both to
  * report the current state of the configuration and request changes to the configuration.
  * @author gaprice@lbl.gov
@@ -257,12 +259,13 @@ public class AuthConfig {
 	/** Get the configuration for a provider.
 	 * @param provider the name of the provider.
 	 * @return the configuration of the provider.
-	 * @throws IllegalArgumentException if the provider is not contained in this configuration.
+	 * @throws NoSuchIdentityProviderException if the provider is not contained in this
+	 *  configuration.
 	 */
-	public ProviderConfig getProviderConfig(final String provider) {
+	public ProviderConfig getProviderConfig(final String provider)
+			throws NoSuchIdentityProviderException {
 		if (!providers.containsKey(provider)) {
-			throw new IllegalArgumentException("No such provider: " +
-					provider);
+			throw new NoSuchIdentityProviderException(provider);
 		}
 		return providers.get(provider);
 	}

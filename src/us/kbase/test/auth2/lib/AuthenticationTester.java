@@ -26,6 +26,7 @@ import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -52,6 +53,10 @@ public class AuthenticationTester {
 	}
 	
 	public static TestMocks initTestMocks() throws Exception {
+		return initTestMocks(Collections.emptySet());
+	}
+	
+	public static TestMocks initTestMocks(final Set<IdentityProvider> providers) throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
 		final Clock clock = mock(Clock.class);
@@ -66,7 +71,7 @@ public class AuthenticationTester {
 				AuthStorage.class, Set.class, ExternalConfig.class,
 				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
-		final Authentication instance = c.newInstance(storage, Collections.emptySet(),
+		final Authentication instance = c.newInstance(storage, providers,
 				new TestExternalConfig("foo"), randGen, clock);
 		reset(storage);
 		return new TestMocks(storage, randGen, instance, clock);

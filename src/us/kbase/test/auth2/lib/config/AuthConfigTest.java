@@ -15,6 +15,7 @@ import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.test.auth2.TestCommon;
@@ -149,17 +150,17 @@ public class AuthConfigTest {
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		
 		final AuthConfig ac = new AuthConfig(null, pc, lts);
-		failGetProvider(ac, null, "No such provider: null");
-		failGetProvider(ac, "", "No such provider: ");
-		failGetProvider(ac, "pc2", "No such provider: pc2");
+		failGetProvider(ac, null, null);
+		failGetProvider(ac, "", "");
+		failGetProvider(ac, "pc2", "pc2");
 	}
 
 	private void failGetProvider(final AuthConfig ac, final String provider, final String err) {
 		try {
 			ac.getProviderConfig(provider);
 			fail("got bad provider");
-		} catch (IllegalArgumentException e) {
-			assertThat("incorrect exception message", e.getMessage(), is(err));
+		} catch (NoSuchIdentityProviderException e) {
+			TestCommon.assertExceptionCorrect(e, new NoSuchIdentityProviderException(err));
 		}
 	}
 	
