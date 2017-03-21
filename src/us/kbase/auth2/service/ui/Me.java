@@ -13,6 +13,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -36,6 +37,7 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
@@ -124,6 +126,10 @@ public class Me {
 			i.put("id", ri.getRemoteID().getID());
 			idents.add(i);
 		}
+		ret.put("policy_ids", u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
+			"id", id.getName(),
+			"agreed_on", u.getPolicyIDs().get(id).toEpochMilli()))
+			.collect(Collectors.toSet()));
 		return ret;
 	}
 	
