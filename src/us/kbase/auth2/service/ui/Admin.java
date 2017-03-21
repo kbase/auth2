@@ -558,6 +558,8 @@ public class Admin {
 				TokenLifetimeType.EXT_CACHE) / MIN_IN_MS);
 		ret.put("tokenlogin", cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.LOGIN) / DAY_IN_MS);
+		ret.put("tokenagent", cfgset.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.AGENT) / DAY_IN_MS);
 		ret.put("tokendev", cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.DEV) / DAY_IN_MS);
 		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
@@ -646,6 +648,7 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@FormParam("tokensugcache") final int sugcache,
 			@FormParam("tokenlogin") final int login,
+			@FormParam("tokenagent") final int agent,
 			@FormParam("tokendev") final int dev,
 			@FormParam("tokenserv") final long serv)
 			throws IllegalParameterException, InvalidTokenException,
@@ -659,6 +662,10 @@ public class Admin {
 			throw new IllegalParameterException(
 					"Login token expiration time must be at least 1");
 		}
+		if (agent < 1) {
+			throw new IllegalParameterException(
+					"Agent token expiration time must be at least 1");
+		}
 		if (dev < 1) {
 			throw new IllegalParameterException(
 					"Developer token expiration time must be at least 1");
@@ -670,6 +677,7 @@ public class Admin {
 		final Map<TokenLifetimeType, Long> t = new HashMap<>();
 		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS));
 		t.put(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS));
+		t.put(TokenLifetimeType.AGENT, safeMult(agent, DAY_IN_MS));
 		t.put(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS));
 		t.put(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS));
 		try {

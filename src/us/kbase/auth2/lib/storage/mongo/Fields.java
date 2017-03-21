@@ -181,6 +181,8 @@ public class Fields {
 	public static final String CONFIG_APP_TOKEN_LIFE_CACHE = "tokenlifecache";
 	/** The lifetime of a login token. */
 	public static final String CONFIG_APP_TOKEN_LIFE_LOGIN = "tokenlifelogin";
+	/** The lifetime of an agent token. */
+	public static final String CONFIG_APP_TOKEN_LIFE_AGENT = "tokenlifeagent";
 	/** The lifetime of a developer token. */
 	public static final String CONFIG_APP_TOKEN_LIFE_DEV = "tokenlifedev";
 	/** The lifetime of a server token. */
