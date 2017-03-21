@@ -3,15 +3,14 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
+import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -26,10 +25,11 @@ import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.storage.AuthStorage;
+import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
-
 
 public class AuthenticationIdentityProviderTest {
 	
@@ -67,7 +67,131 @@ public class AuthenticationIdentityProviderTest {
 		final List<String> provret = auth.getIdentityProviders();
 		assertThat("incorrect provider list", provret,
 				is(Arrays.asList("prov2", "prov3", "prov4")));
-		
 	}
+	
+	@Test
+	public void failGetProviders() throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		when(idp2.getProviderName()).thenReturn("prov2");
+		
+		final TestMocks testauth = initTestMocks(set(idp2, idp1));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final Map<String, ProviderConfig> providers = new HashMap<>();
+		providers.put("prov2", new ProviderConfig(true, false, false));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		try {
+			auth.getIdentityProviders();
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new RuntimeException(
+					"Programming error. The configuration for the provider prov1 is no longer " +
+					"accessible in the storage system"));
+		}
+	}
+	
+	@Test
+	public void getURL() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+		
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final Map<String, ProviderConfig> providers = new HashMap<>();
+		providers.put("prov", new ProviderConfig(true, true, true));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(idp.getLoginURL("foobarbaz", true)).thenReturn(new URL("https://test.com"));
+		
+		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true),
+				is(new URL("https://test.com")));
+	}
+	
+	@Test
+	public void getURLFailNulls() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+		
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final Map<String, ProviderConfig> providers = new HashMap<>();
+		providers.put("prov", new ProviderConfig(true, true, true));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failGetURL(auth, null, "foo", new NoSuchIdentityProviderException(null));
+		failGetURL(auth, "   \t   \n   ", "foo",
+				new NoSuchIdentityProviderException("   \t   \n   "));
+		failGetURL(auth, "prov", null,
+				new IllegalArgumentException("state cannot be null or empty"));
+		failGetURL(auth, "prov", "    \t    \n    ",
+				new IllegalArgumentException("state cannot be null or empty"));
+	}
+	
+	@Test
+	public void getURLFailNotEnabled() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+		
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final Map<String, ProviderConfig> providers = new HashMap<>();
+		providers.put("prov", new ProviderConfig(false, true, true));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failGetURL(auth, "prov", "foobar", new NoSuchIdentityProviderException("prov"));
+	}
+	
+	public void failGetURL(
+			final Authentication auth,
+			final String provider,
+			final String state,
+			final Exception e)
+			throws Exception {
+		try {
+			auth.getIdentityProviderURL(provider, state, true);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 
 }

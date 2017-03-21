@@ -14,6 +14,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -1249,9 +1250,19 @@ public class Authentication {
 	 */
 	public List<String> getIdentityProviders() throws AuthStorageException {
 		final AuthConfig ac = cfg.getAppConfig();
-		return idProviderSet.navigableKeySet().stream()
-				.filter(p -> ac.getProviderConfig(p).isEnabled())
-				.collect(Collectors.toList());
+		final List<String> provs = new LinkedList<>();
+		for (final String prov: idProviderSet.navigableKeySet()) {
+			try {
+				if (ac.getProviderConfig(prov).isEnabled()) {
+					provs.add(prov);
+				}
+			} catch (NoSuchIdentityProviderException e) {
+				throw new RuntimeException(String.format("Programming error. The configuration " +
+						"for the provider %s is no longer accessible in the storage system",
+						prov), e);
+			}
+		}
+		return provs;
 	}
 	
 	private IdentityProvider getIdentityProvider(final String provider)
@@ -1276,6 +1287,9 @@ public class Authentication {
 			final String state,
 			final boolean link)
 			throws NoSuchIdentityProviderException, AuthStorageException {
+		if (state == null || state.trim().isEmpty()) {
+			throw new IllegalArgumentException("state cannot be null or empty");
+		}
 		return getIdentityProvider(provider).getLoginURL(state, link);
 	}
 
