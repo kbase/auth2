@@ -1,4 +1,4 @@
-package us.kbase.auth2.service.ui;
+package us.kbase.auth2.service.common;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -10,7 +10,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 
-public class UIToken {
+public class ExternalToken {
 	
 	//TODO TEST
 	//TODO JAVADOC
@@ -22,13 +22,13 @@ public class UIToken {
 	private final String name;
 	private final String user;
 
-	public UIToken(final HashedToken token) {
+	public ExternalToken(final HashedToken token) {
 		this(token.getTokenType(), token.getTokenName(), token.getId(),
 				token.getUserName(),
 				token.getCreationDate(), token.getExpirationDate());
 	}
 
-	UIToken(
+	ExternalToken(
 			final TokenType type,
 			final Optional<TokenName> tokenName,
 			final UUID id,

@@ -71,6 +71,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.ExternalToken;
 
 @Path(UIPaths.ADMIN_ROOT)
 public class Admin {
@@ -140,7 +141,7 @@ public class Admin {
 		}
 		final HashedToken ht = auth.getToken(t);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("token", new UIToken(ht));
+		ret.put("token", new ExternalToken(ht));
 		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP +
 				ht.getUserName().getName() + SEP + UIPaths.ADMIN_TOKENS + SEP +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP + ht.getId().toString()));
@@ -314,8 +315,8 @@ public class Admin {
 		
 		final Set<HashedToken> tokens = auth.getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()), new UserName(user));
-		final List<UIToken> uitokens = tokens.stream()
-				.map(t -> new UIToken(t)).collect(Collectors.toList());
+		final List<ExternalToken> uitokens = tokens.stream()
+				.map(t -> new ExternalToken(t)).collect(Collectors.toList());
 		final String urlPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP +
 				UIPaths.ADMIN_TOKENS + SEP;
 		final Map<String, Object> ret = new HashMap<>();

@@ -72,6 +72,7 @@ import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.common.IdentityProviderInput;
 import us.kbase.auth2.service.common.IncomingJSON;
+import us.kbase.auth2.service.common.NewExternalToken;
 
 @Path(UIPaths.LOGIN_ROOT)
 public class Login {
@@ -240,7 +241,7 @@ public class Login {
 		final LoginToken lr = auth.login(provider, input.getAuthCode());
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
-			choice.put("token", new UINewToken(lr.getToken()));
+			choice.put("token", new NewExternalToken(lr.getToken()));
 			choice.put("logged_in", true);
 			choice.put("redirect", getRedirectURL(redirect));
 			final ResponseBuilder b = Response.ok(choice);
@@ -288,7 +289,7 @@ public class Login {
 		
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
-		ret.put("token", new UINewToken(newtoken));
+		ret.put("token", new NewExternalToken(newtoken));
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	

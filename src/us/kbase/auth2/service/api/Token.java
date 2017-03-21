@@ -29,7 +29,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.IncomingJSON;
-import us.kbase.auth2.service.ui.UINewToken;
+import us.kbase.auth2.service.common.NewExternalToken;
 
 @Path(APIPaths.API_V2_TOKEN)
 public class Token {
@@ -60,14 +60,14 @@ public class Token {
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.APPLICATION_JSON)
-	public UINewToken createAgentTokenForm(
+	public NewExternalToken createAgentTokenForm(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
 			@FormParam("tokenname") final String name)
 			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
 		
 		//TODO NOW move ui token into common area
-		return new UINewToken(auth.createToken(
+		return new NewExternalToken(auth.createToken(
 				getToken(token), new TokenName(name), TokenType.AGENT));
 	}
 	
@@ -84,13 +84,13 @@ public class Token {
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public UINewToken createAgentTokenJSON(
+	public NewExternalToken createAgentTokenJSON(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
 			final CreateToken create)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		create.exceptOnAdditionalProperties();
-		return new UINewToken(auth.createToken(
+		return new NewExternalToken(auth.createToken(
 				getToken(token), new TokenName(create.tokenname), TokenType.AGENT));
 	}
 }
