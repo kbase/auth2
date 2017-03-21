@@ -680,7 +680,6 @@ public class Authentication {
 	 * other than via logging in.
 	 * @return the new token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws MissingParameterException If the name is missing.
 	 * @throws InvalidTokenException if the provided token is not valid.
 	 * @throws UnauthorizedException if the provided token is not a login token or the user does
 	 * not have the role required to create the token type.
@@ -689,8 +688,7 @@ public class Authentication {
 			final IncomingToken token,
 			final TokenName tokenName,
 			final TokenType tokenType)
-			throws AuthStorageException, MissingParameterException,
-			InvalidTokenException, UnauthorizedException {
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenName, "tokenName");
 		nonNull(tokenType, "tokenType");
 		if (TokenType.LOGIN.equals(tokenType)) {
