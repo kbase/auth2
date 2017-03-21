@@ -60,7 +60,8 @@ public class AuthenticationConstructorTest {
 		
 		final TestExternalConfig t = auth.getExternalConfig(new TestExternalConfigMapper());
 		assertThat("incorrect external config", t, is(new TestExternalConfig("foo")));
-		assertThat("incorrect providers", auth.getIdentityProviders(), is(Collections.emptyList()));
+		assertThat("incorrect providers", auth.getIdentityProviders(),
+				is(Collections.emptyList()));
 	}
 	
 	@Test

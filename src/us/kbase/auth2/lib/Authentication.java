@@ -1929,10 +1929,6 @@ public class Authentication {
 		nonNull(acs, "acs");
 		getUser(token, Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
-			//throws an exception if no provider by given name
-			if (provider == null) {
-				throw new NoSuchIdentityProviderException("Provider name cannot be null");
-			}
 			if (!idProviderSet.containsKey(provider)) {
 				throw new NoSuchIdentityProviderException(provider);
 			}

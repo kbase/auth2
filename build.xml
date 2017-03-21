@@ -208,6 +208,7 @@
       <test name="us.kbase.test.auth2.lib.AuthenticationGetAvailableUserNameTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationGetUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationGetUserDisplayNamesTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationRoleTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
