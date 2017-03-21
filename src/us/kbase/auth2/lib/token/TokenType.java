@@ -20,7 +20,7 @@ public enum TokenType {
 	/** A developer token. */
 	DEV					("Dev", "Developer"),
 	/** A service token. */
-	SERV	("Serv", "Service");
+	SERV				("Serv", "Service");
 	
 	private static final Map<String, TokenType> TYPE_MAP = new HashMap<>();
 	static {
