@@ -33,6 +33,7 @@ public class AuthConfigTest {
 		assertThat("incorrect provider force link default",
 				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLinkChoice(), is(false));
 		final Map<TokenLifetimeType, Long> defaultLifeTimes = new HashMap<>();
+		defaultLifeTimes.put(TokenLifetimeType.AGENT, 7 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.LOGIN, 14 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.DEV, 90 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.SERV, 100_000_000L * 24 * 60 * 60 * 1000L);
@@ -102,6 +103,8 @@ public class AuthConfigTest {
 				ac.getProviderConfig("pc2").isForceLinkChoice(), is((Boolean) null));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE),
 				is(5 * 60 * 1000L));
+		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.AGENT),
+				is(7 * 24 * 60 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.LOGIN),
 				is(70000000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.DEV),
@@ -133,6 +136,8 @@ public class AuthConfigTest {
 		assertThat("incorrect lifetimes", ac.getTokenLifetimeMS(), is(ltscopy));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE),
 				is(5 * 60 * 1000L));
+		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.AGENT),
+				is(7 * 24 * 60 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.LOGIN),
 				is(14 * 24 * 60 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.DEV),

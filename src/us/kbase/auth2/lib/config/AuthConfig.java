@@ -34,6 +34,7 @@ public class AuthConfig {
 	static {
 		final Map<TokenLifetimeType, Long> m = new HashMap<>();
 		m.put(TokenLifetimeType.EXT_CACHE,			   5 * 60 * 1000L);
+		m.put(TokenLifetimeType.AGENT,		 7 * 24 * 60 * 60 * 1000L);
 		m.put(TokenLifetimeType.LOGIN,		14 * 24 * 60 * 60 * 1000L);
 		m.put(TokenLifetimeType.DEV,		90 * 24 * 60 * 60 * 1000L);
 		// this is set so absurdly low because some other, lesser languages can't represent
@@ -50,6 +51,8 @@ public class AuthConfig {
 		
 		/** Lifetime type for a login token. */
 		LOGIN,
+		/** Lifetime type for an agent token. */
+		AGENT,
 		/** Lifetime type for a developer token. */
 		DEV,
 		/** Lifetime type for a server token. */
