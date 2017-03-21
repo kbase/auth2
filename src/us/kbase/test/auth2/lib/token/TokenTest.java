@@ -62,8 +62,12 @@ public class TokenTest {
 	public void tokenTypeGetType() throws Exception {
 		assertThat("failed to get login token type", TokenType.getType("Login"),
 				is(TokenType.LOGIN));
-		assertThat("failed to get login token type", TokenType.getType("ExtLife"),
-				is(TokenType.EXTENDED_LIFETIME));
+		assertThat("failed to get agent token type", TokenType.getType("Agent"),
+				is(TokenType.AGENT));
+		assertThat("failed to get developer token type", TokenType.getType("Dev"),
+				is(TokenType.DEV));
+		assertThat("failed to get service token type", TokenType.getType("Serv"),
+				is(TokenType.SERV));
 		try {
 			TokenType.getType(null);
 			fail("got bad type");
@@ -77,10 +81,15 @@ public class TokenTest {
 		assertThat("Incorrect id for login token", TokenType.LOGIN.getID(), is("Login"));
 		assertThat("Incorrect description for login token", TokenType.LOGIN.getDescription(),
 				is("Login"));
-		assertThat("Incorrect id for ext life token", TokenType.EXTENDED_LIFETIME.getID(),
-				is("ExtLife"));
-		assertThat("Incorrect description for ext life token",
-				TokenType.EXTENDED_LIFETIME.getDescription(), is("Extended lifetime"));
+		assertThat("Incorrect id for agent token", TokenType.AGENT.getID(), is("Agent"));
+		assertThat("Incorrect description for agent token", TokenType.AGENT.getDescription(),
+				is("Agent"));
+		assertThat("Incorrect id for dev token", TokenType.DEV.getID(), is("Dev"));
+		assertThat("Incorrect description for dev token",
+				TokenType.DEV.getDescription(), is("Developer"));
+		assertThat("Incorrect id for serv token", TokenType.SERV.getID(), is("Serv"));
+		assertThat("Incorrect description for serv token",
+				TokenType.SERV.getDescription(), is("Service"));
 	}
 	
 	@Test
@@ -173,9 +182,9 @@ public class TokenTest {
 		// test with named token
 		final UUID id2 = UUID.randomUUID();
 		final HashedToken ht2 = new HashedToken(id2,
-				TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("ugh")), "foobar2",
+				TokenType.DEV, Optional.of(new TokenName("ugh")), "foobar2",
 				new UserName("whee2"), Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000));
-		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
+		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
 		assertThat("incorrect token name", ht2.getTokenName(),
 				is(Optional.of(new TokenName("ugh"))));
 		assertThat("incorrect token id", ht2.getId(), is(id2));
@@ -273,9 +282,9 @@ public class TokenTest {
 		// test with named token
 		final Instant i2 = Instant.ofEpochMilli(70000);
 		final UUID id2 = UUID.randomUUID();
-		final NewToken nt2 = new NewToken(id2, TokenType.EXTENDED_LIFETIME,
+		final NewToken nt2 = new NewToken(id2, TokenType.SERV,
 				new TokenName("myname"), "bar", new UserName("foo2"), i2, 15);
-		assertThat("incorrect token type", nt2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
+		assertThat("incorrect token type", nt2.getTokenType(), is(TokenType.SERV));
 		assertThat("incorrect token name", nt2.getTokenName(),
 				is(Optional.of(new TokenName("myname"))));
 		assertThat("incorrect token string", nt2.getToken(), is("bar"));
@@ -286,7 +295,7 @@ public class TokenTest {
 		assertThat("incorrect expiration date", nt2.getExpirationDate(), is(i2.plusMillis(15)));
 		
 		final HashedToken ht2 = nt2.getHashedToken();
-		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.EXTENDED_LIFETIME));
+		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.SERV));
 		assertThat("incorrect token name", ht2.getTokenName(),
 				is(Optional.of(new TokenName("myname"))));
 		assertThat("incorrect token string", ht2.getTokenHash(),
@@ -375,11 +384,11 @@ public class TokenTest {
 				new UserName("u"), Instant.ofEpochMilli(1000), Instant.ofEpochMilli(2000));
 		final UUID id2 = UUID.randomUUID();
 		final HashedToken ht2 = new HashedToken(id2,
-				TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("n2")), "h2",
+				TokenType.DEV, Optional.of(new TokenName("n2")), "h2",
 				new UserName("u"), Instant.ofEpochMilli(3000), Instant.ofEpochMilli(4000));
 		final UUID id3 = UUID.randomUUID();
 		final HashedToken ht3 = new HashedToken(id3,
-				TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("n3")), "h3",
+				TokenType.AGENT, Optional.of(new TokenName("n3")), "h3",
 				new UserName("u"), Instant.ofEpochMilli(5000), Instant.ofEpochMilli(6000));
 		
 		final Set<HashedToken> tokens = new HashSet<>(Arrays.asList(ht1, ht2, ht3));

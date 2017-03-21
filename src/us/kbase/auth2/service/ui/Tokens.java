@@ -45,9 +45,12 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TokenSet;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.common.ExternalToken;
 import us.kbase.auth2.service.common.IncomingJSON;
+import us.kbase.auth2.service.common.NewExternalToken;
 
 @Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
@@ -71,7 +74,7 @@ public class Tokens {
 			NoTokenProvidedException, DisabledUserException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put("user", ((UIToken) t.get("current")).getUser());
+		t.put("user", ((ExternalToken) t.get("current")).getUser());
 		t.put("createurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
 		t.put("revokeurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
 				UIPaths.SEP));
@@ -93,7 +96,7 @@ public class Tokens {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
-	public UINewToken createTokenHTML(
+	public NewExternalToken createTokenHTML(
 			@Context final HttpHeaders headers,
 			@FormParam("tokenname") final String tokenName,
 			@FormParam("tokentype") final String tokenType)
@@ -123,7 +126,7 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public UINewToken createTokenJSON(
+	public NewExternalToken createTokenJSON(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
@@ -174,15 +177,15 @@ public class Tokens {
 	}
 			
 
-	private UINewToken createtoken(
+	private NewExternalToken createtoken(
 			final String tokenName,
 			final String tokenType,
 			final IncomingToken userToken)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException, IllegalParameterException {
-		return new UINewToken(auth.createToken(userToken, new TokenName(tokenName),
-				"server".equals(tokenType)));
+		return new NewExternalToken(auth.createToken(userToken, new TokenName(tokenName),
+				"server".equals(tokenType) ? TokenType.SERV : TokenType.DEV));
 	}
 
 	private Map<String, Object> getTokens(final IncomingToken token)
@@ -191,10 +194,10 @@ public class Tokens {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("current", new UIToken(ts.getCurrentToken()));
+		ret.put("current", new ExternalToken(ts.getCurrentToken()));
 		
-		final List<UIToken> ats = ts.getTokens().stream()
-				.map(t -> new UIToken(t)).collect(Collectors.toList());
+		final List<ExternalToken> ats = ts.getTokens().stream()
+				.map(t -> new ExternalToken(t)).collect(Collectors.toList());
 		ret.put("tokens", ats);
 		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
 		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));

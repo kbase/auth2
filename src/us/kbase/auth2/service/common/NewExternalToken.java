@@ -1,15 +1,15 @@
-package us.kbase.auth2.service.ui;
+package us.kbase.auth2.service.common;
 
 import us.kbase.auth2.lib.token.NewToken;
 
-public class UINewToken extends UIToken {
+public class NewExternalToken extends ExternalToken {
 
 	private final String token;
 	
 	//TODO TEST
 	//TODO JAVADOC
 	
-	public UINewToken(final NewToken token) {
+	public NewExternalToken(final NewToken token) {
 		super(token.getTokenType(), token.getTokenName(), token.getId(),
 				token.getUserName(),
 				token.getCreationDate(), token.getExpirationDate());

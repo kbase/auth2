@@ -92,6 +92,10 @@ username -> display name. At most 10,000 names are returned.
 GET /api/V2/token  
 Introspect a token.
 
+POST /api/V2/token  
+Create an agent token. Takes form or JSON encoded data with the key `tokenname`. Use the
+`Content-Type` header to specify input type.
+
 #### Legacy
 
 Endpoints (mostly) identical to the original Globus and KBase auth endpoints are provided for

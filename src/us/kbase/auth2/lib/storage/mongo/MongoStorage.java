@@ -125,6 +125,7 @@ public class MongoStorage implements AuthStorage {
 		final Map<TokenLifetimeType, String> m = new HashMap<>();
 		m.put(TokenLifetimeType.EXT_CACHE, Fields.CONFIG_APP_TOKEN_LIFE_CACHE);
 		m.put(TokenLifetimeType.LOGIN, Fields.CONFIG_APP_TOKEN_LIFE_LOGIN);
+		m.put(TokenLifetimeType.AGENT, Fields.CONFIG_APP_TOKEN_LIFE_AGENT);
 		m.put(TokenLifetimeType.DEV, Fields.CONFIG_APP_TOKEN_LIFE_DEV);
 		m.put(TokenLifetimeType.SERV, Fields.CONFIG_APP_TOKEN_LIFE_SERV);
 		TOKEN_LIFETIME_FIELD_MAP = Collections.unmodifiableMap(m);

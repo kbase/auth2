@@ -24,6 +24,7 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
@@ -129,6 +130,12 @@ public class Authentication {
 			throw new RuntimeException("this should be impossible", e);
 		}
 	}
+	
+	private static final Map<TokenType, TokenLifetimeType> TOKEN_LIFE_TYPE = ImmutableMap.of(
+			TokenType.LOGIN, TokenLifetimeType.LOGIN,
+			TokenType.AGENT, TokenLifetimeType.AGENT,
+			TokenType.DEV, TokenLifetimeType.DEV,
+			TokenType.SERV, TokenLifetimeType.SERV);
 
 	private final AuthStorage storage;
 	// DO NOT modify this after construction, not thread safe
@@ -666,13 +673,13 @@ public class Authentication {
 		}
 	}
 
-	/** Create a new developer or service token.
+	/** Create a new agent, developer or service token.
 	 * @param token a token for the user that wishes to create a new token.
 	 * @param tokenName a name for the token.
-	 * @param serverToken whether the token should be a developer or server token.
+	 * @param tokenType the type of token to create. Note that login tokens may not be created
+	 * other than via logging in.
 	 * @return the new token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws MissingParameterException If the name is missing.
 	 * @throws InvalidTokenException if the provided token is not valid.
 	 * @throws UnauthorizedException if the provided token is not a login token or the user does
 	 * not have the role required to create the token type.
@@ -680,31 +687,32 @@ public class Authentication {
 	public NewToken createToken(
 			final IncomingToken token,
 			final TokenName tokenName,
-			final boolean serverToken)
-			throws AuthStorageException, MissingParameterException,
-			InvalidTokenException, UnauthorizedException {
+			final TokenType tokenType)
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenName, "tokenName");
+		nonNull(tokenType, "tokenType");
+		if (TokenType.LOGIN.equals(tokenType)) {
+			throw new IllegalArgumentException("Cannot create a login token without logging in");
+		}
 		final HashedToken t = getToken(token);
 		if (!t.getTokenType().equals(TokenType.LOGIN)) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Only login tokens may be used to create a token");
 		}
-		final AuthUser au = getUser(t);
-		final Role reqRole = serverToken ? Role.SERV_TOKEN : Role.DEV_TOKEN;
-		if (!reqRole.isSatisfiedBy(au.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
-					"User %s is not authorized to create this token type.",
-					au.getUserName().getName()));
+		final AuthUser au = getUser(t); // check for disabled user for AGENT tokens as well
+		if (!TokenType.AGENT.equals(tokenType)) {
+			final Role reqRole = TokenType.SERV.equals(tokenType) ?
+					Role.SERV_TOKEN : Role.DEV_TOKEN;
+			if (!reqRole.isSatisfiedBy(au.getRoles())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
+						"User %s is not authorized to create this token type.",
+						au.getUserName().getName()));
+			}
 		}
-		final long life;
 		final AuthConfig c = cfg.getAppConfig();
-		if (serverToken) {
-			life = c.getTokenLifetimeMS(TokenLifetimeType.SERV);
-		} else {
-			life = c.getTokenLifetimeMS(TokenLifetimeType.DEV);
-		}
-		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.EXTENDED_LIFETIME,
-				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
+		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
+		final NewToken nt = new NewToken(randGen.randomUUID(), tokenType,
+				tokenName, randGen.getToken(), t.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
 	}

@@ -31,6 +31,32 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	}
 	
 	@Test
+	public void updateConfigAndGetWithAllTokenLifeTimes() throws Exception {
+		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+				new AuthConfig(true, null,
+						ImmutableMap.of(
+								TokenLifetimeType.EXT_CACHE, 100000L,
+								TokenLifetimeType.LOGIN, 200000L,
+								TokenLifetimeType.AGENT, 300000L,
+								TokenLifetimeType.DEV, 400000L,
+								TokenLifetimeType.SERV, 500000L)),
+				new TestExternalConfig("foo"));
+		storage.updateConfig(cfgSet, false);
+		
+		final AuthConfig expected = new AuthConfig(true, null,
+				ImmutableMap.of(
+						TokenLifetimeType.EXT_CACHE, 100000L,
+						TokenLifetimeType.LOGIN, 200000L,
+						TokenLifetimeType.AGENT, 300000L,
+						TokenLifetimeType.DEV, 400000L,
+						TokenLifetimeType.SERV, 500000L));
+		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+				new TestExternalConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+	}
+	
+	@Test
 	public void updateConfigAndGet() throws Exception {
 		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,

@@ -60,7 +60,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		storage.storeToken(ht);
 		final Instant now = Instant.now();
 		failStoreToken(new HashedToken(ht.getId(),
-				TokenType.EXTENDED_LIFETIME,
+				TokenType.DEV,
 				Optional.of(new TokenName("bleah")), "somehash", new UserName("baz"), now, now.plusMillis(10000)),
 				new IllegalArgumentException(String.format(
 						"Token ID %s already exists in the database", ht.getId())));
@@ -75,7 +75,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		final Instant now = Instant.now();
 		final UUID id = UUID.randomUUID();
 		failStoreToken(new HashedToken(id,
-				TokenType.EXTENDED_LIFETIME, Optional.of(new TokenName("bleah")),
+				TokenType.SERV, Optional.of(new TokenName("bleah")),
 				ht.getTokenHash(), new UserName("baz"), now, now.plusMillis(10000)),
 				new IllegalArgumentException(String.format(
 						"Token hash for token ID %s already exists in the database", id)));
