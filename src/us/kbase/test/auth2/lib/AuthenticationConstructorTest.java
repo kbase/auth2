@@ -158,12 +158,12 @@ public class AuthenticationConstructorTest {
 				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"));
 		
 		final Set<IdentityProvider> ids = new HashSet<>();
-		ids.add(new NullIdProv("prov1", cfg1));
-		ids.add(new NullIdProv("prov2", cfg2));
+		ids.add(new NullIdProv("Prov1", cfg1));
+		ids.add(new NullIdProv("Prov2", cfg2));
 		
 		final Map<String, ProviderConfig> idcfg = new HashMap<>();
-		idcfg.put("prov1", AuthConfig.DEFAULT_PROVIDER_CONFIG);
-		idcfg.put("prov2", AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		idcfg.put("Prov1", AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		idcfg.put("Prov2", AuthConfig.DEFAULT_PROVIDER_CONFIG);
 		
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, idcfg,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
@@ -178,5 +178,24 @@ public class AuthenticationConstructorTest {
 		
 		assertThat("incorrect providers", auth.getIdentityProviders(),
 				is(Collections.emptyList())); //since no providers are enabled
+	}
+	
+	@Test
+	public void withIDsFailDuplicate() throws Exception {
+		final AuthStorage storage = mock(AuthStorage.class);
+		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
+				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+		final IdentityProviderConfig cfg2 = new IdentityProviderConfig(
+				"prov2", new URL("https://login2.com"), new URL("https://link2.com"),
+				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"));
+		
+		final Set<IdentityProvider> ids = new HashSet<>();
+		ids.add(new NullIdProv("Prov1", cfg1));
+		ids.add(new NullIdProv("Prov2", cfg2));
+		ids.add(new NullIdProv("prov2", cfg2)); // should match on different case
+		
+		failConstruct(storage, ids, new TestExternalConfig("thing"), new IllegalArgumentException(
+				"Duplicate provider name: prov2"));
 	}
 }

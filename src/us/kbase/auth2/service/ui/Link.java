@@ -4,7 +4,6 @@ import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
-import static us.kbase.auth2.service.ui.UIUtils.upperCase;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -133,7 +132,7 @@ public class Link {
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
 			@Context final HttpHeaders headers,
-			@PathParam("provider") String provider,
+			@PathParam("provider") final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
@@ -145,7 +144,6 @@ public class Link {
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		IdentityProviderInput.checkState(state, retstate);
-		provider = upperCase(provider);
 		final Optional<IncomingToken> token =
 				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
 		final Optional<TemporaryToken> tt;
@@ -181,7 +179,7 @@ public class Link {
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
-			@PathParam("provider") String provider,
+			@PathParam("provider") final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo,
 			final IdentityProviderInput input)
@@ -194,7 +192,6 @@ public class Link {
 		//TODO INPUT handle error in provider
 		input.exceptOnAdditionalProperties();
 		input.checkState(state);
-		provider = upperCase(provider);
 		final LinkToken lt = auth.link(getToken(token), provider, input.getAuthCode());
 		final Map<String, Object> linkChoice = new HashMap<>();
 		final ResponseBuilder r = Response.ok(linkChoice).cookie(getStateCookie(null));

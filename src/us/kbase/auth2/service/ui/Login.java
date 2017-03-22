@@ -3,7 +3,6 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
-import static us.kbase.auth2.service.ui.UIUtils.upperCase;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -187,7 +186,7 @@ public class Login {
 	@GET
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
-			@PathParam("provider") String provider,
+			@PathParam("provider") final String provider,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
@@ -200,7 +199,6 @@ public class Login {
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		IdentityProviderInput.checkState(state, retstate);
-		provider = upperCase(provider);
 		final LoginToken lr = auth.login(provider, authcode);
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
@@ -222,7 +220,7 @@ public class Login {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
-			@PathParam("provider") String provider,
+			@PathParam("provider") final String provider,
 			@Context final UriInfo uriInfo,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
@@ -236,7 +234,6 @@ public class Login {
 		//TODO INPUT handle error in provider
 		input.exceptOnAdditionalProperties();
 		input.checkState(state);
-		provider = upperCase(provider);
 		
 		final LoginToken lr = auth.login(provider, input.getAuthCode());
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);

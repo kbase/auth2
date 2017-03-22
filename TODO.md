@@ -70,6 +70,10 @@ Future work
 * Test mode
   * test apis for user creation & admin
   * auto configure server for ease of use
+* More identity providers
+  * Facebook
+  * Orcid (? already supported via Globus)
+  * CiLogon (? already supported via Globus)
 
 ### 3rd party developers acting on behalf of users (e.g. JGI, sequencing centers)
 * OAuth2 endpoint
