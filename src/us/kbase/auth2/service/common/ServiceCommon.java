@@ -37,7 +37,7 @@ public class ServiceCommon {
 			final String displayName,
 			final String email)
 			throws IllegalParameterException, InvalidTokenException, AuthStorageException {
-		final UserUpdate uu = new UserUpdate();
+		final UserUpdate.Builder uu = UserUpdate.getBuilder();
 		try {
 			if (displayName != null && !displayName.isEmpty()) {
 				uu.withDisplayName(new DisplayName(displayName));
@@ -48,7 +48,7 @@ public class ServiceCommon {
 		} catch (MissingParameterException mpe) {
 			throw new RuntimeException("This is impossible", mpe);
 		}
-		auth.updateUser(token, uu);
+		auth.updateUser(token, uu.build());
 	}
 	
 	/** Load and instantiate a class with a given interface. Expects a no-argument constructor.
