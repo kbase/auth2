@@ -173,7 +173,7 @@ to generate a list of current users (parse the output to only usernames).  Get
 a Nexus token using nexus.api.globusonline.org, and get a Globus API token from
 https://tokens.globus.org.
 
-At this point you can enable nonadmin logins and whichever providers you select
+After importing a provider's users you can enable nonadmin logins and whichever providers you select
 (Globus and Google currently supported).
 
 Start & stop server w/o a pid
