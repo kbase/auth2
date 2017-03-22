@@ -48,7 +48,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
-		storage.updateUser(new UserName("user1"), new UserUpdate());
+		storage.updateUser(new UserName("user1"), UserUpdate.getBuilder().build());
 		final AuthUser au = storage.getUser(new UserName("user1"));
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
@@ -62,7 +62,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
-				new UserUpdate().withDisplayName(new DisplayName("whee")));
+				UserUpdate.getBuilder().withDisplayName(new DisplayName("whee")).build());
 		final AuthUser au = storage.getUser(new UserName("user1"));
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("whee")));
@@ -76,7 +76,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
-				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com")));
+				UserUpdate.getBuilder().withEmail(new EmailAddress("foobar@baz.com")).build());
 		final AuthUser au = storage.getUser(new UserName("user1"));
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
@@ -90,8 +90,8 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
-				new UserUpdate().withEmail(new EmailAddress("foobar@baz.com"))
-				.withDisplayName(new DisplayName("herbert")));
+				UserUpdate.getBuilder().withEmail(new EmailAddress("foobar@baz.com"))
+						.withDisplayName(new DisplayName("herbert")).build());
 		final AuthUser au = storage.getUser(new UserName("user1"));
 		assertThat("incorrect username", au.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("herbert")));
@@ -100,15 +100,16 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	
 	@Test
 	public void updateFailNulls() throws Exception {
-		failUpdateUser(null, new UserUpdate().withEmail(new EmailAddress("f@g.com")),
+		failUpdateUser(null, UserUpdate.getBuilder()
+						.withEmail(new EmailAddress("f@g.com")).build(),
 				new NullPointerException("userName"));
 		failUpdateUser(new UserName("foo"), null, new NullPointerException("update"));
 	}
 	
 	@Test
 	public void updateFailNoSuchUser() throws Exception {
-		failUpdateUser(new UserName("foo"), new UserUpdate()
-				.withEmail(new EmailAddress("f@g.com")), new NoSuchUserException("foo"));
+		failUpdateUser(new UserName("foo"), UserUpdate.getBuilder()
+				.withEmail(new EmailAddress("f@g.com")).build(), new NoSuchUserException("foo"));
 	}
 	
 	private void failUpdateUser(final UserName name, final UserUpdate uu, final Exception e) {
