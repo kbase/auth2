@@ -66,7 +66,6 @@ public class Token {
 			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
 		
-		//TODO NOW move ui token into common area
 		return new NewExternalToken(auth.createToken(
 				getToken(token), new TokenName(name), TokenType.AGENT));
 	}
