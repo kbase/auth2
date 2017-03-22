@@ -125,6 +125,9 @@ public class AuthenticationIdentityProviderTest {
 		
 		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true),
 				is(new URL("https://test.com")));
+		//test with alternate case
+		assertThat("incorrect url", auth.getIdentityProviderURL("Prov", "foobarbaz", true),
+				is(new URL("https://test.com")));
 	}
 	
 	@Test
@@ -147,13 +150,36 @@ public class AuthenticationIdentityProviderTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failGetURL(auth, null, "foo", new NoSuchIdentityProviderException(null));
+		failGetURL(auth, null, "foo", new NullPointerException("provider"));
 		failGetURL(auth, "   \t   \n   ", "foo",
 				new NoSuchIdentityProviderException("   \t   \n   "));
 		failGetURL(auth, "prov", null,
 				new IllegalArgumentException("state cannot be null or empty"));
 		failGetURL(auth, "prov", "    \t    \n    ",
 				new IllegalArgumentException("state cannot be null or empty"));
+	}
+	
+	@Test
+	public void getURLFailNoProvider() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+		
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final Map<String, ProviderConfig> providers = new HashMap<>();
+		providers.put("prov", new ProviderConfig(true, true, true));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failGetURL(auth, "provs", "foobar", new NoSuchIdentityProviderException("provs"));
 	}
 	
 	@Test

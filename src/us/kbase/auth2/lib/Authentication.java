@@ -20,6 +20,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -140,7 +141,8 @@ public class Authentication {
 
 	private final AuthStorage storage;
 	// DO NOT modify this after construction, not thread safe
-	private final TreeMap<String, IdentityProvider> idProviderSet = new TreeMap<>();
+	private final TreeMap<String, IdentityProvider> idProviderSet = new TreeMap<>(
+			String.CASE_INSENSITIVE_ORDER);
 	private final RandomDataGenerator randGen;
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
@@ -198,11 +200,15 @@ public class Authentication {
 		noNulls(identityProviderSet, "Null identity provider in set");
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.storage = storage;
-		identityProviderSet.stream().forEach(i -> idProviderSet.put(i.getProviderName(), i));
-		final Map<String, ProviderConfig> provs = new HashMap<>();
-		for (final String provname: idProviderSet.keySet()) {
-			provs.put(provname, AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		for (final IdentityProvider idp: identityProviderSet) {
+			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
+				throw new IllegalArgumentException("Duplicate provider name: " +
+						idp.getProviderName());
+			}
+			idProviderSet.put(idp.getProviderName(), idp);
 		}
+		final Map<String, ProviderConfig> provs = idProviderSet.keySet().stream().collect(
+				Collectors.toMap(Function.identity(), n -> AuthConfig.DEFAULT_PROVIDER_CONFIG));
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		try {
@@ -1274,12 +1280,18 @@ public class Authentication {
 		return provs;
 	}
 	
+	// looks up the provider, case insensitive 
 	private IdentityProvider getIdentityProvider(final String provider)
 			throws NoSuchIdentityProviderException, AuthStorageException {
-		if (!cfg.getAppConfig().getProviderConfig(provider).isEnabled()) {
+		nonNull(provider, "provider");
+		final IdentityProvider idp = idProviderSet.get(provider);
+		if (idp == null) {
 			throw new NoSuchIdentityProviderException(provider);
 		}
-		return idProviderSet.get(provider);
+		if (!cfg.getAppConfig().getProviderConfig(idp.getProviderName()).isEnabled()) {
+			throw new NoSuchIdentityProviderException(provider);
+		}
+		return idp;
 	}
 	
 	/** Get a redirection url for an identity provider.
@@ -1330,13 +1342,14 @@ public class Authentication {
 	public LoginToken login(final String provider, final String authcode)
 			throws MissingParameterException, IdentityRetrievalException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		final IdentityProvider idp = getIdentityProvider(provider);
+		
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
+		final IdentityProvider idp = getIdentityProvider(provider);
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
 		final LoginState ls = getLoginState(ris);
-		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
+		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken lr;
 		if (ls.getUsers().size() == 1 &&
 				ls.getIdentities().isEmpty() &&
@@ -1621,7 +1634,7 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException,
 			NoSuchIdentityProviderException {
-		final Set<RemoteIdentity> ids = getLinkCandidates(provider, authcode);
+		final Set<RemoteIdentity> ids = getLinkCandidates(getIdentityProvider(provider), authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
@@ -1640,10 +1653,11 @@ public class Authentication {
 		return tt;
 	}
 
-	private Set<RemoteIdentity> getLinkCandidates(final String provider, final String authcode)
+	private Set<RemoteIdentity> getLinkCandidates(
+			final IdentityProvider idp,
+			final String authcode)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException {
-		final IdentityProvider idp = getIdentityProvider(provider);
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
@@ -1689,19 +1703,20 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException,
 			MissingParameterException, IdentityRetrievalException,
 			LinkFailedException, NoSuchIdentityProviderException, DisabledUserException {
+		final IdentityProvider idp = getIdentityProvider(provider);
 		final AuthUser u = getUser(token); // UI shouldn't allow disabled users to link
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> ids = getLinkCandidates(provider, authcode);
+		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
 		 * under the control of the primary auth UI.
 		 */
 		final LinkToken lt;
-		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(provider);
+		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			try {
 				/* throws link failed exception if u is a local user or the id is already linked
@@ -1717,7 +1732,7 @@ public class Authentication {
 		} else { // will store an ID set if said set is empty.
 			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
 			if (ids.isEmpty()) {
-				lt = new LinkToken(tt, new LinkIdentities(u, provider));
+				lt = new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
 			} else {
 				lt = new LinkToken(tt, new LinkIdentities(u, ids));
 			}
@@ -1952,7 +1967,9 @@ public class Authentication {
 		nonNull(acs, "acs");
 		getUser(token, Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
-			if (!idProviderSet.containsKey(provider)) {
+			// since idProviderSet is case insensitive
+			final IdentityProvider idp = idProviderSet.get(provider);
+			if (idp == null || !idp.getProviderName().equals(provider)) {
 				throw new NoSuchIdentityProviderException(provider);
 			}
 		}
