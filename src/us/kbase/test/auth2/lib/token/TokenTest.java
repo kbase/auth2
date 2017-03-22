@@ -39,6 +39,11 @@ public class TokenTest {
 	}
 	
 	@Test
+	public void equalsTemporaryToken() throws Exception {
+		EqualsVerifier.forClass(TemporaryToken.class).usingGetClass().verify();
+	}
+	
+	@Test
 	public void equalsIncomingToken() {
 		EqualsVerifier.forClass(IncomingToken.class).usingGetClass().verify();
 	}

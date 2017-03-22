@@ -10,6 +10,7 @@ import java.time.Instant;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
@@ -53,10 +54,15 @@ public class LoginStateTest {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
 	}
+	
+	@Test
+	public void equals() throws Exception {
+		EqualsVerifier.forClass(LoginState.class).usingGetClass().verify();
+	}
 
 	@Test
 	public void buildMinimal() throws Exception {
-		final LoginState ls = new LoginState.Builder("foo", false).build();
+		final LoginState ls = LoginState.getBuilder("foo", false).build();
 		assertThat("incorrect provider", ls.getProvider(), is("foo"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect num users", ls.getUsers().size(), is(0));
@@ -69,7 +75,7 @@ public class LoginStateTest {
 	
 	private void failStartBuild(final String provider, final Exception e) {
 		try {
-			new LoginState.Builder(null, false);
+			LoginState.getBuilder(null, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -78,7 +84,7 @@ public class LoginStateTest {
 	
 	@Test
 	public void buildWithIdentities() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false)
 				.withIdentity(REMOTE1).withIdentity(REMOTE2).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
@@ -88,7 +94,7 @@ public class LoginStateTest {
 	
 	@Test
 	public void buildWithUsers() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", true)
+		final LoginState ls = LoginState.getBuilder("prov", true)
 				.withUser(AUTH_USER1, REMOTE1).withUser(AUTH_USER2, REMOTE3)
 				.withUser(AUTH_USER2, REMOTE2).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
@@ -117,7 +123,7 @@ public class LoginStateTest {
 	
 	@Test
 	public void buildWithUsersAndIdentities() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false)
 				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
@@ -137,7 +143,7 @@ public class LoginStateTest {
 	
 	@Test
 	public void unmodifiable() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false)
 				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
 		
 		try {
@@ -176,10 +182,10 @@ public class LoginStateTest {
 	
 	@Test
 	public void addIdentityFail() throws Exception {
-		failAddIdentity(new LoginState.Builder("prov", false), null,
+		failAddIdentity(LoginState.getBuilder("prov", false), null,
 				new NullPointerException("remoteID"));
 		
-		failAddIdentity(new LoginState.Builder("prov1", false), REMOTE1, new IllegalStateException(
+		failAddIdentity(LoginState.getBuilder("prov1", false), REMOTE1, new IllegalStateException(
 				"Cannot have multiple providers in the same login state"));
 	}
 	
@@ -198,23 +204,23 @@ public class LoginStateTest {
 	
 	@Test
 	public void addUserFail() throws Exception {
-		failAddUser(new LoginState.Builder("prov", false), null, REMOTE1,
+		failAddUser(LoginState.getBuilder("prov", false), null, REMOTE1,
 				new NullPointerException("user"));
 		
-		failAddUser(new LoginState.Builder("prov", false), AUTH_USER1, null,
+		failAddUser(LoginState.getBuilder("prov", false), AUTH_USER1, null,
 				new NullPointerException("remoteID"));
 		
-		failAddUser(new LoginState.Builder("prov1", false), AUTH_USER1, REMOTE1,
+		failAddUser(LoginState.getBuilder("prov1", false), AUTH_USER1, REMOTE1,
 				new IllegalStateException(
 						"Cannot have multiple providers in the same login state"));
 		
-		failAddUser(new LoginState.Builder("prov", false), AUTH_USER1, REMOTE2,
+		failAddUser(LoginState.getBuilder("prov", false), AUTH_USER1, REMOTE2,
 				new IllegalArgumentException("user does not contain remote ID"));
 	}
 	
 	@Test
 	public void noSuchUser() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false)
 				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
 		
 		try {
