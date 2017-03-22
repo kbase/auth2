@@ -51,6 +51,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
+import us.kbase.auth2.providers.GlobusIdentityProviderFactory;
 import us.kbase.auth2.service.AuthBuilder;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthStartupConfig;
@@ -64,8 +65,7 @@ public class AuthCLI {
 	
 	private static final String NAME = "manageauth";
 	private static final String GLOBUS = "Globus";
-	private static final String GLOBUS_CLASS =
-			"us.kbase.auth2.kbase.GlobusIdentityProviderFactory";
+	private static final String GLOBUS_CLASS = GlobusIdentityProviderFactory.class.getName();
 	
 	private static final String GLOBUS_USER_URL = "https://nexus.api.globusonline.org/users/";
 	private static final String GLOBUS_IDENTITES_PATH  = "/v2/api/identities";
