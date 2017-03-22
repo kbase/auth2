@@ -1412,7 +1412,7 @@ public class Authentication {
 	private LoginState getLoginState(final Set<RemoteIdentity> ids)
 			throws AuthStorageException {
 		final String provider = ids.iterator().next().getRemoteID().getProviderName();
-		final LoginState.Builder builder = new LoginState.Builder(provider,
+		final LoginState.Builder builder = LoginState.getBuilder(provider,
 				cfg.getAppConfig().isLoginAllowed());
 		for (final RemoteIdentity ri: ids) {
 			final Optional<AuthUser> u = storage.getUser(ri);

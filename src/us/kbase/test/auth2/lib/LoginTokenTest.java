@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
@@ -34,7 +35,7 @@ public class LoginTokenTest {
 	private static final LoginState LOGIN_STATE;
 	static {
 		try {
-			LOGIN_STATE = new LoginState.Builder("foo", false).withUser(
+			LOGIN_STATE = LoginState.getBuilder("foo", false).withUser(
 					NewUser.getBuilder(
 							new UserName("foo"), new DisplayName("bar"), Instant.now(), REMOTE)
 							.withEmailAddress(new EmailAddress("f@g.com")).build(),
@@ -43,6 +44,11 @@ public class LoginTokenTest {
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests nub", e);
 		}
+	}
+	
+	@Test
+	public void equals() throws Exception {
+		EqualsVerifier.forClass(LoginToken.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -91,10 +97,10 @@ public class LoginTokenTest {
 		failConstructToken((NewToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(nt, null, new NullPointerException("loginState"));
 		
-		failConstructToken(nt, new LoginState.Builder("foo", false).build(),
+		failConstructToken(nt, LoginState.getBuilder("foo", false).build(),
 				new IllegalStateException("Login process is complete but user count != 1 " +
 						"or unlinked identities > 0"));
-		failConstructToken(nt, new LoginState.Builder("foo", false)
+		failConstructToken(nt, LoginState.getBuilder("foo", false)
 				.withUser(LOGIN_STATE.getUser(new UserName("foo")), REMOTE)
 				.withIdentity(REMOTE).build(),
 				new IllegalStateException("Login process is complete but user count != 1 " +

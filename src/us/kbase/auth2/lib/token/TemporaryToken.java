@@ -78,4 +78,60 @@ public class TemporaryToken {
 	public TemporaryHashedToken getHashedToken() {
 		return new TemporaryHashedToken(id, HashedToken.hash(token), creationDate, expirationDate);
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
+		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((token == null) ? 0 : token.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		TemporaryToken other = (TemporaryToken) obj;
+		if (creationDate == null) {
+			if (other.creationDate != null) {
+				return false;
+			}
+		} else if (!creationDate.equals(other.creationDate)) {
+			return false;
+		}
+		if (expirationDate == null) {
+			if (other.expirationDate != null) {
+				return false;
+			}
+		} else if (!expirationDate.equals(other.expirationDate)) {
+			return false;
+		}
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
+			return false;
+		}
+		if (token == null) {
+			if (other.token != null) {
+				return false;
+			}
+		} else if (!token.equals(other.token)) {
+			return false;
+		}
+		return true;
+	}
+	
+	
 }

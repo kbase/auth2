@@ -79,4 +79,50 @@ public class LoginToken {
 	public LoginState getLoginState() {
 		return ls;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((ls == null) ? 0 : ls.hashCode());
+		result = prime * result + ((temporaryToken == null) ? 0 : temporaryToken.hashCode());
+		result = prime * result + ((token == null) ? 0 : token.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		LoginToken other = (LoginToken) obj;
+		if (ls == null) {
+			if (other.ls != null) {
+				return false;
+			}
+		} else if (!ls.equals(other.ls)) {
+			return false;
+		}
+		if (temporaryToken == null) {
+			if (other.temporaryToken != null) {
+				return false;
+			}
+		} else if (!temporaryToken.equals(other.temporaryToken)) {
+			return false;
+		}
+		if (token == null) {
+			if (other.token != null) {
+				return false;
+			}
+		} else if (!token.equals(other.token)) {
+			return false;
+		}
+		return true;
+	}
 }

@@ -104,7 +104,73 @@ public class LoginState {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
-	
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((noUser == null) ? 0 : noUser.hashCode());
+		result = prime * result + (nonAdminLoginAllowed ? 1231 : 1237);
+		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
+		result = prime * result + ((userIDs == null) ? 0 : userIDs.hashCode());
+		result = prime * result + ((users == null) ? 0 : users.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		LoginState other = (LoginState) obj;
+		if (noUser == null) {
+			if (other.noUser != null) {
+				return false;
+			}
+		} else if (!noUser.equals(other.noUser)) {
+			return false;
+		}
+		if (nonAdminLoginAllowed != other.nonAdminLoginAllowed) {
+			return false;
+		}
+		if (provider == null) {
+			if (other.provider != null) {
+				return false;
+			}
+		} else if (!provider.equals(other.provider)) {
+			return false;
+		}
+		if (userIDs == null) {
+			if (other.userIDs != null) {
+				return false;
+			}
+		} else if (!userIDs.equals(other.userIDs)) {
+			return false;
+		}
+		if (users == null) {
+			if (other.users != null) {
+				return false;
+			}
+		} else if (!users.equals(other.users)) {
+			return false;
+		}
+		return true;
+	}
+
+	/** Create a LoginState builder.
+	 * @param provider the name of the identity provider that provided the identities for this
+	 * login attempt.
+	 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
+	 */
+	public static Builder getBuilder(final String provider, final boolean nonAdminLoginAllowed) {
+		return new Builder(provider, nonAdminLoginAllowed);
+	}
 
 	/** A builder for a LoginState instance.
 	 * @author gaprice@lbl.gov
@@ -114,12 +180,7 @@ public class LoginState {
 		
 		private final LoginState ls;
 
-		/** Create the builder.
-		 * @param provider the name of the identity provider that provided the identities for this
-		 * login attempt.
-		 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
-		 */
-		public Builder(final String provider, final boolean nonAdminLoginAllowed) {
+		private Builder(final String provider, final boolean nonAdminLoginAllowed) {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
 			}
