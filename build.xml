@@ -214,6 +214,7 @@
       <test name="us.kbase.test.auth2.lib.AuthenticationPolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationRoleTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationUserUpdateTest"/>
       <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
       <test name="us.kbase.test.auth2.lib.DisplayNameTest"/>
       <test name="us.kbase.test.auth2.lib.EmailAddressTest"/>
