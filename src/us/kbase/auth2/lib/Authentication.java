@@ -1878,8 +1878,8 @@ public class Authentication {
 		try {
 			storage.updateUser(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {
-			throw new AuthStorageException("Token without a user: " +
-					ht.getId());
+			throw new RuntimeException("There seems to be an error in the " +
+					"storage system. Token was valid, but no user", e);
 		}
 	}
 
