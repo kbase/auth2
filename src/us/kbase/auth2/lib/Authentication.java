@@ -2011,32 +2011,32 @@ public class Authentication {
 
 	/** Imports a user from an external service without requiring credentials.
 	 * 
-	 * Do not exposed this method in a public API.
+	 * Do not expose this method in a public API.
 	 * 
 	 * @param userName the user name for the user.
-	 * @param ri the remote identity to link to the new user.
+	 * @param remoteIdentity the remote identity to link to the new user.
 	 * @throws UserExistsException if the user name is already in use.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws IdentityLinkedException if the identity is already linked to a user.
 	 */
-	public void importUser(final UserName userName, final RemoteIdentity ri)
+	public void importUser(final UserName userName, final RemoteIdentity remoteIdentity)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
 		nonNull(userName, "userName");
-		nonNull(ri, "ri");
+		nonNull(remoteIdentity, "remoteIdentity");
 		DisplayName dn;
 		try { // hacky, but eh. Python guys will like it though
-			dn = new DisplayName(ri.getDetails().getFullname());
+			dn = new DisplayName(remoteIdentity.getDetails().getFullname());
 		} catch (IllegalParameterException | MissingParameterException e) {
 			dn = UNKNOWN_DISPLAY_NAME;
 		}
 		EmailAddress email;
 		try {
-			email = new EmailAddress(ri.getDetails().getEmail());
+			email = new EmailAddress(remoteIdentity.getDetails().getEmail());
 		} catch (IllegalParameterException | MissingParameterException e) {
 			email = EmailAddress.UNKNOWN;
 		}
 		try {
-			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), ri)
+			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), remoteIdentity)
 					.withEmailAddress(email).build());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
