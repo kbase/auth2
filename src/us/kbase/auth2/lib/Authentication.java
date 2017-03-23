@@ -1354,8 +1354,8 @@ public class Authentication {
 		if (ls.getUsers().size() == 1 &&
 				ls.getIdentities().isEmpty() &&
 				!pc.isForceLoginChoice()) {
-			final UserName user = ls.getUsers().iterator().next();
-			final AuthUser lastUser = ls.getUser(user);
+			final UserName userName = ls.getUsers().iterator().next();
+			final AuthUser user = ls.getUser(userName);
 			/* Don't throw an error here since an auth UI may not be controlling the call -
 			 * this call may be the result of a redirect from a 3rd party
 			 * provider. Any controllable error should be thrown when the process flow is back
@@ -1366,12 +1366,12 @@ public class Authentication {
 			 * consequence is that they'll have to choose from one account in the next step,
 			 * so who cares.
 			 */
-			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(lastUser.getRoles())) {
+			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
 				lr = storeIdentitiesTemporarily(ls);
-			} else if (lastUser.isDisabled()) {
+			} else if (user.isDisabled()) {
 				lr = storeIdentitiesTemporarily(ls);
 			} else {
-				lr = new LoginToken(login(lastUser.getUserName()), ls);
+				lr = new LoginToken(login(user.getUserName()), ls);
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
@@ -1549,7 +1549,7 @@ public class Authentication {
 					"Non-admin login is disabled");
 		}
 		if (u.get().isDisabled()) {
-			throw new DisabledUserException("This account is disabled");
+			throw new DisabledUserException();
 		}
 		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
