@@ -1450,12 +1450,12 @@ public class Authentication {
 	 * this account.
 	 * @return a new login token for the new user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws AuthenticationException if the id is not included in the login state associated with
-	 * the token.
+	 * @throws UnauthorizedException if the id is not included in the login state associated with
+	 * the token or if login is disabled.
+	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UserExistsException if the user name is already in use.
 	 * @throws UnauthorizedException if login is disabled or the username is the root user name.
 	 * @throws IdentityLinkedException if the specified identity is already linked to a user.
-	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
@@ -1466,11 +1466,7 @@ public class Authentication {
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
 			throws AuthStorageException, InvalidTokenException, UserExistsException,
-			UnauthorizedException, IdentityLinkedException, LinkFailedException {
-		if (!cfg.getAppConfig().isLoginAllowed()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Account creation is disabled");
-		}
+			UnauthorizedException, IdentityLinkedException {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
@@ -1478,6 +1474,10 @@ public class Authentication {
 		noNulls(policyIDs, "null item in policyIDs");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
+		}
+		if (!cfg.getAppConfig().isLoginAllowed()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Account creation is disabled");
 		}
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
@@ -1487,7 +1487,8 @@ public class Authentication {
 		}
 		final Instant now = clock.instant();
 		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
-				.withEmailAddress(email).withLastLogin(now);
+				 // no need to set last login, will be set in the login() call below
+				.withEmailAddress(email);
 		for (final PolicyID pid: policyIDs) {
 			b.withPolicyID(pid, now);
 		}
@@ -1497,7 +1498,7 @@ public class Authentication {
 			throw new RuntimeException("Didn't supply any roles", e);
 		}
 		if (linkAll) {
-			ids.remove(match);
+			ids.remove(match.get());
 			filterLinkCandidates(ids);
 			link(userName, ids);
 		}
@@ -1520,15 +1521,13 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an administrator and non-admin login
 	 * is not allowed or the user account is disabled.
-	 * @throws LinkFailedException if linkAll is true and one of the identities couldn't be linked.
 	 */
 	public NewToken login(
 			final IncomingToken token,
 			final String identityID,
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
-			throws AuthenticationException, AuthStorageException, UnauthorizedException,
-			LinkFailedException {
+			throws AuthenticationException, AuthStorageException, UnauthorizedException {
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
@@ -1553,7 +1552,7 @@ public class Authentication {
 		}
 		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
-			ids.remove(ri);
+			ids.remove(ri.get());
 			filterLinkCandidates(ids);
 			link(u.get().getUserName(), ids);
 		}
@@ -1562,8 +1561,7 @@ public class Authentication {
 	
 	private Optional<RemoteIdentity> getIdentity(
 			final String identityID,
-			final Set<RemoteIdentity> identities)
-					throws AuthStorageException, InvalidTokenException {
+			final Set<RemoteIdentity> identities) {
 		checkStringNoCheckedException(identityID, "identityID");
 		for (final RemoteIdentity ri: identities) {
 			if (ri.getRemoteID().getID().equals(identityID)) {
@@ -1837,8 +1835,7 @@ public class Authentication {
 	 * @param token the user's token.
 	 * @param linkToken a temporary token associated with the link process state.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws LinkFailedException if the identity is already linked, the id is not included in
-	 * the link state associated with the temporary token, or the user is a local user.
+	 * @throws LinkFailedException if the user is a local user.
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws InvalidTokenException if either token is invalid.
 	 */
@@ -1855,35 +1852,40 @@ public class Authentication {
 	}
 	
 	private void link(final UserName userName, final RemoteIdentity id)
-			throws LinkFailedException, AuthStorageException, IdentityLinkedException {
+			throws AuthStorageException, IdentityLinkedException {
 		link(userName, new HashSet<>(Arrays.asList(id)), true);
 	}
 
 	private void link(final UserName userName, final Set<RemoteIdentity> identities)
-			throws AuthStorageException, LinkFailedException {
+			throws AuthStorageException {
 		try {
 			link(userName, identities, false);
 		} catch (IdentityLinkedException e) {
-			//don't care if we miss an identity in this context
+			// don't care if we miss an identity in this context. This catch block is here simply
+			// to avoid having the checked exception in the throws clause
 		}
 	}
 	
+	// assumes user is not local, and that the user exists
 	private void link(
 			final UserName userName,
 			final Set<RemoteIdentity> identities,
 			final boolean throwExceptionIfIdentityLinked)
-			throws AuthStorageException, LinkFailedException, IdentityLinkedException {
+			throws AuthStorageException, IdentityLinkedException {
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
 				storage.link(userName, ri);
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
-						userName.getName());
+						userName.getName(), e);
 			} catch (IdentityLinkedException e) {
 				if (throwExceptionIfIdentityLinked) {
 					throw e;
 				}
+			} catch (LinkFailedException e) {
+				throw new RuntimeException(
+						"Programming error: this method should not be called on a local user", e);
 			}
 		}
 	}
