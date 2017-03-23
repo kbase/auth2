@@ -418,7 +418,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build();
 		
-		failCreateUser(nu2, new IdentityLinkedException("prov : bar1"));
+		failCreateUser(nu2, new IdentityLinkedException(ri.getRemoteID().getID()));
 	}
 	
 	private void failCreateUser(final NewUser user, final Exception e)

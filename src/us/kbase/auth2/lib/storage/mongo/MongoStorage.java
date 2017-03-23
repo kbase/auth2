@@ -553,9 +553,7 @@ public class MongoStorage implements AuthStorage {
 						Fields.FIELD_SEP)) {
 					// either the provider / prov id combo or the local identity uuid are already
 					// in the db
-					final RemoteIdentityID ri = newUser.getIdentity().getRemoteID();
-					throw new IdentityLinkedException(
-							ri.getProviderName() + " : " + ri.getProviderIdentityId());
+					throw new IdentityLinkedException(newUser.getIdentity().getRemoteID().getID());
 				} // otherwise throw next exception
 			}
 			throw new AuthStorageException("Database write failed", mwe);
@@ -1297,8 +1295,8 @@ public class MongoStorage implements AuthStorage {
 	 */
 	@Override
 	public void link(final UserName user, final RemoteIdentity remoteID)
-			throws NoSuchUserException, AuthStorageException,
-			LinkFailedException {
+			throws NoSuchUserException, AuthStorageException, LinkFailedException,
+			IdentityLinkedException {
 		int count = 0;
 		boolean complete = false;
 		while (!complete) {
@@ -1320,7 +1318,8 @@ public class MongoStorage implements AuthStorage {
 	private boolean addIdentity(
 			final AuthUser user,
 			final RemoteIdentity remoteID)
-			throws NoSuchUserException, AuthStorageException, LinkFailedException {
+			throws NoSuchUserException, AuthStorageException, LinkFailedException,
+			IdentityLinkedException {
 		/* This method is written as it is to avoid adding the same provider ID to a user twice.
 		 * Since mongodb unique indexes only enforce uniqueness between documents, not within
 		 * documents, adding the same provider ID to a single document twice is possible without
@@ -1363,7 +1362,7 @@ public class MongoStorage implements AuthStorage {
 		} catch (MongoWriteException mwe) {
 			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
 				// another user already is linked to this ID, fail permanently, no retry
-				throw new LinkFailedException("Provider identity is already linked");
+				throw new IdentityLinkedException(remoteID.getRemoteID().getID());
 			} else {
 				throw new AuthStorageException("Database write failed", mwe);
 			}

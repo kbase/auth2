@@ -46,6 +46,7 @@ import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -330,8 +331,8 @@ public class Link {
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") String identityID)
-			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException, DisabledUserException {
+			throws NoTokenProvidedException, AuthenticationException, AuthStorageException,
+			LinkFailedException, DisabledUserException, IdentityLinkedException {
 		if (identityID == null || identityID.trim().isEmpty()) {
 			identityID = null;
 		}
@@ -367,7 +368,7 @@ public class Link {
 			final LinkPick linkpick)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, LinkFailedException, DisabledUserException,
-			IllegalParameterException, MissingParameterException {
+			IllegalParameterException, MissingParameterException, IdentityLinkedException {
 		if (linkpick == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
@@ -381,7 +382,7 @@ public class Link {
 			final String linktoken,
 			final Optional<String> id)
 			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
-			LinkFailedException, DisabledUserException {
+			LinkFailedException, DisabledUserException, IdentityLinkedException {
 		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
 		if (id.isPresent()) {
 			auth.link(token, linkInProcessToken, id.get());
