@@ -496,9 +496,14 @@ public class AuthenticationLoginTest {
 	
 	@Test
 	public void failLoginNullsAndEmpties() throws Exception {
-		final Authentication auth = initTestMocks().auth;
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final Authentication auth = initTestMocks(set(idp)).auth;
 		
 		failLogin(auth, null, "foo", new NullPointerException("provider"));
+		failLogin(auth, "   \t  \n   ", "foo", new NoSuchIdentityProviderException("   \t  \n   "));
 		failLogin(auth, "prov", null,
 				new MissingParameterException("authorization code"));
 		failLogin(auth, "prov", "    \t \n   ",
