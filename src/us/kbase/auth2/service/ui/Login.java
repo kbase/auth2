@@ -384,6 +384,7 @@ public class Login {
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
 			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
 			c.put("usernamesugg", availName.isPresent() ? availName.get().getName() : null);
+			//TODO UI return null for full name & email if they're not valid by our rules
 			c.put("prov_username", id.getDetails().getUsername());
 			c.put("prov_fullname", id.getDetails().getFullname());
 			c.put("prov_email", id.getDetails().getEmail());

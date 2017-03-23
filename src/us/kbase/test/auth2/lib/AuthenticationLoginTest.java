@@ -36,14 +36,17 @@ import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -503,7 +506,8 @@ public class AuthenticationLoginTest {
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
 		failLogin(auth, null, "foo", new NullPointerException("provider"));
-		failLogin(auth, "   \t  \n   ", "foo", new NoSuchIdentityProviderException("   \t  \n   "));
+		failLogin(auth, "   \t  \n   ", "foo",
+				new NoSuchIdentityProviderException("   \t  \n   "));
 		failLogin(auth, "prov", null,
 				new MissingParameterException("authorization code"));
 		failLogin(auth, "prov", "    \t \n   ",
@@ -576,6 +580,285 @@ public class AuthenticationLoginTest {
 			final Exception e) {
 		try {
 			auth.login(provider, authcode);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getLoginStateOneUnlinkedID() throws Exception {
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		final LoginState got = auth.getLoginState(token);
+		
+		final LoginState expected = LoginState.getBuilder("prov", true)
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
+		
+		assertThat("incorrect login state", got, is(expected));
+	}
+	
+	@Test
+	public void getLoginStateTwoUnlinkedIDsAndNoLoginAllowed() throws Exception {
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		final LoginState got = auth.getLoginState(token);
+		
+		final LoginState expected = LoginState.getBuilder("prov", false)
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
+		
+		assertThat("incorrect login state", got, is(expected));
+	}
+	
+	@Test
+	public void getLoginStateOneLinkedID() throws Exception {
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				Instant.ofEpochMilli(10000L))
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+				.thenReturn(Optional.of(user));
+		
+		final LoginState got = auth.getLoginState(token);
+		
+		final LoginState expected = LoginState.getBuilder("prov", true)
+				.withUser(AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						Instant.ofEpochMilli(10000L))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build(),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
+		
+		assertThat("incorrect login state", got, is(expected));
+	}
+	
+	@Test
+	public void getLoginStateTwoLinkedIDs() throws Exception {
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final AuthUser user1 = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				Instant.ofEpochMilli(10000L))
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
+		
+		final AuthUser user2 = AuthUser.getBuilder(new UserName("foo2"), new DisplayName("bar2"),
+				Instant.ofEpochMilli(20000L))
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+				.thenReturn(Optional.of(user1));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+				.thenReturn(Optional.of(user2));
+		
+		
+		final LoginState got = auth.getLoginState(token);
+		
+		final LoginState expected = LoginState.getBuilder("prov", true).withUser(
+				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						Instant.ofEpochMilli(10000L))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build(),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+		
+				.withUser(AuthUser.getBuilder(new UserName("foo2"), new DisplayName("bar2"),
+						Instant.ofEpochMilli(20000L))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build(),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
+		
+		assertThat("incorrect login state", got, is(expected));
+	}
+	
+	@Test
+	public void getLoginStateOneLinkedOneUnlinkedID() throws Exception {
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				Instant.ofEpochMilli(10000L))
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+				.thenReturn(Optional.of(user));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		
+		final LoginState got = auth.getLoginState(token);
+		
+		final LoginState expected = LoginState.getBuilder("prov", true).withUser(
+				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						Instant.ofEpochMilli(10000L))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build(),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+				
+				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
+		
+		assertThat("incorrect login state", got, is(expected));
+	}
+	
+	@Test
+	public void getLoginStateFailNull() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failGetLoginState(auth, null, new NullPointerException("token"));
+	}
+	
+	@Test
+	public void getLoginStateFailInvalidToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failGetLoginState(auth, token, new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void getLoginStateFailNoIDs() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken()))
+				.thenReturn(Collections.emptySet());
+		
+		failGetLoginState(auth, token, new RuntimeException(
+				"Programming error: temporary login token stored with no identities"));
+	}
+	
+	private void failGetLoginState(
+			final Authentication auth,
+			final IncomingToken token,
+			final Exception e) {
+		try {
+			auth.getLoginState(token);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
