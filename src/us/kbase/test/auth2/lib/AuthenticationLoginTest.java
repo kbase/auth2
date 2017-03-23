@@ -4,9 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -15,14 +13,11 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
 import org.junit.Test;
-import org.mockito.verification.VerificationMode;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -40,23 +35,20 @@ import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
-import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
-import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLoginTest {
@@ -500,5 +492,88 @@ public class AuthenticationLoginTest {
 						.build());
 		
 		assertThat("incorrect login token", lt, is(expected));
+	}
+	
+	@Test
+	public void failLoginNullsAndEmpties() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failLogin(auth, null, "foo", new NullPointerException("provider"));
+		failLogin(auth, "prov", null,
+				new MissingParameterException("authorization code"));
+		failLogin(auth, "prov", "    \t \n   ",
+				new MissingParameterException("authorization code"));
+	}
+	
+	@Test
+	public void failLoginNoSuchProvider() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final Authentication auth = initTestMocks(set(idp)).auth;
+		
+		failLogin(auth, "prov1", "foo", new NoSuchIdentityProviderException("prov1"));
+	}
+	
+	@Test
+	public void failLoginDisabledProvider() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(false, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failLogin(auth, "prov", "foo", new NoSuchIdentityProviderException("prov"));
+	}
+	
+	@Test
+	public void failLoginIdentityRetrieval() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(idp.getIdentities("foobar", false)).thenThrow(new IdentityRetrievalException("foo"));
+		
+		failLogin(auth, "prov", "foobar", new IdentityRetrievalException("foo"));
+	}
+	
+	private void failLogin(
+			final Authentication auth,
+			final String provider,
+			final String authcode,
+			final Exception e) {
+		try {
+			auth.login(provider, authcode);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
 	}
 }

@@ -1804,6 +1804,9 @@ public class Authentication {
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 			InvalidTokenException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
+		if (au.isLocal()) {
+			throw new LinkFailedException("Cannot link identities to local accounts");
+		}
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken);
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
@@ -1831,6 +1834,9 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException, DisabledUserException,
 			LinkFailedException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
+		if (au.isLocal()) {
+			throw new LinkFailedException("Cannot link identities to local accounts");
+		}
 		final Set<RemoteIdentity> identities = getTemporaryIdentities(linkToken);
 		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
