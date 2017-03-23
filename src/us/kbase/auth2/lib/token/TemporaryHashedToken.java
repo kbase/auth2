@@ -53,4 +53,58 @@ public class TemporaryHashedToken {
 	public Instant getExpirationDate() {
 		return expiry;
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((created == null) ? 0 : created.hashCode());
+		result = prime * result + ((expiry == null) ? 0 : expiry.hashCode());
+		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((tokenHash == null) ? 0 : tokenHash.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		TemporaryHashedToken other = (TemporaryHashedToken) obj;
+		if (created == null) {
+			if (other.created != null) {
+				return false;
+			}
+		} else if (!created.equals(other.created)) {
+			return false;
+		}
+		if (expiry == null) {
+			if (other.expiry != null) {
+				return false;
+			}
+		} else if (!expiry.equals(other.expiry)) {
+			return false;
+		}
+		if (id == null) {
+			if (other.id != null) {
+				return false;
+			}
+		} else if (!id.equals(other.id)) {
+			return false;
+		}
+		if (tokenHash == null) {
+			if (other.tokenHash != null) {
+				return false;
+			}
+		} else if (!tokenHash.equals(other.tokenHash)) {
+			return false;
+		}
+		return true;
+	}
 }
