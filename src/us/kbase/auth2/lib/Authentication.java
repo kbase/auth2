@@ -1465,7 +1465,7 @@ public class Authentication {
 			final EmailAddress email,
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
-			throws AuthStorageException, AuthenticationException, UserExistsException,
+			throws AuthStorageException, InvalidTokenException, UserExistsException,
 			UnauthorizedException, IdentityLinkedException, LinkFailedException {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -1489,7 +1489,7 @@ public class Authentication {
 		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
 				.withEmailAddress(email).withLastLogin(now);
 		for (final PolicyID pid: policyIDs) {
-			b.withPolicyID(pid, clock.instant());
+			b.withPolicyID(pid, now);
 		}
 		try {
 			storage.createUser(b.build());
@@ -1693,7 +1693,7 @@ public class Authentication {
 	 * from the provider.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
-	 * @throws LinkFailedException if the link was unsuccessful.
+	 * @throws LinkFailedException if the user is a local user.
 	 * @throws DisabledUserException if the user account is disabled.
 	 */
 	public LinkToken link(
@@ -1718,17 +1718,7 @@ public class Authentication {
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
-			try {
-				/* throws link failed exception if u is a local user or the id is already linked
-				 * Since we already checked those, only a rare race condition can cause a link
-				 * failed exception, and the consequence is trivial so don't worry about it
-				 */
-				storage.link(u.getUserName(), ids.iterator().next());
-			} catch (NoSuchUserException e) {
-				throw new AuthStorageException(
-						"User unexpectedly disappeared from the database", e);
-			}
-			lt = new LinkToken();
+			lt = getLinkToken(idp, u, ids.iterator().next());
 		} else { // will store an ID set if said set is empty.
 			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
 			if (ids.isEmpty()) {
@@ -1738,6 +1728,27 @@ public class Authentication {
 			}
 		}
 		return lt;
+	}
+
+	// expects that u is not a local user. Will throw link failed if so.
+	// will store empty identity set if identity is already linked.
+	private LinkToken getLinkToken(
+			final IdentityProvider idp,
+			final AuthUser u,
+			final RemoteIdentity remoteIdentity)
+			throws AuthStorageException, LinkFailedException {
+		try {
+			storage.link(u.getUserName(), remoteIdentity);
+			return new LinkToken();
+		} catch (NoSuchUserException e) {
+			throw new AuthStorageException(
+					"User unexpectedly disappeared from the database", e);
+		} catch (IdentityLinkedException e) {
+			// well, crap. race condition and now there are no link candidates left.
+			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
+					LINK_TOKEN_LIFETIME_MS);
+			return new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
+		}
 	}
 
 	private void filterLinkCandidates(final Set<? extends RemoteIdentity> rids)
@@ -1792,8 +1803,9 @@ public class Authentication {
 	 * @param identityID the id of the remote identity to link to the user's account. This identity
 	 * must be included in the link state associated with the temporary token. 
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws LinkFailedException if the identity is already linked, the id is not included in
-	 * the link state associated with the temporary token, or the user is a local user.
+	 * @throws LinkFailedException if the id is not included in
+	 * the link state associated with the temporary token or the user is a local user.
+	 * @throws IdentityLinkedException if the identity is already linked to another user.
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws InvalidTokenException if either token is invalid.
 	 */
@@ -1802,7 +1814,7 @@ public class Authentication {
 			final IncomingToken linktoken,
 			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
-			InvalidTokenException {
+			InvalidTokenException, IdentityLinkedException {
 		final AuthUser au = getUser(token); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
@@ -1813,7 +1825,7 @@ public class Authentication {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
 					identityID));
 		}
-		link(au.getUserName(), new HashSet<>(Arrays.asList(ri.get())));
+		link(au.getUserName(), ri.get());
 	}
 	
 	/** Complete the OAuth2 account linking process by linking all available identities to the
@@ -1841,9 +1853,26 @@ public class Authentication {
 		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
 	}
+	
+	private void link(final UserName userName, final RemoteIdentity id)
+			throws LinkFailedException, AuthStorageException, IdentityLinkedException {
+		link(userName, new HashSet<>(Arrays.asList(id)), true);
+	}
 
 	private void link(final UserName userName, final Set<RemoteIdentity> identities)
 			throws AuthStorageException, LinkFailedException {
+		try {
+			link(userName, identities, false);
+		} catch (IdentityLinkedException e) {
+			//don't care if we miss an identity in this context
+		}
+	}
+	
+	private void link(
+			final UserName userName,
+			final Set<RemoteIdentity> identities,
+			final boolean throwExceptionIfIdentityLinked)
+			throws AuthStorageException, LinkFailedException, IdentityLinkedException {
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
@@ -1851,6 +1880,10 @@ public class Authentication {
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
 						userName.getName());
+			} catch (IdentityLinkedException e) {
+				if (throwExceptionIfIdentityLinked) {
+					throw e;
+				}
 			}
 		}
 	}

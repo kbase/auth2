@@ -14,6 +14,7 @@ import org.junit.Test;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -217,8 +218,7 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user10", "full10", "email10"));
-		failLink(new UserName("foo2"), ri,
-				new LinkFailedException("Provider identity is already linked"));
+		failLink(new UserName("foo2"), ri, new IdentityLinkedException(ri.getRemoteID().getID()));
 	}
 	
 	private void failLink(

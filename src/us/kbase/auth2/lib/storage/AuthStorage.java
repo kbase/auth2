@@ -346,14 +346,14 @@ public interface AuthStorage {
 	 * @param userName the user to which the remote identity will be linked. 
 	 * @param remoteID the remote identity.
 	 * @throws NoSuchUserException if the user does not exist.
-	 * @throws LinkFailedException if the user was a local user or the remote identity is already
-	 * linked to another user.
+	 * @throws LinkFailedException if the user is a local user.
+	 * @throws IdentityLinkedException if the identity is already linked to another user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	void link(UserName userName, RemoteIdentity remoteID)
 			throws NoSuchUserException, AuthStorageException,
-			LinkFailedException;
+			LinkFailedException, IdentityLinkedException;
 
 	/** Remove a remote identity from a user.
 	 * @param userName the user.
