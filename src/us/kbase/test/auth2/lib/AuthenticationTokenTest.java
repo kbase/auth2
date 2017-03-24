@@ -165,12 +165,37 @@ public class AuthenticationTokenTest {
 		failGetTokens(auth, t, new InvalidTokenException());
 	}
 	
+	@Test
+	public void getTokensFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
+	}
+	
 	private void failGetTokens(
 			final Authentication auth,
 			final IncomingToken t,
 			final Exception e) {
 		try {
-			auth.getToken(t);
+			auth.getTokens(t);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -250,6 +275,31 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failGetTokensUser(auth, t, new UserName("bar"), new InvalidTokenException());
+	}
+	
+	@Test
+	public void getTokensUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -410,7 +460,31 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failRevokeToken(auth, t, UUID.randomUUID(), new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeTokenFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
 		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -529,6 +603,32 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failRevokeTokenAdmin(auth, t, new UserName("foo"), target, new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeTokenAdminFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final UUID target = UUID.randomUUID();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -659,7 +759,7 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeAllTokenUserFailBadToken() throws Exception {
+	public void revokeAllTokensUserFailBadToken() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -669,6 +769,31 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failRevokeAllTokensUser(auth, t, new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeAllTokensUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
 	}
 	
 	private void failRevokeAllTokensUser(
@@ -752,6 +877,31 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failRevokeAllTokensAdminAll(auth, t, new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeAllTokensAdminAllBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -895,6 +1045,31 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failRevokeAllTokensAdminUser(auth, t, new UserName("foo"), new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeAllTokensAdminUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -1146,8 +1321,8 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
 		
 		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only login tokens may be used to create a token"));
+				new UnauthorizedException(ErrorType.UNAUTHORIZED, tokenType.getDescription() +
+						" tokens are not allowed for this operation"));
 	}
 	
 	@Test

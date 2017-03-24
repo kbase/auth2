@@ -35,7 +35,6 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenName;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -71,7 +70,7 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, DisabledUserException {
+			NoTokenProvidedException, UnauthorizedException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		t.put("user", ((ExternalToken) t.get("current")).getUser());
@@ -87,7 +86,7 @@ public class Tokens {
 	public Map<String, Object> getTokensJSON(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, DisabledUserException {
+			NoTokenProvidedException, UnauthorizedException {
 		return getTokens(getToken(headerToken));
 	}
 	
@@ -143,7 +142,7 @@ public class Tokens {
 			@PathParam("tokenid") final UUID tokenId)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getTokenFromCookie(headers, cfg.getTokenCookieName()), tokenId);
 	}
 	
@@ -154,7 +153,7 @@ public class Tokens {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getToken(headerToken), tokenId);
 	}
 	
@@ -162,7 +161,7 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public Response revokeAllAndLogout(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
 	}
@@ -172,7 +171,7 @@ public class Tokens {
 	public void revokeAll(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+			InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getToken(headerToken));
 	}
 			
@@ -190,7 +189,7 @@ public class Tokens {
 
 	private Map<String, Object> getTokens(final IncomingToken token)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException, DisabledUserException {
+			InvalidTokenException, UnauthorizedException {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();

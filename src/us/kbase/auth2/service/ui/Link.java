@@ -53,6 +53,7 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -138,7 +139,7 @@ public class Link {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
 			NoSuchProviderException, AuthStorageException,
-			NoTokenProvidedException, LinkFailedException, DisabledUserException {
+			NoTokenProvidedException, LinkFailedException, UnauthorizedException {
 		//TODO INPUT handle error in params (provider, state)
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
@@ -185,8 +186,8 @@ public class Link {
 			@Context final UriInfo uriInfo,
 			final IdentityProviderInput input)
 			throws MissingParameterException, AuthenticationException,
-				DisabledUserException, LinkFailedException, NoTokenProvidedException,
-				AuthStorageException, IllegalParameterException {
+				LinkFailedException, NoTokenProvidedException,
+				AuthStorageException, IllegalParameterException, UnauthorizedException {
 		if (input == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
@@ -260,7 +261,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException, DisabledUserException {
+			InvalidTokenException, LinkFailedException, UnauthorizedException {
 		return linkChoice(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				linktoken, uriInfo);
 	}
@@ -274,7 +275,7 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException, DisabledUserException {
+			InvalidTokenException, LinkFailedException, UnauthorizedException {
 		return linkChoice(getToken(token), linktoken, uriInfo);
 	}
 
@@ -283,7 +284,7 @@ public class Link {
 			final String linktoken,
 			final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			LinkFailedException, DisabledUserException {
+			LinkFailedException, UnauthorizedException {
 		final LinkIdentities ids = auth.getLinkState(incomingToken,
 				getLinkInProcessToken(linktoken));
 		return buildLinkChoice(uriInfo, ids);
@@ -331,8 +332,8 @@ public class Link {
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") String identityID)
-			throws NoTokenProvidedException, AuthenticationException, AuthStorageException,
-			LinkFailedException, DisabledUserException, IdentityLinkedException {
+			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
 		if (identityID == null || identityID.trim().isEmpty()) {
 			identityID = null;
 		}
@@ -366,9 +367,9 @@ public class Link {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			final LinkPick linkpick)
-			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, LinkFailedException, DisabledUserException,
-			IllegalParameterException, MissingParameterException, IdentityLinkedException {
+			throws NoTokenProvidedException, AuthStorageException,
+				LinkFailedException, IllegalParameterException, MissingParameterException,
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
 		if (linkpick == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
@@ -381,8 +382,8 @@ public class Link {
 			final IncomingToken token,
 			final String linktoken,
 			final Optional<String> id)
-			throws NoTokenProvidedException, AuthStorageException, AuthenticationException,
-			LinkFailedException, DisabledUserException, IdentityLinkedException {
+			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
 		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
 		if (id.isPresent()) {
 			auth.link(token, linkInProcessToken, id.get());
