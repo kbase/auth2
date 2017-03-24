@@ -42,6 +42,8 @@ import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
@@ -1712,8 +1714,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(true, null,
-								ImmutableMap.of(TokenLifetimeType.LOGIN, 600000L)),
+						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
@@ -1745,12 +1746,343 @@ public class AuthenticationLoginTest {
 		verify(storage).storeToken(new HashedToken(
 				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
 				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(610000)));
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)));
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(
 				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(10000), 600000)));
+				Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)));
+	}
+	
+	@Test
+	public void completeLoginFailNullsAndEmpties() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "whee";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		failCompleteLogin(auth, null, id, pids, l, new NullPointerException("token"));
+		failCompleteLogin(auth, t, null, pids, l,
+				new IllegalArgumentException("Missing argument: identityID"));
+		failCompleteLogin(auth, t, "   \t   ", pids, l,
+				new IllegalArgumentException("Missing argument: identityID"));
+		failCompleteLogin(auth, t, id, null, l, new NullPointerException("policyIDs"));
+		failCompleteLogin(auth, t, id, set(new PolicyID("foo"), null), l,
+				new NullPointerException("null item in policyIDs"));
+	}
+	
+	@Test
+	public void completeLoginFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "whee";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failCompleteLogin(auth, t, id, pids, l, new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void completeLoginFailBadId() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "whee"; // definitely won't match anything
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		failCompleteLogin(auth, t, id, pids, l, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Not authorized to login to user with remote identity whee"));
+	}
+	
+	@Test
+	public void completeLoginFailNoUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.absent());
+		
+		failCompleteLogin(auth, t, id, pids, l, new AuthenticationException(
+				ErrorType.AUTHENTICATION_FAILED,
+				"There is no account linked to the provided identity ID"));
+	}
+	
+	@Test
+	public void completeLoginFailLoginDisabled() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failCompleteLogin(auth, t, id, pids, l, new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+	}
+	
+	@Test
+	public void completeLoginFailDisabledAccount() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+					.withUserDisabledState(
+							new UserDisabledState("foo", new UserName("baz"), Instant.now()))
+					.build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failCompleteLogin(auth, t, id, pids, l, new DisabledUserException());
+	}
+	
+	@Test
+	public void completeLoginFailNoSuchUserOnPolicyID() throws Exception {
+		/* should be impossible, but might as well exercise */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = set(new PolicyID("foobaz"));
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		doThrow(new NoSuchUserException("foo")).when(storage)
+				.addPolicyIDs(new UserName("foo"), set(new PolicyID("foobaz")));
+		
+		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+				"Something is very broken. User should exist but doesn't: " +
+				"50000 No such user: foo"));
+	}
+	
+	@Test
+	public void completeLoginFailNoSuchUserOnLink() throws Exception {
+		/* should be impossible, but might as well exercise */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = true;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build()));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+					.thenReturn(Optional.absent());
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		doThrow(new NoSuchUserException("foo")).when(storage)
+				.link(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
+		
+		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+				"User magically disappeared from database: foo"));
+	}
+	
+	@Test
+	public void completeLoginFailLinkFailOnLink() throws Exception {
+		/* should be impossible, but might as well exercise */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = true;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build()));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+					.thenReturn(Optional.absent());
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		doThrow(new LinkFailedException("foo")).when(storage)
+				.link(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
+		
+		failCompleteLogin(auth, t, id, pids, l, new RuntimeException(
+				"Programming error: this method should not be called on a local user"));
+	}
+	
+	@Test
+	public void completeLoginFailNoSuchUserOnSetLastLogin() throws Exception {
+		/* should be impossible, but might as well exercise */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "ef0518c79af70ed979907969c6d0a0f7";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken()))
+				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+							new DisplayName("bar"), Instant.ofEpochMilli(70000))
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(20000L), null);
+		when(rand.randomUUID()).thenReturn(UUID.randomUUID()).thenReturn(null);
+		when(rand.getToken()).thenReturn("mfingtoken");
+		
+		doThrow(new NoSuchUserException("foo")).when(storage)
+				.setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		
+		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+				"Something is very broken. User should exist but doesn't: " +
+				"50000 No such user: foo"));
+	}
+	
+	private void failCompleteLogin(
+			final Authentication auth,
+			final IncomingToken token,
+			final String identityID,
+			final Set<PolicyID> policyIDs,
+			final boolean linkAll,
+			final Exception e) {
+		try {
+			auth.login(token, identityID, policyIDs, linkAll);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
 	}
 }
