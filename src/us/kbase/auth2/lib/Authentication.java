@@ -1574,6 +1574,9 @@ public class Authentication {
 	// assumes inputs have been checked and the user exists
 	private void addPolicyIDs(final UserName user, final Set<PolicyID> pids)
 			throws AuthStorageException {
+		if (pids.isEmpty()) {
+			return;
+		}
 		try {
 			storage.addPolicyIDs(user, pids);
 		} catch (NoSuchUserException e) {
