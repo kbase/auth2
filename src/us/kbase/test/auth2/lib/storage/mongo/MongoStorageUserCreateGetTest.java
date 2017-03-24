@@ -517,8 +517,6 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect user", storage.getUser(REMOTE2), is(Optional.absent()));
 	}
 	
-	//TODO TEST case where user starts login, stores identity linked to user, id is unlinked, and then completes login. In Authentication tests
-	
 	@Test
 	public void getUserAndUpdateRemoteId() throws Exception {
 		storage.createUser(NewUser.getBuilder(

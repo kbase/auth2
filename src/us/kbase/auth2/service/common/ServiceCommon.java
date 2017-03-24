@@ -12,6 +12,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -36,7 +37,8 @@ public class ServiceCommon {
 			final IncomingToken token,
 			final String displayName,
 			final String email)
-			throws IllegalParameterException, InvalidTokenException, AuthStorageException {
+			throws IllegalParameterException, InvalidTokenException, AuthStorageException,
+				UnauthorizedException {
 		final UserUpdate.Builder uu = UserUpdate.getBuilder();
 		try {
 			if (displayName != null && !displayName.isEmpty()) {

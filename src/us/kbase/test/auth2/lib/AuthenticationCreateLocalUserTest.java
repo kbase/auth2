@@ -297,6 +297,34 @@ public class AuthenticationCreateLocalUserTest {
 	}
 	
 	@Test
+	public void createUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void createUserFailNoSuchUser() throws Exception {
 		// should never actually happen if db isn't corrupted
 		final TestMocks testauth = initTestMocks();

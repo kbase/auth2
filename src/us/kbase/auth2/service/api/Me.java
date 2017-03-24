@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -90,7 +91,7 @@ public class Me {
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException {
+			IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getToken(token), displayName, email);
 	}
 	
@@ -100,7 +101,7 @@ public class Me {
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
 			final Map<String, String> params)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException {
+			IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getToken(token), params.get("display"), params.get("email"));
 	}
 }

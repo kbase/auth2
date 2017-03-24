@@ -349,8 +349,8 @@ public class Authentication {
 	 * @return the new password for the local user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UserExistsException if the username is already in use.
-	 * @throws UnauthorizedException if the user for the token is not an admin, or the username to
-	 * be created is the root user name.
+	 * @throws UnauthorizedException if the user for the token is not an admin, the username to
+	 * be created is the root user name, or the token is not a login token.
 	 * @throws InvalidTokenException if the token is invalid.
 	 */
 	public Password createLocalUser(
@@ -367,7 +367,7 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot create ROOT user");
 		}
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
 		char [] pwd_copy = null;
 		byte[] salt = null;
@@ -507,7 +507,7 @@ public class Authentication {
 	 * @return the new password.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not
-	 * have the administrator role.
+	 * have the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchUserException if there is no user corresponding to the given user name.
 	 */
@@ -543,7 +543,8 @@ public class Authentication {
 			NoSuchUserException {
 		// this method is gross. rethink. ideally based on the grantable roles somehow.
 		nonNull(userName, "userName");
-		final AuthUser admin = getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
+		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
+				Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
 		final AuthUser user = storage.getUser(userName);
 		if (!user.isLocal()) {
 			throw new NoSuchUserException(String.format(
@@ -582,7 +583,7 @@ public class Authentication {
 	 * @param userName the user name of the account for which a password reset is required.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not
-	 * have the administrator role.
+	 * have the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchUserException if there is no user corresponding to the given user name.
 	 */
@@ -597,12 +598,12 @@ public class Authentication {
 	 * @param token a token for a user with the administrator role.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not
-	 * have the administrator role.
+	 * have the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.CREATE_ADMIN, Role.ROOT); // force admin
+		getUser(token, set(TokenType.LOGIN), Role.CREATE_ADMIN, Role.ROOT); // force admin
 		storage.forcePasswordReset();
 	}
 	
@@ -634,15 +635,18 @@ public class Authentication {
 		return randGen.getToken();
 	}
 
+	//TODO NOW never return the hash with the token outside this class.
+	
 	/** Get the tokens associated with a user account associated with a possessed token.
 	 * @param token a user token for the account in question.
 	 * @return the tokens.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 */
 	public TokenSet getTokens(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException {
-		final HashedToken ht = getToken(token);
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
 		return new TokenSet(ht, storage.getTokens(ht.getUserName()));
 	}
 
@@ -653,13 +657,13 @@ public class Authentication {
 	 * @return the tokens associated with the given account.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not
-	 * have the administrator role.
+	 * have the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public Set<HashedToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // force admin
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // force admin
 		return storage.getTokens(userName);
 	}
 
@@ -672,9 +676,24 @@ public class Authentication {
 	 */
 	public HashedToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
+		try {
+			return getToken(token, set());
+		} catch (UnauthorizedException e) {
+			throw new RuntimeException("Didn't require any particular token", e);
+		}
+	}
+	
+	private HashedToken getToken(final IncomingToken token, final Set<TokenType> allowedTypes)
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(token, "token");
 		try {
-			return storage.getToken(token.getHashedToken());
+			final HashedToken ht = storage.getToken(token.getHashedToken());
+			if (!allowedTypes.isEmpty() && !allowedTypes.contains(ht.getTokenType())) {
+				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						ht.getTokenType().getDescription() +
+						" tokens are not allowed for this operation");
+			}
+			return ht;
 		} catch (NoSuchTokenException e) {
 			throw new InvalidTokenException();
 		}
@@ -701,12 +720,8 @@ public class Authentication {
 		if (TokenType.LOGIN.equals(tokenType)) {
 			throw new IllegalArgumentException("Cannot create a login token without logging in");
 		}
-		final HashedToken t = getToken(token);
-		if (!t.getTokenType().equals(TokenType.LOGIN)) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Only login tokens may be used to create a token");
-		}
-		final AuthUser au = getUser(t); // check for disabled user for AGENT tokens as well
+		// check for disabled user for all token type targets as well
+		final AuthUser au = getUser(token, set(TokenType.LOGIN));
 		if (!TokenType.AGENT.equals(tokenType)) {
 			final Role reqRole = TokenType.SERV.equals(tokenType) ?
 					Role.SERV_TOKEN : Role.DEV_TOKEN;
@@ -719,7 +734,7 @@ public class Authentication {
 		final AuthConfig c = cfg.getAppConfig();
 		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
 		final NewToken nt = new NewToken(randGen.randomUUID(), tokenType,
-				tokenName, randGen.getToken(), t.getUserName(), clock.instant(), life);
+				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		storage.storeToken(nt.getHashedToken());
 		return nt;
 	}
@@ -751,7 +766,26 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		return getUser(getToken(token), required);
 	}
+	
+	// requires the user to have at least one of the required roles
+	private AuthUser getUser(
+			final IncomingToken token,
+			final Set<TokenType> allowedTokenTypes)
+					throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		return getUser(getToken(token, allowedTokenTypes), new Role[0]);
+	}
 
+	// requires the user to have at least one of the required roles
+	private AuthUser getUser(
+			final IncomingToken token,
+			final Set<TokenType> allowedTokenTypes,
+			final Role ... requiredRoles)
+					throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		return getUser(getToken(token, allowedTokenTypes), requiredRoles);
+	}
+
+	//TODO ZLATER CODE might want to make a requirements class that captures token and role requirements
+	
 	// assumes hashed token is good
 	// requires the user to have at least one of the required roles
 	private AuthUser getUser(final HashedToken ht, final Role ... required)
@@ -815,7 +849,7 @@ public class Authentication {
 	 * @throws NoSuchUserException if no user exists with the given user name.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * one of the required roles.
+	 * one of the required roles or the token is not a login token.
 	 */
 	public AuthUser getUserAsAdmin(
 			final IncomingToken adminToken,
@@ -823,7 +857,7 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException,
 			InvalidTokenException, UnauthorizedException {
 		nonNull(userName, "userName");
-		getUser(adminToken, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		return storage.getUser(userName);
 	}
 
@@ -971,27 +1005,28 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchTokenException if the user does not possess a token with the given id.
 	 * @throws InvalidTokenException if the user's token is invalid.
+	 * @throws UnauthorizedException if the incoming token is not a login token.
 	 */
 	public void revokeToken(
 			final IncomingToken token,
 			final UUID tokenID)
 			throws AuthStorageException,
-			NoSuchTokenException, InvalidTokenException {
+			NoSuchTokenException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenID, "tokenID");
-		final HashedToken ht = getToken(token);
+		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
 		storage.deleteToken(ht.getUserName(), tokenID);
 	}
 
 	/* maybe combine this with the above method...? The username is a good check that you're
 	 * revoking the right token though.
 	 */
-	/**
+	/** Revokes an arbitrary users's token.
 	 * @param token a token for a user with the administrator role.
 	 * @param userName the user name of the account for which a token will be revoked.
 	 * @param tokenID the ID of the token to revoke.
 	 * @throws InvalidTokenException if the admin token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the incoming token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchTokenException if there is no token for the specified user with the
 	 * specified ID.
@@ -1004,7 +1039,7 @@ public class Authentication {
 			NoSuchTokenException {
 		nonNull(userName, "userName");
 		nonNull(tokenID, "tokenID");
-		getUser(token, Role.ADMIN); // ensure admin
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
 		storage.deleteToken(userName, tokenID);
 		
 	}
@@ -1033,10 +1068,11 @@ public class Authentication {
 	 * @param token the token for the user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 */
 	public void revokeTokens(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException {
-		final HashedToken ht = getToken(token);
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
 		storage.deleteTokens(ht.getUserName());
 	}
 	
@@ -1044,12 +1080,12 @@ public class Authentication {
 	 * @param token a token for a user with the administrator role.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void revokeAllTokens(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, Role.ADMIN); // ensure admin
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
 		storage.deleteTokens();
 	}
 	
@@ -1059,13 +1095,13 @@ public class Authentication {
 	 * @param userName the name of the user account for which all tokens will be revoked.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void revokeAllTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, Role.ADMIN); // ensure admin
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
 		storage.deleteTokens(userName);
 	}
 	
@@ -1073,13 +1109,14 @@ public class Authentication {
 	 * @param token the user's token.
 	 * @param removeRoles the roles to remove.
 	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws UnauthorizedException if the user is the root user.
+	 * @throws UnauthorizedException if the user is the root user or the token is not a login
+	 * token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void removeRoles(final IncomingToken token, final Set<Role> removeRoles)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
-		final HashedToken ht = getToken(token);
+		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
 		try {
 			updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
 		} catch (NoSuchUserException e) {
@@ -1102,7 +1139,7 @@ public class Authentication {
 	 * @throws NoSuchUserException if there is no user account with the given name.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user account associated with the token is not
-	 * authorized to make the changes requested.
+	 * authorized to make the changes requested or the token is not a login token.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws IllegalParameterException if a role is to be both removed and added.
 	 */
@@ -1130,7 +1167,7 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Cannot change ROOT roles");
 		}
-		final AuthUser actinguser = getUser(userToken);
+		final AuthUser actinguser = getUser(userToken, set(TokenType.LOGIN));
 		
 		final Set<Role> add = new HashSet<>(addRoles);
 		add.removeAll(actinguser.getGrantableRoles());
@@ -1162,7 +1199,7 @@ public class Authentication {
 	 * @param role the role to create, or if it already exists based on the ID, update.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the token is not a login token.
 	 * @throws InvalidTokenException if the token is invalid.
 	 */
 	public void setCustomRole(
@@ -1170,7 +1207,7 @@ public class Authentication {
 			final CustomRole role)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(role, "role");
-		getUser(token, Role.ADMIN);
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
 		storage.setCustomRole(role);
 	}
 	
@@ -1180,7 +1217,7 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the token is not a login token.
 	 * @throws NoSuchRoleException if there is no role by the given ID.
 	 * @throws MissingParameterException if the role ID is missing.
 	 * @throws IllegalParameterException if the role ID is illegal.
@@ -1193,7 +1230,7 @@ public class Authentication {
 		if (roleId == null || roleId.trim().isEmpty()) {
 			throw new MissingParameterException("roleId cannot be null or empty");
 		}
-		getUser(token, Role.ADMIN); // ensure admin
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
 		storage.deleteCustomRole(roleId);
 	}
 
@@ -1204,15 +1241,15 @@ public class Authentication {
 	 * @return the custom roles.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * an appropriate role and forceAdmin is true.
+	 * an appropriate role and forceAdmin is true, or if the token is not a login token.
 	 * @throws InvalidTokenException if the token is invalid.
 	 */
 	public Set<CustomRole> getCustomRoles(final IncomingToken token, final boolean forceAdmin)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		if (forceAdmin) {
-			getUser(token, Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT);
+			getUser(token, set(TokenType.LOGIN), Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT);
 		} else {
-			getToken(token); // check for valid token
+			getToken(token, set(TokenType.LOGIN)); // check for valid token
 		}
 		return storage.getCustomRoles();
 	}
@@ -1224,7 +1261,7 @@ public class Authentication {
 	 * @param removeRoles the roles to remove.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role.
+	 * the administrator role or the token is not a login token.
 	 * @throws NoSuchUserException if there is no user account with the given name.
 	 * @throws NoSuchRoleException if one of the roles does not exist in the database.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -1255,7 +1292,7 @@ public class Authentication {
 		 * to set roles for users that users can't change. However, there's no reason not to allow
 		 * users to remove standard roles, which are privileges, not tags 
 		 */
-		getUser(userToken, Role.ADMIN);
+		getUser(userToken, set(TokenType.LOGIN), Role.ADMIN);
 		storage.updateCustomRoles(userName, addRoles, removeRoles);
 	}
 
@@ -1591,13 +1628,14 @@ public class Authentication {
 	 * @param token the user's token
 	 * @param policyID the policyID to remove.
 	 * @throws InvalidTokenException if the token is invalid.
-	 * @throws UnauthorizedException if the user is not authorized to remove policy IDs.
+	 * @throws UnauthorizedException if the user is not authorized to remove policy IDs or the
+	 * token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(policyID, "policyID");
-		getUser(token, Role.ADMIN);
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
 		storage.removePolicyID(policyID);
 	}
 	
@@ -1696,16 +1734,19 @@ public class Authentication {
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
 	 * @throws LinkFailedException if the user is a local user.
 	 * @throws DisabledUserException if the user account is disabled.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 */
 	public LinkToken link(
 			final IncomingToken token,
 			final String provider,
 			final String authcode)
 			throws InvalidTokenException, AuthStorageException,
-			MissingParameterException, IdentityRetrievalException,
-			LinkFailedException, NoSuchIdentityProviderException, DisabledUserException {
+				MissingParameterException, IdentityRetrievalException,
+				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
+				UnauthorizedException {
 		final IdentityProvider idp = getIdentityProvider(provider);
-		final AuthUser u = getUser(token); // UI shouldn't allow disabled users to link
+		 // UI shouldn't allow disabled users to link
+		final AuthUser u = getUser(token, set(TokenType.LOGIN));
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local accounts");
@@ -1776,13 +1817,14 @@ public class Authentication {
 	 * @throws LinkFailedException if the user is a local user or there are no available identities
 	 * to link.
 	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 */
 	public LinkIdentities getLinkState(
 			final IncomingToken token,
 			final IncomingToken linktoken)
 			throws InvalidTokenException, AuthStorageException,
-			LinkFailedException, DisabledUserException {
-		final AuthUser u = getUser(token);
+			LinkFailedException, DisabledUserException, UnauthorizedException {
+		final AuthUser u = getUser(token, set(TokenType.LOGIN));
 		if (u.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
@@ -1808,6 +1850,7 @@ public class Authentication {
 	 * the link state associated with the temporary token or the user is a local user.
 	 * @throws IdentityLinkedException if the identity is already linked to another user.
 	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws InvalidTokenException if either token is invalid.
 	 */
 	public void link(
@@ -1815,8 +1858,8 @@ public class Authentication {
 			final IncomingToken linktoken,
 			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
-			InvalidTokenException, IdentityLinkedException {
-		final AuthUser au = getUser(token); // checks user isn't disabled
+			InvalidTokenException, IdentityLinkedException, UnauthorizedException {
+		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
@@ -1840,12 +1883,13 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws LinkFailedException if the user is a local user.
 	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the token isn't a login token.
 	 * @throws InvalidTokenException if either token is invalid.
 	 */
 	public void linkAll(final IncomingToken token, final IncomingToken linkToken)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException,
-			LinkFailedException {
-		final AuthUser au = getUser(token); // checks user isn't disabled
+			UnauthorizedException, LinkFailedException {
+		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
@@ -1900,16 +1944,17 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnLinkFailedException if the user has only one identity or is a local user.
 	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws NoSuchIdentityException if the user does not possess the identity.
 	 */
 	public void unlink(
 			final IncomingToken token,
 			final String id)
-			throws InvalidTokenException, AuthStorageException,
-			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
+			throws InvalidTokenException, AuthStorageException, UnLinkFailedException,
+			DisabledUserException, UnauthorizedException, NoSuchIdentityException {
 		checkStringNoCheckedException(id, "id");
 		nonNull(id, "id");
-		final AuthUser au = getUser(token);
+		final AuthUser au = getUser(token, set(TokenType.LOGIN));
 		try {
 			storage.unlink(au.getUserName(), id);
 		} catch (NoSuchUserException e) {
@@ -1924,16 +1969,17 @@ public class Authentication {
 	 * @param update the update.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws UnauthorizedException if the token is not a login token.
 	 */
 	public void updateUser(
 			final IncomingToken token,
 			final UserUpdate update)
-			throws InvalidTokenException, AuthStorageException {
+			throws InvalidTokenException, AuthStorageException, UnauthorizedException {
 		nonNull(update, "update");
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
-		final HashedToken ht = getToken(token);
+		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
 		try {
 			storage.updateUser(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {
@@ -1951,7 +1997,7 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token doesn't have
 	 * the appropriate role, or if any user other than the root user attempts to disable the root
-	 * account, or any user attempts to enable the root account.
+	 * account, or any user attempts to enable the root account, or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws IllegalParameterException if a disable reason is not provided.
 	 * @throws NoSuchUserException if the specified user doesn't exist.
@@ -1963,7 +2009,8 @@ public class Authentication {
 			final String reason)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			IllegalParameterException, NoSuchUserException {
-		final AuthUser admin = getUser(token, Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
+				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		nonNull(user, "user");
 		if (disable) {
 			if (user.isRoot() && !admin.isRoot()) {
@@ -1998,7 +2045,7 @@ public class Authentication {
 	 * @param acs the new server configuration.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token doesn't have
-	 * the appropriate role.
+	 * the appropriate role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if a provider specified in the new configuration
 	 * is not supported by this authentication instance.
@@ -2009,7 +2056,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
 		nonNull(acs, "acs");
-		getUser(token, Role.ADMIN);
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
 		for (final String provider: acs.getCfg().getProviders().keySet()) {
 			// since idProviderSet is case insensitive
 			final IdentityProvider idp = idProviderSet.get(provider);
@@ -2027,7 +2074,7 @@ public class Authentication {
 	 * @return the authentication configuration.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token doesn't have
-	 * the appropriate role.
+	 * the appropriate role or if the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws ExternalConfigMappingException if the mapper failed to map the external
 	 * configuration into a class.
@@ -2038,7 +2085,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
-		getUser(token, Role.ADMIN);
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().toMap()));
@@ -2102,5 +2149,10 @@ public class Authentication {
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		}
+	}
+	
+	@SafeVarargs
+	public static <T> Set<T> set(T... objects) {
+		return new HashSet<T>(Arrays.asList(objects));
 	}
 }

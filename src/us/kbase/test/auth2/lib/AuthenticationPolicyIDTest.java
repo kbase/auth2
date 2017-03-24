@@ -75,6 +75,31 @@ public class AuthenticationPolicyIDTest {
 	}
 	
 	@Test
+	public void removePolicyIDFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRemovePolicyID(auth, token, new PolicyID("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failRemovePolicyID(auth, token, new PolicyID("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failRemovePolicyID(auth, token, new PolicyID("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void failRemotePolicyIDFailCatastrophic() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;

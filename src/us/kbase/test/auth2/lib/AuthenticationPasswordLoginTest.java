@@ -832,6 +832,31 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
+	public void resetPasswordFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void resetPasswordFailCatastrophicNoUser() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -1230,6 +1255,31 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
+	public void forceResetPasswordFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void forceResetPasswordFailCatastrophicNoUser() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -1387,6 +1437,31 @@ public class AuthenticationPasswordLoginTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failForceResetAllPasswords(auth, t, new InvalidTokenException());
+	}
+	
+	@Test
+	public void forceResetAllPasswordsFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test

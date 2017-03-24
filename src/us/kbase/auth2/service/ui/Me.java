@@ -140,7 +140,7 @@ public class Me {
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException {
+			IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				displayName, email);
 	}
@@ -165,7 +165,7 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			final Update update)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException, MissingParameterException {
+			IllegalParameterException, MissingParameterException, UnauthorizedException {
 		
 		if (update == null) {
 			throw new MissingParameterException("Missing JSON body");
@@ -181,7 +181,7 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			@PathParam("id") final String id)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			UnLinkFailedException, DisabledUserException, NoSuchIdentityException {
+			UnLinkFailedException, NoSuchIdentityException, UnauthorizedException {
 		// id can't be null
 		final Optional<IncomingToken> token = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);

@@ -402,6 +402,31 @@ public class AuthenticationGetUserTest {
 	}
 	
 	@Test
+	public void getUserAsAdminFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failGetUserAsAdmin(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failGetUserAsAdmin(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failGetUserAsAdmin(auth, token, new UserName("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void getUserAsAdminFailCatastrophic() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;

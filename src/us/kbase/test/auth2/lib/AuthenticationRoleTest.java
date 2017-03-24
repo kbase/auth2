@@ -186,6 +186,31 @@ public class AuthenticationRoleTest {
 			
 		failRemoveRoles(auth, token, set(Role.ADMIN), new InvalidTokenException());
 	}
+	
+	@Test
+	public void removeRolesFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
 
 	private void failRemoveRoles(
 			final Authentication auth,
@@ -295,6 +320,34 @@ public class AuthenticationRoleTest {
 			
 		failUpdateRoles(auth, token, new UserName("foo"), Collections.emptySet(),
 				Collections.emptySet(), new InvalidTokenException());
+	}
+	
+	@Test
+	public void updateRolesFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Agent tokens are not allowed for this operation"));
+		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Developer tokens are not allowed for this operation"));
+		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test

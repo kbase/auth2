@@ -84,6 +84,31 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
+	public void createRoleFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
 	public void createRoleFailCatastrophic() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -220,6 +245,31 @@ public class AuthenticationCustomRoleTest {
 		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 			
 		failDeleteRole(auth, token, "foo", new InvalidTokenException());
+	}
+	
+	@Test
+	public void deleteRoleFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failDeleteRole(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failDeleteRole(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failDeleteRole(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -360,6 +410,43 @@ public class AuthenticationCustomRoleTest {
 			
 		failGetCustomRoles(auth, token, true, new InvalidTokenException());
 		failGetCustomRoles(auth, token, false, new InvalidTokenException());
+	}
+	
+	@Test
+	public void getCustomRolesFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
+		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
@@ -512,6 +599,34 @@ public class AuthenticationCustomRoleTest {
 		
 		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
 				new InvalidTokenException());
+	}
+	
+	@Test
+	public void updateCustomRoleFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Agent tokens are not allowed for this operation"));
+		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Developer tokens are not allowed for this operation"));
+		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test

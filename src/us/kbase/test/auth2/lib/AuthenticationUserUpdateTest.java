@@ -17,9 +17,11 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -89,6 +91,31 @@ public class AuthenticationUserUpdateTest {
 		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		failUpdateUser(auth, token, UU, new InvalidTokenException());
+	}
+	
+	@Test
+	public void updateUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+						new UserName("bar"), Instant.now(), Instant.now()),
+				null);
+		
+		failUpdateUser(auth, token, UU, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Agent tokens are not allowed for this operation"));
+		failUpdateUser(auth, token, UU, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Developer tokens are not allowed for this operation"));
+		failUpdateUser(auth, token, UU, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				"Service tokens are not allowed for this operation"));
 	}
 	
 	@Test
