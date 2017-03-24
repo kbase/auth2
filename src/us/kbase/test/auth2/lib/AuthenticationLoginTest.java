@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -921,6 +922,8 @@ public class AuthenticationLoginTest {
 				.withPolicyID(new PolicyID("pid1"), Instant.ofEpochMilli(10000))
 				.withPolicyID(new PolicyID("pid2"), Instant.ofEpochMilli(10000)).build());
 		
+		verify(storage, never()).link(any(), any());
+		
 		verify(storage).storeToken(new HashedToken(
 				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
 				new UserName("foo"), Instant.ofEpochMilli(20000L),
@@ -934,7 +937,8 @@ public class AuthenticationLoginTest {
 	}
 	
 	@Test
-	public void createUserAlternateTokenLifeTime() throws Exception {
+	public void createUserAlternateTokenLifeTimeAndEmptyLinks() throws Exception {
+		/* tests the case where link all is true but no links are available */
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final RandomDataGenerator rand = testauth.randGenMock;
@@ -954,9 +958,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
 				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
@@ -965,7 +967,7 @@ public class AuthenticationLoginTest {
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
 				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"),
-				set(new PolicyID("pid1"), new PolicyID("pid2")), false);
+				set(new PolicyID("pid1"), new PolicyID("pid2")), true);
 
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000),
@@ -974,6 +976,8 @@ public class AuthenticationLoginTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withPolicyID(new PolicyID("pid1"), Instant.ofEpochMilli(10000))
 				.withPolicyID(new PolicyID("pid2"), Instant.ofEpochMilli(10000)).build());
+		
+		verify(storage, never()).link(any(), any());
 		
 		verify(storage).storeToken(new HashedToken(
 				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
@@ -1523,5 +1527,230 @@ public class AuthenticationLoginTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
+	}
+	
+	@Test
+	public void completeLogin() throws Exception {
+		completeLogin(Role.DEV_TOKEN, true);
+		completeLogin(Role.ADMIN, false);
+		completeLogin(Role.CREATE_ADMIN, false);
+	}
+
+	private void completeLogin(final Role userRole, final boolean allowLogin)
+			throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		final UUID tokenID = UUID.randomUUID();
+
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com")))).thenReturn(Optional.of(
+						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+								Instant.ofEpochMilli(70000))
+						.withRole(userRole)
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+						.build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(allowLogin, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(20000L), null);
+		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.getToken()).thenReturn("mfingtoken");
+		
+		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
+				set(new PolicyID("pid1"),  new PolicyID("pid2")), false);
+		
+		verify(storage).addPolicyIDs(new UserName("foo"),
+				set(new PolicyID("pid1"), new PolicyID("pid2")));
+		
+		verify(storage, never()).link(any(), any());
+		
+		verify(storage).storeToken(new HashedToken(
+				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+				new UserName("foo"), Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)));
+		
+		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		
+		assertThat("incorrect new token", nt, is(new NewToken(
+				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
+				Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)));
+	}
+	
+	@Test
+	public void completeLoginWithAlternateTokenLifetimeAndEmptyLinks() throws Exception {
+		/* tests no policy ids case and link all with no available links case*/
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		final UUID tokenID = UUID.randomUUID();
+
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com")))).thenReturn(Optional.of(
+						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+								Instant.ofEpochMilli(70000))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+						.build()));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null,
+								ImmutableMap.of(TokenLifetimeType.LOGIN, 600000L)),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(20000L), null);
+		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.getToken()).thenReturn("mfingtoken");
+		
+		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
+				Collections.emptySet(), true);
+		
+		verify(storage, never()).addPolicyIDs(any(), any());
+		
+		verify(storage, never()).link(any(), any());
+		
+		verify(storage).storeToken(new HashedToken(
+				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+				new UserName("foo"), Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(610000)));
+		
+		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		
+		assertThat("incorrect new token", nt, is(new NewToken(
+				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
+				Instant.ofEpochMilli(10000), 600000)));
+	}
+	
+	@Test
+	public void completeLoginAndLinkAll() throws Exception {
+		/* also tests no policy ids case
+		 * this is also friggin huge
+		 */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		final UUID tokenID = UUID.randomUUID();
+
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "e@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+							new RemoteIdentityDetails("user3", "full3", "d@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+							new RemoteIdentityDetails("user4", "full4", "c@g.com")),
+					new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+							new RemoteIdentityDetails("user5", "full5", "b@g.com"))));
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com")))).thenReturn(Optional.of(
+						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+								Instant.ofEpochMilli(70000))
+						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+						.build()));
+
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
+				.thenReturn(Optional.absent());
+		
+		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user5", "full5", "b@g.com"))))
+				.thenReturn(Optional.of(NewUser.getBuilder(
+						new UserName("baz"), new DisplayName("bar"), Instant.ofEpochMilli(700000),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
+		
+		//the identity was linked after identity filtering. Code should just ignore this.
+		doThrow(new IdentityLinkedException("foo")).when(storage).link(
+				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "d@g.com")));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null,
+								ImmutableMap.of(TokenLifetimeType.LOGIN, 600000L)),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(20000L), null);
+		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.getToken()).thenReturn("mfingtoken");
+		
+		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
+				Collections.emptySet(), true);
+		
+		verify(storage, never()).addPolicyIDs(any(), any());
+		
+		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id1"),
+				new RemoteIdentityDetails("user1", "full1", "f@g.com")));
+		
+		verify(storage).link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com")));
+		
+		verify(storage).link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com")));
+		
+		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
+		
+		verify(storage).storeToken(new HashedToken(
+				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+				new UserName("foo"), Instant.ofEpochMilli(10000L),
+				Instant.ofEpochMilli(610000)));
+		
+		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		
+		assertThat("incorrect new token", nt, is(new NewToken(
+				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
+				Instant.ofEpochMilli(10000), 600000)));
 	}
 }
