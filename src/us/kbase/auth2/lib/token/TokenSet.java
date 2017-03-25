@@ -13,8 +13,8 @@ import java.util.Set;
  */
 public class TokenSet {
 
-	private final HashedToken currentToken;
-	private final Set<HashedToken> tokens;
+	private final StoredToken currentToken;
+	private final Set<StoredToken> tokens;
 	
 	/** Create a new token set.
 	 * @param current the current token for the user associated with this token set.
@@ -22,15 +22,15 @@ public class TokenSet {
 	 * the token is removed from the set.
 	 */
 	public TokenSet(
-			final HashedToken current,
-			final Set<HashedToken> tokens) {
+			final StoredToken current,
+			final Set<StoredToken> tokens) {
 		nonNull(current, "current");
 		nonNull(tokens, "tokens");
 		this.currentToken = current;
-		final Set<HashedToken> nt = new HashSet<>(tokens);
-		final Iterator<HashedToken> i = nt.iterator();
+		final Set<StoredToken> nt = new HashSet<>(tokens);
+		final Iterator<StoredToken> i = nt.iterator();
 		while (i.hasNext()) {
-			final HashedToken ht = i.next();
+			final StoredToken ht = i.next();
 			nonNull(ht, "One of the tokens in the incoming set is null");
 			if (!ht.getUserName().equals(current.getUserName())) {
 				throw new IllegalArgumentException(
@@ -46,14 +46,14 @@ public class TokenSet {
 	/** Get the current token.
 	 * @return the current token.
 	 */
-	public HashedToken getCurrentToken() {
+	public StoredToken getCurrentToken() {
 		return currentToken;
 	}
 
 	/** Get all tokens other than the current token.
 	 * @return all other tokens.
 	 */
-	public Set<HashedToken> getTokens() {
+	public Set<StoredToken> getTokens() {
 		return tokens;
 	}
 

@@ -23,8 +23,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
@@ -49,8 +49,8 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("foo"), Instant.now(), Instant.now());
+		final StoredToken htoken = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				new UserName("foo"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
@@ -102,11 +102,11 @@ public class AuthenticationUserUpdateTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -126,8 +126,8 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("foo"), Instant.now(), Instant.now());
+		final StoredToken htoken = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				new UserName("foo"), Instant.now(), Instant.now());
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		

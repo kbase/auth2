@@ -63,13 +63,13 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 
 /** The main class for the Authentication application.
@@ -646,7 +646,7 @@ public class Authentication {
 	 */
 	public TokenSet getTokens(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		return new TokenSet(ht, storage.getTokens(ht.getUserName()));
 	}
 
@@ -660,7 +660,7 @@ public class Authentication {
 	 * have the administrator role or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
-	public Set<HashedToken> getTokens(final IncomingToken token, final UserName userName)
+	public Set<StoredToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // force admin
@@ -674,7 +674,7 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
-	public HashedToken getToken(final IncomingToken token)
+	public StoredToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
 		try {
 			return getToken(token, set());
@@ -683,11 +683,11 @@ public class Authentication {
 		}
 	}
 	
-	private HashedToken getToken(final IncomingToken token, final Set<TokenType> allowedTypes)
+	private StoredToken getToken(final IncomingToken token, final Set<TokenType> allowedTypes)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(token, "token");
 		try {
-			final HashedToken ht = storage.getToken(token.getHashedToken());
+			final StoredToken ht = storage.getToken(token.getHashedToken());
 			if (!allowedTypes.isEmpty() && !allowedTypes.contains(ht.getTokenType())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						ht.getTokenType().getDescription() +
@@ -788,7 +788,7 @@ public class Authentication {
 	
 	// assumes hashed token is good
 	// requires the user to have at least one of the required roles
-	private AuthUser getUser(final HashedToken ht, final Role ... required)
+	private AuthUser getUser(final StoredToken ht, final Role ... required)
 			throws AuthStorageException, UnauthorizedException {
 		final AuthUser u;
 		try {
@@ -828,7 +828,7 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException,
 			NoSuchUserException {
 		nonNull(user, "userName");
-		final HashedToken ht = getToken(token);
+		final StoredToken ht = getToken(token);
 		final AuthUser u = storage.getUser(user);
 		final boolean sameUser = ht.getUserName().equals(u.getUserName());
 		if (u.isDisabled()) {
@@ -1013,7 +1013,7 @@ public class Authentication {
 			throws AuthStorageException,
 			NoSuchTokenException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenID, "tokenID");
-		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		storage.deleteToken(ht.getUserName(), tokenID);
 	}
 
@@ -1050,10 +1050,10 @@ public class Authentication {
 	 * @return the revoked token, or an empty Optional.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
-	public Optional<HashedToken> revokeToken(final IncomingToken token)
+	public Optional<StoredToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
-		HashedToken ht = null;
+		StoredToken ht = null;
 		try {
 			ht = storage.getToken(token.getHashedToken());
 			storage.deleteToken(ht.getUserName(), ht.getId());
@@ -1072,7 +1072,7 @@ public class Authentication {
 	 */
 	public void revokeTokens(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		storage.deleteTokens(ht.getUserName());
 	}
 	
@@ -1116,7 +1116,7 @@ public class Authentication {
 	public void removeRoles(final IncomingToken token, final Set<Role> removeRoles)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
-		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		try {
 			updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
 		} catch (NoSuchUserException e) {
@@ -1979,7 +1979,7 @@ public class Authentication {
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
-		final HashedToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		try {
 			storage.updateUser(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {

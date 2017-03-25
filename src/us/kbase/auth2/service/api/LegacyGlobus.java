@@ -25,8 +25,8 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 
 @Path(APIPaths.LEGACY_GLOBUS)
 public class LegacyGlobus {
@@ -55,7 +55,7 @@ public class LegacyGlobus {
 					grantType);
 		}
 		token = getGlobusToken(xtoken, token);
-		final HashedToken ht;
+		final StoredToken ht;
 		try {
 			ht = auth.getToken(new IncomingToken(token));
 		} catch (InvalidTokenException e) {

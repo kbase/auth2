@@ -65,8 +65,8 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
@@ -139,7 +139,7 @@ public class Admin {
 		} catch (NoTokenProvidedException e) {
 			throw new MissingParameterException("token");
 		}
-		final HashedToken ht = auth.getToken(t);
+		final StoredToken ht = auth.getToken(t);
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("token", new ExternalToken(ht));
 		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP +
@@ -313,7 +313,7 @@ public class Admin {
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		
-		final Set<HashedToken> tokens = auth.getTokens(
+		final Set<StoredToken> tokens = auth.getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()), new UserName(user));
 		final List<ExternalToken> uitokens = tokens.stream()
 				.map(t -> new ExternalToken(t)).collect(Collectors.toList());

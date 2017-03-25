@@ -18,13 +18,13 @@ import us.kbase.auth2.lib.UserName;
  */
 public class NewToken {
 
+	private final UUID id;
 	private final TokenType type;
-	private final Optional<TokenName> tokenName;
 	private final String token;
+	private final Optional<TokenName> tokenName;
 	private final UserName userName;
 	private final Instant expirationDate;
 	private final Instant creationDate;
-	private final UUID id;
 	
 	/** Create a new unnamed token.
 	 * @param id the token id.

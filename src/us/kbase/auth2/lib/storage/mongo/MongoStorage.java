@@ -79,6 +79,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -670,15 +671,16 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public HashedToken getToken(final IncomingHashedToken token)
+	public StoredToken getToken(final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
 		nonNull(token, "token");
-		final Document t = findOne(COL_TOKEN, new Document(
-				Fields.TOKEN_TOKEN, token.getTokenHash()));
+		final Document t = findOne(COL_TOKEN,
+				new Document(Fields.TOKEN_TOKEN, token.getTokenHash()),
+				new Document(Fields.TOKEN_TOKEN, 0));
 		if (t == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		final HashedToken htoken = getToken(t);
+		final StoredToken htoken = getToken(t);
 		/* although expired tokens are automatically deleted from the DB by mongo, the thread
 		 * only runs ~1/min, so check here
 		 */
@@ -688,24 +690,24 @@ public class MongoStorage implements AuthStorage {
 		return htoken;
 	}
 	
-	private HashedToken getToken(final Document t) throws AuthStorageException {
-		return new HashedToken(
+	private StoredToken getToken(final Document t) throws AuthStorageException {
+		return new StoredToken(
 				UUID.fromString(t.getString(Fields.TOKEN_ID)),
 				TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
 				getTokenName(t.getString(Fields.TOKEN_NAME)),
-				t.getString(Fields.TOKEN_TOKEN),
 				getUserName(t.getString(Fields.TOKEN_USER_NAME)),
 				t.getDate(Fields.TOKEN_CREATION).toInstant(),
 				t.getDate(Fields.TOKEN_EXPIRY).toInstant());
 	}
 
 	@Override
-	public Set<HashedToken> getTokens(final UserName userName) throws AuthStorageException {
+	public Set<StoredToken> getTokens(final UserName userName) throws AuthStorageException {
 		nonNull(userName, "userName");
-		final Set<HashedToken> ret = new HashSet<>();
+		final Set<StoredToken> ret = new HashSet<>();
 		try {
 			final FindIterable<Document> ts = db.getCollection(COL_TOKEN).find(
-					new Document(Fields.TOKEN_USER_NAME, userName.getName()));
+					new Document(Fields.TOKEN_USER_NAME, userName.getName())).projection(
+					new Document(Fields.TOKEN_TOKEN, 0));
 			for (final Document d: ts) {
 				ret.add(getToken(d));
 			}

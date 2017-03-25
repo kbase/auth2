@@ -32,6 +32,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -228,7 +229,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	HashedToken getToken(IncomingHashedToken token)
+	StoredToken getToken(IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
 	/** Get all the tokens for a user.
@@ -237,7 +238,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	Set<HashedToken> getTokens(UserName userName) throws AuthStorageException;
+	Set<StoredToken> getTokens(UserName userName) throws AuthStorageException;
 
 	/** Deletes a token from the database.
 	 * @param userName the user that owns the token.

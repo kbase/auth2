@@ -36,8 +36,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -119,7 +119,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(adminUser);
@@ -167,7 +167,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = AuthUser.getBuilder(
@@ -204,7 +204,7 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = AuthUser.getBuilder(
@@ -238,7 +238,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = AuthUser.getBuilder(
@@ -263,7 +263,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		final AuthUser admin = AuthUser.getBuilder(
@@ -305,11 +305,11 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -334,7 +334,7 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("admin"), NOW, NOW));
 		
 		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("whee"));

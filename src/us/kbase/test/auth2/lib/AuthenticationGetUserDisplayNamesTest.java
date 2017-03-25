@@ -37,8 +37,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
@@ -60,7 +60,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		expected.put(new UserName("bar"), new DisplayName("dbar"));
 
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("foo"), Instant.now(), Instant.now()));
 		
 		when(storage.getUserDisplayNames(
@@ -83,7 +83,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("foo"), Instant.now(), Instant.now()));
 		
 		final Map<UserName, DisplayName> disp = auth.getUserDisplayNames(
@@ -131,7 +131,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		}
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("foo"), Instant.now(), Instant.now()));
 		
 		failGetDisplayNamesSet(auth, token, users,
@@ -299,7 +299,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		final IncomingToken token = new IncomingToken("foobar");
 
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						new UserName("foo"), Instant.now(), Instant.now()));
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
@@ -409,7 +409,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		final IncomingToken token = new IncomingToken("foobar");
 
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
+				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 						user.getUserName(), Instant.now(), Instant.now()));
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);

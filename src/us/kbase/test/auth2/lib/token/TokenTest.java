@@ -23,6 +23,7 @@ import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenSet;
@@ -36,6 +37,11 @@ public class TokenTest {
 	@Test
 	public void equalsHashedToken() throws Exception {
 		EqualsVerifier.forClass(HashedToken.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void equalsStoredToken() throws Exception {
+		EqualsVerifier.forClass(StoredToken.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -166,6 +172,73 @@ public class TokenTest {
 			fail("created bad temporary token");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, exception);
+		}
+	}
+	
+	@Test
+	public void storedToken() throws Exception {
+		
+		final UUID id = UUID.randomUUID();
+		final StoredToken ht = new StoredToken(id, TokenType.LOGIN, Optional.absent(),
+				new UserName("whee"), Instant.ofEpochMilli(1000), Instant.ofEpochMilli(5000));
+		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect token name", ht.getTokenName(), is(Optional.absent()));
+		assertThat("incorrect token id", ht.getId(), is(id));
+		assertThat("incorrect user", ht.getUserName(), is(new UserName("whee")));
+		assertThat("incorrect creation date", ht.getCreationDate(),
+				is(Instant.ofEpochMilli(1000)));
+		assertThat("incorrect expiration date", ht.getExpirationDate(),
+				is(Instant.ofEpochMilli(5000)));
+		
+		final StoredToken htnull = new StoredToken(id, TokenType.LOGIN, null,
+				new UserName("whee"), Instant.ofEpochMilli(1000), Instant.ofEpochMilli(5000));
+		assertThat("incorrect token name", htnull.getTokenName(), is(Optional.absent()));
+		
+		// test with named token
+		final UUID id2 = UUID.randomUUID();
+		final StoredToken ht2 = new StoredToken(id2,
+				TokenType.DEV, Optional.of(new TokenName("ugh")),
+				new UserName("whee2"), Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000));
+		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
+		assertThat("incorrect token name", ht2.getTokenName(),
+				is(Optional.of(new TokenName("ugh"))));
+		assertThat("incorrect token id", ht2.getId(), is(id2));
+		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
+		assertThat("incorrect creation date", ht2.getCreationDate(),
+				is(Instant.ofEpochMilli(27000)));
+		assertThat("incorrect expiration date", ht2.getExpirationDate(),
+				is(Instant.ofEpochMilli(42000)));
+		
+		final UserName u = new UserName("u");
+		final Instant c = Instant.ofEpochMilli(1);
+		final Instant e = Instant.ofEpochMilli(2);
+		final Optional<TokenName> tn = Optional.of(new TokenName("ugh"));
+		failCreateStoredToken(null, tn, id, u, c, e, new NullPointerException("type"));
+		failCreateStoredToken(TokenType.LOGIN, tn, null, u, c, e,
+				new NullPointerException("id"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, null, c, e,
+				new NullPointerException("userName"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, null, e,
+				new NullPointerException("creationDate"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, null,
+				new NullPointerException("expirationDate"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, e, c,
+				new IllegalArgumentException("expirationDate must be > creationDate"));
+	}
+	
+	private void failCreateStoredToken(
+			final TokenType type,
+			final Optional<TokenName> tokenName,
+			final UUID id,
+			final UserName userName,
+			final Instant creationDate,
+			final Instant expirationDate,
+			final Exception exception) {
+		try {
+			new StoredToken(id, type, tokenName, userName, creationDate, expirationDate);
+			fail("made bad hashed token");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
 		}
 	}
 	
@@ -390,18 +463,18 @@ public class TokenTest {
 	@Test
 	public void tokenSet() throws Exception {
 		final UUID id1 = UUID.randomUUID();
-		final HashedToken ht1 = new HashedToken(id1, TokenType.LOGIN, Optional.absent(), "h1",
+		final StoredToken ht1 = new StoredToken(id1, TokenType.LOGIN, Optional.absent(),
 				new UserName("u"), Instant.ofEpochMilli(1000), Instant.ofEpochMilli(2000));
 		final UUID id2 = UUID.randomUUID();
-		final HashedToken ht2 = new HashedToken(id2,
-				TokenType.DEV, Optional.of(new TokenName("n2")), "h2",
+		final StoredToken ht2 = new StoredToken(id2,
+				TokenType.DEV, Optional.of(new TokenName("n2")),
 				new UserName("u"), Instant.ofEpochMilli(3000), Instant.ofEpochMilli(4000));
 		final UUID id3 = UUID.randomUUID();
-		final HashedToken ht3 = new HashedToken(id3,
-				TokenType.AGENT, Optional.of(new TokenName("n3")), "h3",
+		final StoredToken ht3 = new StoredToken(id3,
+				TokenType.AGENT, Optional.of(new TokenName("n3")),
 				new UserName("u"), Instant.ofEpochMilli(5000), Instant.ofEpochMilli(6000));
 		
-		final Set<HashedToken> tokens = new HashSet<>(Arrays.asList(ht1, ht2, ht3));
+		final Set<StoredToken> tokens = new HashSet<>(Arrays.asList(ht1, ht2, ht3));
 		//test removing current token from incoming set
 		final TokenSet ts = new TokenSet(ht1, tokens);
 		tokens.clear(); // test makes copy of set rather than using same set
@@ -419,8 +492,8 @@ public class TokenTest {
 		
 		failCreateTokenSet(null, Collections.emptySet(), new NullPointerException("current"));
 		failCreateTokenSet(ht1, null, new NullPointerException("tokens"));
-		final HashedToken htnewuser = new HashedToken(id1,
-				TokenType.LOGIN, Optional.of(new TokenName("foo")), "foo",
+		final StoredToken htnewuser = new StoredToken(id1,
+				TokenType.LOGIN, Optional.of(new TokenName("foo")),
 				new UserName("u2"), Instant.ofEpochMilli(1000), Instant.ofEpochMilli(2000));
 		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, htnewuser, ht3)),
 				new IllegalArgumentException("Mixing tokens from different users is not allowed"));
@@ -430,8 +503,8 @@ public class TokenTest {
 	}
 	
 	private void failCreateTokenSet(
-			final HashedToken current,
-			final Set<HashedToken> tokens,
+			final StoredToken current,
+			final Set<StoredToken> tokens,
 			final Exception exception) {
 		try {
 			new TokenSet(current, tokens);

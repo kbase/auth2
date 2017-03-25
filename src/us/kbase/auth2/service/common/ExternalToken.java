@@ -7,7 +7,7 @@ import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 
 public class ExternalToken {
@@ -22,10 +22,10 @@ public class ExternalToken {
 	private final String name;
 	private final String user;
 
-	public ExternalToken(final HashedToken token) {
-		this(token.getTokenType(), token.getTokenName(), token.getId(),
-				token.getUserName(),
-				token.getCreationDate(), token.getExpirationDate());
+	public ExternalToken(final StoredToken ht) {
+		this(ht.getTokenType(), ht.getTokenName(), ht.getId(),
+				ht.getUserName(),
+				ht.getCreationDate(), ht.getExpirationDate());
 	}
 
 	ExternalToken(

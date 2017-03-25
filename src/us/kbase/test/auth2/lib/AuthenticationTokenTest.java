@@ -45,6 +45,7 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -55,15 +56,15 @@ public class AuthenticationTokenTest {
 	
 	/* tests token get, create, revoke, and getBare. */
 	
-	private static final HashedToken TOKEN1;
-	private static final HashedToken TOKEN2;
+	private static final StoredToken TOKEN1;
+	private static final StoredToken TOKEN2;
 	static {
 		try {
-		TOKEN1 = new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
-				Optional.absent(), "whee", new UserName("foo"), Instant.ofEpochMilli(3000),
+		TOKEN1 = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.absent(), new UserName("foo"), Instant.ofEpochMilli(3000),
 				Instant.ofEpochMilli(4000));
-		TOKEN2 = new HashedToken(UUID.randomUUID(), TokenType.DEV,
-				Optional.of(new TokenName("baz")), "whee1", new UserName("foo"), Instant.ofEpochMilli(5000),
+		TOKEN2 = new StoredToken(UUID.randomUUID(), TokenType.DEV,
+				Optional.of(new TokenName("baz")), new UserName("foo"), Instant.ofEpochMilli(5000),
 				Instant.ofEpochMilli(6000));
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -81,14 +82,14 @@ public class AuthenticationTokenTest {
 		final Instant now = Instant.now();
 		final UUID id = UUID.randomUUID();
 		
-		final HashedToken expected = new HashedToken(id, TokenType.LOGIN, Optional.absent(),
-				"whee", new UserName("foo"), now, now);
+		final StoredToken expected = new StoredToken(id, TokenType.LOGIN, Optional.absent(),
+				new UserName("foo"), now, now);
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(expected);
 		
-		final HashedToken ht = auth.getToken(t);
-		assertThat("incorrect token", ht, is(new HashedToken(id, TokenType.LOGIN,
-				Optional.absent(), "whee", new UserName("foo"), now, now)));
+		final StoredToken ht = auth.getToken(t);
+		assertThat("incorrect token", ht, is(new StoredToken(id, TokenType.LOGIN,
+				Optional.absent(), new UserName("foo"), now, now)));
 	}
 	
 	@Test
@@ -134,10 +135,10 @@ public class AuthenticationTokenTest {
 		final Instant now = Instant.now();
 		final UUID id = UUID.randomUUID();
 		
-		final HashedToken expected = new HashedToken(id, TokenType.LOGIN, null,
-				"whee", new UserName("foo"), now, now);
+		final StoredToken expected = new StoredToken(id, TokenType.LOGIN, null,
+				new UserName("foo"), now, now);
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(expected, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(expected, (StoredToken) null);
 		
 		when(storage.getTokens(new UserName("foo"))).thenReturn(set(TOKEN1, TOKEN2));
 		
@@ -174,11 +175,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -286,11 +287,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -310,10 +311,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
-				Optional.absent(), "wubba", new UserName("admin"), Instant.now(), Instant.now());
+		final StoredToken token = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.absent(), new UserName("admin"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
 		
@@ -328,17 +329,17 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		
-		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
-				Optional.absent(), "wubba", admin.getUserName(), Instant.now(), Instant.now());
+		final StoredToken token = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.absent(), admin.getUserName(), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		
 		when(storage.getUser(admin.getUserName())).thenReturn(admin, (AuthUser) null);
 		
 		when(storage.getTokens(new UserName("foo"))).thenReturn(set(TOKEN1, TOKEN2));
 		
 		try {
-			final Set<HashedToken> tokens = auth.getTokens(t, new UserName("foo"));
+			final Set<StoredToken> tokens = auth.getTokens(t, new UserName("foo"));
 			assertThat("incorrect tokens", tokens, is(set(TOKEN1, TOKEN2)));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
@@ -391,12 +392,12 @@ public class AuthenticationTokenTest {
 		
 		final UUID id = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(id, TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(id, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
-		final Optional<HashedToken> res = auth.revokeToken(t);
+		final Optional<StoredToken> res = auth.revokeToken(t);
 		
 		verify(storage).deleteToken(new UserName("foo"), id);
 		
@@ -413,7 +414,7 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
-		final Optional<HashedToken> res = auth.revokeToken(t);
+		final Optional<StoredToken> res = auth.revokeToken(t);
 		
 		assertThat("incorrect token", res, is(Optional.absent()));
 	}
@@ -439,10 +440,10 @@ public class AuthenticationTokenTest {
 		
 		final UUID target = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		auth.revokeToken(t, target);
 		
@@ -471,11 +472,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -497,10 +498,10 @@ public class AuthenticationTokenTest {
 		
 		final UUID target = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		doThrow(new NoSuchTokenException(target.toString()))
 			.when(storage).deleteToken(new UserName("foo"), target);
@@ -615,11 +616,11 @@ public class AuthenticationTokenTest {
 		final UUID target = UUID.randomUUID();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -641,10 +642,10 @@ public class AuthenticationTokenTest {
 		
 		final UUID target = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
@@ -662,7 +663,7 @@ public class AuthenticationTokenTest {
 		final IncomingToken t = new IncomingToken("foobar");
 		final UUID target = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
 		final AuthUser admin = AuthUser.getBuilder(
@@ -670,7 +671,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.ADMIN).build();
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(admin);
 		
@@ -690,10 +691,10 @@ public class AuthenticationTokenTest {
 		
 		final UUID target = UUID.randomUUID();
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				admin.getUserName(), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(admin.getUserName())).thenReturn(admin);
 		
@@ -742,10 +743,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		auth.revokeTokens(t);
 		
@@ -780,11 +781,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -888,11 +889,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -912,10 +913,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
@@ -931,10 +932,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				admin.getUserName(), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(admin.getUserName())).thenReturn(admin);
 		
@@ -1056,11 +1057,11 @@ public class AuthenticationTokenTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
+				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
 						new UserName("bar"), Instant.now(), Instant.now()),
 				null);
 		
@@ -1080,10 +1081,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
@@ -1099,10 +1100,10 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				admin.getUserName(), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(admin.getUserName())).thenReturn(admin);
 		
@@ -1315,10 +1316,10 @@ public class AuthenticationTokenTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobar");
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), tokenType,
-				null, "baz", new UserName("foo"), Instant.now(), Instant.now());
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), tokenType,
+				null, new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, tokenType.getDescription() +
@@ -1332,10 +1333,10 @@ public class AuthenticationTokenTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobar");
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				new UserName("foo"), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
@@ -1359,10 +1360,10 @@ public class AuthenticationTokenTest {
 		final IncomingToken t = new IncomingToken("foobar");
 		final UUID id = UUID.randomUUID();
 		final Instant time = Instant.ofEpochMilli(100000);
-		final HashedToken ht = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "baz",
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
 				user.getUserName(), Instant.now(), Instant.now());
 		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user, (AuthUser) null);
 		
