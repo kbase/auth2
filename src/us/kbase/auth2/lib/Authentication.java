@@ -611,7 +611,9 @@ public class Authentication {
 		final NewToken nt = new NewToken(randGen.randomUUID(), TokenType.LOGIN, randGen.getToken(),
 				userName, clock.instant(),
 				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
-		storage.storeToken(nt.getHashedToken());
+		final StoredToken st = new StoredToken(nt.getId(), nt.getTokenType(), null, userName,
+				nt.getCreationDate(), nt.getExpirationDate());
+		storage.storeToken(st, StoredToken.hash(nt.getToken()));
 		setLastLogin(userName);
 		return nt;
 	}
@@ -735,7 +737,9 @@ public class Authentication {
 		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
 		final NewToken nt = new NewToken(randGen.randomUUID(), tokenType,
 				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
-		storage.storeToken(nt.getHashedToken());
+		final StoredToken st = new StoredToken(nt.getId(), nt.getTokenType(), nt.getTokenName(),
+				au.getUserName(), nt.getCreationDate(), nt.getExpirationDate());
+		storage.storeToken(st, StoredToken.hash(nt.getToken()));
 		return nt;
 	}
 	

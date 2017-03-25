@@ -30,11 +30,11 @@ public class IncomingToken {
 	
 	/** Get the a hashed token based on this token. 
 	 * 
-	 * Uses the {@link HashedToken#hash(String)} method.
+	 * Uses the {@link StoredToken#hash(String)} method.
 	 * @return a hashed token.
 	 */
 	public IncomingHashedToken getHashedToken() {
-		return new IncomingHashedToken(HashedToken.hash(token));
+		return new IncomingHashedToken(StoredToken.hash(token));
 	}
 
 	@Override

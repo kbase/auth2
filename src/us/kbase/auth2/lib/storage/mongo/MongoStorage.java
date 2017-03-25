@@ -77,7 +77,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
@@ -612,8 +611,10 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void storeToken(final HashedToken token) throws AuthStorageException {
+	public void storeToken(final StoredToken token, final String hash)
+			throws AuthStorageException {
 		nonNull(token, "token");
+		checkStringNoCheckedException(hash, "hash");
 		final Optional<TokenName> tokenName = token.getTokenName();
 		final Document td = new Document(
 				Fields.TOKEN_TYPE, token.getTokenType().getID())
@@ -621,7 +622,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_ID, token.getId().toString())
 				.append(Fields.TOKEN_NAME, tokenName.isPresent() ?
 						tokenName.get().getName() : null)
-				.append(Fields.TOKEN_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_TOKEN, hash)
 				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
 				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()));
 		try {

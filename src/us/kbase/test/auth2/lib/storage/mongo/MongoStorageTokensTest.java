@@ -17,10 +17,8 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
-import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
@@ -33,10 +31,10 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	public void storeAndGet() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final HashedToken ht = new NewToken(id, TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), now, 20000).getHashedToken();
-		storage.storeToken(ht);
+		final StoredToken ht = new StoredToken(id, TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 20000));
+		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 		
 		final StoredToken expected = new StoredToken(id, TokenType.LOGIN,
 				Optional.of(new TokenName("foo")),
@@ -51,9 +49,9 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	public void storeAndGetNoName() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final HashedToken ht = new NewToken(id, TokenType.LOGIN, "sometoken",
-				new UserName("bar"), now, 10000).getHashedToken();
-		storage.storeToken(ht);
+		final StoredToken ht = new StoredToken(id, TokenType.LOGIN, null,
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 		
 		final StoredToken expected = new StoredToken(id, TokenType.LOGIN, Optional.absent(),
 				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000)); 
@@ -63,42 +61,47 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void storeTokenFailNull() {
-		failStoreToken(null, new NullPointerException("token"));
+	public void storeTokenFailNull() throws Exception {
+		final StoredToken st = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				null, new UserName("bar"), Instant.now(), Instant.now());
+		failStoreToken(null, "foo", new NullPointerException("token"));
+		failStoreToken(st, null, new IllegalArgumentException("Missing argument: hash"));
+		failStoreToken(st, "   \t  ", new IllegalArgumentException(
+				"Missing argument: hash"));
 	}
 	
 	@Test
 	public void storeTokenFailDuplicateID() throws Exception {
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 10000).getHashedToken();
-		storage.storeToken(ht);
 		final Instant now = Instant.now();
-		failStoreToken(new HashedToken(ht.getId(),
-				TokenType.DEV,
-				Optional.of(new TokenName("bleah")), "somehash", new UserName("baz"), now, now.plusMillis(10000)),
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "somehash");
+		failStoreToken(new StoredToken(ht.getId(), TokenType.DEV,
+				Optional.of(new TokenName("bleah")), new UserName("baz"), now,
+				now.plusMillis(10000)),
+				"someotherhash",
 				new IllegalArgumentException(String.format(
 						"Token ID %s already exists in the database", ht.getId())));
 	}
 	
 	@Test
 	public void storeTokenFailDuplicateToken() throws Exception {
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 10000).getHashedToken();
-		storage.storeToken(ht);
 		final Instant now = Instant.now();
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "hashyhash");
 		final UUID id = UUID.randomUUID();
-		failStoreToken(new HashedToken(id,
-				TokenType.SERV, Optional.of(new TokenName("bleah")),
-				ht.getTokenHash(), new UserName("baz"), now, now.plusMillis(10000)),
+		failStoreToken(new StoredToken(id, TokenType.SERV, Optional.of(new TokenName("bleah")),
+				new UserName("baz"), now, now.plusMillis(10000)), "hashyhash",
 				new IllegalArgumentException(String.format(
 						"Token hash for token ID %s already exists in the database", id)));
 	}
 	
-	private void failStoreToken(final HashedToken token, final Exception e) {
+	private void failStoreToken(final StoredToken token, final String hash, final Exception e) {
 		try {
-			storage.storeToken(token);
+			storage.storeToken(token, hash);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -121,11 +124,11 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		// this test could fail to cover the intended code if mongo happens to remove the token
 		// before the get occurs.
 		// since the removal thread only runs 1/min should be rare.
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
+		final Instant now = Instant.now();
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				new UserName("bar"), now, now);
 		Thread.sleep(1);
-		storage.storeToken(ht);
+		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 		failGetToken(new IncomingToken("sometoken").getHashedToken(),
 				new NoSuchTokenException("Token not found"));
 	}
@@ -144,17 +147,17 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		final UUID id1 = UUID.randomUUID();
 		final UUID id3 = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final HashedToken ht = new NewToken(id1, TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), now, 15000).getHashedToken();
-		final HashedToken ht2 = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"),
-				"sometoken1", new UserName("bar2"), Instant.now(), 10000).getHashedToken();
-		final HashedToken ht3 = new NewToken(id3, TokenType.LOGIN, "sometoken3",
-				new UserName("bar"), now, 30000).getHashedToken();
-		storage.storeToken(ht);
-		storage.storeToken(ht2);
-		storage.storeToken(ht3);
+		final StoredToken ht = new StoredToken(id1, TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() +  15000));
+		final StoredToken ht2 = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")), new UserName("bar2"), Instant.now(),
+				Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		final StoredToken ht3 = new StoredToken(id3, TokenType.LOGIN, null,
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 30000));
+		storage.storeToken(ht, "1");
+		storage.storeToken(ht2, "2");
+		storage.storeToken(ht3, "3");
 		
 		final StoredToken expected1 = new StoredToken(id1, TokenType.LOGIN,
 				Optional.of(new TokenName("foo")),
@@ -181,15 +184,14 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
-		final HashedToken ht2 = new NewToken(id, TokenType.LOGIN,
-				new TokenName("foo"),
-				"sometoken1", new UserName("bar"), now, 10000)
-				.getHashedToken();
-		storage.storeToken(ht);
-		storage.storeToken(ht2);
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		final StoredToken ht2 = new StoredToken(id, TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "1");
+		storage.storeToken(ht2, "2");
 		storage.deleteToken(new UserName("bar"), ht.getId());
 		
 		final StoredToken expected = new StoredToken(id, TokenType.LOGIN,
@@ -207,10 +209,11 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	
 	@Test
 	public void deleteTokenFailBadID() throws Exception {
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
-		storage.storeToken(ht);
+		final Instant now = Instant.now();
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "hash");
 		final UUID id = UUID.randomUUID();
 		failDeleteToken(new UserName("bar"), id, new NoSuchTokenException(
 				String.format("No token %s for user bar exists", id)));
@@ -218,10 +221,11 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	
 	@Test
 	public void deleteTokenFailBadUser() throws Exception {
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
-		storage.storeToken(ht);
+		final Instant now = Instant.now();
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		storage.storeToken(ht, "hash");
 		failDeleteToken(new UserName("bar1"), ht.getId(), new NoSuchTokenException(
 				String.format("No token %s for user bar1 exists", ht.getId())));
 	}
@@ -239,17 +243,17 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	public void deleteTokensForUser() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 10000).getHashedToken();
-		final HashedToken ht2 = new NewToken(id, TokenType.LOGIN,
-				new TokenName("foo"),
-				"sometoken1", new UserName("bar2"), now, 5000).getHashedToken();
-		final HashedToken ht3 = new NewToken(UUID.randomUUID(), TokenType.LOGIN, "sometoken3",
-				new UserName("bar"), Instant.now(), 100000).getHashedToken();
-		storage.storeToken(ht);
-		storage.storeToken(ht2);
-		storage.storeToken(ht3);
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 10000));
+		final StoredToken ht2 = new StoredToken(id, TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar2"), now, Instant.ofEpochMilli(now.toEpochMilli() + 5000));
+		final StoredToken ht3 = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 100000));
+		storage.storeToken(ht, "1");
+		storage.storeToken(ht2, "2");
+		storage.storeToken(ht3, "3");
 		
 		final StoredToken expected = new StoredToken(id, TokenType.LOGIN,
 				Optional.of(new TokenName("foo")),
@@ -274,17 +278,18 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	
 	@Test
 	public void deleteTokens() throws Exception {
-		final HashedToken ht = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"), "sometoken",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
-		final HashedToken ht2 = new NewToken(UUID.randomUUID(), TokenType.LOGIN,
-				new TokenName("foo"),
-				"sometoken1", new UserName("bar2"), Instant.now(), 0).getHashedToken();
-		final HashedToken ht3 = new NewToken(UUID.randomUUID(), TokenType.LOGIN, "sometoken3",
-				new UserName("bar"), Instant.now(), 0).getHashedToken();
-		storage.storeToken(ht);
-		storage.storeToken(ht2);
-		storage.storeToken(ht3);
+		final Instant now = Instant.now();
+		final StoredToken ht = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 100000));
+		final StoredToken ht2 = new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
+				Optional.of(new TokenName("foo")),
+				new UserName("bar2"), now, Instant.ofEpochMilli(now.toEpochMilli() + 100000));
+		final StoredToken ht3 = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
+				new UserName("bar"), now, Instant.ofEpochMilli(now.toEpochMilli() + 100000));
+		storage.storeToken(ht, "1");
+		storage.storeToken(ht2, "2");
+		storage.storeToken(ht3, "3");
 		
 		storage.deleteTokens();
 		assertThat("tokens remaining", storage.getTokens(new UserName("bar")),

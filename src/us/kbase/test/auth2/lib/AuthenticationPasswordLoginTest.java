@@ -53,7 +53,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -121,9 +120,10 @@ public class AuthenticationPasswordLoginTest {
 		
 		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
 		
-		verify(storage).storeToken(new HashedToken(t.getToken().get().getId(), TokenType.LOGIN,
-				null, "p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
-				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
+		verify(storage).storeToken(new StoredToken(t.getToken().get().getId(), TokenType.LOGIN,
+				null, new UserName("foo"),
+				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)),
+				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(6000));
 		
@@ -316,10 +316,10 @@ public class AuthenticationPasswordLoginTest {
 				"Something is very broken. User should exist but doesn't: " +
 				"50000 No such user: foo"));
 		
-		verify(storage).storeToken(new HashedToken(UUID.fromString(id.toString()), TokenType.LOGIN,
-				null,
-				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", new UserName("foo"),
-				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)));
+		verify(storage).storeToken(new StoredToken(UUID.fromString(id.toString()), TokenType.LOGIN,
+				null, new UserName("foo"),
+				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)),
+				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 		assertClear(p);
 	}
 

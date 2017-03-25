@@ -62,9 +62,9 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -130,10 +130,10 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken lt = auth.login("prov", "foobar");
 		
-		verify(storage).storeToken(new HashedToken(tokenID, TokenType.LOGIN, null,
-				"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=",
+		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(20000),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)));
+				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+				"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
@@ -926,10 +926,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)));
+				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
@@ -981,10 +981,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken( tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(120000)));
+				Instant.ofEpochMilli(120000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
@@ -1084,10 +1084,10 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken( tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)));
+				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
@@ -1584,10 +1584,11 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)));
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
@@ -1640,10 +1641,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(610000)));
+				Instant.ofEpochMilli(610000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
@@ -1743,10 +1744,10 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 		
-		verify(storage).storeToken(new HashedToken(
-				tokenID, TokenType.LOGIN, null, "hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=",
+		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
 				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)));
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)),
+				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		

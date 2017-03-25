@@ -144,16 +144,6 @@ public class NewToken {
 		return expirationDate;
 	}
 
-	/** Get a hashed token based on this token.
-	 * 
-	 * uses the {@link HashedToken#hash(String)} method.
-	 * @return a hashed token.
-	 */
-	public HashedToken getHashedToken() {
-		return new HashedToken(id, type, tokenName, HashedToken.hash(token),
-				userName, creationDate, expirationDate);
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;

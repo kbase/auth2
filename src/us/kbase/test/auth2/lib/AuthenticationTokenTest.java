@@ -42,7 +42,6 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -1380,10 +1379,10 @@ public class AuthenticationTokenTest {
 			
 			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
 					(expectedLifetime));
-			verify(storage).storeToken(new HashedToken(id, tokenType,
-					Optional.of(new TokenName("a name")),
-					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=", user.getUserName(),
-					time, expiration));
+			verify(storage).storeToken(new StoredToken(id, tokenType,
+					Optional.of(new TokenName("a name")), user.getUserName(),
+					time, expiration),
+					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 			
 			final NewToken expected = new NewToken(id, tokenType,
 					new TokenName("a name"), "this is a token", user.getUserName(), time,

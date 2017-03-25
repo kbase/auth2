@@ -30,7 +30,6 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
@@ -215,12 +214,14 @@ public interface AuthStorage {
 	/** Store a token in the database. No checking is done on the validity
 	 * of the token - passing in tokens with bad data is a programming error.
 	 * @param token the token to store.
+	 * @param hash the hash of the token. This value will be used to look up the token in
+	 * {@link #getToken(IncomingHashedToken)}
 	 * @throws IllegalArgumentException if the token or the token ID already exists in the
 	 * database.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void storeToken(HashedToken token) throws AuthStorageException;
+	void storeToken(StoredToken token, String hash) throws AuthStorageException;
 
 	/** Get a token from the database based on the hash of the token.
 	 * @param token the hashed token from which to retrieve details.
