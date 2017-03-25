@@ -16,7 +16,6 @@ import us.kbase.auth2.lib.UserName;
  *
  */
 
-//TODO NOW refactor common token code into a class - NOT a superclass
 public class StoredToken {
 
 	private final UUID id;

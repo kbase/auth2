@@ -138,8 +138,9 @@ public class AuthenticationLoginTest {
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
 		final LoginToken expected = new LoginToken(
-				new NewToken(tokenID, TokenType.LOGIN, "thisisatoken", new UserName("foo"),
-						Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000),
+				new NewToken(new StoredToken(tokenID, TokenType.LOGIN, null, new UserName("foo"),
+						Instant.ofEpochMilli(20000),
+						Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "thisisatoken"), 
 				LoginState.getBuilder("prov", allowLogin).withUser(user, storageRemoteID).build());
 		
 		assertThat("incorrect login token", lt, is(expected));
@@ -933,9 +934,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(20000),
+				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
 	}
 	
 	@Test
@@ -988,9 +990,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(20000), 100000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(20000),
+				Instant.ofEpochMilli(20000 + 100000)), "mfingtoken")));
 	}
 	
 	@Test
@@ -1091,9 +1094,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(20000),
+				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
 	}
 	
 	@Test
@@ -1592,9 +1596,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(10000),
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
 	}
 	
 	@Test
@@ -1648,9 +1653,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(10000), 600000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(10000),
+				Instant.ofEpochMilli(10000 + 600000)), "mfingtoken")));
 	}
 	
 	@Test
@@ -1751,9 +1757,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(
-				tokenID, TokenType.LOGIN, "mfingtoken", new UserName("foo"),
-				Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)));
+		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
+				tokenID, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(10000),
+				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
 	}
 	
 	@Test

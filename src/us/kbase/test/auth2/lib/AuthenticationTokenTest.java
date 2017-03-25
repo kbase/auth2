@@ -1384,9 +1384,9 @@ public class AuthenticationTokenTest {
 					time, expiration),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 			
-			final NewToken expected = new NewToken(id, tokenType,
-					new TokenName("a name"), "this is a token", user.getUserName(), time,
-					expectedLifetime);
+			final NewToken expected = new NewToken(new StoredToken(
+					id, tokenType, Optional.of(new TokenName("a name")), user.getUserName(),
+					time, time.plusMillis(expectedLifetime)), "this is a token");
 			
 			assertThat("incorrect token", nt, is(expected));
 		} catch (Throwable th) {

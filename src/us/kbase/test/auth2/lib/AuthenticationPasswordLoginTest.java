@@ -96,8 +96,10 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		final UUID id = UUID.randomUUID();
 		
-		final NewToken expectedToken = new NewToken(id, TokenType.LOGIN, "this is a token",
-				new UserName("foo"), Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000);
+		final NewToken expectedToken = new NewToken(new StoredToken(
+				id, TokenType.LOGIN, null, new UserName("foo"),
+				Instant.ofEpochMilli(4000),
+				Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)), "this is a token");
 		
 		final LocalUser.Builder b = LocalUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
@@ -120,7 +122,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
 		
-		verify(storage).storeToken(new StoredToken(t.getToken().get().getId(), TokenType.LOGIN,
+		verify(storage).storeToken(new StoredToken(id, TokenType.LOGIN,
 				null, new UserName("foo"),
 				Instant.ofEpochMilli(4000), Instant.ofEpochMilli(4000 + 14 * 24 * 3600 * 1000)),
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");

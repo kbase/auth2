@@ -26,7 +26,6 @@ import us.kbase.test.auth2.TestCommon;
 public class MongoStorageTokensTest extends MongoStorageTester {
 	
 	//TODO TEST test that temporary tokens are stored in the db correctly. Only the hash is really checked.
-	//TODO NOW make newtoken wrap stored token
 	//TODO NOW builder for StoredToken
 
 	@Test

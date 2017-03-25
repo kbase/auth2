@@ -9,8 +9,6 @@ import java.util.UUID;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -21,6 +19,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.NewUser;
@@ -53,21 +52,15 @@ public class LoginTokenTest {
 	
 	@Test
 	public void constructorNewToken() throws Exception {
-		final NewToken nt = new NewToken(UUID.randomUUID(),
-				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 10000);
+		final Instant now = Instant.now();
+		final NewToken nt = new NewToken(new StoredToken(
+				UUID.randomUUID(), TokenType.LOGIN, null, new UserName("bar"),
+				now, now.plusMillis(10000)), "foo");
+		
+		
 		final LoginToken lt = new LoginToken(nt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(true));
-		assertThat("incorrect token type", lt.getToken().getTokenType(),
-				is(TokenType.LOGIN));
-		assertThat("incorrect creation date", lt.getToken().getCreationDate(),
-				is(nt.getCreationDate()));
-		assertThat("incorrect expiration date", lt.getToken().getExpirationDate(),
-				is(nt.getExpirationDate()));
-		assertThat("incorrect token id", lt.getToken().getId(), is(nt.getId()));
-		assertThat("incorrect token", lt.getToken().getToken(), is("foo"));
-		assertThat("incorrect token name", lt.getToken().getTokenName(), is(Optional.absent()));
-		assertThat("incorrect token username", lt.getToken().getUserName(),
-				is(new UserName("bar")));
+		assertThat("incorrect token", lt.getToken(), is(nt));
 		assertThat("incorrect login state provider", lt.getLoginState().getProvider(), is("foo"));
 		assertThat("incorrect login state login allowed",
 				lt.getLoginState().isNonAdminLoginAllowed(), is(false));
@@ -92,8 +85,11 @@ public class LoginTokenTest {
 	
 	@Test
 	public void constructFail() throws Exception {
-		final NewToken nt = new NewToken(UUID.randomUUID(), 
-				TokenType.LOGIN, "foo", new UserName("bar"), Instant.now(), 10000);
+		final Instant now = Instant.now();
+		final NewToken nt = new NewToken(new StoredToken(
+				UUID.randomUUID(), TokenType.LOGIN, null, new UserName("bar"),
+				now, now.plusMillis(10000)), "foo");
+
 		failConstructToken((NewToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(nt, null, new NullPointerException("loginState"));
 		

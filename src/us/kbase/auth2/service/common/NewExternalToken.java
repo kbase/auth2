@@ -10,9 +10,12 @@ public class NewExternalToken extends ExternalToken {
 	//TODO JAVADOC
 	
 	public NewExternalToken(final NewToken token) {
-		super(token.getTokenType(), token.getTokenName(), token.getId(),
-				token.getUserName(),
-				token.getCreationDate(), token.getExpirationDate());
+		super(token.getStoredToken().getTokenType(),
+				token.getStoredToken().getTokenName(),
+				token.getStoredToken().getId(),
+				token.getStoredToken().getUserName(),
+				token.getStoredToken().getCreationDate(),
+				token.getStoredToken().getExpirationDate());
 		this.token = token.getToken();
 	}
 
