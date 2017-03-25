@@ -1,13 +1,8 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
-import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.UUID;
 
 import com.google.common.base.Optional;
@@ -104,22 +99,6 @@ public class StoredToken {
 		return expirationDate;
 	}
 	
-	/** Get a SHA-256 hash of a token.
-	 * @param token the token to hash, encoded as UTF-8.
-	 * @return the hash of the token.
-	 */
-	public static String hash(final String token) {
-		checkStringNoCheckedException(token, "token");
-		final MessageDigest digest;
-		try {
-			digest = MessageDigest.getInstance("SHA-256");
-		} catch (NoSuchAlgorithmException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
-		final byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-		return Base64.getEncoder().encodeToString(hash);
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;

@@ -238,7 +238,7 @@ public class TokenTest {
 	
 	@Test
 	public void hashingTokens() throws Exception {
-		assertThat("incorrect hash", StoredToken.hash("whee"),
+		assertThat("incorrect hash", IncomingToken.hash("whee"),
 				is("bG4rDP2oAAfmk9UrWVYIPqaHcOExDQ7QLRlcsUETsoQ="));
 		failHashToken(null);
 		failHashToken("");
@@ -247,7 +247,7 @@ public class TokenTest {
 
 	private void failHashToken(final String token) {
 		try {
-			StoredToken.hash(token);
+			IncomingToken.hash(token);
 			fail("hashed bad input");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
@@ -263,6 +263,8 @@ public class TokenTest {
 		assertThat("incorrect token type", nt.getTokenType(), is(TokenType.LOGIN));
 		assertThat("incorrect token name", nt.getTokenName(), is(Optional.absent()));
 		assertThat("incorrect token string", nt.getToken(), is("baz"));
+		assertThat("incorrect token hash", nt.getTokenHash(),
+				is("uqWglk0zIPvAxqkiFARTyFE+okq4/QV3A0gEqWckgJY="));
 		assertThat("incorrect ID", nt.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect user", nt.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect creation date", nt.getCreationDate(), is(i));
@@ -277,6 +279,9 @@ public class TokenTest {
 		assertThat("incorrect token name", nt2.getTokenName(),
 				is(Optional.of(new TokenName("myname"))));
 		assertThat("incorrect token string", nt2.getToken(), is("bar"));
+		assertThat("incorrect token hash", nt.getTokenHash(),
+				is("uqWglk0zIPvAxqkiFARTyFE+okq4/QV3A0gEqWckgJY="));
+		
 		assertThat("incorrect ID", nt2.getId(), is(UUID.fromString(id2.toString())));
 		assertThat("incorrect user", nt2.getUserName(), is(new UserName("foo2")));
 		assertThat("incorrect creation date", nt2.getCreationDate(),

@@ -122,6 +122,15 @@ public class NewToken {
 	public String getToken() {
 		return token;
 	}
+	
+	/** Gets the hash of the token string.
+	 * 
+	 * Uses the {@link IncomingToken#hash(String)} method.
+	 * @return the hash of the token string.
+	 */
+	public String getTokenHash() {
+		return IncomingToken.hash(token);
+	}
 
 	/** Get the name of the user that possesses the token.
 	 * @return the user name.

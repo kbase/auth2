@@ -613,7 +613,7 @@ public class Authentication {
 				cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN));
 		final StoredToken st = new StoredToken(nt.getId(), nt.getTokenType(), null, userName,
 				nt.getCreationDate(), nt.getExpirationDate());
-		storage.storeToken(st, StoredToken.hash(nt.getToken()));
+		storage.storeToken(st, nt.getTokenHash());
 		setLastLogin(userName);
 		return nt;
 	}
@@ -637,8 +637,6 @@ public class Authentication {
 		return randGen.getToken();
 	}
 
-	//TODO NOW never return the hash with the token outside this class.
-	
 	/** Get the tokens associated with a user account associated with a possessed token.
 	 * @param token a user token for the account in question.
 	 * @return the tokens.
@@ -739,7 +737,7 @@ public class Authentication {
 				tokenName, randGen.getToken(), au.getUserName(), clock.instant(), life);
 		final StoredToken st = new StoredToken(nt.getId(), nt.getTokenType(), nt.getTokenName(),
 				au.getUserName(), nt.getCreationDate(), nt.getExpirationDate());
-		storage.storeToken(st, StoredToken.hash(nt.getToken()));
+		storage.storeToken(st, nt.getTokenHash());
 		return nt;
 	}
 	
