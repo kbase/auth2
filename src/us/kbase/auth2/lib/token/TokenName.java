@@ -8,7 +8,7 @@ public class TokenName extends Name {
 	
 	public TokenName(final String name)
 			throws MissingParameterException, IllegalParameterException {
-		super(name, "token name", 30);
+		super(name, "token name", 100);
 	}
 
 	@Override
