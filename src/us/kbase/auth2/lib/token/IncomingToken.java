@@ -1,6 +1,12 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -30,11 +36,27 @@ public class IncomingToken {
 	
 	/** Get the a hashed token based on this token. 
 	 * 
-	 * Uses the {@link HashedToken#hash(String)} method.
+	 * Uses the {@link #hash(String)} method.
 	 * @return a hashed token.
 	 */
 	public IncomingHashedToken getHashedToken() {
-		return new IncomingHashedToken(HashedToken.hash(token));
+		return new IncomingHashedToken(hash(token));
+	}
+	
+	/** Get a SHA-256 hash of a token.
+	 * @param token the token to hash.
+	 * @return the hash of the token when encoded as UTF-8.
+	 */
+	public static String hash(final String token) {
+		checkStringNoCheckedException(token, "token");
+		final MessageDigest digest;
+		try {
+			digest = MessageDigest.getInstance("SHA-256");
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+		final byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+		return Base64.getEncoder().encodeToString(hash);
 	}
 
 	@Override

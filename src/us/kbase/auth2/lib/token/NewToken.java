@@ -1,16 +1,7 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.addNoOverflow;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
-
-import java.time.Instant;
-import java.util.UUID;
-
-import com.google.common.base.Optional;
-
-import us.kbase.auth2.lib.TokenName;
-import us.kbase.auth2.lib.UserName;
 
 /** A new token associated with a user.
  * @author gaprice@lbl.gov
@@ -18,102 +9,25 @@ import us.kbase.auth2.lib.UserName;
  */
 public class NewToken {
 
-	private final TokenType type;
-	private final Optional<TokenName> tokenName;
+	private final StoredToken st;
 	private final String token;
-	private final UserName userName;
-	private final Instant expirationDate;
-	private final Instant creationDate;
-	private final UUID id;
 	
-	/** Create a new unnamed token.
-	 * @param id the token id.
-	 * @param type the token type.
+	/** Create a new token.
+	 * @param storedToken the token that this new token wraps.
 	 * @param token the token string.
-	 * @param userName the user that possesses the token.
-	 * @param creation the date of this token's creation.
-	 * @param lifetimeInMS the token's lifetime in milliseconds.
 	 */
-	public NewToken(
-			final UUID id,
-			final TokenType type,
-			final String token,
-			final UserName userName,
-			final Instant creation,
-			final long lifetimeInMS) {
-		nonNull(id, "id");
+	public NewToken(final StoredToken storedToken, final String token) {
+		nonNull(storedToken, "storedToken");
 		checkStringNoCheckedException(token, "token");
-		nonNull(type, "type");
-		nonNull(userName, "userName");
-		nonNull(creation, "creation");
-		if (lifetimeInMS < 0) {
-			throw new IllegalArgumentException("lifetime must be >= 0");
-		}
-		this.id = id;
-		this.type = type;
-		this.tokenName = Optional.absent();
+		this.st = storedToken;
 		this.token = token;
-		this.userName = userName;
-		this.creationDate = creation;
-		this.expirationDate = Instant.ofEpochMilli(
-				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
 	}
 	
-	/** Create a new named token.
-	 * @param id the token id.
-	 * @param type the token type.
-	 * @param tokenName the name of the token.
-	 * @param token the token string.
-	 * @param userName the user that possesses the token.
-	 * @param creation the date of this token's creation.
-	 * @param lifetimeInMS the token's lifetime in milliseconds.
+	/** Get the wrapped token.
+	 * @return the wrapped token.
 	 */
-	public NewToken(
-			final UUID id,
-			final TokenType type,
-			final TokenName tokenName,
-			final String token,
-			final UserName userName,
-			final Instant creation,
-			final long lifetimeInMS) {
-		nonNull(id, "id");
-		checkStringNoCheckedException(token, "token");
-		nonNull(tokenName, "tokenName");
-		nonNull(type, "type");
-		nonNull(userName, "userName");
-		nonNull(creation, "creation");
-		if (lifetimeInMS < 0) {
-			throw new IllegalArgumentException("lifetime must be >= 0");
-		}
-		this.id = id;
-		this.type = type;
-		this.tokenName = Optional.of(tokenName);
-		this.token = token;
-		this.userName = userName;
-		this.creationDate = creation;
-		this.expirationDate = Instant.ofEpochMilli(
-				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
-	}
-
-	/** Get the token's type.
-	 * @return the type.
-	 */
-	public TokenType getTokenType() {
-		return type;
-	}
-	
-	/** Get the token's name, or absent if the token is not named.
-	 * @return the token's name.
-	 */
-	public Optional<TokenName> getTokenName() {
-		return tokenName;
-	}
-
-	/** Get the token's ID.
-	 * @return the ID.
-	 */
-	public UUID getId() {
-		return id;
+	public StoredToken getStoredToken() {
+		return st;
 	}
 
 	/** Get the token string.
@@ -122,49 +36,22 @@ public class NewToken {
 	public String getToken() {
 		return token;
 	}
-
-	/** Get the name of the user that possesses the token.
-	 * @return the user name.
-	 */
-	public UserName getUserName() {
-		return userName;
-	}
-
-	/** Get the date this token was created.
-	 * @return the creation date.
-	 */
-	public Instant getCreationDate() {
-		return creationDate;
-	}
-
-	/** Get the date this token expires.
-	 * @return the expiration date.
-	 */
-	public Instant getExpirationDate() {
-		return expirationDate;
-	}
-
-	/** Get a hashed token based on this token.
+	
+	/** Gets the hash of the token string.
 	 * 
-	 * uses the {@link HashedToken#hash(String)} method.
-	 * @return a hashed token.
+	 * Uses the {@link IncomingToken#hash(String)} method.
+	 * @return the hash of the token string.
 	 */
-	public HashedToken getHashedToken() {
-		return new HashedToken(id, type, tokenName, HashedToken.hash(token),
-				userName, creationDate, expirationDate);
+	public String getTokenHash() {
+		return IncomingToken.hash(token);
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
-		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((st == null) ? 0 : st.hashCode());
 		result = prime * result + ((token == null) ? 0 : token.hashCode());
-		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
-		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
 		return result;
 	}
 
@@ -180,25 +67,11 @@ public class NewToken {
 			return false;
 		}
 		NewToken other = (NewToken) obj;
-		if (creationDate == null) {
-			if (other.creationDate != null) {
+		if (st == null) {
+			if (other.st != null) {
 				return false;
 			}
-		} else if (!creationDate.equals(other.creationDate)) {
-			return false;
-		}
-		if (expirationDate == null) {
-			if (other.expirationDate != null) {
-				return false;
-			}
-		} else if (!expirationDate.equals(other.expirationDate)) {
-			return false;
-		}
-		if (id == null) {
-			if (other.id != null) {
-				return false;
-			}
-		} else if (!id.equals(other.id)) {
+		} else if (!st.equals(other.st)) {
 			return false;
 		}
 		if (token == null) {
@@ -206,23 +79,6 @@ public class NewToken {
 				return false;
 			}
 		} else if (!token.equals(other.token)) {
-			return false;
-		}
-		if (tokenName == null) {
-			if (other.tokenName != null) {
-				return false;
-			}
-		} else if (!tokenName.equals(other.tokenName)) {
-			return false;
-		}
-		if (type != other.type) {
-			return false;
-		}
-		if (userName == null) {
-			if (other.userName != null) {
-				return false;
-			}
-		} else if (!userName.equals(other.userName)) {
 			return false;
 		}
 		return true;

@@ -36,8 +36,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -119,8 +119,9 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(adminUser);
 		
@@ -167,8 +168,9 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
@@ -204,8 +206,9 @@ public class AuthenticationCreateLocalUserTest {
 		final Instant create = Instant.ofEpochSecond(1000);
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
@@ -238,9 +241,10 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
-		
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
+
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@g.com"))
@@ -263,8 +267,9 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
@@ -305,12 +310,12 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(NOW, NOW).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(NOW, NOW).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(NOW, NOW).build(),
 				null);
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
@@ -334,8 +339,9 @@ public class AuthenticationCreateLocalUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("admin"), NOW, NOW));
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
 		
 		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("whee"));
 		

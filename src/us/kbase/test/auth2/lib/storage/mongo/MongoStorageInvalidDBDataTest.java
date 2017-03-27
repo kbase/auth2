@@ -10,8 +10,6 @@ import java.util.UUID;
 import org.bson.Document;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenName;
@@ -20,8 +18,8 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
@@ -138,9 +136,11 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalTokenName() throws Exception {
 		final IncomingToken t = new IncomingToken("foobar");
-		storage.storeToken(new HashedToken(UUID.randomUUID(), TokenType.LOGIN,
-				Optional.of(new TokenName("foo")), t.getHashedToken().getTokenHash(),
-				new UserName("baz"), Instant.now(), Instant.now().plusSeconds(3600)));
+		final StoredToken st = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now().plusSeconds(10))
+				.withTokenName(new TokenName("foo")).build();
+		storage.storeToken(st, t.getHashedToken().getTokenHash());
 		db.getCollection("tokens").updateOne(new Document("user", "baz"),
 				new Document("$set", new Document("name", "  foo\nbar  ")));
 		

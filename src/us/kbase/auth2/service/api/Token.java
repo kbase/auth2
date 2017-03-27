@@ -26,7 +26,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.IncomingJSON;
 import us.kbase.auth2.service.common.NewExternalToken;
@@ -45,7 +45,7 @@ public class Token {
 	public Map<String, Object> viewToken(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
-		final HashedToken ht = auth.getToken(getToken(token));
+		final StoredToken ht = auth.getToken(getToken(token));
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("cachefor", auth.getSuggestedTokenCacheTime());
 		ret.put("user", ht.getUserName().getName());

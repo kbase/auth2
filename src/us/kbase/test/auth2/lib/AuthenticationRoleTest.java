@@ -29,8 +29,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
@@ -45,8 +45,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken token = new IncomingToken("foobarbaz");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foobar"), Instant.now())
@@ -72,8 +73,9 @@ public class AuthenticationRoleTest {
 				new NullPointerException("token"));
 		
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
@@ -90,8 +92,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
@@ -109,8 +112,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken token = new IncomingToken("foobarbaz");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foobar"), Instant.now())
@@ -134,8 +138,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foobar"), Instant.now())
@@ -160,8 +165,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", UserName.ROOT, Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), UserName.ROOT)
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				UserName.ROOT, new DisplayName("foobar"), Instant.now()).build();
@@ -196,12 +202,12 @@ public class AuthenticationRoleTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
 				null);
 		
 		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
@@ -331,12 +337,12 @@ public class AuthenticationRoleTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
 				null);
 		
 		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
@@ -357,8 +363,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
@@ -377,8 +384,9 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 
 		final IncomingToken token = new IncomingToken("foo");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foobar"), Instant.now())
@@ -387,7 +395,7 @@ public class AuthenticationRoleTest {
 						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
 				.build();
 		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
@@ -404,14 +412,15 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken token = new IncomingToken("foobarbaz");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("baz"), Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foobar"), Instant.now())
 				.withRole(Role.CREATE_ADMIN).build();
 		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u, (AuthUser) null);
 		
@@ -473,14 +482,15 @@ public class AuthenticationRoleTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken token = new IncomingToken("foobarbaz");
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", adminUser, Instant.now(), Instant.now());
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), adminUser)
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
 				adminUser, new DisplayName("foobar"), Instant.now())
 				.withRole(withRole).build();
 		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (HashedToken) null);
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
 		
 		when(storage.getUser(adminUser)).thenReturn(u, (AuthUser) null);
 		

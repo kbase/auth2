@@ -19,8 +19,8 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.user.AuthUser;
 
 @Path(APIPaths.LEGACY_KBASE)
@@ -92,7 +92,7 @@ public class LegacyKBase {
 			}
 			ret.put("user_id", u.getUserName().getName());
 		} else {
-			final HashedToken ht = auth.getToken(in);
+			final StoredToken ht = auth.getToken(in);
 			ret.put("user_id", ht.getUserName().getName());
 		}
 		return ret;

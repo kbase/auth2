@@ -25,7 +25,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 
 @Path(UIPaths.LOGOUT_ROOT)
@@ -44,7 +44,7 @@ public class Logout {
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException {
-		final HashedToken ht = auth.getToken(
+		final StoredToken ht = auth.getToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return ImmutableMap.of("user", ht.getUserName().getName(),
 				"logouturl", relativize(uriInfo, UIPaths.LOGOUT_ROOT_RESULT));
@@ -54,7 +54,7 @@ public class Logout {
 	@Path(UIPaths.LOGOUT_RESULT)
 	public Response logoutResult(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException {
-		final Optional<HashedToken> ht = auth.revokeToken(
+		final Optional<StoredToken> ht = auth.revokeToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return Response.ok(
 				new Viewable("/logoutresult", ImmutableMap.of("user", ht.isPresent() ?

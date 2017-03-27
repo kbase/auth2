@@ -72,11 +72,12 @@ public class TemporaryToken {
 
 	/** Get a hashed token based on this token.
 	 * 
-	 * uses the {@link HashedToken#hash(String)} method.
+	 * uses the {@link IncomingToken#hash(String)} method.
 	 * @return a hashed temporary token.
 	 */
 	public TemporaryHashedToken getHashedToken() {
-		return new TemporaryHashedToken(id, HashedToken.hash(token), creationDate, expirationDate);
+		return new TemporaryHashedToken(id, IncomingToken.hash(token),
+				creationDate, expirationDate);
 	}
 
 	@Override

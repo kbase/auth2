@@ -23,8 +23,8 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
@@ -49,9 +49,10 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("foo"), Instant.now(), Instant.now());
-		
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+			.withLifeTime(Instant.now(), 10000).build();
+
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		auth.updateUser(token, UserUpdate.getBuilder()
@@ -102,12 +103,12 @@ public class AuthenticationUserUpdateTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new HashedToken(UUID.randomUUID(), TokenType.AGENT, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.DEV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new HashedToken(UUID.randomUUID(), TokenType.SERV, null, "foo",
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
+					StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
+					StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
 				null);
 		
 		failUpdateUser(auth, token, UU, new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -126,9 +127,10 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final HashedToken htoken = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("foo"), Instant.now(), Instant.now());
-		
+		final StoredToken htoken = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.now(), 10).build();
+
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).updateUser(new UserName("foo"),
