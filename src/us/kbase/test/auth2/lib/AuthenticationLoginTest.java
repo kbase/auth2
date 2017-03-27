@@ -839,7 +839,7 @@ public class AuthenticationLoginTest {
 	public void getLoginStateFailNull() throws Exception {
 		final Authentication auth = initTestMocks().auth;
 		
-		failGetLoginState(auth, null, new NullPointerException("token"));
+		failGetLoginState(auth, null, new NullPointerException("Temporary token"));
 	}
 	
 	@Test
@@ -1122,7 +1122,8 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, null, id, u, d, e, pids, l, new NullPointerException("token"));
+		failCreateUser(auth, null, id, u, d, e, pids, l,
+				new NullPointerException("Temporary token"));
 		failCreateUser(auth, t, null, u, d, e, pids, l,
 				new IllegalArgumentException("Missing argument: identityID"));
 		failCreateUser(auth, t, "   \t   ", u, d, e, pids, l,
@@ -1772,7 +1773,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = false;
 		
-		failCompleteLogin(auth, null, id, pids, l, new NullPointerException("token"));
+		failCompleteLogin(auth, null, id, pids, l, new NullPointerException("Temporary token"));
 		failCompleteLogin(auth, t, null, pids, l,
 				new IllegalArgumentException("Missing argument: identityID"));
 		failCompleteLogin(auth, t, "   \t   ", pids, l,

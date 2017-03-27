@@ -1471,7 +1471,7 @@ public class Authentication {
 	private Set<RemoteIdentity> getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		nonNull(token, "token");
+		nonNull(token, "Temporary token");
 		try {
 			return storage.getTemporaryIdentities(token.getHashedToken());
 		} catch (NoSuchTokenException e) {
@@ -1813,7 +1813,8 @@ public class Authentication {
 	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
 	 * {@link #link(String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
-	 * {@link #link(IncomingToken, IncomingToken, String)}.
+	 * {@link #link(IncomingToken, IncomingToken, String)} or
+	 * {@link #linkAll(IncomingToken, IncomingToken)}.
 	 * 
 	 * @param token the user's token.
 	 * @param linktoken the temporary token associated with the link state.
