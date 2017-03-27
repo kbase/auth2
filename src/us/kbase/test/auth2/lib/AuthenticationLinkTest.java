@@ -827,5 +827,201 @@ public class AuthenticationLinkTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void linkWithoutToken() throws Exception {
+		/* tests filtering */
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("Prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov", new ProviderConfig(true, false, false));
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(idp.getIdentities("authcode", true)).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+				.thenReturn(null);
+
+		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
+		final RemoteIdentity storageRemoteID3 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
+		final RemoteIdentity storageRemoteID4 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
+		
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
+				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+				.thenReturn(null);
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+				.thenReturn(null);
+		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
+				.thenReturn(null);
+		
+		final UUID tokenID = UUID.randomUUID();
+		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.getToken()).thenReturn("sometoken").thenReturn(null);
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000)).thenReturn(null);
+		
+		final TemporaryToken tt = auth.link("prov", "authcode");
+		
+		assertThat("incorrect temptoken", tt, is(new TemporaryToken(
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)));
+		
+		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
+						.getHashedToken(),
+				set(storageRemoteID3, storageRemoteID4));
+	}
+	
+	@Test
+	public void linkWithoutTokenFailNullsAndEmpties() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failLinkWithoutToken(auth, null, "foo", new NullPointerException("provider"));
+		failLinkWithoutToken(auth, "  \t ", "foo",
+				new NoSuchIdentityProviderException("  \t "));
+		failLinkWithoutToken(auth, "prov", null,
+				new MissingParameterException("authorization code"));
+		failLinkWithoutToken(auth, "prov", "  \n  ",
+				new MissingParameterException("authorization code"));
+	}
+	
+	@Test
+	public void linkWithoutTokenFailNoProvider() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final Authentication auth = initTestMocks(set(idp)).auth;
+		
+		failLinkWithoutToken(auth, "prov1", "foo",
+				new NoSuchIdentityProviderException("prov1"));
+	}
+	
+	@Test
+	public void linkWithoutTokenFailNoProviderInConfig() throws Exception {
+		/* this case indicates a programming error, a provider should never be in the internal
+		 * Authorization class state but not in the config in the db
+		 */
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("Prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov1", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failLinkWithoutToken(auth, "prov", "foo",
+				new NoSuchIdentityProviderException("Prov"));
+	}
+	
+	@Test
+	public void linkWithoutTokenFailDisabledProvider() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("Prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov", new ProviderConfig(false, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failLinkWithoutToken(auth, "prov", "foo",
+				new NoSuchIdentityProviderException("prov"));
+	}
+	
+	@Test
+	public void linkWithoutTokenFailIDRetrievalFailed() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("Prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(idp.getIdentities("foo", true)).thenThrow(new IdentityRetrievalException("oh poop"));
+		
+		failLinkWithoutToken(auth, "prov", "foo", new IdentityRetrievalException("oh poop"));
+	}
+	
+	private void failLinkWithoutToken(
+			final Authentication auth,
+			final String provider,
+			final String authcode,
+			final Exception e) {
+		try {
+			auth.link(provider, authcode);
+			fail("exception expected");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 
 }
