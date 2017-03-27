@@ -228,7 +228,6 @@
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
-      <test name="us.kbase.test.auth2.lib.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>
@@ -253,6 +252,7 @@
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
       <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
+      <test name="us.kbase.test.auth2.lib.token.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
       <test name="us.kbase.test.auth2.lib.user.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.user.LocalUserTest"/>
