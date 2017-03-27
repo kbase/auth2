@@ -10,8 +10,6 @@ import java.util.UUID;
 import org.bson.Document;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenName;
@@ -138,10 +136,11 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	@Test
 	public void illegalTokenName() throws Exception {
 		final IncomingToken t = new IncomingToken("foobar");
-		storage.storeToken(new StoredToken(UUID.randomUUID(), TokenType.LOGIN,
-				Optional.of(new TokenName("foo")),
-				new UserName("baz"), Instant.now(), Instant.now().plusSeconds(3600)),
-				t.getHashedToken().getTokenHash());
+		final StoredToken st = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now().plusSeconds(10))
+				.withTokenName(new TokenName("foo")).build();
+		storage.storeToken(st, t.getHashedToken().getTokenHash());
 		db.getCollection("tokens").updateOne(new Document("user", "baz"),
 				new Document("$set", new Document("name", "  foo\nbar  ")));
 		

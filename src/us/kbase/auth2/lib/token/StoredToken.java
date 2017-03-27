@@ -10,14 +10,13 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 
-/** A hashed token associated with a user.
+/** A token associated with a user stored in the authentication storage system.
  * 
  * @author gaprice@lbl.gov
  *
  */
-
 public class StoredToken {
-
+	
 	private final UUID id;
 	private final TokenType type;
 	private final Optional<TokenName> tokenName;
@@ -25,31 +24,19 @@ public class StoredToken {
 	private final Instant creationDate;
 	private final Instant expirationDate;
 	
-	/** Create a hashed token.
-	 * @param id the ID of the token.
-	 * @param type the type of the token.
-	 * @param tokenName the name of the token, or null to leave the token unnamed.
-	 * @param userName the username of the token.
-	 * @param creationDate the creation date of the token.
-	 * @param expirationDate the expiration date of the token.
-	 */
-	public StoredToken(
+	private StoredToken(
 			final UUID id,
 			final TokenType type,
 			final Optional<TokenName> tokenName,
 			final UserName userName,
 			final Instant creationDate,
 			final Instant expirationDate) {
-		nonNull(type, "type");
-		nonNull(userName, "userName");
-		nonNull(creationDate, "creationDate");
-		nonNull(expirationDate, "expirationDate");
-		nonNull(id, "id");
-		if (creationDate.isAfter(expirationDate)) {
-			throw new IllegalArgumentException("expirationDate must be > creationDate");
-		}
+		// this stuff is here just in case naughty users use casting to skip a builder step
+		nonNull(creationDate, "created");
+		// no way to test this one
+		nonNull(expirationDate, "expires");
 		this.type = type;
-		this.tokenName = tokenName == null ? Optional.absent() : tokenName;
+		this.tokenName = tokenName;
 		this.userName = userName;
 		this.expirationDate = expirationDate;
 		this.creationDate = creationDate;
@@ -162,5 +149,120 @@ public class StoredToken {
 			return false;
 		}
 		return true;
+	}
+	
+	/** Get a builder for a StoredToken.
+	 * @param type the type of the token.
+	 * @param id the token's ID.
+	 * @param user the user name associated with the token.
+	 * @return a builder.
+	 */
+	public static LifeStep getBuilder(final TokenType type, final UUID id, final UserName user) {
+		return new Builder(type, id, user);
+	}
+	
+	/** A step in the StoredToken builder for specifying the token's lifetime.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public interface LifeStep {
+		
+		/** Specify the lifetime for the token.
+		 * @param created the date the token was created.
+		 * @param expires the date the token expires.
+		 * @return the next step of the builder.
+		 */
+		OptionalsStep withLifeTime(Instant created, Instant expires);
+		
+		/** Specify the lifetime for the token.
+		 * @param created the date the token was created.
+		 * @param lifeTimeInMilliseconds the lifetime of the token in milliseconds.
+		 * @return the next step of the builder.
+		 */
+		OptionalsStep withLifeTime(Instant created, long lifeTimeInMilliseconds);
+	}
+	
+	/** A step in the StoredToken builder for specifying optional information and completing the
+	 * build.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public interface OptionalsStep {
+		
+		/** Specify the token's name.
+		 * @param tokenName the token's name.
+		 * @return this builder.
+		 */
+		OptionalsStep withTokenName(TokenName tokenName);
+		
+		/** Specify the token's name, and allow null input.
+		 * @param tokenName the token's name, or null for no name.
+		 * @return this builder.
+		 */
+		OptionalsStep withNullableTokenName(TokenName tokenName);
+		
+		/** Build the token.
+		 * @return a new StoredToken.
+		 */
+		StoredToken build();
+	}
+	
+	private static class Builder implements LifeStep, OptionalsStep {
+		
+		private final UUID id;
+		private final TokenType type;
+		private Optional<TokenName> tokenName = Optional.absent();
+		private final UserName userName;
+		private Instant creationDate;
+		private Instant expirationDate;
+	
+		private Builder(final TokenType type, final UUID id, final UserName userName) {
+			nonNull(type, "type");
+			nonNull(id, "id");
+			nonNull(userName, "userName");
+			this.id = id;
+			this.type = type;
+			this.userName = userName;
+		}
+
+		@Override
+		public OptionalsStep withTokenName(final TokenName tokenName) {
+			nonNull(tokenName, "tokenName");
+			this.tokenName = Optional.of(tokenName);
+			return this;
+		}
+		
+		@Override
+		public OptionalsStep withNullableTokenName(final TokenName tokenName) {
+			this.tokenName = Optional.fromNullable(tokenName);
+			return this;
+		}
+
+		@Override
+		public StoredToken build() {
+			return new StoredToken(id, type, tokenName, userName, creationDate, expirationDate);
+		}
+
+		@Override
+		public OptionalsStep withLifeTime(final Instant created, final Instant expires) {
+			nonNull(created, "created");
+			nonNull(expires, "expires");
+			if (created.isAfter(expires)) {
+				throw new IllegalArgumentException("expires must be > created");
+			}
+			this.creationDate = created;
+			this.expirationDate = expires;
+			return this;
+		}
+
+		@Override
+		public OptionalsStep withLifeTime(
+				final Instant created,
+				final long lifeTimeInMilliseconds) {
+			nonNull(created, "created");
+			this.creationDate = created;
+			this.expirationDate = created.plusMillis(lifeTimeInMilliseconds);
+			return this;
+		}
 	}
 }

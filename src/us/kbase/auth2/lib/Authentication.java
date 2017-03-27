@@ -608,12 +608,13 @@ public class Authentication {
 	}
 	
 	private NewToken login(final UserName userName) throws AuthStorageException {
-		final Instant now = clock.instant();
-		final StoredToken st = new StoredToken(randGen.randomUUID(), TokenType.LOGIN, null,
-				userName, now,
-				now.plusMillis(cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN)));
-		final NewToken nt = new NewToken(st, randGen.getToken());
-		storage.storeToken(st, nt.getTokenHash());
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+					TokenType.LOGIN, randGen.randomUUID(), userName)
+				.withLifeTime(clock.instant(),
+						cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
+				.build(),
+				randGen.getToken());
+		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		setLastLogin(userName);
 		return nt;
 	}
@@ -734,10 +735,12 @@ public class Authentication {
 		final AuthConfig c = cfg.getAppConfig();
 		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
 		final Instant now = clock.instant();
-		final StoredToken st = new StoredToken(randGen.randomUUID(), tokenType,
-				Optional.of(tokenName), au.getUserName(), now, now.plusMillis(life));
-		final NewToken nt = new NewToken(st, randGen.getToken());
-		storage.storeToken(st, nt.getTokenHash());
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+					tokenType, randGen.randomUUID(), au.getUserName())
+				.withLifeTime(now, life)
+				.withTokenName(tokenName).build(),
+				randGen.getToken());
+		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		return nt;
 	}
 	

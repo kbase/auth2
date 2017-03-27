@@ -49,9 +49,10 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final StoredToken htoken = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				new UserName("foo"), Instant.now(), Instant.now());
-		
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+			.withLifeTime(Instant.now(), 10000).build();
+
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		auth.updateUser(token, UserUpdate.getBuilder()
@@ -102,12 +103,12 @@ public class AuthenticationUserUpdateTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
+					StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
+					StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+					.withLifeTime(Instant.now(), 10).build(),
 				null);
 		
 		failUpdateUser(auth, token, UU, new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -126,9 +127,10 @@ public class AuthenticationUserUpdateTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		final StoredToken htoken = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				new UserName("foo"), Instant.now(), Instant.now());
-		
+		final StoredToken htoken = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.now(), 10).build();
+
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).updateUser(new UserName("foo"),

@@ -53,10 +53,9 @@ public class LoginTokenTest {
 	@Test
 	public void constructorNewToken() throws Exception {
 		final Instant now = Instant.now();
-		final NewToken nt = new NewToken(new StoredToken(
-				UUID.randomUUID(), TokenType.LOGIN, null, new UserName("bar"),
-				now, now.plusMillis(10000)), "foo");
-		
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10)).build(), "foo");
 		
 		final LoginToken lt = new LoginToken(nt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(true));
@@ -86,9 +85,9 @@ public class LoginTokenTest {
 	@Test
 	public void constructFail() throws Exception {
 		final Instant now = Instant.now();
-		final NewToken nt = new NewToken(new StoredToken(
-				UUID.randomUUID(), TokenType.LOGIN, null, new UserName("bar"),
-				now, now.plusMillis(10000)), "foo");
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10)).build(), "foo");
 
 		failConstructToken((NewToken) null, LOGIN_STATE, new NullPointerException("token"));
 		failConstructToken(nt, null, new NullPointerException("loginState"));

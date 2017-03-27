@@ -59,9 +59,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 		expected.put(new UserName("foo"), new DisplayName("dfoo"));
 		expected.put(new UserName("bar"), new DisplayName("dbar"));
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("foo"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUserDisplayNames(
 				set(new UserName("foo"), new UserName("bar"), new UserName("***ROOT***"))))
@@ -82,9 +82,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("foo"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		final Map<UserName, DisplayName> disp = auth.getUserDisplayNames(
 				token, Collections.emptySet());
@@ -130,10 +130,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 			users.add(new UserName("u" + i));
 		}
 		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("foo"), Instant.now(), Instant.now()));
-		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+				
 		failGetDisplayNamesSet(auth, token, users,
 				new IllegalParameterException("User count exceeds maximum of 10000"));
 	}
@@ -298,10 +298,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("foo"), Instant.now(), Instant.now()));
-		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
+				
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
 		failGetDisplayNamesSpec(auth, token, UserSearchSpec.getBuilder().build(),
@@ -408,9 +408,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						user.getUserName(), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), user.getUserName())
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
 		

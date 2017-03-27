@@ -460,12 +460,12 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	private Optional<TokenName> getTokenName(final String tokenName) throws AuthStorageException {
+	private TokenName getTokenName(final String tokenName) throws AuthStorageException {
 		if (tokenName == null) {
-			return Optional.absent();
+			return null;
 		}
 		try {
-			return Optional.of(new TokenName(tokenName));
+			return new TokenName(tokenName);
 		} catch (MissingParameterException | IllegalParameterException e) {
 			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
 		}
@@ -692,13 +692,15 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	private StoredToken getToken(final Document t) throws AuthStorageException {
-		return new StoredToken(
-				UUID.fromString(t.getString(Fields.TOKEN_ID)),
-				TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
-				getTokenName(t.getString(Fields.TOKEN_NAME)),
-				getUserName(t.getString(Fields.TOKEN_USER_NAME)),
-				t.getDate(Fields.TOKEN_CREATION).toInstant(),
-				t.getDate(Fields.TOKEN_EXPIRY).toInstant());
+		return StoredToken.getBuilder(
+					TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
+					UUID.fromString(t.getString(Fields.TOKEN_ID)),
+					getUserName(t.getString(Fields.TOKEN_USER_NAME)))
+				.withLifeTime(
+						t.getDate(Fields.TOKEN_CREATION).toInstant(),
+						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
+				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
+				.build();
 	}
 
 	@Override

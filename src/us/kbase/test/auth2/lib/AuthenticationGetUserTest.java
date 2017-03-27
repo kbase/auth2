@@ -86,9 +86,9 @@ public class AuthenticationGetUserTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("foo"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
@@ -103,9 +103,9 @@ public class AuthenticationGetUserTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						user.getUserName(), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), user.getUserName())
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
 		
@@ -221,9 +221,9 @@ public class AuthenticationGetUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						new UserName("bar"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(new UserName("bar"))).thenThrow(new NoSuchUserException("bar"));
 		
@@ -242,9 +242,9 @@ public class AuthenticationGetUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-						tokenName, Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), tokenName)
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
 		try {
@@ -410,12 +410,12 @@ public class AuthenticationGetUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
-				new StoredToken(UUID.randomUUID(), TokenType.AGENT, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new StoredToken(UUID.randomUUID(), TokenType.DEV, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
-				new StoredToken(UUID.randomUUID(), TokenType.SERV, null,
-						new UserName("bar"), Instant.now(), Instant.now()),
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+						.withLifeTime(Instant.now(), Instant.now()).build(),
 				null);
 		
 		failGetUserAsAdmin(auth, token, new UserName("bar"), new UnauthorizedException(
@@ -433,9 +433,9 @@ public class AuthenticationGetUserTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		final StoredToken token = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				new UserName("foobar"), Instant.now(), Instant.now());
+		final StoredToken token = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foobar"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		
@@ -453,9 +453,9 @@ public class AuthenticationGetUserTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		final StoredToken token = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				new UserName("admin"), Instant.now(), Instant.now());
+		final StoredToken token = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
@@ -476,9 +476,9 @@ public class AuthenticationGetUserTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		final StoredToken token = new StoredToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				admin.getUserName(), Instant.now(), Instant.now());
+		final StoredToken token = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), admin.getUserName())
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		

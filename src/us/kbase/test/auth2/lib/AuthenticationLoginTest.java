@@ -130,17 +130,18 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken lt = auth.login("prov", "foobar");
 		
-		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(20000),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
 				"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
 		final LoginToken expected = new LoginToken(
-				new NewToken(new StoredToken(tokenID, TokenType.LOGIN, null, new UserName("foo"),
-						Instant.ofEpochMilli(20000),
-						Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "thisisatoken"), 
+				new NewToken(StoredToken.getBuilder(
+						TokenType.LOGIN, tokenID, new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+						"thisisatoken"), 
 				LoginState.getBuilder("prov", allowLogin).withUser(user, storageRemoteID).build());
 		
 		assertThat("incorrect login token", lt, is(expected));
@@ -927,17 +928,17 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(20000),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				"mfingtoken")));
 	}
 	
 	@Test
@@ -983,17 +984,17 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new StoredToken( tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(120000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 100000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(20000),
-				Instant.ofEpochMilli(20000 + 100000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 100000).build(),
+				"mfingtoken")));
 	}
 	
 	@Test
@@ -1087,17 +1088,17 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 
-		verify(storage).storeToken(new StoredToken( tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(20000L),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(20000),
-				Instant.ofEpochMilli(20000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				"mfingtoken")));
 	}
 	
 	@Test
@@ -1588,18 +1589,17 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(10000),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				"mfingtoken")));
 	}
 	
 	@Test
@@ -1646,17 +1646,17 @@ public class AuthenticationLoginTest {
 		
 		verify(storage, never()).link(any(), any());
 		
-		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(610000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 600000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(10000),
-				Instant.ofEpochMilli(10000 + 600000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(610000)).build(),
+				"mfingtoken")));
 	}
 	
 	@Test
@@ -1750,17 +1750,17 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 		
-		verify(storage).storeToken(new StoredToken(tokenID, TokenType.LOGIN, null,
-				new UserName("foo"), Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)),
+		verify(storage).storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		assertThat("incorrect new token", nt, is(new NewToken(new StoredToken(
-				tokenID, TokenType.LOGIN, null, new UserName("foo"),
-				Instant.ofEpochMilli(10000),
-				Instant.ofEpochMilli(10000 + 14 * 24 * 3600 * 1000)), "mfingtoken")));
+		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, tokenID, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				"mfingtoken")));
 	}
 	
 	@Test

@@ -30,9 +30,9 @@ public class LocalLoginResultTest {
 	@Test
 	public void constructToken() throws Exception {
 		final Instant now = Instant.now();
-		final NewToken nt = new NewToken(new StoredToken(
-				UUID.randomUUID(), TokenType.LOGIN, null, new UserName("bar"),
-				now, now.plusMillis(5000)), "foo");
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(5)).build(), "foo");
 		final LocalLoginResult llr = new LocalLoginResult(nt);
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(false));
 		assertThat("incorrect token", llr.getToken(), is(Optional.of(nt)));
