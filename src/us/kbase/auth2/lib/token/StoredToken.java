@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 
-import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 
 /** A token associated with a user stored in the authentication storage system.

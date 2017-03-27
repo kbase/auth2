@@ -6,9 +6,9 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.test.auth2.TestCommon;
 
 public class TokenNameTest {

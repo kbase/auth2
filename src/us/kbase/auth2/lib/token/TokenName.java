@@ -1,5 +1,6 @@
-package us.kbase.auth2.lib;
+package us.kbase.auth2.lib.token;
 
+import us.kbase.auth2.lib.Name;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
