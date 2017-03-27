@@ -5,9 +5,9 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 
-import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 
 public class ExternalToken {

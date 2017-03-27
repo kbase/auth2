@@ -1,5 +1,6 @@
-package us.kbase.auth2.lib;
+package us.kbase.auth2.lib.token;
 
+import us.kbase.auth2.lib.Name;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
@@ -7,7 +8,7 @@ public class TokenName extends Name {
 	
 	public TokenName(final String name)
 			throws MissingParameterException, IllegalParameterException {
-		super(name, "token name", 30);
+		super(name, "token name", 100);
 	}
 
 	@Override

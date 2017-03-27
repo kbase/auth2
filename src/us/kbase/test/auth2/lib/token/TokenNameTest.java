@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.lib;
+package us.kbase.test.auth2.lib.token;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -6,9 +6,9 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import us.kbase.auth2.lib.TokenName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.test.auth2.TestCommon;
 
 public class TokenNameTest {
@@ -23,8 +23,9 @@ public class TokenNameTest {
 	@Test
 	public void constructFail() throws Exception {
 		failConstruct(null, new MissingParameterException("token name"));
-		failConstruct(TestCommon.LONG101.substring(0, 31),
-				new IllegalParameterException("token name size greater than limit 30"));
+		failConstruct("   \t   ", new MissingParameterException("token name"));
+		failConstruct(TestCommon.LONG101,
+				new IllegalParameterException("token name size greater than limit 100"));
 	}
 	
 	private void failConstruct(
