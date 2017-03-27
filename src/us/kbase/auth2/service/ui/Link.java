@@ -154,7 +154,7 @@ public class Link {
 			if (lt.isLinked()) {
 				tt = Optional.absent();
 			} else {
-				tt = Optional.of(lt.getTemporaryToken());
+				tt = Optional.of(lt.getTemporaryToken().get());
 			}
 		} else {
 			tt = Optional.of(auth.link(provider, authcode));
@@ -200,9 +200,9 @@ public class Link {
 		if (lt.isLinked()) {
 			linkChoice.put("linked", true);
 		} else {
-			linkChoice.putAll(buildLinkChoice(uriInfo, lt.getLinkIdentities()));
+			linkChoice.putAll(buildLinkChoice(uriInfo, lt.getLinkIdentities().get()));
 			linkChoice.put("linked", false);
-			r.cookie(getLinkInProcessCookie(lt.getTemporaryToken()));
+			r.cookie(getLinkInProcessCookie(lt.getTemporaryToken().get()));
 		}
 		return r.build();
 	}
