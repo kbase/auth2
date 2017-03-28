@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
@@ -1471,7 +1471,7 @@ public class Authentication {
 	private Set<RemoteIdentity> getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		nonNull(token, "token");
+		nonNull(token, "Temporary token");
 		try {
 			return storage.getTemporaryIdentities(token.getHashedToken());
 		} catch (NoSuchTokenException e) {
@@ -1499,6 +1499,7 @@ public class Authentication {
 	 * @throws UserExistsException if the user name is already in use.
 	 * @throws UnauthorizedException if login is disabled or the username is the root user name.
 	 * @throws IdentityLinkedException if the specified identity is already linked to a user.
+	 * @throws MissingParameterException if the identity ID is null or the empty string.
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
@@ -1509,7 +1510,7 @@ public class Authentication {
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
 			throws AuthStorageException, InvalidTokenException, UserExistsException,
-			UnauthorizedException, IdentityLinkedException {
+			UnauthorizedException, IdentityLinkedException, MissingParameterException {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
@@ -1564,13 +1565,15 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an administrator and non-admin login
 	 * is not allowed or the user account is disabled.
+	 * @throws MissingParameterException  if the identity ID is null or the empty string.
 	 */
 	public NewToken login(
 			final IncomingToken token,
 			final String identityID,
 			final Set<PolicyID> policyIDs,
 			final boolean linkAll)
-			throws AuthenticationException, AuthStorageException, UnauthorizedException {
+			throws AuthenticationException, AuthStorageException, UnauthorizedException,
+				MissingParameterException {
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
@@ -1604,8 +1607,9 @@ public class Authentication {
 	
 	private Optional<RemoteIdentity> getIdentity(
 			final String identityID,
-			final Set<RemoteIdentity> identities) {
-		checkStringNoCheckedException(identityID, "identityID");
+			final Set<RemoteIdentity> identities)
+			throws MissingParameterException {
+		checkString(identityID, "identityID");
 		for (final RemoteIdentity ri: identities) {
 			if (ri.getRemoteID().getID().equals(identityID)) {
 				return Optional.of(ri);
@@ -1813,7 +1817,8 @@ public class Authentication {
 	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
 	 * {@link #link(String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
-	 * {@link #link(IncomingToken, IncomingToken, String)}.
+	 * {@link #link(IncomingToken, IncomingToken, String)} or
+	 * {@link #linkAll(IncomingToken, IncomingToken)}.
 	 * 
 	 * @param token the user's token.
 	 * @param linktoken the temporary token associated with the link state.
@@ -1858,13 +1863,15 @@ public class Authentication {
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws InvalidTokenException if either token is invalid.
+	 * @throws MissingParameterException if the identity ID is null or the empty string.
 	 */
 	public void link(
 			final IncomingToken token,
 			final IncomingToken linktoken,
 			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
-			InvalidTokenException, IdentityLinkedException, UnauthorizedException {
+				InvalidTokenException, IdentityLinkedException, UnauthorizedException,
+				MissingParameterException {
 		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
@@ -1945,24 +1952,28 @@ public class Authentication {
 
 	/** Remove a remote identity from a user account.
 	 * @param token the user's token.
-	 * @param id the ID of the remote identity to remove.
+	 * @param identityID the ID of the remote identity to remove.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnLinkFailedException if the user has only one identity or is a local user.
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws NoSuchIdentityException if the user does not possess the identity.
+	 * @throws MissingParameterException if the identity id is null or the empty string. 
 	 */
 	public void unlink(
 			final IncomingToken token,
-			final String id)
+			final String identityID)
 			throws InvalidTokenException, AuthStorageException, UnLinkFailedException,
-			DisabledUserException, UnauthorizedException, NoSuchIdentityException {
-		checkStringNoCheckedException(id, "id");
-		nonNull(id, "id");
+			DisabledUserException, UnauthorizedException, NoSuchIdentityException,
+			MissingParameterException {
+		checkString(identityID, "identityID");
 		final AuthUser au = getUser(token, set(TokenType.LOGIN));
+		if (au.isLocal()) {
+			throw new UnLinkFailedException("Local users don't have remote identities");
+		}
 		try {
-			storage.unlink(au.getUserName(), id);
+			storage.unlink(au.getUserName(), identityID);
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
 					au.getUserName().getName());

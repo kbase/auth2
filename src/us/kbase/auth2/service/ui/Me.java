@@ -181,7 +181,8 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			@PathParam("id") final String id)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			UnLinkFailedException, NoSuchIdentityException, UnauthorizedException {
+			UnLinkFailedException, NoSuchIdentityException, UnauthorizedException,
+			MissingParameterException {
 		// id can't be null
 		final Optional<IncomingToken> token = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);

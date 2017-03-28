@@ -75,4 +75,49 @@ public class LinkIdentities {
 		return provider;
 	}
 
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((idents == null) ? 0 : idents.hashCode());
+		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
+		result = prime * result + ((user == null) ? 0 : user.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		LinkIdentities other = (LinkIdentities) obj;
+		if (idents == null) {
+			if (other.idents != null) {
+				return false;
+			}
+		} else if (!idents.equals(other.idents)) {
+			return false;
+		}
+		if (provider == null) {
+			if (other.provider != null) {
+				return false;
+			}
+		} else if (!provider.equals(other.provider)) {
+			return false;
+		}
+		if (user == null) {
+			if (other.user != null) {
+				return false;
+			}
+		} else if (!user.equals(other.user)) {
+			return false;
+		}
+		return true;
+	}
 }

@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LinkIdentities;
@@ -42,11 +43,16 @@ public class LinkTokenTest {
 	}
 	
 	@Test
+	public void equals() {
+		EqualsVerifier.forClass(LinkToken.class).usingGetClass().verify();
+	}
+	
+	@Test
 	public void emptyConstructor() throws Exception {
 		final LinkToken lt = new LinkToken();
 		assertThat("incorrect isLinked()", lt.isLinked(), is(true));
-		assertThat("incorrect token", lt.getTemporaryToken(), is((TemporaryToken) null));
-		assertThat("incorrect ids", lt.getLinkIdentities(), is((LinkIdentities) null));
+		assertThat("incorrect token", lt.getTemporaryToken(), is(Optional.absent()));
+		assertThat("incorrect ids", lt.getLinkIdentities(), is(Optional.absent()));
 	}
 	
 	@Test
@@ -56,32 +62,35 @@ public class LinkTokenTest {
 				UUID.randomUUID(), "foo", Instant.now(), 10000);
 		final LinkToken lt = new LinkToken(tt, linkids);
 		assertThat("incorrect isLinked()", lt.isLinked(), is(false));
-		assertThat("incorrect token id", lt.getTemporaryToken().getId(), is(tt.getId()));
-		assertThat("incorrect token id", lt.getTemporaryToken().getToken(), is("foo"));
-		assertThat("incorrect token id", lt.getTemporaryToken().getCreationDate(),
+		final TemporaryToken ttgot = lt.getTemporaryToken().get();
+		assertThat("incorrect token id", ttgot.getId(), is(tt.getId()));
+		assertThat("incorrect token id", ttgot.getToken(), is("foo"));
+		assertThat("incorrect token id", ttgot.getCreationDate(),
 				is(tt.getCreationDate()));
-		assertThat("incorrect token id", lt.getTemporaryToken().getExpirationDate(),
+		assertThat("incorrect token id", ttgot.getExpirationDate(),
 				is(tt.getExpirationDate()));
 		
-		assertThat("incorrect provider", lt.getLinkIdentities().getProvider(), is("foobar"));
+		final LinkIdentities ligot = lt.getLinkIdentities().get();
+		
+		assertThat("incorrect provider", ligot.getProvider(), is("foobar"));
 		
 		//check the user is correct
-		assertThat("incorrect username", lt.getLinkIdentities().getUser().getUserName(),
+		assertThat("incorrect username", ligot.getUser().getUserName(),
 				is(new UserName("foo")));
-		assertThat("incorrect email", lt.getLinkIdentities().getUser().getEmail(),
+		assertThat("incorrect email", ligot.getUser().getEmail(),
 				is(new EmailAddress("f@g.com")));
-		assertThat("incorrect displayname", lt.getLinkIdentities().getUser().getDisplayName(),
+		assertThat("incorrect displayname", ligot.getUser().getDisplayName(),
 				is(new DisplayName("bar")));
 		assertThat("incorrect user id number",
-				lt.getLinkIdentities().getUser().getIdentities().size(), is(1));
+				ligot.getUser().getIdentities().size(), is(1));
 		assertThat("incorrect user identity",
-				lt.getLinkIdentities().getUser().getIdentities().iterator().next(), is(
+				ligot.getUser().getIdentities().iterator().next(), is(
 				new RemoteIdentity(
 						new RemoteIdentityID("foo", "bar"),
 						new RemoteIdentityDetails("user", "full", "email"))));
-		assertThat("incorrect creation date", lt.getLinkIdentities().getUser().getCreated(),
+		assertThat("incorrect creation date", ligot.getUser().getCreated(),
 				is(AUTH_USER.getCreated()));
-		assertThat("incorrect login date", lt.getLinkIdentities().getUser().getLastLogin(),
+		assertThat("incorrect login date", ligot.getUser().getLastLogin(),
 				is(Optional.absent()));
 	}
 	

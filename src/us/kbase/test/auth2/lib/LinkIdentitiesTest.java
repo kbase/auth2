@@ -13,6 +13,7 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LinkIdentities;
@@ -43,6 +44,11 @@ public class LinkIdentitiesTest {
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
+	}
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(LinkIdentities.class).usingGetClass().verify();
 	}
 	
 	@Test

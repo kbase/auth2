@@ -133,6 +133,4 @@ public class TemporaryToken {
 		}
 		return true;
 	}
-	
-	
 }
