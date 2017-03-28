@@ -1610,4 +1610,295 @@ public class AuthenticationLinkTest {
 		}
 	}
 	
+	@Test
+	public void linkAll() throws Exception {
+		/* tests filtering ids and ignoring link failures due to already linked ids */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+				.thenReturn(null);
+
+		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
+		final RemoteIdentity storageRemoteID3 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
+		final RemoteIdentity storageRemoteID4 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
+		
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
+				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+				.thenReturn(null);
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+				.thenReturn(null);
+		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
+				.thenReturn(null);
+		
+		doThrow(new IdentityLinkedException("foo")).when(storage)
+				.link(new UserName("baz"), storageRemoteID3);
+		
+		auth.linkAll(userToken, tempToken);
+		
+		verify(storage).link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "f4@g.com")));
+	}
+	
+	@Test
+	public void linkAllFailNullsAndEmpties() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build());
+		
+		failLinkAll(auth, null, tempToken, new NullPointerException("token"));
+		failLinkAll(auth, userToken, null, new NullPointerException("Temporary token"));
+	}
+	
+	@Test
+	public void linkAllFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failLinkAll(auth, userToken, tempToken, new InvalidTokenException());
+	}
+	
+	@Test
+	public void linkAllFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				null);
+		
+		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
+	public void linkAllFailNoUserForToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		failLinkAll(auth, token, new IncomingToken("bar"), new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void linkAllFailDisabledUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now())
+				.withIdentity(REMOTE).withUserDisabledState(
+						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
+		
+		failLinkAll(auth, token, new IncomingToken("bar"), new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("foo"));
+	}
+	
+	@Test
+	public void linkAllFailLocalUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+
+		failLinkAll(auth, token, new IncomingToken("bar"),
+				new LinkFailedException("Cannot link identities to local accounts"));
+	}
+	
+	@Test
+	public void linkAllFailBadTempToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failLinkAll(auth, userToken, tempToken, new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkAllFailNoSuchUserAtLink() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+				.thenReturn(null);
+
+		final RemoteIdentity storageRemote3 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
+		
+		when(storage.getUser(storageRemote3)).thenReturn(Optional.absent());
+
+		doThrow(new NoSuchUserException("baz")).when(storage).link(new UserName("baz"),
+				storageRemote3);
+		
+		failLinkAll(auth, userToken, tempToken,
+				new AuthStorageException("User magically disappeared from database: baz"));
+	}
+	
+	@Test
+	public void linkAllFailLinkFailedAtLink() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+				.thenReturn(null);
+		
+
+		final RemoteIdentity storageRemote3 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
+		
+		when(storage.getUser(storageRemote3)).thenReturn(Optional.absent());
+
+		doThrow(new LinkFailedException("foobar"))
+				.when(storage).link(new UserName("baz"), storageRemote3);
+		
+		failLinkAll(auth, userToken, tempToken, new RuntimeException(
+						"Programming error: this method should not be called on a local user"));
+	}
+
+	private void failLinkAll(
+			final Authentication auth,
+			final IncomingToken utoken,
+			final IncomingToken ttoken,
+			final Exception e) { 
+		try {
+			auth.linkAll(utoken, ttoken);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 }
