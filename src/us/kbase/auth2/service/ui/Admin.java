@@ -364,9 +364,12 @@ public class Admin {
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		final boolean disable = disableStr != null;
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		auth.disableAccount(token, new UserName(user), disable, reason);
+		if (disableStr == null) {
+			auth.enableAccount(token, new UserName(user));
+		} else {
+			auth.disableAccount(token, new UserName(user), reason);
+		}
 	}
 	
 	@POST
