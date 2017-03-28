@@ -1,13 +1,7 @@
 package us.kbase.test.auth2.lib;
 
-import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.isA;
-import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -243,6 +237,194 @@ public class AuthenticationDisableUserTest {
 			final Exception e) {
 		try {
 			auth.disableAccount(token, name, reason);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void enableUser() throws Exception {
+		enableUser(new UserName("baz"), new UserName("foo"), Role.ADMIN);
+		enableUser(new UserName("baz"), new UserName("foo"), Role.CREATE_ADMIN);
+		enableUser(UserName.ROOT, new UserName("foo"), Role.ROOT);
+	}
+	
+	@Test
+	public void enableUserFailBadRole() throws Exception {
+		failEnableUser(new UserName("baz"), new UserName("foo"), Role.DEV_TOKEN,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		failEnableUser(new UserName("baz"), new UserName("foo"), Role.SERV_TOKEN,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		failEnableUser(new UserName("baz"), UserName.ROOT, Role.ADMIN,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"The root user cannot be enabled via this method"));
+		failEnableUser(new UserName("baz"), UserName.ROOT, Role.CREATE_ADMIN,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"The root user cannot be enabled via this method"));
+	}
+	
+	@Test
+	public void enableUserFailNullsAndEmpties() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final UserName un = new UserName("foo");
+		
+		failEnableUser(auth, null, un, new NullPointerException("token"));
+		failEnableUser(auth, token, null, new NullPointerException("userName"));
+	}
+	
+	
+	@Test
+	public void enableUserFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("user");
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failEnableUser(auth, token, new UserName("foo"), new InvalidTokenException());
+	}
+	
+	@Test
+	public void enableUserFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				null);
+		
+		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
+	public void enableUserFailNoUserForToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		failEnableUser(auth, token, new UserName("foo"), new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void enableUserFailDisabledUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now())
+				.withUserDisabledState(
+						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
+		
+		failEnableUser(auth, token, new UserName("foo"), new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("foo"));
+	}
+	
+	@Test
+	public void enableUserFailNoSuchUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				.withRole(Role.ADMIN).build())
+				.thenReturn(null);
+		
+		doThrow(new NoSuchUserException("foo")).when(storage)
+				.enableAccount(new UserName("foo"), new UserName("baz"));
+
+		failEnableUser(auth, token, new UserName("foo"),
+				new NoSuchUserException("foo"));
+	}
+	
+	private void enableUser(final UserName adminName, final UserName userName, final Role role)
+			throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), adminName)
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(adminName)).thenReturn(AuthUser.getBuilder(
+				adminName, new DisplayName("foo"), Instant.now())
+				.withRole(role).build())
+				.thenReturn(null);
+		
+		auth.enableAccount(token, userName);
+		
+		verify(storage).enableAccount(userName, adminName);
+	}
+	
+	private void failEnableUser(
+			final UserName adminName,
+			final UserName userName,
+			final Role role,
+			final Exception e) {
+		try {
+			enableUser(adminName, userName, role);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private void failEnableUser(
+			final Authentication auth,
+			final IncomingToken token,
+			final UserName userName,
+			final Exception e) {
+		try {
+			auth.enableAccount(token, userName);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
