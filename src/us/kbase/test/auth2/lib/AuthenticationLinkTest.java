@@ -44,9 +44,11 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -1895,6 +1897,223 @@ public class AuthenticationLinkTest {
 			final Exception e) { 
 		try {
 			auth.linkAll(utoken, ttoken);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void unlink() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		auth.unlink(userToken, "foobar");
+		
+		verify(storage).unlink(new UserName("baz"), "foobar");
+	}
+	
+	@Test
+	public void unlinkFailNullsAndEmpties() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		failUnlink(auth, null, "foo", new NullPointerException("token"));
+		failUnlink(auth, userToken, null, new MissingParameterException("identityID"));
+		failUnlink(auth, userToken, "  \n \t  ", new MissingParameterException("identityID"));
+	}
+	
+	@Test
+	public void unlinkFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		when(storage.getToken(userToken.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failUnlink(auth, userToken, "foo", new InvalidTokenException());
+	}
+	
+	@Test
+	public void unlinkFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				null);
+		
+		failUnlink(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failUnlink(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failUnlink(auth, token, "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	@Test
+	public void unlinkFailNoUserForToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		failUnlink(auth, token, "bar", new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void unlinkFailDisabledUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now())
+				.withIdentity(REMOTE).withUserDisabledState(
+						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
+		
+		failUnlink(auth, token, "foo", new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("foo"));
+	}
+	
+	@Test
+	public void unlinkFailLocalUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+
+		failUnlink(auth, token, "foo",
+				new UnLinkFailedException("Local users don't have remote identities"));
+	}
+	
+	@Test
+	public void unlinkFailAtUnlinkNoSuchUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		doThrow(new NoSuchUserException("baz")).when(storage)
+				.unlink(new UserName("baz"), "foobar");
+		
+		failUnlink(auth, userToken, "foobar", new AuthStorageException(
+				"User magically disappeared from database: baz"));
+	}
+	
+	@Test
+	public void unlinkFailAtUnlinkUnlinkFailed() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		doThrow(new UnLinkFailedException("unlink")).when(storage)
+				.unlink(new UserName("baz"), "foobar");
+		
+		failUnlink(auth, userToken, "foobar", new UnLinkFailedException("unlink"));
+	}
+	
+	@Test
+	public void unlinkFailAtUnlinkNoSuchIdentity() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		doThrow(new NoSuchIdentityException("noid")).when(storage)
+				.unlink(new UserName("baz"), "foobar");
+		
+		failUnlink(auth, userToken, "foobar", new NoSuchIdentityException("noid"));
+	}
+	
+	private void failUnlink(
+			final Authentication auth,
+			final IncomingToken token,
+			final String id,
+			final Exception e) {
+		try {
+			auth.unlink(token, id);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

@@ -1952,7 +1952,7 @@ public class Authentication {
 
 	/** Remove a remote identity from a user account.
 	 * @param token the user's token.
-	 * @param id the ID of the remote identity to remove.
+	 * @param identityID the ID of the remote identity to remove.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnLinkFailedException if the user has only one identity or is a local user.
@@ -1963,15 +1963,17 @@ public class Authentication {
 	 */
 	public void unlink(
 			final IncomingToken token,
-			final String id)
+			final String identityID)
 			throws InvalidTokenException, AuthStorageException, UnLinkFailedException,
 			DisabledUserException, UnauthorizedException, NoSuchIdentityException,
 			MissingParameterException {
-		checkString(id, "id");
-		nonNull(id, "id");
+		checkString(identityID, "identityID");
 		final AuthUser au = getUser(token, set(TokenType.LOGIN));
+		if (au.isLocal()) {
+			throw new UnLinkFailedException("Local users don't have remote identities");
+		}
 		try {
-			storage.unlink(au.getUserName(), id);
+			storage.unlink(au.getUserName(), identityID);
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
 					au.getUserName().getName());
