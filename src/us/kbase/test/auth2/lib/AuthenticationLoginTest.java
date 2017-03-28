@@ -1125,9 +1125,9 @@ public class AuthenticationLoginTest {
 		failCreateUser(auth, null, id, u, d, e, pids, l,
 				new NullPointerException("Temporary token"));
 		failCreateUser(auth, t, null, u, d, e, pids, l,
-				new IllegalArgumentException("Missing argument: identityID"));
+				new MissingParameterException("identityID"));
 		failCreateUser(auth, t, "   \t   ", u, d, e, pids, l,
-				new IllegalArgumentException("Missing argument: identityID"));
+				new MissingParameterException("identityID"));
 		failCreateUser(auth, t, id, null, d, e, pids, l, new NullPointerException("userName"));
 		failCreateUser(auth, t, id, u, null, e, pids, l, new NullPointerException("displayName"));
 		failCreateUser(auth, t, id, u, d, null, pids, l, new NullPointerException("email"));
@@ -1775,9 +1775,9 @@ public class AuthenticationLoginTest {
 		
 		failCompleteLogin(auth, null, id, pids, l, new NullPointerException("Temporary token"));
 		failCompleteLogin(auth, t, null, pids, l,
-				new IllegalArgumentException("Missing argument: identityID"));
+				new MissingParameterException("identityID"));
 		failCompleteLogin(auth, t, "   \t   ", pids, l,
-				new IllegalArgumentException("Missing argument: identityID"));
+				new MissingParameterException("identityID"));
 		failCompleteLogin(auth, t, id, null, l, new NullPointerException("policyIDs"));
 		failCompleteLogin(auth, t, id, set(new PolicyID("foo"), null), l,
 				new NullPointerException("null item in policyIDs"));

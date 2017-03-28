@@ -333,7 +333,8 @@ public class Link {
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@FormParam("id") String identityID)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
-				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
+				MissingParameterException {
 		if (identityID == null || identityID.trim().isEmpty()) {
 			identityID = null;
 		}
@@ -383,7 +384,8 @@ public class Link {
 			final String linktoken,
 			final Optional<String> id)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
-				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
+				MissingParameterException {
 		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
 		if (id.isPresent()) {
 			auth.link(token, linkInProcessToken, id.get());

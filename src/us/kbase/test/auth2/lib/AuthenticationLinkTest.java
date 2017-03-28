@@ -1276,4 +1276,338 @@ public class AuthenticationLinkTest {
 		}
 	}
 	
+	@Test
+	public void linkIdentity() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+				.thenReturn(null);
+		
+		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		verify(storage).link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com")));
+	}
+	
+	@Test
+	public void linkIdentityFailNullsAndEmpties() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build());
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set());
+		
+		failLinkIdentity(auth, null, tempToken, "foo", new NullPointerException("token"));
+		failLinkIdentity(auth, userToken, null, "foo",
+				new NullPointerException("Temporary token"));
+		failLinkIdentity(auth, userToken, tempToken, null,
+				new MissingParameterException("identityID"));
+		failLinkIdentity(auth, userToken, tempToken, "  \t    ",
+				new MissingParameterException("identityID"));
+	}
+	
+	@Test
+	public void linkIdentityFailBadToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failLinkIdentity(auth, userToken, tempToken, "foo", new InvalidTokenException());
+	}
+	
+	@Test
+	public void linkIdentityFailBadTokenType() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
+						.withLifeTime(Instant.now(), 0).build(),
+				null);
+		
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
+				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	}
+	
+	
+	@Test
+	public void linkIdentityFailNoUserForToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new RuntimeException(
+				"There seems to be an error in the storage system. Token was valid, but no user"));
+	}
+	
+	@Test
+	public void linkIdentityFailDisabledUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now())
+				.withIdentity(REMOTE).withUserDisabledState(
+						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
+		
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
+				new DisabledUserException());
+		
+		verify(storage).deleteTokens(new UserName("foo"));
+	}
+	
+	@Test
+	public void linkIdentityFailLocalUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), 0).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+
+		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
+				new LinkFailedException("Cannot link identities to local accounts"));
+	}
+	
+	@Test
+	public void linkIdentityFailBadTempToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("foo"));
+		
+		failLinkIdentity(auth, userToken, tempToken, "foo",
+				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkIdentityFailNoMatchingID() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+				.thenReturn(null);
+		
+		failLinkIdentity(auth, userToken, tempToken, "fakeid",
+				new LinkFailedException("Not authorized to link identity fakeid"));
+	}
+	
+	@Test
+	public void linkIdentityFailNoSuchUserAtLink() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+				.thenReturn(null);
+
+		doThrow(new NoSuchUserException("baz")).when(storage).link(new UserName("baz"),
+				new RemoteIdentity(
+						new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")));
+		
+		failLinkIdentity(auth, userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2",
+				new AuthStorageException("User magically disappeared from database: baz"));
+	}
+	
+	@Test
+	public void linkIdentityFailIdentityLinkedAtLink() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+				.thenReturn(null);
+
+		doThrow(new IdentityLinkedException("de0702aa7927b562e0d6be5b6527cfb2"))
+				.when(storage).link(new UserName("baz"), new RemoteIdentity(
+						new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")));
+		
+		failLinkIdentity(auth, userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2",
+				new IdentityLinkedException("de0702aa7927b562e0d6be5b6527cfb2"));
+	}
+	
+	@Test
+	public void linkIdentityFailLinkFailedAtLink() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+				.thenReturn(null);
+
+		doThrow(new LinkFailedException("foobar"))
+				.when(storage).link(new UserName("baz"), new RemoteIdentity(
+						new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com")));
+		
+		failLinkIdentity(auth, userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2",
+				new RuntimeException(
+						"Programming error: this method should not be called on a local user"));
+	}
+	
+	
+	private void failLinkIdentity(
+			final Authentication auth,
+			final IncomingToken utoken,
+			final IncomingToken ttoken,
+			final String id,
+			final Exception e) {
+		try {
+			auth.link(utoken, ttoken, id);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 }
