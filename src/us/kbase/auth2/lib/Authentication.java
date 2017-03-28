@@ -2005,56 +2005,67 @@ public class Authentication {
 		}
 	}
 
-	/** Disable or enable an account.
+	/** Disable an account.
 	 * @param token a token for a user with the administrator, create administrator, or root
 	 * role.
-	 * @param user the user name of the account to disable.
-	 * @param disable true to disable the account, false to enable it.
-	 * @param reason the reason the account was disabled. Ignored if enable is true.
+	 * @param userName the user name of the account to disable.
+	 * @param reason the reason the account was disabled.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token doesn't have
 	 * the appropriate role, or if any user other than the root user attempts to disable the root
-	 * account, or any user attempts to enable the root account, or the token is not a login token.
+	 * account, or the token is not a login token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws IllegalParameterException if a disable reason is not provided.
+	 * @throws IllegalParameterException if the reason is more than 1000 Unicode code points.
+	 * @throws MissingParameterException if the reason is null or the empty string.
 	 * @throws NoSuchUserException if the specified user doesn't exist.
 	 */
 	public void disableAccount(
 			final IncomingToken token,
-			final UserName user,
-			final boolean disable,
+			final UserName userName,
 			final String reason)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			IllegalParameterException, NoSuchUserException {
+			IllegalParameterException, NoSuchUserException, MissingParameterException {
+		nonNull(userName, "userName");
+		checkString(reason, "reason", 1000);
 		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
 				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		nonNull(user, "user");
-		if (disable) {
-			if (user.isRoot() && !admin.isRoot()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only the root user can disable the root account");
-			}
-			if (reason == null || reason.trim().isEmpty()) {
-				throw new IllegalParameterException(
-						"Must provide a reason why the account was disabled");
-			}
-			storage.deleteTokens(user); //not really necessary but doesn't hurt
-			storage.disableAccount(user, admin.getUserName(), reason);
-			/* there's a tiny chance a login could be in process right now and have have passed the
-			 * disabled check, and then have the token created after the next line, but that's
-			 * so improbable I'm not going to worry about it
-			 * The getUser method checks to see if a user is disabled if if so deletes their tokens
-			 * as well as a backup
-			 */
-			storage.deleteTokens(user);
-		} else {
-			if (user.isRoot()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"The root user cannot be enabled from the UI");
-			}
-			storage.enableAccount(user, admin.getUserName());
+		if (userName.isRoot() && !admin.isRoot()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Only the root user can disable the root account");
 		}
-		
+		storage.deleteTokens(userName); //not really necessary but doesn't hurt
+		storage.disableAccount(userName, admin.getUserName(), reason);
+		/* there's a tiny chance a login could be in process right now and have have passed the
+		 * disabled check, and then have the token created after the next line, but that's
+		 * so improbable I'm not going to worry about it
+		 * The getUser method checks to see if a user is disabled and if so deletes their tokens
+		 * as well as a backup
+		 */
+		storage.deleteTokens(userName);
+	}
+	
+	/** Enable an account.
+	 * @param token a token for a user with the administrator, create administrator, or root
+	 * role.
+	 * @param userName the user name of the account to enable.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user account associated with the token doesn't have
+	 * the appropriate role, or if the user to be enabled is the root user, or the token is not a
+	 * login token.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if the specified user doesn't exist.
+	 */
+	public void enableAccount(final IncomingToken token, final UserName userName)
+			throws UnauthorizedException, InvalidTokenException, AuthStorageException,
+				NoSuchUserException {
+		nonNull(userName, "userName");
+		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
+				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		if (userName.isRoot()) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"The root user cannot be enabled via this method");
+		}
+		storage.enableAccount(userName, admin.getUserName());
 	}
 	
 	/** Update the server configuration.
