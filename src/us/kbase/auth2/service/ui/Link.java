@@ -43,6 +43,8 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -210,36 +212,36 @@ public class Link {
 	
 	// the two methods below are very similar and there's another similar method in Login
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final URL url;
+		final ConfigItem<URL, State> url;
 		try {
 			url = auth.getExternalConfig(new AuthExternalConfigMapper())
 					.getCompleteLinkRedirect();
 		} catch (ExternalConfigMappingException e) {
 			throw new RuntimeException("Dude, like, what just happened?", e);
 		}
-		if (url == null) {
+		if (!url.hasItem()) {
 			return toURI(deflt);
 		}
 		try {
-			return url.toURI();
+			return url.getItem().toURI();
 		} catch (URISyntaxException e) {
 			throw new RuntimeException("this should be impossible" , e);
 		}
 	}
 	
 	private URI getPostLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final URL url;
+		final ConfigItem<URL, State> url;
 		try {
 			url = auth.getExternalConfig(new AuthExternalConfigMapper())
 					.getPostLinkRedirect();
 		} catch (ExternalConfigMappingException e) {
 			throw new RuntimeException("Dude, like, what just happened?", e);
 		}
-		if (url == null) {
+		if (!url.hasItem()) {
 			return toURI(deflt);
 		}
 		try {
-			return url.toURI();
+			return url.getItem().toURI();
 		} catch (URISyntaxException e) {
 			throw new RuntimeException("this should be impossible" , e);
 		}

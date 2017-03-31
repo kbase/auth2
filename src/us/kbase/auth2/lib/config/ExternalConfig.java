@@ -2,6 +2,8 @@ package us.kbase.auth2.lib.config;
 
 import java.util.Map;
 
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+
 /** A configuration external to the Authentication instance. As a convenience, the Authorization
  * instance allows storing arbitrary configurations as key value pairs in Authorization
  * storage.
@@ -15,6 +17,6 @@ public interface ExternalConfig {
 	 * the authorization storage system.
 	 * @return a map of configuration key value pairs.
 	 */
-	Map<String, String> toMap();
+	Map<String, ConfigItem<String, Action>> toMap();
 	
 }

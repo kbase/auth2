@@ -5,13 +5,14 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 
+import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.service.AuthenticationService;
 
 public class StartAuthServer {
 
 	public static void main(String[] args) throws Exception {
 
-		AuthenticationService.setConfig("us.kbase.auth2.kbase.KBaseAuthConfig");
+		AuthenticationService.setConfig(KBaseAuthConfig.class.getName());
 		
 		final Server server = new Server(Integer.valueOf(args[0]));
 

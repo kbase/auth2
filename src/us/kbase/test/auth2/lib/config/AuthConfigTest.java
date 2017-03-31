@@ -14,6 +14,9 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
@@ -22,7 +25,95 @@ import us.kbase.test.auth2.TestCommon;
 
 public class AuthConfigTest {
 
+	@Test
+	public void configItemEquals() throws Exception {
+		EqualsVerifier.forClass(ConfigItem.class).usingGetClass().verify();
+	}
 	
+	@Test
+	public void configItemNoAction() throws Exception {
+		final ConfigItem<String, Action> ci = ConfigItem.noAction();
+		
+		assertThat("incorrect isstate", ci.getAction().isState(), is(false));
+		assertThat("incorrect isnoaction", ci.getAction().isNoAction(), is(true));
+		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
+		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
+		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		failGetItem(ci);
+	}
+	
+	@Test
+	public void configItemRemove() throws Exception {
+		final ConfigItem<String, Action> ci = ConfigItem.remove();
+		
+		assertThat("incorrect isstate", ci.getAction().isState(), is(false));
+		assertThat("incorrect isnoaction", ci.getAction().isNoAction(), is(false));
+		assertThat("incorrect isremove", ci.getAction().isRemove(), is(true));
+		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
+		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		failGetItem(ci);
+	}
+	
+	@Test
+	public void configItemSet() throws Exception {
+		final ConfigItem<String, Action> ci = ConfigItem.set("foo");
+		
+		assertThat("incorrect isstate", ci.getAction().isState(), is(false));
+		assertThat("incorrect isnoaction", ci.getAction().isNoAction(), is(false));
+		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
+		assertThat("incorrect isset", ci.getAction().isSet(), is(true));
+		assertThat("incorrect hasItem", ci.hasItem(), is(true));
+		assertThat("incorrect getItem", ci.getItem(), is("foo"));
+		
+		try {
+			ConfigItem.set(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("item"));
+		}
+	}
+	
+	@Test
+	public void configItemState() throws Exception {
+		final ConfigItem<String, State> ci = ConfigItem.state("foo");
+		
+		assertThat("incorrect isstate", ci.getAction().isState(), is(true));
+		assertThat("incorrect isnoaction", ci.getAction().isNoAction(), is(false));
+		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
+		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
+		assertThat("incorrect hasItem", ci.hasItem(), is(true));
+		assertThat("incorrect getItem", ci.getItem(), is("foo"));
+		
+		try {
+			ConfigItem.state(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("item"));
+		}
+	}
+	
+	@Test
+	public void configItemEmptyState() throws Exception {
+		final ConfigItem<String, State> ci = ConfigItem.emptyState();
+		
+		assertThat("incorrect isstate", ci.getAction().isState(), is(true));
+		assertThat("incorrect isnoaction", ci.getAction().isNoAction(), is(false));
+		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
+		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
+		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		failGetItem(ci);
+	}
+	
+	private void failGetItem(final ConfigItem<String, ?> ci) {
+		try {
+			ci.getItem();
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new IllegalStateException(
+					"getItem() cannot be called on an absent item"));
+		}
+	}
+
 	@Test
 	public void defaults() throws Exception {
 		assertThat("incorrect login default", AuthConfig.DEFAULT_LOGIN_ALLOWED, is(false));
@@ -220,8 +311,8 @@ public class AuthConfigTest {
 	class TestExtCfg implements ExternalConfig {
 
 		@Override
-		public Map<String, String> toMap() {
-			return ImmutableMap.of("foo", "bar");
+		public Map<String, ConfigItem<String, Action>> toMap() {
+			return ImmutableMap.of("foo", ConfigItem.set("bar"));
 		}
 		
 		@Override
@@ -241,7 +332,7 @@ public class AuthConfigTest {
 		assertThat("incorrect config token lifetimes", ac.getCfg().getTokenLifetimeMS(),
 				is(lts));
 		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
-				is(ImmutableMap.of("foo", "bar")));
+				is(ImmutableMap.of("foo", ConfigItem.set("bar"))));
 		assertThat("incorrect toString", ac.toString(), is(
 				"AuthConfigSet [cfg=AuthConfig [loginAllowed=false, providers={}, " +
 				"tokenLifetimeMS={DEV=350000}], " +

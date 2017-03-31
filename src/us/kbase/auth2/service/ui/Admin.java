@@ -51,6 +51,9 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -529,7 +532,7 @@ public class Admin {
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, AuthStorageException {
-		final AuthConfigSet<AuthExternalConfig> cfgset;
+		final AuthConfigSet<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthExternalConfigMapper());
@@ -550,12 +553,19 @@ public class Admin {
 			p.put("forceloginchoice", e.getValue().isForceLoginChoice());
 			prov.add(p);
 		}
-		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponse());
-		ret.put("ignoreip", cfgset.getExtcfg().isIgnoreIPHeaders());
-		ret.put("allowedloginredirect", cfgset.getExtcfg().getAllowedLoginRedirectPrefix());
-		ret.put("completeloginredirect", cfgset.getExtcfg().getCompleteLoginRedirect());
-		ret.put("postlinkredirect", cfgset.getExtcfg().getPostLinkRedirect());
-		ret.put("completelinkredirect", cfgset.getExtcfg().getCompleteLinkRedirect());
+		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponseOrDefault());
+		ret.put("ignoreip", cfgset.getExtcfg().isIgnoreIPHeadersOrDefault());
+		final ConfigItem<URL, State> loginallowed =
+				cfgset.getExtcfg().getAllowedLoginRedirectPrefix();
+		ret.put("allowedloginredirect", loginallowed.hasItem() ? loginallowed.getItem() : null);
+		final ConfigItem<URL, State> logincomplete =
+				cfgset.getExtcfg().getCompleteLoginRedirect();
+		ret.put("completeloginredirect", logincomplete.hasItem() ? logincomplete.getItem() : null);
+		final ConfigItem<URL, State> postlink = cfgset.getExtcfg().getPostLinkRedirect();
+		ret.put("postlinkredirect", postlink.hasItem() ? postlink.getItem() : null);
+		final ConfigItem<URL, State> completelink =
+				cfgset.getExtcfg().getCompleteLinkRedirect();
+		ret.put("completelinkredirect", completelink.hasItem() ? completelink.getItem() : null);
 		
 		ret.put("allowlogin", cfgset.getCfg().isLoginAllowed());
 		ret.put("tokensugcache", cfgset.getCfg().getTokenLifetimeMS(
@@ -590,14 +600,15 @@ public class Admin {
 			throws IllegalParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
-		final URL postlogin = getURL(allowedloginredirect);
-		final URL completelogin = getURL(completeloginredirect);
-		final URL postlink = getURL(postlinkredirect);
-		final URL completelink = getURL(completelinkredirect);
+		final ConfigItem<URL, Action> postlogin = getURL(allowedloginredirect);
+		final ConfigItem<URL, Action> completelogin = getURL(completeloginredirect);
+		final ConfigItem<URL, Action> postlink = getURL(postlinkredirect);
+		final ConfigItem<URL, Action> completelink = getURL(completelinkredirect);
+		final ConfigItem<Boolean, Action> ignore = ConfigItem.set(!nullOrEmpty(ignoreip));
+		final ConfigItem<Boolean, Action> stack = ConfigItem.set(!nullOrEmpty(showstack));
 		
-		final AuthExternalConfig ext = new AuthExternalConfig(
-				postlogin, completelogin, postlink, completelink,
-				!nullOrEmpty(ignoreip), !nullOrEmpty(showstack));
+		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
+				postlogin, completelogin, postlink, completelink, ignore, stack);
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthConfigSet<>(new AuthConfig(!nullOrEmpty(allowLogin), null, null),
@@ -607,13 +618,14 @@ public class Admin {
 		}
 	}
 
-	private URL getURL(final String putativeURL) throws IllegalParameterException {
-		final URL redirect;
-		if (putativeURL == null || putativeURL.isEmpty()) {
-			redirect = null;
+	private ConfigItem<URL, Action> getURL(final String putativeURL)
+			throws IllegalParameterException {
+		final ConfigItem<URL, Action> redirect;
+		if (putativeURL == null || putativeURL.trim().isEmpty()) {
+			redirect = ConfigItem.remove();
 		} else {
 			try {
-				redirect = new URL(putativeURL);
+				redirect = ConfigItem.set(new URL(putativeURL));
 			} catch (MalformedURLException e) {
 				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
 			}

@@ -54,6 +54,9 @@ import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
@@ -1557,6 +1560,19 @@ public class MongoStorage implements AuthStorage {
 		updateConfig(COL_CONFIG_PROVIDERS, q, value, overwrite);
 	}
 	
+	private void removeConfig(final String collection, final String key, final boolean overwrite)
+			throws AuthStorageException {
+		if (!overwrite) {
+			return; // don't remove keys unless overwrite is specified
+		}
+		try {
+			db.getCollection(collection).deleteOne(new Document(Fields.CONFIG_KEY, key));
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+
+	
 	@Override
 	public <T extends ExternalConfig> void updateConfig(
 			final AuthConfigSet<T> cfgSet,
@@ -1580,8 +1596,13 @@ public class MongoStorage implements AuthStorage {
 					e.getValue().isForceLinkChoice(), overwrite);
 		}
 		
-		for (final Entry<String, String> e: cfgSet.getExtcfg().toMap().entrySet()) {
-			updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue(), overwrite);
+		for (final Entry<String, ConfigItem<String, Action>> e:
+				cfgSet.getExtcfg().toMap().entrySet()) {
+			if (e.getValue().getAction().isSet()) {
+				updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue().getItem(), overwrite);
+			} else if (e.getValue().getAction().isRemove()) {
+				removeConfig(COL_CONFIG_EXTERNAL, e.getKey(), overwrite);
+			}
 		}
 	}
 	
@@ -1627,9 +1648,10 @@ public class MongoStorage implements AuthStorage {
 		nonNull(mapper, "mapper");
 		try {
 			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
-			final Map<String, String> ext = new HashMap<>();
+			final Map<String, ConfigItem<String, State>> ext = new HashMap<>();
 			for (final Document d: extiter) {
-				ext.put(d.getString(Fields.CONFIG_KEY), d.getString(Fields.CONFIG_VALUE));
+				ext.put(d.getString(Fields.CONFIG_KEY),
+						ConfigItem.state(d.getString(Fields.CONFIG_VALUE)));
 			}
 			final Map<String, ProviderConfig> provs = getProviderConfig();
 			final Map<String, Document> appcfg = getAppConfig();

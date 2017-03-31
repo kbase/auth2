@@ -93,7 +93,7 @@ public class AuthCLI {
 		final AuthStartupConfig cfg;
 		try {
 			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
-			auth = new AuthBuilder(cfg, AuthExternalConfig.DEFAULT).getAuth();
+			auth = new AuthBuilder(cfg, AuthExternalConfig.SET_DEFAULT).getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			error(e, a);
 			throw new RuntimeException(); // error() stops execution

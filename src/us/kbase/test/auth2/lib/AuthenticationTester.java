@@ -28,6 +28,7 @@ import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.lib.config.TestExternalConfig;
@@ -64,15 +65,15 @@ public class AuthenticationTester {
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
-				new AuthConfigSet<>(ac,
-						new CollectingExternalConfig(ImmutableMap.of("thing", "foo"))));
+				new AuthConfigSet<>(ac, new CollectingExternalConfig(
+						ImmutableMap.of("thing", ConfigItem.state("foo")))));
 		
 		final Constructor<Authentication> c = Authentication.class.getDeclaredConstructor(
 				AuthStorage.class, Set.class, ExternalConfig.class,
 				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Authentication instance = c.newInstance(storage, providers,
-				new TestExternalConfig("foo"), randGen, clock);
+				new TestExternalConfig<>(ConfigItem.set("foo")), randGen, clock);
 		reset(storage);
 		return new TestMocks(storage, randGen, instance, clock);
 	}

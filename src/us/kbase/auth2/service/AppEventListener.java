@@ -3,12 +3,14 @@ package us.kbase.auth2.service;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
 
+import us.kbase.auth2.kbase.KBaseAuthConfig;
+
 public class AppEventListener implements ServletContextListener {
 	
 	@Override
 	public void contextInitialized(final ServletContextEvent arg0) {
 		// may want to make this configurable with the -D switch later
-		AuthenticationService.setConfig("us.kbase.auth2.kbase.KBaseAuthConfig");
+		AuthenticationService.setConfig(KBaseAuthConfig.class.getName());
 	}
 	
 	@Override
