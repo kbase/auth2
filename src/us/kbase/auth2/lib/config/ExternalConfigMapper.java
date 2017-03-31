@@ -2,6 +2,7 @@ package us.kbase.auth2.lib.config;
 
 import java.util.Map;
 
+import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 
 /** A mapper for mapping a set of key-value pairs into an ExternalConfig class. The Authentication
@@ -16,6 +17,8 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
  * @param <T> the type of the ExternalConfig that is the target of the mapper.
  */
 public interface ExternalConfigMapper<T extends ExternalConfig> {
+	
+	//TODO NOW rename to customconfig
 
 	/** Convert a set of key-value pairs into an ExternalConfig instance. 
 	 * @param config the key-value pairs.
@@ -23,6 +26,7 @@ public interface ExternalConfigMapper<T extends ExternalConfig> {
 	 * @throws ExternalConfigMappingException if the key-value pairs could not be mapped into
 	 * the ExternalConfig instance.
 	 */
-	T fromMap(Map<String, String> config) throws ExternalConfigMappingException;
+	T fromMap(Map<String, ConfigItem<String, ConfigState>> config)
+			throws ExternalConfigMappingException;
 	
 }

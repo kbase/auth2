@@ -14,6 +14,8 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
@@ -220,8 +222,8 @@ public class AuthConfigTest {
 	class TestExtCfg implements ExternalConfig {
 
 		@Override
-		public Map<String, String> toMap() {
-			return ImmutableMap.of("foo", "bar");
+		public Map<String, ConfigItem<String, Action>> toMap() {
+			return ImmutableMap.of("foo", ConfigItem.set("bar"));
 		}
 		
 		@Override
@@ -241,7 +243,7 @@ public class AuthConfigTest {
 		assertThat("incorrect config token lifetimes", ac.getCfg().getTokenLifetimeMS(),
 				is(lts));
 		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
-				is(ImmutableMap.of("foo", "bar")));
+				is(ImmutableMap.of("foo", ConfigItem.set("bar"))));
 		assertThat("incorrect toString", ac.toString(), is(
 				"AuthConfigSet [cfg=AuthConfig [loginAllowed=false, providers={}, " +
 				"tokenLifetimeMS={DEV=350000}], " +

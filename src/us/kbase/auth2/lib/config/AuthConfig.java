@@ -20,7 +20,9 @@ public class AuthConfig {
 	 * change classes. Try with the conflated semantics for now.
 	 */
 	
-	private static final int MIN_TOKEN_LIFE = 60 * 1000;
+	//TODO NOW include custom config
+	
+	public static final int MIN_TOKEN_LIFE_MS = 60 * 1000;
 	
 	/** Default configuration for a identity provider. */
 	public static final ProviderConfig DEFAULT_PROVIDER_CONFIG =
@@ -185,6 +187,8 @@ public class AuthConfig {
 	private final Map<String, ProviderConfig> providers;
 	private final Map<TokenLifetimeType, Long> tokenLifetimeMS;
 	
+	//TODO NOW don't allow nulls
+	
 	/** Create an authentication configuration.
 	 * @param loginAllowed true if non-admin logins are allowed, false if not, or null if no
 	 * changes should be made.
@@ -215,9 +219,9 @@ public class AuthConfig {
 		for (final TokenLifetimeType t: tokenLifetimeMS.keySet()) {
 			nonNull(t, "null key in token life time map");
 			nonNull(tokenLifetimeMS.get(t), String.format("lifetime for key %s is null", t));
-			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE) {
+			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE_MS) {
 				throw new IllegalArgumentException(String.format(
-						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE));
+						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE_MS));
 			}
 		}
 		this.loginAllowed = loginAllowed;

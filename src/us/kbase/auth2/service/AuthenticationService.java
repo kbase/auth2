@@ -52,7 +52,7 @@ public class AuthenticationService extends ResourceConfig {
 		quietLogger();
 		logger = cfg.getLogger();
 		try {
-			buildApp(cfg, AuthExternalConfig.DEFAULT);
+			buildApp(cfg, AuthExternalConfig.SET_DEFAULT);
 		} catch (StorageInitException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"Failed to initialize storage engine: " + e.getMessage(),

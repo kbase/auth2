@@ -213,8 +213,7 @@ public class Authentication {
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		try {
-			storage.updateConfig(new AuthConfigSet<ExternalConfig>(
-					ac, defaultExternalConfig), false);
+			storage.updateConfig(new AuthConfigSet<>(ac, defaultExternalConfig), false);
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to set config in storage: " +
 					e.getMessage(), e);
@@ -2117,7 +2116,7 @@ public class Authentication {
 		//TODO NOW remove providers from config that aren't in set
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
-				mapper.fromMap(acs.getExtcfg().toMap()));
+				mapper.fromMap(acs.getExtcfg().getMap()));
 	}
 	
 	/** Returns the suggested cache time for tokens.
@@ -2143,7 +2142,7 @@ public class Authentication {
 			throws AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return mapper.fromMap(acs.getExtcfg().toMap());
+		return mapper.fromMap(acs.getExtcfg().getMap());
 	}
 
 	/** Imports a user from an external service without requiring credentials.

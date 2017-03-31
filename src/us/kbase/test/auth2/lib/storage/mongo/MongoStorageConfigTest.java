@@ -12,6 +12,9 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
@@ -22,17 +25,20 @@ import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMappe
 
 public class MongoStorageConfigTest extends MongoStorageTester {
 	
+	private static final ConfigItem<String, ConfigState> STATE_FOO = ConfigItem.state("foo");
+	
 	@Test
 	public void getEmptyConfig() throws Exception {
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(new AuthConfig(null, null, null)));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is((String) null));
+		assertThat("incorrect external config", res.getExtcfg().aThing,
+				is((ConfigItem<String, ConfigState>) null));
 	}
 	
 	@Test
 	public void updateConfigAndGetWithAllTokenLifeTimes() throws Exception {
-		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true, null,
 						ImmutableMap.of(
 								TokenLifetimeType.EXT_CACHE, 100000L,
@@ -40,7 +46,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 								TokenLifetimeType.AGENT, 300000L,
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.SERV, 500000L)),
-				new TestExternalConfig("foo"));
+				new TestExternalConfig<>(ConfigItem.set("foo")));
 		storage.updateConfig(cfgSet, false);
 		
 		final AuthConfig expected = new AuthConfig(true, null,
@@ -50,15 +56,15 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						TokenLifetimeType.AGENT, 300000L,
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.SERV, 500000L));
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
 	}
 	
 	@Test
 	public void updateConfigAndGet() throws Exception {
-		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(false, true, false),
@@ -66,7 +72,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig("foo"));
+				new TestExternalConfig<>(ConfigItem.set("foo")));
 		storage.updateConfig(cfgSet, false);
 		
 		final AuthConfig expected = new AuthConfig(true,
@@ -76,15 +82,15 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 				ImmutableMap.of(
 						TokenLifetimeType.DEV, 200000L,
 						TokenLifetimeType.LOGIN, 300000L));
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
 	}
 	
 	@Test
 	public void updateConfigWithoutOverwrite() throws Exception {
-		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(false, true, false),
@@ -92,10 +98,10 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig("foo"));
+				new TestExternalConfig<>(ConfigItem.set("foo")));
 		storage.updateConfig(cfgSet, false);
 		
-		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(false,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(true, true, true),
@@ -105,7 +111,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.LOGIN, 600000L,
 								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig("foo1"));
+				new TestExternalConfig<>(ConfigItem.set("foo1")));
 		storage.updateConfig(cfgSet2, false);
 		
 		final AuthConfig expected = new AuthConfig(true,
@@ -117,15 +123,15 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						TokenLifetimeType.DEV, 200000L,
 						TokenLifetimeType.LOGIN, 300000L,
 						TokenLifetimeType.SERV, 800000L));
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
 	}
 	
 	@Test
 	public void updateConfigWithOverwrite() throws Exception {
-		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(false, true, false),
@@ -133,10 +139,10 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig("foo"));
+				new TestExternalConfig<>(ConfigItem.set("foo")));
 		storage.updateConfig(cfgSet, false);
 		
-		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(false,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(true, true, true),
@@ -146,7 +152,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.LOGIN, 600000L,
 								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig("foo1"));
+				new TestExternalConfig<>(ConfigItem.set("foo1")));
 		storage.updateConfig(cfgSet2, true);
 		
 		final AuthConfig expected = new AuthConfig(false,
@@ -158,17 +164,57 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 600000L,
 						TokenLifetimeType.SERV, 800000L));
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo1"));
+		assertThat("incorrect external config", res.getExtcfg().aThing,
+				is(ConfigItem.state("foo1")));
+	}
+	
+	@Test
+	public void updateConfigRemoveExternal() throws Exception {
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
+				new AuthConfig(true, null, null),
+				new TestExternalConfig<>(ConfigItem.set("foo")));
+		storage.updateConfig(cfgSet, false);
+		
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
+				new AuthConfig(true, null, null),
+				new TestExternalConfig<>(ConfigItem.remove()));
+		storage.updateConfig(cfgSet2, true);
+		
+		final AuthConfig expected = new AuthConfig(true, null, null);
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
+				new TestExternalConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
+		assertThat("incorrect external config", res.getExtcfg().aThing,
+				is((ConfigItem<String, ConfigState>) null));
+	}
+	
+	@Test
+	public void updateConfigRemoveExternalWithoutOverwrite() throws Exception {
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
+				new AuthConfig(true, null, null),
+				new TestExternalConfig<>(ConfigItem.set("foo")));
+		storage.updateConfig(cfgSet, false);
+		
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
+				new AuthConfig(true, null, null),
+				new TestExternalConfig<>(ConfigItem.remove()));
+		storage.updateConfig(cfgSet2, false);
+		
+		final AuthConfig expected = new AuthConfig(true, null, null);
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
+				new TestExternalConfigMapper());
+		assertThat("incorrect config", res.getCfg(), is(expected));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
 	}
 	
 	@Test
 	public void updateConfigWithOverwriteAndNullValues() throws Exception {
 		// tests that a null value causes no update
 		// if you believe Google (and I probably should) I should use an Optional instead of nulls
-		final AuthConfigSet<TestExternalConfig> cfgSet = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
 				new AuthConfig(true,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(false, true, false),
@@ -176,10 +222,10 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 200000L,
 								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig("foo"));
+				new TestExternalConfig<>(ConfigItem.set("foo")));
 		storage.updateConfig(cfgSet, false);
 		
-		final AuthConfigSet<TestExternalConfig> cfgSet2 = new AuthConfigSet<>(
+		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
 				new AuthConfig(null,
 						ImmutableMap.of(
 								"prov1", new ProviderConfig(true, true, true),
@@ -188,7 +234,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						ImmutableMap.of(
 								TokenLifetimeType.DEV, 400000L,
 								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig(null));
+				new TestExternalConfig<>(ConfigItem.noAction()));
 		storage.updateConfig(cfgSet2, true);
 		
 		final AuthConfig expected = new AuthConfig(true,
@@ -200,16 +246,17 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 						TokenLifetimeType.DEV, 400000L,
 						TokenLifetimeType.LOGIN, 300000L,
 						TokenLifetimeType.SERV, 800000L));
-		final AuthConfigSet<TestExternalConfig> res = storage.getConfig(
+		final AuthConfigSet<TestExternalConfig<ConfigState>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is("foo"));
+		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
 	}
 	
-	private class BadMapper implements ExternalConfigMapper<TestExternalConfig> {
+	private class BadMapper implements ExternalConfigMapper<TestExternalConfig<ConfigState>> {
 
 		@Override
-		public TestExternalConfig fromMap(final Map<String, String> config)
+		public TestExternalConfig<ConfigState> fromMap(
+				final Map<String, ConfigItem<String, ConfigState>> config)
 				throws ExternalConfigMappingException {
 			throw new ExternalConfigMappingException("borkborkbork");
 		}

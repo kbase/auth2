@@ -1,22 +1,24 @@
 package us.kbase.auth2.service;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 
+import us.kbase.auth2.lib.config.ConfigAction;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 
-public class AuthExternalConfig implements ExternalConfig {
+public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfig {
 
-	/* might want to have separate current config state classes and config
-	 * change classes. Try with the conflated semantics for now.
-	 */
-	
 	//TODO TEST
 	//TODO JAVADOC
 	
@@ -27,14 +29,21 @@ public class AuthExternalConfig implements ExternalConfig {
 	private static final String COMPLETE_LOGIN_REDIRECT = "completeLoginRedirect";
 	private static final String POST_LINK_REDIRECT = "postLinkRedirect";
 	private static final String COMPLETE_LINK_REDIRECT = "completeLinkRedirect";
+	private static final String IGNORE_IP_HEADERS = "ignoreIPHeaders";
+	private static final String INCLUDE_STACK_TRACE_IN_RESPONSE = "includeStackTraceInResponse";
 
-	public static final ExternalConfig DEFAULT;
-	public static final ExternalConfig NO_CHANGE;
+	private static final ConfigItem<URL, Action> MT_URL = ConfigItem.noAction();
+	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
+	private static final ConfigItem<Boolean, Action> MT_BOOL = ConfigItem.noAction();
+
+	public static final AuthExternalConfig<Action> SET_DEFAULT;
+	public static final AuthExternalConfig<Action> NO_CHANGE;
 	
 	static {
 		try {
-			DEFAULT = new AuthExternalConfig(null, null, null, null, false, false);
-			NO_CHANGE = new AuthExternalConfig(null, null, null, null, null, null);
+			NO_CHANGE = new AuthExternalConfig<>(MT_URL, MT_URL, MT_URL, MT_URL, MT_BOOL, MT_BOOL);
+			SET_DEFAULT = new AuthExternalConfig<>(
+					MT_URL, MT_URL, MT_URL, MT_URL, SET_FALSE, SET_FALSE);
 		} catch (IllegalParameterException e) {
 			throw new RuntimeException("this should be impossible", e);
 		}
@@ -43,139 +52,168 @@ public class AuthExternalConfig implements ExternalConfig {
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
 	
-	private final URL allowedPostLoginRedirectPrefix;
-	private final URL completeLoginRedirect;
-	private final URL postLinkRedirect;
-	private final URL completeLinkRedirect;
-	private final Boolean ignoreIPHeaders;
-	private final Boolean includeStackTraceInResponse;
+	private final ConfigItem<URL, T> allowedPostLoginRedirectPrefix;
+	private final ConfigItem<URL, T> completeLoginRedirect;
+	private final ConfigItem<URL, T> postLinkRedirect;
+	private final ConfigItem<URL, T> completeLinkRedirect;
+	private final ConfigItem<Boolean, T> ignoreIPHeaders;
+	private final ConfigItem<Boolean, T> includeStackTraceInResponse;
 	
 	public AuthExternalConfig(
-			final URL allowedPostLoginRedirectPrefix,
-			final URL completeLoginRedirect,
-			final URL postLinkRedirect,
-			final URL completeLinkRedirect,
-			final Boolean ignoreIPHeaders,
-			final Boolean includeStackTraceInResponse) throws IllegalParameterException {
+			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
+			final ConfigItem<URL, T> completeLoginRedirect,
+			final ConfigItem<URL, T> postLinkRedirect,
+			final ConfigItem<URL, T> completeLinkRedirect,
+			final ConfigItem<Boolean, T> ignoreIPHeaders,
+			final ConfigItem<Boolean, T> includeStackTraceInResponse)
+			throws IllegalParameterException {
 		// nulls indicate no value or no change depending on context
+		nonNull(allowedPostLoginRedirectPrefix, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
 		checkURI(allowedPostLoginRedirectPrefix);
 		this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix; //null ok
+		nonNull(completeLoginRedirect, COMPLETE_LOGIN_REDIRECT);
 		checkURI(completeLoginRedirect);
 		this.completeLoginRedirect = completeLoginRedirect;
+		nonNull(postLinkRedirect, POST_LINK_REDIRECT);
 		checkURI(postLinkRedirect);
 		this.postLinkRedirect = postLinkRedirect;
+		nonNull(completeLinkRedirect, COMPLETE_LINK_REDIRECT);
 		checkURI(completeLinkRedirect);
 		this.completeLinkRedirect = completeLinkRedirect;
+		nonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
 		this.ignoreIPHeaders = ignoreIPHeaders;
+		nonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
 	}
 
-	private void checkURI(final URL url) throws IllegalParameterException {
-		if (url == null) {
+	private void checkURI(final ConfigItem<URL, T> url)
+			throws IllegalParameterException {
+		if (!url.hasItem()) {
 			return;
 		}
 		try {
-			url.toURI();
+			url.getItem().toURI();
 		} catch (URISyntaxException e) {
 			throw new IllegalParameterException("Illegal URL " + url + ":" + e.getMessage(), e);
 		}
 	}
 
-	public URL getAllowedLoginRedirectPrefix() {
+	public ConfigItem<URL, T> getAllowedLoginRedirectPrefix() {
 		return allowedPostLoginRedirectPrefix;
 	}
 	
-	public URL getCompleteLoginRedirect() {
+	public ConfigItem<URL, T> getCompleteLoginRedirect() {
 		return completeLoginRedirect;
 	}
 	
-	public URL getPostLinkRedirect() {
+	public ConfigItem<URL, T> getPostLinkRedirect() {
 		return postLinkRedirect;
 	}
 	
-	public URL getCompleteLinkRedirect() {
+	public ConfigItem<URL, T> getCompleteLinkRedirect() {
 		return completeLinkRedirect;
 	}
 
-	public Boolean isIgnoreIPHeaders() {
+	public ConfigItem<Boolean, T> isIgnoreIPHeaders() {
 		return ignoreIPHeaders;
 	}
+	
+	public boolean isIgnoreIPHeadersOrDefault() {
+		if (ignoreIPHeaders.getAction().isState() && ignoreIPHeaders.hasItem()) {
+			return ignoreIPHeaders.getItem();
+		}
+		return SET_DEFAULT.isIgnoreIPHeaders().getItem();
+	}
 
-	public Boolean isIncludeStackTraceInResponse() {
+	public ConfigItem<Boolean, T> isIncludeStackTraceInResponse() {
 		return includeStackTraceInResponse;
+	}
+	
+	public boolean isIncludeStackTraceInResponseOrDefault() {
+		if (includeStackTraceInResponse.getAction().isState() &&
+				includeStackTraceInResponse.hasItem()) {
+			return includeStackTraceInResponse.getItem();
+		}
+		return SET_DEFAULT.isIncludeStackTraceInResponse().getItem();
 	}
 
 	@Override
-	public Map<String, String> toMap() {
-		final Map<String, String> ret = new HashMap<String, String>();
-		ret.put(ALLOWED_POST_LOGIN_REDIRECT_PREFIX, allowedPostLoginRedirectPrefix == null ? null :
-			allowedPostLoginRedirectPrefix.toString());
-		ret.put(COMPLETE_LOGIN_REDIRECT, completeLoginRedirect == null ? null :
-			completeLoginRedirect.toString());
-		ret.put(POST_LINK_REDIRECT, postLinkRedirect == null ? null : postLinkRedirect.toString());
-		ret.put(COMPLETE_LINK_REDIRECT, completeLinkRedirect == null ? null :
-			completeLinkRedirect.toString());
-		ret.put("ignoreIPHeaders", getBooleanRepresentation(ignoreIPHeaders));
-		ret.put("includeStackTraceInResponse",
-				getBooleanRepresentation(includeStackTraceInResponse));
+	public Map<String, ConfigItem<String, Action>> toMap() {
+		final Map<String, ConfigItem<String, Action>> ret = new HashMap<>();
+		processURL(ret, ALLOWED_POST_LOGIN_REDIRECT_PREFIX, allowedPostLoginRedirectPrefix);
+		processURL(ret, COMPLETE_LOGIN_REDIRECT, completeLoginRedirect);
+		processURL(ret, POST_LINK_REDIRECT, postLinkRedirect);
+		processURL(ret, COMPLETE_LINK_REDIRECT, completeLinkRedirect);
+		processBool(ret, IGNORE_IP_HEADERS, ignoreIPHeaders);
+		processBool(ret, INCLUDE_STACK_TRACE_IN_RESPONSE, includeStackTraceInResponse);
 		return ret;
 	}
 	
-	private String getBooleanRepresentation(final Boolean b) {
-		if (b == null) {
-			return null;
+
+	private void processBool(
+			final Map<String, ConfigItem<String, Action>> ret,
+			final String key,
+			final ConfigItem<Boolean, T> bool) {
+		if (bool.getAction().isRemove()) {
+			ret.put(key, ConfigItem.remove());
+		} else if (bool.getAction().isSet()) {
+			ret.put(key, ConfigItem.set(bool.getItem() ? TRUE : FALSE));
 		}
-		if (b) {
-			return TRUE;
+		// otherwise do nothing
+	}
+
+	private void processURL(
+			final Map<String, ConfigItem<String, Action>> ret,
+			final String key,
+			final ConfigItem<URL, T> url) {
+		if (url.getAction().isRemove()) {
+			ret.put(key, ConfigItem.remove());
+		} else if (url.getAction().isSet()) {
+			ret.put(key, ConfigItem.set(url.getItem().toString()));
 		}
-		return FALSE;
+		// otherwise do nothing
 	}
 	
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("AuthExternalConfig [allowedPostLoginRedirectPrefix=");
-		builder.append(allowedPostLoginRedirectPrefix);
-		builder.append(", ignoreIPHeaders=");
-		builder.append(ignoreIPHeaders);
-		builder.append(", includeStackTraceInResponse=");
-		builder.append(includeStackTraceInResponse);
-		builder.append("]");
-		return builder.toString();
-	}
-
-
 	public static class AuthExternalConfigMapper implements
-			ExternalConfigMapper<AuthExternalConfig> {
+			ExternalConfigMapper<AuthExternalConfig<ConfigState>> {
 
 		@Override
-		public AuthExternalConfig fromMap(final Map<String, String> config)
+		public AuthExternalConfig<ConfigState> fromMap(
+				final Map<String, ConfigItem<String, ConfigState>> config)
 				throws ExternalConfigMappingException {
-			final URL allowedPostLogin = getURL(config, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
-			final URL completeLogin = getURL(config, COMPLETE_LOGIN_REDIRECT);
-			final URL postLink = getURL(config, POST_LINK_REDIRECT);
-			final URL completeLink = getURL(config, COMPLETE_LINK_REDIRECT);
-			final boolean ignoreIPs = getBoolean(config, "ignoreIPHeaders");
-			final boolean includeStack = getBoolean(config, "includeStackTraceInResponse");
+			final ConfigItem<URL, ConfigState> allowedPostLogin =
+					getURL(config, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
+			final ConfigItem<URL, ConfigState> completeLogin =
+					getURL(config, COMPLETE_LOGIN_REDIRECT);
+			final ConfigItem<URL, ConfigState> postLink =
+					getURL(config, POST_LINK_REDIRECT);
+			final ConfigItem<URL, ConfigState> completeLink =
+					getURL(config, COMPLETE_LINK_REDIRECT);
+			final ConfigItem<Boolean, ConfigState> ignoreIPs =
+					getBoolean(config, IGNORE_IP_HEADERS);
+			final ConfigItem<Boolean, ConfigState> includeStack =
+					getBoolean(config, INCLUDE_STACK_TRACE_IN_RESPONSE);
 			try {
-				return new AuthExternalConfig(allowedPostLogin, completeLogin, postLink,
-						completeLink, ignoreIPs, includeStack);
+				return new AuthExternalConfig<ConfigState>(allowedPostLogin, completeLogin,
+						postLink, completeLink, ignoreIPs, includeStack);
 			} catch (IllegalParameterException e) {
 				throw new ExternalConfigMappingException(
 						"Error in incoming config: " + e.getMessage(), e);
 			}
 		}
 
-		private URL getURL(final Map<String, String> config, final String key)
+		private ConfigItem<URL, ConfigState> getURL(
+				final Map<String, ConfigItem<String, ConfigState>> config, final String key)
 				throws ExternalConfigMappingException {
-			final String url = config.get(key);
-			final URL allowed;
-			if (url == null) {
-				allowed = null;
+			final ConfigItem<String, ConfigState> url = config.get(key);
+			final ConfigItem<URL, ConfigState> allowed;
+			if (url == null || !url.hasItem()) {
+				allowed = ConfigItem.emptyState();
 			} else {
 				try {
-					allowed = new URL(url);
-					allowed.toURI();
+					final URL check = new URL(url.getItem());
+					check.toURI();
+					allowed = ConfigItem.state(check);
 				} catch (MalformedURLException | URISyntaxException e) {
 					throw new ExternalConfigMappingException(
 							"Bad URL: " + e.getMessage(), e);
@@ -184,22 +222,24 @@ public class AuthExternalConfig implements ExternalConfig {
 			return allowed;
 		}
 
-		private boolean getBoolean(
-				final Map<String, String> config,
+		private ConfigItem<Boolean, ConfigState> getBoolean(
+				final Map<String, ConfigItem<String, ConfigState>> config,
 				final String paramName)
 				throws ExternalConfigMappingException {
-			final String value = config.get(paramName);
-			final boolean b;
-			if (TRUE.equals(value)) {
-				b = true;
-			} else if (FALSE.equals(value)) {
-				b = false;
+			final ConfigItem<String, ConfigState> value = config.get(paramName);
+			final ConfigItem<Boolean, ConfigState> ret;
+			if (value == null || !value.hasItem()) {
+				ret = ConfigItem.emptyState();
+			} else if (TRUE.equals(value.getItem())) {
+				ret = ConfigItem.state(true);
+			} else if (FALSE.equals(value.getItem())) {
+				ret = ConfigItem.state(false);
 			} else {
 				throw new ExternalConfigMappingException(String.format(
 						"Expected value of %s or %s for parameter %s",
 						TRUE, FALSE, paramName));
 			}
-			return b;
+			return ret;
 		}
 	}
 

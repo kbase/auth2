@@ -3,23 +3,38 @@ package us.kbase.test.auth2.lib.config;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.google.common.collect.ImmutableMap;
+
+import us.kbase.auth2.lib.config.ConfigAction;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 
-public class TestExternalConfig implements ExternalConfig {
+public class TestExternalConfig<T extends ConfigAction> implements ExternalConfig {
 		
-	public final String aThing;
+	public final ConfigItem<String, T> aThing;
 	
-	public TestExternalConfig(final String thing) {
+	
+	public TestExternalConfig(final ConfigItem<String, T> thing) {
 		aThing = thing;
 	}
 
 	@Override
-	public Map<String, String> toMap() {
-		final Map<String, String> ret = new HashMap<>();
-		ret.put("thing", aThing);
-		return ret;
+	public Map<String, ConfigItem<String, Action>> toMap() {
+		final ConfigItem<String, Action> item;
+		if (aThing.getAction().isRemove()) {
+			item = ConfigItem.remove();
+		} else if (aThing.getAction().isSet()) {
+			item = ConfigItem.set(aThing.getItem());
+		} else if (aThing.getAction().isNoAction()) {
+			item = ConfigItem.noAction(); // just here to test mongostorage no action
+		} else {
+			return new HashMap<>();
+		}
+		return ImmutableMap.of("thing", item);
 	}
 	
 	@Override
@@ -41,7 +56,7 @@ public class TestExternalConfig implements ExternalConfig {
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		TestExternalConfig other = (TestExternalConfig) obj;
+		TestExternalConfig<?> other = (TestExternalConfig<?>) obj;
 		if (aThing == null) {
 			if (other.aThing != null) {
 				return false;
@@ -61,16 +76,15 @@ public class TestExternalConfig implements ExternalConfig {
 		return builder.toString();
 	}
 
-
-
 	public static class TestExternalConfigMapper implements
-			ExternalConfigMapper<TestExternalConfig> {
+			ExternalConfigMapper<TestExternalConfig<ConfigState>> {
 
 		@Override
-		public TestExternalConfig fromMap(final Map<String, String> config)
+		public TestExternalConfig<ConfigState> fromMap(
+				final Map<String, ConfigItem<String, ConfigState>> config)
 				throws ExternalConfigMappingException {
-			return new TestExternalConfig(config.get("thing"));
+			
+			return new TestExternalConfig<>(config.get("thing"));
 		}
 	}
-	
 }

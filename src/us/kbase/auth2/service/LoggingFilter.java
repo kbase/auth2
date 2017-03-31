@@ -13,6 +13,7 @@ import javax.ws.rs.core.Context;
 import org.slf4j.LoggerFactory;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
@@ -40,9 +41,9 @@ public class LoggingFilter implements ContainerRequestFilter,
 			throws IOException {
 		boolean ignoreIPheaders = true;
 		try {
-			final AuthExternalConfig ext = auth.getExternalConfig(
+			final AuthExternalConfig<ConfigState> ext = auth.getExternalConfig(
 					new AuthExternalConfigMapper());
-			ignoreIPheaders = ext.isIgnoreIPHeaders();
+			ignoreIPheaders = ext.isIgnoreIPHeadersOrDefault();
 		} catch (AuthStorageException | ExternalConfigMappingException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"An error occurred in the logger when attempting " +
