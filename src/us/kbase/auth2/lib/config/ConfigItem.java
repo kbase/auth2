@@ -14,8 +14,6 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
  */
 public class ConfigItem<T, A extends ConfigAction> {
 	
-	//TODO NOW TEST
-
 	private final T item;
 	private final A action;
 	

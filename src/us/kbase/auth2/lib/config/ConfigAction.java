@@ -8,8 +8,6 @@ public abstract class ConfigAction {
 	
 	private ConfigAction() {}
 	
-	//TODO NOW TEST
-
 	/** Returns true if this ConfigAction simply represents the state of the configuration item.
 	 * 
 	 * No action is required, but a value for the configuration item may be expected.
@@ -88,6 +86,18 @@ public abstract class ConfigAction {
 	public static abstract class Action extends ConfigAction {
 		
 		private Action() {}
+		
+		@Override
+		public abstract boolean isRemove();
+
+		@Override
+		public abstract boolean isNoAction();
+
+		@Override
+		public abstract boolean isSet();
+		
+		@Override
+		public abstract boolean isState();
 	}
 	
 	private static final class RemoveAction extends Action {
