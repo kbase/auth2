@@ -49,7 +49,7 @@ import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -140,7 +140,7 @@ public class Login {
 	private URL getRedirectURL(final String redirect)
 			throws AuthStorageException, IllegalParameterException {
 		if (redirect != null && !redirect.trim().isEmpty()) {
-			final AuthExternalConfig<ConfigState> ext;
+			final AuthExternalConfig<State> ext;
 			try {
 				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
 			} catch (ExternalConfigMappingException e) {
@@ -294,7 +294,7 @@ public class Login {
 	}
 	
 	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, ConfigState> url;
+		final ConfigItem<URL, State> url;
 		try {
 			url = auth.getExternalConfig(new AuthExternalConfigMapper())
 					.getCompleteLoginRedirect();

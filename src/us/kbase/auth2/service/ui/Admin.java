@@ -52,7 +52,7 @@ import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
@@ -532,7 +532,7 @@ public class Admin {
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, AuthStorageException {
-		final AuthConfigSet<AuthExternalConfig<ConfigState>> cfgset;
+		final AuthConfigSet<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthExternalConfigMapper());
@@ -555,15 +555,15 @@ public class Admin {
 		}
 		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponseOrDefault());
 		ret.put("ignoreip", cfgset.getExtcfg().isIgnoreIPHeadersOrDefault());
-		final ConfigItem<URL, ConfigState> loginallowed =
+		final ConfigItem<URL, State> loginallowed =
 				cfgset.getExtcfg().getAllowedLoginRedirectPrefix();
 		ret.put("allowedloginredirect", loginallowed.hasItem() ? loginallowed.getItem() : null);
-		final ConfigItem<URL, ConfigState> logincomplete =
+		final ConfigItem<URL, State> logincomplete =
 				cfgset.getExtcfg().getCompleteLoginRedirect();
 		ret.put("completeloginredirect", logincomplete.hasItem() ? logincomplete.getItem() : null);
-		final ConfigItem<URL, ConfigState> postlink = cfgset.getExtcfg().getPostLinkRedirect();
+		final ConfigItem<URL, State> postlink = cfgset.getExtcfg().getPostLinkRedirect();
 		ret.put("postlinkredirect", postlink.hasItem() ? postlink.getItem() : null);
-		final ConfigItem<URL, ConfigState> completelink =
+		final ConfigItem<URL, State> completelink =
 				cfgset.getExtcfg().getCompleteLinkRedirect();
 		ret.put("completelinkredirect", completelink.hasItem() ? completelink.getItem() : null);
 		

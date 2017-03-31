@@ -10,7 +10,7 @@ import java.util.Map;
 
 import us.kbase.auth2.lib.config.ConfigAction;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
@@ -175,26 +175,26 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	}
 	
 	public static class AuthExternalConfigMapper implements
-			ExternalConfigMapper<AuthExternalConfig<ConfigState>> {
+			ExternalConfigMapper<AuthExternalConfig<State>> {
 
 		@Override
-		public AuthExternalConfig<ConfigState> fromMap(
-				final Map<String, ConfigItem<String, ConfigState>> config)
+		public AuthExternalConfig<State> fromMap(
+				final Map<String, ConfigItem<String, State>> config)
 				throws ExternalConfigMappingException {
-			final ConfigItem<URL, ConfigState> allowedPostLogin =
+			final ConfigItem<URL, State> allowedPostLogin =
 					getURL(config, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
-			final ConfigItem<URL, ConfigState> completeLogin =
+			final ConfigItem<URL, State> completeLogin =
 					getURL(config, COMPLETE_LOGIN_REDIRECT);
-			final ConfigItem<URL, ConfigState> postLink =
+			final ConfigItem<URL, State> postLink =
 					getURL(config, POST_LINK_REDIRECT);
-			final ConfigItem<URL, ConfigState> completeLink =
+			final ConfigItem<URL, State> completeLink =
 					getURL(config, COMPLETE_LINK_REDIRECT);
-			final ConfigItem<Boolean, ConfigState> ignoreIPs =
+			final ConfigItem<Boolean, State> ignoreIPs =
 					getBoolean(config, IGNORE_IP_HEADERS);
-			final ConfigItem<Boolean, ConfigState> includeStack =
+			final ConfigItem<Boolean, State> includeStack =
 					getBoolean(config, INCLUDE_STACK_TRACE_IN_RESPONSE);
 			try {
-				return new AuthExternalConfig<ConfigState>(allowedPostLogin, completeLogin,
+				return new AuthExternalConfig<State>(allowedPostLogin, completeLogin,
 						postLink, completeLink, ignoreIPs, includeStack);
 			} catch (IllegalParameterException e) {
 				throw new ExternalConfigMappingException(
@@ -202,11 +202,11 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			}
 		}
 
-		private ConfigItem<URL, ConfigState> getURL(
-				final Map<String, ConfigItem<String, ConfigState>> config, final String key)
+		private ConfigItem<URL, State> getURL(
+				final Map<String, ConfigItem<String, State>> config, final String key)
 				throws ExternalConfigMappingException {
-			final ConfigItem<String, ConfigState> url = config.get(key);
-			final ConfigItem<URL, ConfigState> allowed;
+			final ConfigItem<String, State> url = config.get(key);
+			final ConfigItem<URL, State> allowed;
 			if (url == null || !url.hasItem()) {
 				allowed = ConfigItem.emptyState();
 			} else {
@@ -222,12 +222,12 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			return allowed;
 		}
 
-		private ConfigItem<Boolean, ConfigState> getBoolean(
-				final Map<String, ConfigItem<String, ConfigState>> config,
+		private ConfigItem<Boolean, State> getBoolean(
+				final Map<String, ConfigItem<String, State>> config,
 				final String paramName)
 				throws ExternalConfigMappingException {
-			final ConfigItem<String, ConfigState> value = config.get(paramName);
-			final ConfigItem<Boolean, ConfigState> ret;
+			final ConfigItem<String, State> value = config.get(paramName);
+			final ConfigItem<Boolean, State> ret;
 			if (value == null || !value.hasItem()) {
 				ret = ConfigItem.emptyState();
 			} else if (TRUE.equals(value.getItem())) {

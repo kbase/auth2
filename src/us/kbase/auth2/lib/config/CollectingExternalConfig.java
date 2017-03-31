@@ -5,7 +5,7 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import java.util.Map;
 
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 
 /** An external configuration stored as a map. The corresponding mapper simply stores the map
@@ -15,12 +15,12 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
  */
 public class CollectingExternalConfig implements ExternalConfig {
 	
-	private final Map<String, ConfigItem<String, ConfigState>> cfg;
+	private final Map<String, ConfigItem<String, State>> cfg;
 	
 	/** Create a new configuration.
 	 * @param map the map defining the configuration.
 	 */
-	public CollectingExternalConfig(final Map<String, ConfigItem<String, ConfigState>> map) {
+	public CollectingExternalConfig(final Map<String, ConfigItem<String, State>> map) {
 		nonNull(map, "map");
 		cfg = map;
 	}
@@ -33,7 +33,7 @@ public class CollectingExternalConfig implements ExternalConfig {
 	/** Get the collected map.
 	 * @return the map.
 	 */
-	public Map<String, ConfigItem<String, ConfigState>> getMap() {
+	public Map<String, ConfigItem<String, State>> getMap() {
 		return cfg;
 	}
 
@@ -76,7 +76,7 @@ public class CollectingExternalConfig implements ExternalConfig {
 
 		@Override
 		public CollectingExternalConfig fromMap(
-				final Map<String, ConfigItem<String, ConfigState>> config)
+				final Map<String, ConfigItem<String, State>> config)
 				throws ExternalConfigMappingException {
 			return new CollectingExternalConfig(config);
 		}

@@ -55,7 +55,7 @@ import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
@@ -1648,7 +1648,7 @@ public class MongoStorage implements AuthStorage {
 		nonNull(mapper, "mapper");
 		try {
 			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
-			final Map<String, ConfigItem<String, ConfigState>> ext = new HashMap<>();
+			final Map<String, ConfigItem<String, State>> ext = new HashMap<>();
 			for (final Document d: extiter) {
 				ext.put(d.getString(Fields.CONFIG_KEY),
 						ConfigItem.state(d.getString(Fields.CONFIG_VALUE)));

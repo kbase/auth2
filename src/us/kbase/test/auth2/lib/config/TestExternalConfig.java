@@ -7,7 +7,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.config.ConfigAction;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
@@ -77,11 +77,11 @@ public class TestExternalConfig<T extends ConfigAction> implements ExternalConfi
 	}
 
 	public static class TestExternalConfigMapper implements
-			ExternalConfigMapper<TestExternalConfig<ConfigState>> {
+			ExternalConfigMapper<TestExternalConfig<State>> {
 
 		@Override
-		public TestExternalConfig<ConfigState> fromMap(
-				final Map<String, ConfigItem<String, ConfigState>> config)
+		public TestExternalConfig<State> fromMap(
+				final Map<String, ConfigItem<String, State>> config)
 				throws ExternalConfigMappingException {
 			
 			return new TestExternalConfig<>(config.get("thing"));

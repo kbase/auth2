@@ -32,7 +32,7 @@ import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -47,7 +47,7 @@ import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMappe
 public class AuthenticationConstructorTest {
 	
 	private static final ConfigItem<String, Action> SET_FOO = ConfigItem.set("foo");
-	private static final ConfigItem<String, ConfigState> STATE_FOO = ConfigItem.state("foo");
+	private static final ConfigItem<String, State> STATE_FOO = ConfigItem.state("foo");
 	private static final ConfigItem<String, Action> SET_THINGY = ConfigItem.set("thingy");
 	
 	@Test
@@ -65,7 +65,7 @@ public class AuthenticationConstructorTest {
 		verify(storage).updateConfig(new AuthConfigSet<TestExternalConfig<Action>>(ac,
 				new TestExternalConfig<>(SET_THINGY)), false);
 		
-		final TestExternalConfig<ConfigState> t =
+		final TestExternalConfig<State> t =
 				auth.getExternalConfig(new TestExternalConfigMapper());
 		assertThat("incorrect external config", t, is(new TestExternalConfig<>(STATE_FOO)));
 		assertThat("incorrect providers", auth.getIdentityProviders(),

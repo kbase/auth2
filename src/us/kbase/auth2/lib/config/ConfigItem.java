@@ -3,7 +3,7 @@ package us.kbase.auth2.lib.config;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import us.kbase.auth2.lib.config.ConfigAction.Action;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 
 /** A configuration item. A configuration item consists of an action to take, and possibly an item
  * associated with that action.
@@ -24,7 +24,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	 * @param item the item to associate with the action.
 	 * @return a new ConfigItem with the state "action".
 	 */
-	public static <T> ConfigItem<T, ConfigState> state(T item) {
+	public static <T> ConfigItem<T, State> state(T item) {
 		nonNull(item, "item");
 		return new ConfigItem<>(item, ConfigAction.state());
 	}
@@ -34,7 +34,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	 * the action.
 	 * @return an empty ConfigItem with the state "action".
 	 */
-	public static <T> ConfigItem<T, ConfigState> emptyState() {
+	public static <T> ConfigItem<T, State> emptyState() {
 		return new ConfigItem<>(null, ConfigAction.state());
 	}
 	

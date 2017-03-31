@@ -34,8 +34,8 @@ public abstract class ConfigAction {
 	 */
 	public abstract boolean isRemove();
 	
-	static ConfigState state() {
-		return ConfigState.INSTANCE;
+	static State state() {
+		return State.INSTANCE;
 	}
 	
 	static Action remove() {
@@ -54,11 +54,11 @@ public abstract class ConfigAction {
 	 * @author gaprice@lbl.gov
 	 *
 	 */
-	public static final class ConfigState extends ConfigAction {
+	public static final class State extends ConfigAction {
 		
-		private static final ConfigState INSTANCE = new ConfigState();
+		private static final State INSTANCE = new State();
 		
-		private ConfigState() {}
+		private State() {}
 		
 		@Override
 		public boolean isRemove() {

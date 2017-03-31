@@ -43,7 +43,7 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
-import us.kbase.auth2.lib.config.ConfigAction.ConfigState;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
@@ -212,7 +212,7 @@ public class Link {
 	
 	// the two methods below are very similar and there's another similar method in Login
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, ConfigState> url;
+		final ConfigItem<URL, State> url;
 		try {
 			url = auth.getExternalConfig(new AuthExternalConfigMapper())
 					.getCompleteLinkRedirect();
@@ -230,7 +230,7 @@ public class Link {
 	}
 	
 	private URI getPostLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, ConfigState> url;
+		final ConfigItem<URL, State> url;
 		try {
 			url = auth.getExternalConfig(new AuthExternalConfigMapper())
 					.getPostLinkRedirect();
