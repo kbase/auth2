@@ -524,7 +524,7 @@ public class Admin {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
-	//TODO NOW CONFIG reset to defaults
+	//TODO CONFIG reset to defaults
 	@GET
 	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")

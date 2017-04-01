@@ -151,7 +151,7 @@ public class Authentication {
 	private final ConfigManager cfg;
 	private final Clock clock;
 	
-	//TODO UI show this with note that it'll take X seconds to sync to other server instance
+	//TODO CONFIG UI show this with note that it'll take X seconds to sync to other server instance
 	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
@@ -249,7 +249,7 @@ public class Authentication {
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
-	//TODO TEST config manager
+	//TODO CONFIG TEST config manager
 	private class ConfigManager {
 	
 		private AuthConfigSet<CollectingExternalConfig> cfg;
@@ -2077,6 +2077,7 @@ public class Authentication {
 		storage.enableAccount(userName, admin.getUserName());
 	}
 	
+	//TODO CONFIG TEST update and various get config methods
 	/** Update the server configuration.
 	 * @param token a token for a user with the administrator role.
 	 * @param acs the new server configuration.
@@ -2123,7 +2124,7 @@ public class Authentication {
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		//TODO NOW remove providers from config that aren't in set
+		//TODO CONFIG remove providers from config that aren't in set
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
 				mapper.fromMap(acs.getExtcfg().getMap()));
