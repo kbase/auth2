@@ -117,12 +117,6 @@ public class AuthConfigTest {
 	@Test
 	public void defaults() throws Exception {
 		assertThat("incorrect login default", AuthConfig.DEFAULT_LOGIN_ALLOWED, is(false));
-		assertThat("incorrect provider enabled default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isEnabled(), is(false));
-		assertThat("incorrect provider force login default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLoginChoice(), is(false));
-		assertThat("incorrect provider force link default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLinkChoice(), is(false));
 		final Map<TokenLifetimeType, Long> defaultLifeTimes = new HashMap<>();
 		defaultLifeTimes.put(TokenLifetimeType.AGENT, 7 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.LOGIN, 14 * 24 * 60 * 60 * 1000L);

@@ -16,17 +16,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
  */
 public class AuthConfig {
 
-	/* might want to have separate current config state classes and config
-	 * change classes. Try with the conflated semantics for now.
-	 */
-	
-	//TODO NOW include custom config
-	
 	public static final int MIN_TOKEN_LIFE_MS = 60 * 1000;
-	
-	/** Default configuration for a identity provider. */
-	public static final ProviderConfig DEFAULT_PROVIDER_CONFIG =
-			new ProviderConfig(false, false, false);
 	
 	/** Default for whether non-admin logins are allowed. */
 	public static final boolean DEFAULT_LOGIN_ALLOWED = false;

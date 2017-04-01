@@ -49,11 +49,13 @@ import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
-import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
+import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -522,7 +524,7 @@ public class Admin {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
-	//TODO CONFIG reset to defaults
+	//TODO NOW CONFIG reset to defaults
 	@GET
 	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")
@@ -611,8 +613,8 @@ public class Admin {
 				postlogin, completelogin, postlink, completelink, ignore, stack);
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-					new AuthConfigSet<>(new AuthConfig(!nullOrEmpty(allowLogin), null, null),
-							ext));
+					AuthConfigUpdate.getBuilder().withLoginAllowed(!nullOrEmpty(allowLogin))
+							.withExternalConfig(ext).build());
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
@@ -645,16 +647,13 @@ public class Admin {
 			throws MissingParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		final ProviderConfig pc = new ProviderConfig(
-				!nullOrEmpty(enabled), !nullOrEmpty(forceLogin), !nullOrEmpty(forcelink));
 		if (provname == null || provname.isEmpty()) {
 			throw new MissingParameterException("provname");
 		}
-		final Map<String, ProviderConfig> provs = new HashMap<>();
-		provs.put(provname, pc);
 		auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new AuthConfigSet<>(new AuthConfig(null, provs, null),
-						AuthExternalConfig.NO_CHANGE));
+				AuthConfigUpdate.getBuilder().withProviderUpdate(provname, new ProviderUpdate(
+						!nullOrEmpty(enabled), !nullOrEmpty(forceLogin), !nullOrEmpty(forcelink)))
+				.build());
 	}
 	
 	@POST
@@ -690,16 +689,15 @@ public class Admin {
 			throw new IllegalParameterException(
 					"Server token expiration time must be at least 1");
 		}
-		final Map<TokenLifetimeType, Long> t = new HashMap<>();
-		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS));
-		t.put(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS));
-		t.put(TokenLifetimeType.AGENT, safeMult(agent, DAY_IN_MS));
-		t.put(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS));
-		t.put(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS));
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withTokenLifeTime(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.AGENT, safeMult(agent, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS))
+				.build();
 		try {
-			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-					new AuthConfigSet<>(new AuthConfig(null, null, t),
-							AuthExternalConfig.NO_CHANGE));
+			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()), acu);
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}

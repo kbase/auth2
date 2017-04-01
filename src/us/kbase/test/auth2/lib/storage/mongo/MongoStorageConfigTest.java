@@ -8,13 +8,16 @@ import java.util.Map;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
-import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
+import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
@@ -31,25 +34,23 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	public void getEmptyConfig() throws Exception {
 		final AuthConfigSet<TestExternalConfig<State>> res = storage.getConfig(
 				new TestExternalConfigMapper());
-		assertThat("incorrect config", res.getCfg(), is(new AuthConfig(null, null, null)));
+		assertThat("incorrect config", res.getCfg(), is(new AuthConfig(false, null, null)));
 		assertThat("incorrect external config", res.getExtcfg().aThing,
 				is((ConfigItem<String, State>) null));
 	}
 	
 	@Test
 	public void updateConfigAndGetWithAllTokenLifeTimes() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true, null,
-						ImmutableMap.of(
-								TokenLifetimeType.EXT_CACHE, 100000L,
-								TokenLifetimeType.LOGIN, 200000L,
-								TokenLifetimeType.AGENT, 300000L,
-								TokenLifetimeType.DEV, 400000L,
-								TokenLifetimeType.SERV, 500000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		final AuthConfigUpdate<ExternalConfig> cfgUp = AuthConfigUpdate.getBuilder()
+				.withTokenLifeTime(TokenLifetimeType.EXT_CACHE, 100000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 200000L)
+				.withTokenLifeTime(TokenLifetimeType.AGENT, 300000L)
+				.withTokenLifeTime(TokenLifetimeType.DEV, 400000L)
+				.withTokenLifeTime(TokenLifetimeType.SERV, 500000L)
+				.build();
+		storage.updateConfig(cfgUp, false);
 		
-		final AuthConfig expected = new AuthConfig(true, null,
+		final AuthConfig expected = new AuthConfig(false, null,
 				ImmutableMap.of(
 						TokenLifetimeType.EXT_CACHE, 100000L,
 						TokenLifetimeType.LOGIN, 200000L,
@@ -59,21 +60,21 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 		final AuthConfigSet<TestExternalConfig<State>> res = storage.getConfig(
 				new TestExternalConfigMapper());
 		assertThat("incorrect config", res.getCfg(), is(expected));
-		assertThat("incorrect external config", res.getExtcfg().aThing, is(STATE_FOO));
+		assertThat("incorrect external config", res.getExtcfg().aThing,
+				is((ConfigItem<String, State>) null));
 	}
 	
 	@Test
 	public void updateConfigAndGet() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true, false),
-								"prov2", new ProviderConfig(true, false, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 200000L,
-								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		final AuthConfigUpdate<ExternalConfig> cfgUp = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 200000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 300000L)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build();
+		storage.updateConfig(cfgUp, false);
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
@@ -90,29 +91,27 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	
 	@Test
 	public void updateConfigWithoutOverwrite() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true, false),
-								"prov2", new ProviderConfig(true, false, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 200000L,
-								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		final AuthConfigUpdate<ExternalConfig> cfgUp = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 200000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 300000L)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build();
+		storage.updateConfig(cfgUp, false);
 		
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
-				new AuthConfig(false,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true, true),
-								"prov2", new ProviderConfig(true, true, true),
-								"prov3", new ProviderConfig(true, true, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 400000L,
-								TokenLifetimeType.LOGIN, 600000L,
-								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo1")));
-		storage.updateConfig(cfgSet2, false);
+		final AuthConfigUpdate<ExternalConfig> cfgUp2 = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withProviderUpdate("prov1", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov3", new ProviderUpdate(true, true, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 400000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 600000L)
+				.withTokenLifeTime(TokenLifetimeType.SERV, 800000)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo1")))
+				.build();
+		storage.updateConfig(cfgUp2, false);
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
@@ -131,29 +130,28 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	
 	@Test
 	public void updateConfigWithOverwrite() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true, false),
-								"prov2", new ProviderConfig(true, false, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 200000L,
-								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		final AuthConfigUpdate<ExternalConfig> cfgUp = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 200000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 300000L)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build();
+		storage.updateConfig(cfgUp, false);
 		
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
-				new AuthConfig(false,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true, true),
-								"prov2", new ProviderConfig(true, true, true),
-								"prov3", new ProviderConfig(true, true, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 400000L,
-								TokenLifetimeType.LOGIN, 600000L,
-								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo1")));
-		storage.updateConfig(cfgSet2, true);
+
+		final AuthConfigUpdate<ExternalConfig> cfgUp2 = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withProviderUpdate("prov1", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov3", new ProviderUpdate(true, true, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 400000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 600000L)
+				.withTokenLifeTime(TokenLifetimeType.SERV, 800000)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo1")))
+				.build();
+		storage.updateConfig(cfgUp2, true);
 		
 		final AuthConfig expected = new AuthConfig(false,
 				ImmutableMap.of(
@@ -173,15 +171,13 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	
 	@Test
 	public void updateConfigRemoveExternal() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true, null, null),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		storage.updateConfig(AuthConfigUpdate.getBuilder()
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.withLoginAllowed(true).build(), false);
 		
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
-				new AuthConfig(true, null, null),
-				new TestExternalConfig<>(ConfigItem.remove()));
-		storage.updateConfig(cfgSet2, true);
+		storage.updateConfig(AuthConfigUpdate.getBuilder()
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.remove()))
+				.build(), true);
 		
 		final AuthConfig expected = new AuthConfig(true, null, null);
 		final AuthConfigSet<TestExternalConfig<State>> res = storage.getConfig(
@@ -193,15 +189,13 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	
 	@Test
 	public void updateConfigRemoveExternalWithoutOverwrite() throws Exception {
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true, null, null),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+		storage.updateConfig(AuthConfigUpdate.getBuilder()
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.withLoginAllowed(true).build(), false);
 		
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
-				new AuthConfig(true, null, null),
-				new TestExternalConfig<>(ConfigItem.remove()));
-		storage.updateConfig(cfgSet2, false);
+		storage.updateConfig(AuthConfigUpdate.getBuilder()
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.remove()))
+				.build(), false);
 		
 		final AuthConfig expected = new AuthConfig(true, null, null);
 		final AuthConfigSet<TestExternalConfig<State>> res = storage.getConfig(
@@ -211,35 +205,31 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void updateConfigWithOverwriteAndNullValues() throws Exception {
-		// tests that a null value causes no update
-		// if you believe Google (and I probably should) I should use an Optional instead of nulls
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet = new AuthConfigSet<>(
-				new AuthConfig(true,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(false, true, false),
-								"prov2", new ProviderConfig(true, false, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 200000L,
-								TokenLifetimeType.LOGIN, 300000L)),
-				new TestExternalConfig<>(ConfigItem.set("foo")));
-		storage.updateConfig(cfgSet, false);
+	public void updateConfigWithOverwriteAndOptionalValues() throws Exception {
+		final AuthConfigUpdate<ExternalConfig> cfgUp = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 200000L)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 300000L)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build();
+		storage.updateConfig(cfgUp, false);
 		
-		final AuthConfigSet<TestExternalConfig<Action>> cfgSet2 = new AuthConfigSet<>(
-				new AuthConfig(null,
-						ImmutableMap.of(
-								"prov1", new ProviderConfig(true, true, true),
-								"prov2", new ProviderConfig(null, null, null),
-								"prov3", new ProviderConfig(true, true, true)),
-						ImmutableMap.of(
-								TokenLifetimeType.DEV, 400000L,
-								TokenLifetimeType.SERV, 800000L)),
-				new TestExternalConfig<>(ConfigItem.noAction()));
-		storage.updateConfig(cfgSet2, true);
+		final Optional<Boolean> ab = Optional.absent();
+		final AuthConfigUpdate<ExternalConfig> cfgUp2 = AuthConfigUpdate.getBuilder()
+				// leave out login allowed = absent value supplied
+				.withProviderUpdate("prov2", new ProviderUpdate(ab, ab, ab))
+				.withProviderUpdate("prov3", new ProviderUpdate(true, true, true))
+				.withTokenLifeTime(TokenLifetimeType.DEV, 400000L)
+				.withTokenLifeTime(TokenLifetimeType.SERV, 800000)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.noAction()))
+				.build();
+		storage.updateConfig(cfgUp2, true);
 		
 		final AuthConfig expected = new AuthConfig(true,
 				ImmutableMap.of(
-						"prov1", new ProviderConfig(true, true, true),
+						"prov1", new ProviderConfig(false, true, false),
 						"prov2", new ProviderConfig(true, false, true),
 						"prov3", new ProviderConfig(true, true, true)),
 				ImmutableMap.of(
