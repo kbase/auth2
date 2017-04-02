@@ -20,8 +20,6 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  */
 public class AuthConfigUpdate<T extends ExternalConfig> {
 	
-	//TODO NOW TEST
-	
 	/** The default provider update - not enabled and neither of the force options are active. */
 	public static final ProviderUpdate DEFAULT_PROVIDER_UPDATE = new ProviderUpdate(
 			false, false, false);
@@ -207,6 +205,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((external == null) ? 0 : external.hashCode());
 		result = prime * result + ((loginAllowed == null) ? 0 : loginAllowed.hashCode());
 		result = prime * result + ((providers == null) ? 0 : providers.hashCode());
 		result = prime * result + ((tokenLifetimeMS == null) ? 0 : tokenLifetimeMS.hashCode());
@@ -225,6 +224,13 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 			return false;
 		}
 		AuthConfigUpdate<?> other = (AuthConfigUpdate<?>) obj;
+		if (external == null) {
+			if (other.external != null) {
+				return false;
+			}
+		} else if (!external.equals(other.external)) {
+			return false;
+		}
 		if (loginAllowed == null) {
 			if (other.loginAllowed != null) {
 				return false;
@@ -249,6 +255,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		return true;
 	}
 	
+	// this doesn't quite work right, T always has to be an ExternalConfig. fix later.
 	/** Get a builder for an authorization configuration update.
 	 * @return a builder.
 	 */
