@@ -25,6 +25,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig;
@@ -58,9 +59,9 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 
 		boolean includeStack = false;
 		try {
-			final AuthExternalConfig ext = auth.getExternalConfig(
+			final AuthExternalConfig<State> ext = auth.getExternalConfig(
 					new AuthExternalConfigMapper());
-			includeStack = ext.isIncludeStackTraceInResponse();
+			includeStack = ext.isIncludeStackTraceInResponseOrDefault();
 		} catch (AuthStorageException | ExternalConfigMappingException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"An error occurred in the error handler when attempting " +

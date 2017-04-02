@@ -9,22 +9,13 @@ import java.util.TreeMap;
 
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 
-/** Contains the configuration of the authentication instance. This class can be used both to
- * report the current state of the configuration and request changes to the configuration.
+/** Contains the configuration of the authentication instance.
  * @author gaprice@lbl.gov
  *
  */
 public class AuthConfig {
 
-	/* might want to have separate current config state classes and config
-	 * change classes. Try with the conflated semantics for now.
-	 */
-	
-	private static final int MIN_TOKEN_LIFE = 60 * 1000;
-	
-	/** Default configuration for a identity provider. */
-	public static final ProviderConfig DEFAULT_PROVIDER_CONFIG =
-			new ProviderConfig(false, false, false);
+	public static final int MIN_TOKEN_LIFE_MS = 60 * 1000;
 	
 	/** Default for whether non-admin logins are allowed. */
 	public static final boolean DEFAULT_LOGIN_ALLOWED = false;
@@ -68,28 +59,26 @@ public class AuthConfig {
 	 */
 	public static class ProviderConfig {
 		
-		private final Boolean enabled;
-		private final Boolean forceLoginChoice;
-		private final Boolean forceLinkChoice;
+		private final boolean enabled;
+		private final boolean forceLoginChoice;
+		private final boolean forceLinkChoice;
 		
 		/** Create a provider config.
-		 * @param enabled whether the provider is enabled. True if so, false if not, null if no
-		 * change should be applied.
+		 * @param enabled whether the provider is enabled.
 		 * @param forceLoginChoice if false, an account link will proceed immediately if the
 		 * provider only returns a single remote identity and that identity is already linked
 		 * to a user account. If true, the Authentication class will return a list of choices for
 		 * login or account creation populated with all the accounts returned from the provider,
-		 * regardless of the number of accounts. Null indicates no change should be applied.
+		 * regardless of the number of accounts.
 		 * @param forceLinkChoice if false, an account link will proceed immediately if the
 		 * provider only returns a single remote identity. If true, the Authentication class will
 		 * return a list of choices for linking populated with all the accounts returned from the
-		 * provider, regardless of the number of accounts. Null indicates no change should be
-		 * applied.
+		 * provider, regardless of the number of accounts.
 		 */
 		public ProviderConfig(
-				final Boolean enabled,
-				final Boolean forceLoginChoice,
-				final Boolean forceLinkChoice) {
+				final boolean enabled,
+				final boolean forceLoginChoice,
+				final boolean forceLinkChoice) {
 			super();
 			this.enabled = enabled;
 			this.forceLinkChoice = forceLinkChoice;
@@ -97,27 +86,27 @@ public class AuthConfig {
 		}
 
 		/** Returns whether this provider is enabled.
-		 * @return true for enabled, false for not, null for no change.
+		 * @return true for enabled, false otherwise.
 		 */
-		public Boolean isEnabled() {
+		public boolean isEnabled() {
 			return enabled;
 		}
 		
 		/** Returns whether the authorization instance will always return a list of account choices
 		 * when logging in, regardless of the size of the list.
-		 * @return true if a list is always returned, false if the login proceeds immediately if
-		 * only one account is available for login, null for no change.
+		 * @return true if a list is always returned or false if the login proceeds immediately if
+		 * only one account is available for login.
 		 */
-		public Boolean isForceLoginChoice() {
+		public boolean isForceLoginChoice() {
 			return forceLoginChoice;
 		}
 
 		/** Returns whether the authorization instance will always return a list of account choices
 		 * when linking accounts, regardless of the size of the list.
-		 * @return true if a list is always returned, false if the link proceeds immediately if
-		 * only one account is available for linking, null for no change.
+		 * @return true if a list is always returned or false if the link proceeds immediately if
+		 * only one account is available for linking.
 		 */
-		public Boolean isForceLinkChoice() {
+		public boolean isForceLinkChoice() {
 			return forceLinkChoice;
 		}
 
@@ -125,9 +114,9 @@ public class AuthConfig {
 		public int hashCode() {
 			final int prime = 31;
 			int result = 1;
-			result = prime * result + ((enabled == null) ? 0 : enabled.hashCode());
-			result = prime * result + ((forceLinkChoice == null) ? 0 : forceLinkChoice.hashCode());
-			result = prime * result + ((forceLoginChoice == null) ? 0 : forceLoginChoice.hashCode());
+			result = prime * result + (enabled ? 1231 : 1237);
+			result = prime * result + (forceLinkChoice ? 1231 : 1237);
+			result = prime * result + (forceLoginChoice ? 1231 : 1237);
 			return result;
 		}
 
@@ -143,25 +132,13 @@ public class AuthConfig {
 				return false;
 			}
 			ProviderConfig other = (ProviderConfig) obj;
-			if (enabled == null) {
-				if (other.enabled != null) {
-					return false;
-				}
-			} else if (!enabled.equals(other.enabled)) {
+			if (enabled != other.enabled) {
 				return false;
 			}
-			if (forceLinkChoice == null) {
-				if (other.forceLinkChoice != null) {
-					return false;
-				}
-			} else if (!forceLinkChoice.equals(other.forceLinkChoice)) {
+			if (forceLinkChoice != other.forceLinkChoice) {
 				return false;
 			}
-			if (forceLoginChoice == null) {
-				if (other.forceLoginChoice != null) {
-					return false;
-				}
-			} else if (!forceLoginChoice.equals(other.forceLoginChoice)) {
+			if (forceLoginChoice != other.forceLoginChoice) {
 				return false;
 			}
 			return true;
@@ -181,24 +158,19 @@ public class AuthConfig {
 		}
 	}
 	
-	private final Boolean loginAllowed;
+	private final boolean loginAllowed;
 	private final Map<String, ProviderConfig> providers;
 	private final Map<TokenLifetimeType, Long> tokenLifetimeMS;
 	
 	/** Create an authentication configuration.
-	 * @param loginAllowed true if non-admin logins are allowed, false if not, or null if no
-	 * changes should be made.
-	 * @param providers the names of providers to be used mapped to their configuration. If a
-	 * provider is missing from the map no changes will be made to their configuration.
-	 * @param tokenLifetimeMS the lifetimes of the various token types in milliseconds. If a
-	 * lifetime type is missing from the map no changes will be made to its configuration.
+	 * @param loginAllowed true if non-admin logins are allowed, false otherwise.
+	 * @param providers the names of the providers mapped to their configurations.
+	 * @param tokenLifetimeMS the lifetimes of the various token types in milliseconds.
 	 */
 	public AuthConfig(
-			final Boolean loginAllowed,
+			final boolean loginAllowed,
 			Map<String, ProviderConfig> providers,
 			Map<TokenLifetimeType, Long> tokenLifetimeMS) {
-		// nulls indicate no value or no change depending on context
-		// which is probably bad
 		// should probably switch this to a builder
 		if (providers == null) {
 			providers = new HashMap<>();
@@ -215,9 +187,9 @@ public class AuthConfig {
 		for (final TokenLifetimeType t: tokenLifetimeMS.keySet()) {
 			nonNull(t, "null key in token life time map");
 			nonNull(tokenLifetimeMS.get(t), String.format("lifetime for key %s is null", t));
-			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE) {
+			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE_MS) {
 				throw new IllegalArgumentException(String.format(
-						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE));
+						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE_MS));
 			}
 		}
 		this.loginAllowed = loginAllowed;
@@ -225,11 +197,10 @@ public class AuthConfig {
 		this.tokenLifetimeMS = Collections.unmodifiableMap(new HashMap<>(tokenLifetimeMS));
 	}
 
-	/** Returns whether non-admin logins are allowed, or null if no change is to be applied to the
-	 * configuration.
+	/** Returns whether non-admin logins are allowed.
 	 * @return whether non-admin logins are allowed.
 	 */
-	public Boolean isLoginAllowed() {
+	public boolean isLoginAllowed() {
 		return loginAllowed;
 	}
 
@@ -277,7 +248,7 @@ public class AuthConfig {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((loginAllowed == null) ? 0 : loginAllowed.hashCode());
+		result = prime * result + (loginAllowed ? 1231 : 1237);
 		result = prime * result + ((providers == null) ? 0 : providers.hashCode());
 		result = prime * result + ((tokenLifetimeMS == null) ? 0 : tokenLifetimeMS.hashCode());
 		return result;
@@ -295,11 +266,7 @@ public class AuthConfig {
 			return false;
 		}
 		AuthConfig other = (AuthConfig) obj;
-		if (loginAllowed == null) {
-			if (other.loginAllowed != null) {
-				return false;
-			}
-		} else if (!loginAllowed.equals(other.loginAllowed)) {
+		if (loginAllowed != other.loginAllowed) {
 			return false;
 		}
 		if (providers == null) {

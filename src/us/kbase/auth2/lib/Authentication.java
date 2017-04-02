@@ -17,10 +17,10 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
-import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -38,6 +38,8 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.Builder;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
@@ -149,7 +151,7 @@ public class Authentication {
 	private final ConfigManager cfg;
 	private final Clock clock;
 	
-	//TODO UI show this with note that it'll take X seconds to sync to other server instance
+	//TODO CONFIG UI show this with note that it'll take X seconds to sync to other server instance
 	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
@@ -202,19 +204,26 @@ public class Authentication {
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.storage = storage;
 		for (final IdentityProvider idp: identityProviderSet) {
+			nonNull(idp.getProviderName(), "provider name");
 			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
 				throw new IllegalArgumentException("Duplicate provider name: " +
 						idp.getProviderName());
 			}
 			idProviderSet.put(idp.getProviderName(), idp);
 		}
-		final Map<String, ProviderConfig> provs = idProviderSet.keySet().stream().collect(
-				Collectors.toMap(Function.identity(), n -> AuthConfig.DEFAULT_PROVIDER_CONFIG));
-		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, provs,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		final Builder<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(AuthConfig.DEFAULT_LOGIN_ALLOWED)
+				.withExternalConfig(defaultExternalConfig)
+				.withDefaultTokenLifeTimes();
+		for (final Entry<String, IdentityProvider> e: idProviderSet.entrySet()) {
+			try {
+				acu.withProviderUpdate(e.getKey(), AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE);
+			} catch (MissingParameterException ex) {
+				throw new IllegalArgumentException("Bad provider name: " + e.getKey());
+			}
+		}
 		try {
-			storage.updateConfig(new AuthConfigSet<ExternalConfig>(
-					ac, defaultExternalConfig), false);
+			storage.updateConfig(acu.build(), false);
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to set config in storage: " +
 					e.getMessage(), e);
@@ -240,7 +249,7 @@ public class Authentication {
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
-	//TODO TEST config manager
+	//TODO CONFIG TEST config manager
 	private class ConfigManager {
 	
 		private AuthConfigSet<CollectingExternalConfig> cfg;
@@ -2068,6 +2077,7 @@ public class Authentication {
 		storage.enableAccount(userName, admin.getUserName());
 	}
 	
+	//TODO CONFIG TEST update and various get config methods
 	/** Update the server configuration.
 	 * @param token a token for a user with the administrator role.
 	 * @param acs the new server configuration.
@@ -2080,12 +2090,12 @@ public class Authentication {
 	 */
 	public <T extends ExternalConfig> void updateConfig(
 			final IncomingToken token,
-			final AuthConfigSet<T> acs)
+			final AuthConfigUpdate<T> acs)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
 		nonNull(acs, "acs");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		for (final String provider: acs.getCfg().getProviders().keySet()) {
+		for (final String provider: acs.getProviders().keySet()) {
 			// since idProviderSet is case insensitive
 			final IdentityProvider idp = idProviderSet.get(provider);
 			if (idp == null || !idp.getProviderName().equals(provider)) {
@@ -2114,10 +2124,10 @@ public class Authentication {
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		//TODO NOW remove providers from config that aren't in set
+		//TODO CONFIG remove providers from config that aren't in set
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return new AuthConfigSet<T>(acs.getCfg(),
-				mapper.fromMap(acs.getExtcfg().toMap()));
+				mapper.fromMap(acs.getExtcfg().getMap()));
 	}
 	
 	/** Returns the suggested cache time for tokens.
@@ -2143,7 +2153,7 @@ public class Authentication {
 			throws AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return mapper.fromMap(acs.getExtcfg().toMap());
+		return mapper.fromMap(acs.getExtcfg().getMap());
 	}
 
 	/** Imports a user from an external service without requiring credentials.
