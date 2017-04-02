@@ -164,7 +164,7 @@ public class AuthConfig {
 	
 	/** Create an authentication configuration.
 	 * @param loginAllowed true if non-admin logins are allowed, false otherwise.
-	 * @param providers the names of providers to be used mapped to their configuration.
+	 * @param providers the names of the providers mapped to their configurations.
 	 * @param tokenLifetimeMS the lifetimes of the various token types in milliseconds.
 	 */
 	public AuthConfig(
