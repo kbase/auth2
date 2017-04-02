@@ -4,20 +4,25 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
@@ -117,12 +122,6 @@ public class AuthConfigTest {
 	@Test
 	public void defaults() throws Exception {
 		assertThat("incorrect login default", AuthConfig.DEFAULT_LOGIN_ALLOWED, is(false));
-		assertThat("incorrect provider enabled default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isEnabled(), is(false));
-		assertThat("incorrect provider force login default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLoginChoice(), is(false));
-		assertThat("incorrect provider force link default",
-				AuthConfig.DEFAULT_PROVIDER_CONFIG.isForceLinkChoice(), is(false));
 		final Map<TokenLifetimeType, Long> defaultLifeTimes = new HashMap<>();
 		defaultLifeTimes.put(TokenLifetimeType.AGENT, 7 * 24 * 60 * 60 * 1000L);
 		defaultLifeTimes.put(TokenLifetimeType.LOGIN, 14 * 24 * 60 * 60 * 1000L);
@@ -141,13 +140,6 @@ public class AuthConfigTest {
 		assertThat("incorrect force link", pc.isForceLinkChoice(), is(false));
 		assertThat("incorrect to string", pc.toString(), is(
 				"ProviderConfig [enabled=false, forceLoginChoice=true, forceLinkChoice=false]"));
-		
-		final ProviderConfig pc2 = new ProviderConfig(null, null, null);
-		assertThat("incorrect enabled", pc2.isEnabled(), is((Boolean) null));
-		assertThat("incorrect force login", pc2.isForceLoginChoice(), is((Boolean) null));
-		assertThat("incorrect force link", pc2.isForceLinkChoice(), is((Boolean) null));
-		assertThat("incorrect to string", pc2.toString(),
-				is("ProviderConfig [enabled=null, forceLoginChoice=null, forceLinkChoice=null]"));
 	}
 	
 	@Test
@@ -163,8 +155,8 @@ public class AuthConfigTest {
 	@Test
 	public void constructAndGettersSuccess() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
-		pc.put("pc1", new ProviderConfig(null, true, false));
-		pc.put("pc2", new ProviderConfig(false, false, null));
+		pc.put("pc1", new ProviderConfig(true, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, true));
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		lts.put(TokenLifetimeType.DEV, 500000L);
 		lts.put(TokenLifetimeType.LOGIN, 70000000L);
@@ -181,7 +173,7 @@ public class AuthConfigTest {
 		assertThat("incorrect providers", ac.getProviders(), is(pccopy));
 		assertThat("incorrect lifetimes", ac.getTokenLifetimeMS(), is(ltscopy));
 		assertThat("incorrect provider enabled", ac.getProviderConfig("pc1").isEnabled(),
-				is((Boolean) null));
+				is(true));
 		assertThat("incorrect provider force login",
 				ac.getProviderConfig("pc1").isForceLoginChoice(), is(true));
 		assertThat("incorrect provider force link",
@@ -191,7 +183,7 @@ public class AuthConfigTest {
 		assertThat("incorrect provider force login",
 				ac.getProviderConfig("pc2").isForceLoginChoice(), is(false));
 		assertThat("incorrect provider force link",
-				ac.getProviderConfig("pc2").isForceLinkChoice(), is((Boolean) null));
+				ac.getProviderConfig("pc2").isForceLinkChoice(), is(true));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE),
 				is(5 * 60 * 1000L));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.AGENT),
@@ -204,10 +196,10 @@ public class AuthConfigTest {
 				is(8640000000000000L));
 		assertThat("incorrect to string", ac.toString(), is(
 				"AuthConfig [loginAllowed=false, providers={" +
-				"pc1=ProviderConfig [enabled=null, forceLoginChoice=true, " +
+				"pc1=ProviderConfig [enabled=true, forceLoginChoice=true, " +
 						"forceLinkChoice=false], " +
 				"pc2=ProviderConfig [enabled=false, forceLoginChoice=false, " +
-				"forceLinkChoice=null]}, tokenLifetimeMS={LOGIN=70000000, DEV=500000}]"));
+				"forceLinkChoice=true]}, tokenLifetimeMS={LOGIN=70000000, DEV=500000}]"));
 	}
 	
 	@Test
@@ -215,14 +207,14 @@ public class AuthConfigTest {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		
-		final AuthConfig ac = new AuthConfig(null, null, null);
+		final AuthConfig ac = new AuthConfig(true, null, null);
 		final Map<TokenLifetimeType, Long> ltscopy = new HashMap<>(lts);
 		final Map<String, ProviderConfig> pccopy = new HashMap<>(pc);
 		// modify input maps to ensure does not modify config instance
-		pc.put("foo", new ProviderConfig(null, null, null));
+		pc.put("foo", new ProviderConfig(false, false, false));
 		lts.put(TokenLifetimeType.EXT_CACHE, 6000000L);
 		
-		assertThat("incorrect login allowed", ac.isLoginAllowed(), is((Boolean) null));
+		assertThat("incorrect login allowed", ac.isLoginAllowed(), is(true));
 		assertThat("incorrect providers", ac.getProviders(), is(pccopy));
 		assertThat("incorrect lifetimes", ac.getTokenLifetimeMS(), is(ltscopy));
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE),
@@ -236,16 +228,16 @@ public class AuthConfigTest {
 		assertThat("incorrect token lifetime", ac.getTokenLifetimeMS(TokenLifetimeType.SERV),
 				is(8640000000000000L));
 		assertThat("incorrect to string", ac.toString(), is(
-				"AuthConfig [loginAllowed=null, providers={}, tokenLifetimeMS={}]"));
+				"AuthConfig [loginAllowed=true, providers={}, tokenLifetimeMS={}]"));
 	}
 	
 	@Test
 	public void getProviderFail() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
-		pc.put("pc1", new ProviderConfig(null, true, false));
+		pc.put("pc1", new ProviderConfig(true, true, false));
 		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
 		
-		final AuthConfig ac = new AuthConfig(null, pc, lts);
+		final AuthConfig ac = new AuthConfig(true, pc, lts);
 		failGetProvider(ac, null, null);
 		failGetProvider(ac, "", "");
 		failGetProvider(ac, "pc2", "pc2");
@@ -268,7 +260,7 @@ public class AuthConfigTest {
 				"provider names cannot be null or empty"));
 		
 		pc.clear();
-		pc.put("  \t  ", new ProviderConfig(null, null, null));
+		pc.put("  \t  ", new ProviderConfig(true, true, true));
 		failConstructAuthConfig(pc, null, new IllegalArgumentException(
 				"provider names cannot be null or empty"));
 		
@@ -301,14 +293,16 @@ public class AuthConfigTest {
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final Exception exception) {
 		try {
-			new AuthConfig(null, providers, lifetimes);
+			new AuthConfig(true, providers, lifetimes);
 			fail("created bad config");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
 		}
 	}
 	
-	class TestExtCfg implements ExternalConfig {
+	static class TestExtCfg implements ExternalConfig {
+		
+		private int i = 1;
 
 		@Override
 		public Map<String, ConfigItem<String, Action>> toMap() {
@@ -319,6 +313,170 @@ public class AuthConfigTest {
 		public String toString() {
 			return "This is a very poor toString() implementation. Sad!";
 		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + i;
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			TestExtCfg other = (TestExtCfg) obj;
+			if (i != other.i) {
+				return false;
+			}
+			return true;
+		}
+
+	}
+
+	@Test
+	public void updateConfigProviderEquals() {
+		EqualsVerifier.forClass(ProviderUpdate.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void updateConfigProviderDefault() throws Exception {
+		final ProviderUpdate pu = AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE;
+		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
+		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(false)));
+		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+	}
+	
+	@Test
+	public void updateConfigProviderConstructBoolean() throws Exception {
+		final ProviderUpdate pu = new ProviderUpdate(false, true, false);
+		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
+		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(true)));
+		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+	}
+	
+	@Test
+	public void updateConfigProviderConstructOptional() throws Exception {
+		final ProviderUpdate pu = new ProviderUpdate(Optional.of(false),
+				Optional.of(true), Optional.of(false));
+		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
+		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(true)));
+		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+	}
+	
+	@Test
+	public void updatgeConfigProviderConstructFailNulls() throws Exception {
+		final Optional<Boolean> o = Optional.of(false);
+		failUpdateConfigProviderConstruct(null, o, o, new NullPointerException("enabled"));
+		failUpdateConfigProviderConstruct(o, null, o,
+				new NullPointerException("forceLoginChoice"));
+		failUpdateConfigProviderConstruct(o, o, null, new NullPointerException("forceLinkChoice"));
+	}
+	
+	private void failUpdateConfigProviderConstruct(
+			final Optional<Boolean> enabled,
+			final Optional<Boolean> forceLogin,
+			final Optional<Boolean> forceLink,
+			final Exception e) {
+		try {
+			new ProviderUpdate(enabled, forceLogin, forceLink);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void updateConfigEquals() {
+		EqualsVerifier.forClass(AuthConfigUpdate.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void updateConfigMinimal() throws Exception {
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder().build();
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.absent()));
+		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.absent()));
+		assertThat("incorrect providers", acu.getProviders(), is(Collections.emptyMap()));
+		assertThat("incorrect token lifetimes", acu.getTokenLifetimeMS(), is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void updateConfigMaximal() throws Exception {
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(true)
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 60000)
+				.withProviderUpdate("prov", new ProviderUpdate(false, true, true))
+				.withExternalConfig(new TestExtCfg())
+				.build();
+		
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.of(true)));
+		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.of(new TestExtCfg())));
+		assertThat("incorrect providers", acu.getProviders(), is(ImmutableMap.of(
+				"prov", new ProviderUpdate(false, true, true))));
+		assertThat("incorrect token lifetime", acu.getTokenLifetimeMS(), is(ImmutableMap.of(
+				TokenLifetimeType.LOGIN, 60000L)));
+	}
+	
+	@Test
+	public void updateConfigWithDefaultTokenLifetimes() throws Exception {
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withDefaultTokenLifeTimes()
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, 60000)
+				.build();
+		
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.of(false)));
+		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.absent()));
+		assertThat("incorrect providers", acu.getProviders(), is(Collections.emptyMap()));
+		assertThat("incorrect token lifetime", acu.getTokenLifetimeMS(), is(ImmutableMap.of(
+				TokenLifetimeType.LOGIN, 60000L,
+				TokenLifetimeType.AGENT, 7 * 24 * 3600 * 1000L,
+				TokenLifetimeType.DEV, 90 * 24 * 3600 * 1000L,
+				TokenLifetimeType.SERV, 100_000_000L * 24 * 3600 * 1000L,
+				TokenLifetimeType.EXT_CACHE, 5 * 60 * 1000L)));
+	}
+	@Test
+	public void updateConfigFail() throws Exception {
+		final TokenLifetimeType tlt = TokenLifetimeType.LOGIN;
+		final long life = 60000;
+		final String prov = "foo";
+		final ProviderUpdate pu = new ProviderUpdate(false, false, false);
+		final ExternalConfig ec = new TestExtCfg();
+		
+		failUpdateConfigBuild(null, life, prov, pu, ec, new NullPointerException("lifetimeType"));
+		failUpdateConfigBuild(tlt, 59999, prov, pu, ec,
+				new IllegalArgumentException("token lifetime must be at least 60000 ms"));
+		failUpdateConfigBuild(tlt, life, null, pu, ec, new MissingParameterException("provider"));
+		failUpdateConfigBuild(tlt, life, "    \t  ", pu, ec,
+				new MissingParameterException("provider"));
+		failUpdateConfigBuild(tlt, life, prov, null, ec, new NullPointerException("update"));
+		failUpdateConfigBuild(tlt, life, prov, pu, null, new NullPointerException("config"));
+	}
+	
+	private void failUpdateConfigBuild(
+			final TokenLifetimeType tlt,
+			final long lifetimeMS,
+			final String provider,
+			final ProviderUpdate update,
+			final ExternalConfig ec,
+			final Exception e) {
+		try {
+			AuthConfigUpdate.getBuilder().withExternalConfig(ec)
+					.withProviderUpdate(provider, update)
+					.withTokenLifeTime(tlt, lifetimeMS);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+		
 	}
 	
 	@Test
@@ -342,7 +500,7 @@ public class AuthConfigTest {
 	@Test
 	public void configSetConstructFail() throws Exception {
 		failConstructConfigSet(null, new TestExtCfg(), "cfg");
-		failConstructConfigSet(new AuthConfig(null, null, null), null, "extcfg");
+		failConstructConfigSet(new AuthConfig(true, null, null), null, "extcfg");
 	}
 	
 	@Test

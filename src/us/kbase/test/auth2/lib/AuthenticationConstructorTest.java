@@ -26,6 +26,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ExternalConfig;
@@ -62,8 +63,9 @@ public class AuthenticationConstructorTest {
 		
 		final Authentication auth = new Authentication(storage, Collections.emptySet(),
 				new TestExternalConfig<>(SET_THINGY));
-		verify(storage).updateConfig(new AuthConfigSet<TestExternalConfig<Action>>(ac,
-				new TestExternalConfig<>(SET_THINGY)), false);
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false).withDefaultTokenLifeTimes()
+				.withExternalConfig(new TestExternalConfig<>(SET_THINGY)).build(), false);
 		
 		final TestExternalConfig<State> t =
 				auth.getExternalConfig(new TestExternalConfigMapper());
@@ -75,11 +77,10 @@ public class AuthenticationConstructorTest {
 	@Test
 	public void updateConfigFail() throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
-		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
 		doThrow(new AuthStorageException("foobar")).when(
-				storage).updateConfig(new AuthConfigSet<TestExternalConfig<Action>>(ac,
-						new TestExternalConfig<>(SET_THINGY)), false);
+				storage).updateConfig(AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(false).withDefaultTokenLifeTimes()
+						.withExternalConfig(new TestExternalConfig<>(SET_THINGY)).build(), false);
 		
 		failConstruct(storage, Collections.emptySet(), new TestExternalConfig<>(SET_THINGY),
 				new StorageInitException("Failed to set config in storage: foobar"));
@@ -170,8 +171,8 @@ public class AuthenticationConstructorTest {
 		ids.add(new NullIdProv("Prov2", cfg2));
 		
 		final Map<String, ProviderConfig> idcfg = new HashMap<>();
-		idcfg.put("Prov1", AuthConfig.DEFAULT_PROVIDER_CONFIG);
-		idcfg.put("Prov2", AuthConfig.DEFAULT_PROVIDER_CONFIG);
+		idcfg.put("Prov1", new ProviderConfig(false, false, false));
+		idcfg.put("Prov2", new ProviderConfig(false, false, false));
 		
 		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, idcfg,
 				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
@@ -181,8 +182,12 @@ public class AuthenticationConstructorTest {
 		
 		final Authentication auth = new Authentication(storage, ids,
 				new TestExternalConfig<>(SET_THINGY));
-		verify(storage).updateConfig(new AuthConfigSet<TestExternalConfig<Action>>(ac,
-				new TestExternalConfig<>(SET_THINGY)), false);
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false).withDefaultTokenLifeTimes()
+				.withExternalConfig(new TestExternalConfig<>(SET_THINGY))
+				.withProviderUpdate("Prov1", AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE)
+				.withProviderUpdate("Prov2", AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE)
+				.build(), false);
 		
 		assertThat("incorrect providers", auth.getIdentityProviders(),
 				is(Collections.emptyList())); //since no providers are enabled
@@ -205,5 +210,24 @@ public class AuthenticationConstructorTest {
 		
 		failConstruct(storage, ids, new TestExternalConfig<>(SET_THINGY),
 				new IllegalArgumentException("Duplicate provider name: prov2"));
+	}
+	
+	@Test
+	public void withIDsFailNullEmpty() throws Exception {
+		final AuthStorage storage = mock(AuthStorage.class);
+		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
+				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+		
+		final Set<IdentityProvider> ids = new HashSet<>();
+		ids.add(new NullIdProv(null, cfg1));
+		
+		failConstruct(storage, ids, new TestExternalConfig<>(SET_THINGY),
+				new NullPointerException("provider name"));
+		
+		ids.clear();
+		ids.add(new NullIdProv("   \t ", cfg1));
+		failConstruct(storage, ids, new TestExternalConfig<>(SET_THINGY),
+				new IllegalArgumentException("Bad provider name:    \t "));
 	}
 }

@@ -15,6 +15,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
@@ -371,14 +372,14 @@ public interface AuthStorage {
 			NoSuchIdentityException;
 
 	/** Update the system configuration.
-	 * @param authConfigSet the configuration to set. Null values are ignored.
+	 * @param authConfigUpdate the configuration update.
 	 * @param overwrite whether the new configuration should overwrite the current configuration.
 	 * If false, only new values are stored.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
 	<T extends ExternalConfig> void updateConfig(
-			AuthConfigSet<T> authConfigSet,
+			AuthConfigUpdate<T> authConfigUpdate,
 			boolean overwrite)
 			throws AuthStorageException;
 

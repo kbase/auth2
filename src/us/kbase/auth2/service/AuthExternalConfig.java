@@ -22,8 +22,6 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	//TODO TEST
 	//TODO JAVADOC
 	
-	//TODO CONFIG nulls = no change doesn't work. What if you want to remove the url?
-	
 	private static final String ALLOWED_POST_LOGIN_REDIRECT_PREFIX =
 			"allowedPostLoginRedirectPrefix";
 	private static final String COMPLETE_LOGIN_REDIRECT = "completeLoginRedirect";
@@ -34,14 +32,10 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 
 	private static final ConfigItem<URL, Action> MT_URL = ConfigItem.noAction();
 	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
-	private static final ConfigItem<Boolean, Action> MT_BOOL = ConfigItem.noAction();
 
 	public static final AuthExternalConfig<Action> SET_DEFAULT;
-	public static final AuthExternalConfig<Action> NO_CHANGE;
-	
 	static {
 		try {
-			NO_CHANGE = new AuthExternalConfig<>(MT_URL, MT_URL, MT_URL, MT_URL, MT_BOOL, MT_BOOL);
 			SET_DEFAULT = new AuthExternalConfig<>(
 					MT_URL, MT_URL, MT_URL, MT_URL, SET_FALSE, SET_FALSE);
 		} catch (IllegalParameterException e) {
@@ -203,7 +197,8 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 
 		private ConfigItem<URL, State> getURL(
-				final Map<String, ConfigItem<String, State>> config, final String key)
+				final Map<String, ConfigItem<String, State>> config,
+				final String key)
 				throws ExternalConfigMappingException {
 			final ConfigItem<String, State> url = config.get(key);
 			final ConfigItem<URL, State> allowed;
@@ -224,9 +219,9 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 
 		private ConfigItem<Boolean, State> getBoolean(
 				final Map<String, ConfigItem<String, State>> config,
-				final String paramName)
+				final String key)
 				throws ExternalConfigMappingException {
-			final ConfigItem<String, State> value = config.get(paramName);
+			final ConfigItem<String, State> value = config.get(key);
 			final ConfigItem<Boolean, State> ret;
 			if (value == null || !value.hasItem()) {
 				ret = ConfigItem.emptyState();
@@ -237,7 +232,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			} else {
 				throw new ExternalConfigMappingException(String.format(
 						"Expected value of %s or %s for parameter %s",
-						TRUE, FALSE, paramName));
+						TRUE, FALSE, key));
 			}
 			return ret;
 		}

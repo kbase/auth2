@@ -54,6 +54,8 @@ import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -1521,25 +1523,47 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private void updateConfig(
+	private <T> void updateConfig(
 			final String collection,
 			final String key,
-			final Object value,
+			final Optional<T> value,
+			final boolean overwrite)
+			throws AuthStorageException {
+		if (!value.isPresent()) {
+			return;
+		}
+		final Document q = new Document(Fields.CONFIG_KEY, key);
+		updateConfig(collection, q, value.get(), overwrite);
+	}
+	
+	private <T> void updateConfig(
+			final String collection,
+			final String key,
+			final long value,
 			final boolean overwrite)
 			throws AuthStorageException {
 		final Document q = new Document(Fields.CONFIG_KEY, key);
 		updateConfig(collection, q, value, overwrite);
 	}
-
+	
+	// assumes a set action
+	private void updateConfig(
+			final String collection,
+			final String key,
+			final ConfigItem<String, Action> value,
+			final boolean overwrite)
+			throws AuthStorageException {
+		final Document q = new Document(Fields.CONFIG_KEY, key);
+		updateConfig(collection, q, value.getItem(), overwrite);
+	}
+	
+	// assumes value is non null
 	private void updateConfig(
 			final String collection,
 			final Document query,
 			final Object value,
 			final boolean overwrite) // may want to have an action type to allow remove?
 			throws AuthStorageException {
-		if (value == null) {
-			return;
-		}
 		final String op = overwrite ? "$set" : "$setOnInsert";
 		final Document u = new Document(op, new Document(Fields.CONFIG_VALUE, value));
 		try {
@@ -1552,12 +1576,15 @@ public class MongoStorage implements AuthStorage {
 	private void updateProviderConfig(
 			final String provider,
 			final String key,
-			final Object value,
+			final Optional<Boolean> value,
 			final boolean overwrite)
 			throws AuthStorageException {
+		if (!value.isPresent()) {
+			return;
+		}
 		final Document q = new Document(Fields.CONFIG_KEY, key)
 				.append(Fields.CONFIG_PROVIDER, provider);
-		updateConfig(COL_CONFIG_PROVIDERS, q, value, overwrite);
+		updateConfig(COL_CONFIG_PROVIDERS, q, value.get(), overwrite);
 	}
 	
 	private void removeConfig(final String collection, final String key, final boolean overwrite)
@@ -1575,33 +1602,36 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public <T extends ExternalConfig> void updateConfig(
-			final AuthConfigSet<T> cfgSet,
+			final AuthConfigUpdate<T> cfgUpdate,
 			final boolean overwrite)
 			throws AuthStorageException {
 
-		nonNull(cfgSet, "cfgSet");
+		nonNull(cfgUpdate, "cfgSet");
 		updateConfig(COL_CONFIG_APPLICATION,
-				Fields.CONFIG_APP_ALLOW_LOGIN, cfgSet.getCfg().isLoginAllowed(), overwrite);
+				Fields.CONFIG_APP_ALLOW_LOGIN, cfgUpdate.getLoginAllowed(), overwrite);
 		for (final Entry<TokenLifetimeType, Long> e:
-				cfgSet.getCfg().getTokenLifetimeMS().entrySet()) {
+				cfgUpdate.getTokenLifetimeMS().entrySet()) {
 			updateConfig(COL_CONFIG_APPLICATION,
 					TOKEN_LIFETIME_FIELD_MAP.get(e.getKey()), e.getValue(), overwrite);
 		}
-		for (final Entry<String, ProviderConfig> e: cfgSet.getCfg().getProviders().entrySet()) {
+		for (final Entry<String, ProviderUpdate> e: cfgUpdate.getProviders().entrySet()) {
 			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_ENABLED,
-					e.getValue().isEnabled(), overwrite);
+					e.getValue().getEnabled(), overwrite);
 			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LOGIN_CHOICE,
-					e.getValue().isForceLoginChoice(), overwrite);
+					e.getValue().getForceLoginChoice(), overwrite);
 			updateProviderConfig(e.getKey(), Fields.CONFIG_PROVIDER_FORCE_LINK_CHOICE,
-					e.getValue().isForceLinkChoice(), overwrite);
+					e.getValue().getForceLinkChoice(), overwrite);
 		}
 		
-		for (final Entry<String, ConfigItem<String, Action>> e:
-				cfgSet.getExtcfg().toMap().entrySet()) {
-			if (e.getValue().getAction().isSet()) {
-				updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue().getItem(), overwrite);
-			} else if (e.getValue().getAction().isRemove()) {
-				removeConfig(COL_CONFIG_EXTERNAL, e.getKey(), overwrite);
+		if (cfgUpdate.getExternalConfig().isPresent()) {
+			for (final Entry<String, ConfigItem<String, Action>> e:
+					cfgUpdate.getExternalConfig().get().toMap().entrySet()) {
+				if (e.getValue().getAction().isSet()) {
+					updateConfig(COL_CONFIG_EXTERNAL, e.getKey(), e.getValue(),
+							overwrite);
+				} else if (e.getValue().getAction().isRemove()) {
+					removeConfig(COL_CONFIG_EXTERNAL, e.getKey(), overwrite);
+				}
 			}
 		}
 	}
@@ -1655,12 +1685,12 @@ public class MongoStorage implements AuthStorage {
 			}
 			final Map<String, ProviderConfig> provs = getProviderConfig();
 			final Map<String, Document> appcfg = getAppConfig();
-			final Boolean allowLogin;
+			final boolean allowLogin;
 			if (appcfg.containsKey(Fields.CONFIG_APP_ALLOW_LOGIN)) {
 				allowLogin = appcfg.get(Fields.CONFIG_APP_ALLOW_LOGIN)
 						.getBoolean(Fields.CONFIG_VALUE);
 			} else {
-				allowLogin = null;
+				allowLogin = AuthConfig.DEFAULT_LOGIN_ALLOWED;
 			}
 			final Map<TokenLifetimeType, Long> tokens = new HashMap<>();
 			for (final Entry<TokenLifetimeType, String> e: TOKEN_LIFETIME_FIELD_MAP.entrySet()) {
