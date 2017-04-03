@@ -4,6 +4,8 @@ import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
@@ -47,6 +49,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
@@ -465,6 +468,17 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
+	private InetAddress getIPAddress(final String ipAddress) throws AuthStorageException {
+		if (ipAddress == null) {
+			return null;
+		}
+		try {
+			return InetAddress.getByName(ipAddress);
+		} catch (UnknownHostException e) {
+			throw new AuthStorageException("Illegal value stored in db: " + e.getMessage(), e);
+		}
+	}
+	
 	private TokenName getTokenName(final String tokenName) throws AuthStorageException {
 		if (tokenName == null) {
 			return null;
@@ -621,6 +635,7 @@ public class MongoStorage implements AuthStorage {
 		nonNull(token, "token");
 		checkStringNoCheckedException(hash, "hash");
 		final Optional<TokenName> tokenName = token.getTokenName();
+		final TokenCreationContext ctx = token.getContext();
 		final Document td = new Document(
 				Fields.TOKEN_TYPE, token.getTokenType().getID())
 				.append(Fields.TOKEN_USER_NAME, token.getUserName().getName())
@@ -629,7 +644,19 @@ public class MongoStorage implements AuthStorage {
 						tokenName.get().getName() : null)
 				.append(Fields.TOKEN_TOKEN, hash)
 				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
-				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()));
+				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()))
+				.append(Fields.TOKEN_AGENT, ctx.getAgent().isPresent() ?
+						ctx.getAgent().get() : null)
+				.append(Fields.TOKEN_AGENT_VER, ctx.getAgentVersion().isPresent() ?
+						ctx.getAgentVersion().get() : null)
+				.append(Fields.TOKEN_OS, ctx.getOS().isPresent() ? ctx.getOS().get() : null)
+				.append(Fields.TOKEN_OS_VER, ctx.getOSVersion().isPresent() ?
+						ctx.getOSVersion().get() : null)
+				.append(Fields.TOKEN_DEVICE, ctx.getDevice().isPresent() ?
+						ctx.getDevice().get() : null)
+				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
+						ctx.getIpAddress().get() : null)
+				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -649,6 +676,16 @@ public class MongoStorage implements AuthStorage {
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
+	}
+
+	private List<Document> toCustomContextList(
+			final Map<String, String> customContext) {
+		final List<Document> ret = new LinkedList<>();
+		for (final Entry<String, String> e: customContext.entrySet()) {
+			ret.add(new Document(Fields.TOKEN_CUSTOM_KEY, e.getKey())
+					.append(Fields.TOKEN_CUSTOM_VALUE, e.getValue()));
+		}
+		return ret;
 	}
 
 	/* Use this for finding documents where indexes should force only a single
@@ -705,7 +742,33 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_CREATION).toInstant(),
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
+				.withContext(toTokenCreationContext(t))
 				.build();
+	}
+	
+	private TokenCreationContext toTokenCreationContext(final Document t)
+			throws AuthStorageException {
+		final TokenCreationContext.Builder b = TokenCreationContext.getBuilder()
+				.withNullableIpAddress(getIPAddress(t.getString(Fields.TOKEN_IP)))
+				.withNullableAgent(t.getString(Fields.TOKEN_AGENT),
+						t.getString(Fields.TOKEN_AGENT_VER))
+				.withNullableOS(t.getString(Fields.TOKEN_OS), t.getString(Fields.TOKEN_OS_VER))
+				.withNullableDevice(t.getString(Fields.TOKEN_DEVICE));
+		
+		@SuppressWarnings("unchecked")
+		final List<Document> custom = (List<Document>) t.get(Fields.TOKEN_CUSTOM_CONTEXT);
+		if (custom != null) { // backwards compatibility
+			for (final Document c: custom) {
+				try {
+					b.withCustomContext(c.getString(Fields.TOKEN_CUSTOM_KEY),
+							c.getString(Fields.TOKEN_CUSTOM_VALUE));
+				} catch (MissingParameterException | IllegalParameterException e) {
+					throw new AuthStorageException(
+							"Illegal value stored in db: " + e.getMessage(), e);
+				}
+			}
+		}
+		return b.build();
 	}
 
 	@Override

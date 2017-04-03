@@ -1,13 +1,17 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
+import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Collections;
 import java.util.Map;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
@@ -27,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -35,6 +40,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.UserAgentParser;
 
 @Path(UIPaths.LOCAL_ROOT)
 public class LocalAccounts {
@@ -47,6 +53,9 @@ public class LocalAccounts {
 	
 	@Inject
 	private AuthAPIStaticConfig cfg;
+	
+	@Inject
+	private UserAgentParser userAgentParser;
 	
 	@GET
 	@Path(UIPaths.LOCAL_LOGIN)
@@ -61,6 +70,7 @@ public class LocalAccounts {
 	@Path(UIPaths.LOCAL_LOGIN_RESULT)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public Response loginResult(
+			@Context final HttpServletRequest req,
 			@FormParam("user") final String userName,
 			@FormParam("pwd") String pwd, //char makes Jersey puke
 			//checkbox, so "on" = checked, null = not checked
@@ -76,7 +86,12 @@ public class LocalAccounts {
 		}
 		final Password cpwd = new Password(pwd.toCharArray());
 		pwd = null; // try to get pwd GC'd as quickly as possible
-		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd);
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		
+		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd, tcc);
 		//TODO LOG log
 		if (llr.isPwdResetRequired()) {
 			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?user=" +

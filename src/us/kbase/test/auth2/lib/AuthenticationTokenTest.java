@@ -27,6 +27,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
@@ -54,6 +55,8 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 public class AuthenticationTokenTest {
 	
 	/* tests token get, create, revoke, and getBare. */
+	
+	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
 	
 	private static final StoredToken TOKEN1;
 	private static final StoredToken TOKEN2;
@@ -1267,18 +1270,20 @@ public class AuthenticationTokenTest {
 	public void createTokenFailNulls() throws Exception {
 		final Authentication auth = initTestMocks().auth;
 		
-		failCreateToken(auth, null, new TokenName("foo"), TokenType.DEV,
+		failCreateToken(auth, null, new TokenName("foo"), TokenType.DEV, CTX,
 				new NullPointerException("token"));
-		failCreateToken(auth, new IncomingToken("foo"), null, TokenType.DEV,
+		failCreateToken(auth, new IncomingToken("foo"), null, TokenType.DEV, CTX,
 				new NullPointerException("tokenName"));
-		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), null,
+		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), null, CTX,
 				new NullPointerException("tokenType"));
+		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), TokenType.DEV, null,
+				new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
 	public void createTokenFailCreateLogin() throws Exception {
 		final Authentication auth = initTestMocks().auth;
-		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), TokenType.LOGIN,
+		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), TokenType.LOGIN, CTX,
 				new IllegalArgumentException(
 						"Cannot create a login token without logging in"));
 	}
@@ -1293,7 +1298,8 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
-		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, new InvalidTokenException());
+		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, CTX,
+				new InvalidTokenException());
 	}
 	
 	@Test
@@ -1323,7 +1329,7 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
-		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV,
+		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, CTX,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, tokenType.getDescription() +
 						" tokens are not allowed for this operation"));
 	}
@@ -1343,7 +1349,7 @@ public class AuthenticationTokenTest {
 		
 		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
-		failCreateToken(auth, t, new TokenName("baz"), TokenType.AGENT, new RuntimeException(
+		failCreateToken(auth, t, new TokenName("baz"), TokenType.AGENT, CTX, new RuntimeException(
 				"There seems to be an error in the storage system. Token was valid, but no user"));
 	}
 	
@@ -1380,20 +1386,25 @@ public class AuthenticationTokenTest {
 		when(clock.instant()).thenReturn(time, (Instant) null);
 		
 		try {
-			final NewToken nt = auth.createToken(t, new TokenName("a name"), tokenType);
+			final NewToken nt = auth.createToken(t, new TokenName("a name"), tokenType,
+					TokenCreationContext.getBuilder().withNullableDevice("device").build());
 			
 			final Instant expiration = Instant.ofEpochMilli(time.toEpochMilli() +
 					(expectedLifetime));
 			
 			verify(storage).storeToken(StoredToken.getBuilder(tokenType, id, user.getUserName())
 					.withLifeTime(time, expiration)
-					.withTokenName(new TokenName("a name")).build(),
+					.withTokenName(new TokenName("a name"))
+					.withContext(TokenCreationContext.getBuilder()
+							.withNullableDevice("device").build()).build(),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 			
 			final NewToken expected = new NewToken(
 					StoredToken.getBuilder(tokenType, id, user.getUserName())
 							.withLifeTime(time, time.plusMillis(expectedLifetime))
-							.withTokenName(new TokenName("a name")).build(),
+							.withTokenName(new TokenName("a name"))
+							.withContext(TokenCreationContext.getBuilder()
+									.withNullableDevice("device").build()).build(),
 					"this is a token");
 			
 			assertThat("incorrect token", nt, is(expected));
@@ -1422,9 +1433,10 @@ public class AuthenticationTokenTest {
 			final IncomingToken t,
 			final TokenName name,
 			final TokenType tokenType,
+			final TokenCreationContext ctx,
 			final Exception e) {
 		try {
-			auth.createToken(t, name, tokenType);
+			auth.createToken(t, name, tokenType, ctx);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

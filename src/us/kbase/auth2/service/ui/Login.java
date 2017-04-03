@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
+import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
@@ -9,6 +11,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -18,6 +21,7 @@ import java.util.Set;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
 import javax.ws.rs.FormParam;
@@ -48,6 +52,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -71,9 +76,9 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.UserAgentParser;
 import us.kbase.auth2.service.common.IdentityProviderInput;
 import us.kbase.auth2.service.common.IncomingJSON;
-import us.kbase.auth2.service.common.NewExternalToken;
 
 @Path(UIPaths.LOGIN_ROOT)
 public class Login {
@@ -96,6 +101,9 @@ public class Login {
 	
 	@Inject
 	private AuthAPIStaticConfig cfg;
+	
+	@Inject
+	private UserAgentParser userAgentParser;
 	
 	@GET
 	@Template(name = "/loginstart")
@@ -189,6 +197,7 @@ public class Login {
 	@GET
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
+			@Context final HttpServletRequest req,
 			@PathParam("provider") final String provider,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
@@ -202,7 +211,9 @@ public class Login {
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
 		IdentityProviderInput.checkState(state, retstate);
-		final LoginToken lr = auth.login(provider, authcode);
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
+		final LoginToken lr = auth.login(provider, authcode, tcc);
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
 		// note nginx will rewrite the redirect appropriately so absolute
@@ -223,6 +234,7 @@ public class Login {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
+			@Context final HttpServletRequest req,
 			@PathParam("provider") final String provider,
 			@Context final UriInfo uriInfo,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
@@ -238,10 +250,15 @@ public class Login {
 		input.exceptOnAdditionalProperties();
 		input.checkState(state);
 		
-		final LoginToken lr = auth.login(provider, input.getAuthCode());
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		
+		final LoginToken lr = auth.login(provider, input.getAuthCode(), tcc);
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
-			choice.put("token", new NewExternalToken(lr.getToken()));
+			choice.put("token", new NewUIToken(lr.getToken()));
 			choice.put("logged_in", true);
 			choice.put("redirect", getRedirectURL(redirect));
 			final ResponseBuilder b = Response.ok(choice);
@@ -289,7 +306,7 @@ public class Login {
 		
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
-		ret.put("token", new NewExternalToken(newtoken));
+		ret.put("token", new NewUIToken(newtoken));
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	
@@ -433,6 +450,7 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
+			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
@@ -443,12 +461,16 @@ public class Login {
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
 		
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				PickChoice.getString(identityID, "id"),
-				PickChoice.getPolicyIDs(policyIDs), linkAll != null);
+				PickChoice.getPolicyIDs(policyIDs), tcc, linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
-	
+
 	private static class PickChoice extends IncomingJSON {
 		
 		private final String id;
@@ -507,6 +529,7 @@ public class Login {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
+			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final PickChoice pick)
@@ -518,8 +541,12 @@ public class Login {
 		}
 		
 		pick.exceptOnAdditionalProperties();
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
-				pick.getIdentityID(), pick.getPolicyIDs(), pick.isLinkAll());
+				pick.getIdentityID(), pick.getPolicyIDs(), tcc, pick.isLinkAll());
 		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
 	}
 
@@ -527,6 +554,7 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
+			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
@@ -544,6 +572,11 @@ public class Login {
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
 				CreateChoice.getString(identityID, "id"),
@@ -551,6 +584,7 @@ public class Login {
 				new DisplayName(displayName),
 				new EmailAddress(email),
 				CreateChoice.getPolicyIDs(policyIDs),
+				tcc,
 				linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
@@ -582,6 +616,7 @@ public class Login {
 	@Produces(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
+			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final CreateChoice create)
@@ -595,6 +630,11 @@ public class Login {
 		
 		create.exceptOnAdditionalProperties();
 		
+		//TODO CTX add custom context to input
+		final Map<String, String> customContext = Collections.emptyMap();
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
 				create.getIdentityID(),
@@ -602,6 +642,7 @@ public class Login {
 				new DisplayName(create.displayName),
 				new EmailAddress(create.email),
 				create.getPolicyIDs(),
+				tcc,
 				create.isLinkAll());
 		return createLoginResponseJSON(Response.Status.CREATED, redirect, newtoken);
 	}

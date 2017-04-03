@@ -255,7 +255,6 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		return true;
 	}
 	
-	// this doesn't quite work right, T always has to be an ExternalConfig. fix later.
 	/** Get a builder for an authorization configuration update.
 	 * @return a builder.
 	 */

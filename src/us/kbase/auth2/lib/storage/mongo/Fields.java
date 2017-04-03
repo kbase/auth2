@@ -111,6 +111,24 @@ public class Fields {
 	public static final String TOKEN_NAME = "name";
 	/** The date the token was created. */
 	public static final String TOKEN_CREATION = "create";
+	/** The operating system of the user when the token was created. */
+	public static final String TOKEN_OS = "os";
+	/** The version of the operating system of the user when the token was created. */
+	public static final String TOKEN_OS_VER = "osver";
+	/** The agent of the user when the token was created. */
+	public static final String TOKEN_AGENT = "agent";
+	/** The version of the agent of the user when the token was created. */
+	public static final String TOKEN_AGENT_VER = "agentver";
+	/** The device of the user when the token was created. */
+	public static final String TOKEN_DEVICE = "device";
+	/** The IP address of the user when the token was created. */
+	public static final String TOKEN_IP = "ip";
+	/** Any custom token creation context information supplied by the user. */
+	public static final String TOKEN_CUSTOM_CONTEXT = "custctx";
+	/** A key for a custom context key / value pair. */
+	public static final String TOKEN_CUSTOM_KEY = "k";
+	/** A value for a custom context key / value pair. */
+	public static final String TOKEN_CUSTOM_VALUE = "v";
 	
 	/* ************************
 	 * temporary token fields

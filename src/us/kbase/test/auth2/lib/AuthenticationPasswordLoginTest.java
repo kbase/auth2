@@ -34,6 +34,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
@@ -67,6 +68,8 @@ public class AuthenticationPasswordLoginTest {
 	
 	/* tests anything to do with passwords, including login. */
 	
+	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
+	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
@@ -98,7 +101,9 @@ public class AuthenticationPasswordLoginTest {
 		
 		final NewToken expectedToken = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("device")
+						.build()).build(),
 				"this is a token");
 		
 		final LocalUser.Builder b = LocalUser.getBuilder(
@@ -120,11 +125,14 @@ public class AuthenticationPasswordLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(4000), Instant.ofEpochMilli(6000),
 				null);
 		
-		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
+		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p,
+				TokenCreationContext.getBuilder().withNullableDevice("device").build());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("device")
+						.build()).build(),
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(6000));
@@ -159,7 +167,8 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p);
+		final LocalLoginResult t = auth.localLogin(new UserName("foo"), p,
+				TokenCreationContext.getBuilder().withNullableDevice("device").build());
 		
 		assertClear(p);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(true));
@@ -173,10 +182,11 @@ public class AuthenticationPasswordLoginTest {
 		final Authentication auth = testauth.auth;
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
-		failLogin(auth, null, password, new NullPointerException("userName"));
+		failLogin(auth, null, password, CTX, new NullPointerException("userName"));
 		assertClear(password);
 		
-		failLogin(auth, new UserName("foo"), null, new NullPointerException("password"));
+		failLogin(auth, new UserName("foo"), null, CTX, new NullPointerException("password"));
+		failLogin(auth, new UserName("foo"), password, null, new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
@@ -188,7 +198,7 @@ public class AuthenticationPasswordLoginTest {
 		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
-		failLogin(auth, new UserName("foo"), password,
+		failLogin(auth, new UserName("foo"), password, CTX,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch"));
 		assertClear(password);
@@ -214,7 +224,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
-		failLogin(auth, new UserName("foo"), p,
+		failLogin(auth, new UserName("foo"), p, CTX,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch") );
 		assertClear(p);
@@ -243,8 +253,8 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(false, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failLogin(auth, new UserName("foo"), p, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Non-admin login is disabled"));
+		failLogin(auth, new UserName("foo"), p, CTX,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
 		assertClear(p);
 	}
 	
@@ -273,7 +283,7 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failLogin(auth, new UserName("foo"), p, new DisabledUserException());
+		failLogin(auth, new UserName("foo"), p, CTX, new DisabledUserException());
 		assertClear(p);
 	}
 	
@@ -314,7 +324,7 @@ public class AuthenticationPasswordLoginTest {
 		doThrow(new NoSuchUserException("foo")).when(storage)
 				.setLastLogin(new UserName("foo"), Instant.ofEpochMilli(6000));
 		
-		failLogin(auth, new UserName("foo"), p, new AuthStorageException(
+		failLogin(auth, new UserName("foo"), p, CTX, new AuthStorageException(
 				"Something is very broken. User should exist but doesn't: " +
 				"50000 No such user: foo"));
 		
@@ -329,9 +339,10 @@ public class AuthenticationPasswordLoginTest {
 			final Authentication auth,
 			final UserName userName,
 			final Password password,
+			final TokenCreationContext ctx,
 			final Exception e) {
 		try {
-			auth.localLogin(userName, password);
+			auth.localLogin(userName, password, ctx);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

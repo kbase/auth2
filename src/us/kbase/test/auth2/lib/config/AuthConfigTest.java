@@ -410,7 +410,7 @@ public class AuthConfigTest {
 	
 	@Test
 	public void updateConfigMaximal() throws Exception {
-		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+		final AuthConfigUpdate<TestExtCfg> acu = AuthConfigUpdate.<TestExtCfg>getBuilder()
 				.withLoginAllowed(true)
 				.withTokenLifeTime(TokenLifetimeType.LOGIN, 60000)
 				.withProviderUpdate("prov", new ProviderUpdate(false, true, true))

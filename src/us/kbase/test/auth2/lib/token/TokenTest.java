@@ -16,6 +16,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
@@ -184,13 +185,16 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(1000)));
 		assertThat("incorrect expiration date", ht.getExpirationDate(),
 				is(Instant.ofEpochMilli(5000)));
+		assertThat("incorrect context", ht.getContext(),
+				is(TokenCreationContext.getBuilder().build()));
 	}
 	
 	@Test
-	public void storedTokenExpDateAndName() throws Exception {
+	public void storedTokenExpDateAndNameAndContext() throws Exception {
 		final UUID id2 = UUID.randomUUID();
 		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("whee2"))
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.withTokenName(new TokenName("ugh")).build();
 		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
 		assertThat("incorrect token name", ht2.getTokenName(),
@@ -201,6 +205,8 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(27000)));
 		assertThat("incorrect expiration date", ht2.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
+		assertThat("incorrect context", ht2.getContext(),
+				is(TokenCreationContext.getBuilder().withNullableDevice("d").build()));
 	}
 	
 	@Test
@@ -218,6 +224,8 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(27000)));
 		assertThat("incorrect expiration date", ht2.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
+		assertThat("incorrect context", ht2.getContext(),
+				is(TokenCreationContext.getBuilder().build()));
 	}
 	
 	@Test
@@ -235,6 +243,8 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(27000)));
 		assertThat("incorrect expiration date", ht2.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
+		assertThat("incorrect context", ht2.getContext(),
+				is(TokenCreationContext.getBuilder().build()));
 	}
 	
 	@Test
@@ -257,19 +267,22 @@ public class TokenTest {
 		final Instant c = Instant.ofEpochMilli(1);
 		final Instant e = Instant.ofEpochMilli(2);
 		final TokenName tn = new TokenName("ugh");
-		failCreateStoredToken(null, tn, id, u, c, e, new NullPointerException("type"));
-		failCreateStoredToken(TokenType.LOGIN, null, id, u, c, e,
+		final TokenCreationContext ctx = TokenCreationContext.getBuilder().build();
+		failCreateStoredToken(null, tn, id, u, c, e, ctx, new NullPointerException("type"));
+		failCreateStoredToken(TokenType.LOGIN, null, id, u, c, e, ctx,
 				new NullPointerException("tokenName"));
-		failCreateStoredToken(TokenType.LOGIN, tn, null, u, c, e,
+		failCreateStoredToken(TokenType.LOGIN, tn, null, u, c, e, ctx,
 				new NullPointerException("id"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, null, c, e,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, null, c, e, ctx,
 				new NullPointerException("userName"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, null, e,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, null, e, ctx,
 				new NullPointerException("created"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, null,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, null, ctx,
 				new NullPointerException("expires"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, e, c,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, e, c, ctx,
 				new IllegalArgumentException("expires must be > created"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, e, null,
+				new NullPointerException("context"));
 	}
 	
 	private void failCreateStoredToken(
@@ -279,10 +292,11 @@ public class TokenTest {
 			final UserName userName,
 			final Instant creationDate,
 			final Instant expirationDate,
+			final TokenCreationContext ctx,
 			final Exception exception) {
 		try {
 			StoredToken.getBuilder(type, id, userName).withLifeTime(creationDate, expirationDate)
-					.withTokenName(tokenName).build();
+					.withTokenName(tokenName).withContext(ctx).build();
 			fail("made bad hashed token");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
