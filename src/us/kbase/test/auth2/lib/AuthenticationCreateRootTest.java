@@ -23,6 +23,7 @@ import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
@@ -59,17 +60,19 @@ public class AuthenticationCreateRootTest {
 				"0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		final Instant create = Instant.ofEpochMilli(1000000006);
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				UserName.ROOT, new DisplayName("root"), create, hash, salt).build();
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				UserName.ROOT, new DisplayName("root"), create).build();
 		
-		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(exp);
+		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(
+				exp, new PasswordHashAndSalt(hash, salt));
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
 		when(clock.instant()).thenReturn(create);
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).createLocalUser(any(LocalUser.class));
+		doAnswer(matcher).when(storage).createLocalUser(
+				any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		auth.createRoot(pwd);
 		
@@ -78,10 +81,10 @@ public class AuthenticationCreateRootTest {
 		assertClear(matcher.savedHash);
 		/* ensure method was called at least once
 		 * Usually not necessary when mocking the call, but since createLU returns null
-		 * need to ensure the method was actually called and therefore the RootuserAnswerMatcher
+		 * need to ensure the method was actually called and therefore the LocalUserAnswerMatcher
 		 * ran
 		 */
-		verify(storage).createLocalUser(any());
+		verify(storage).createLocalUser(any(), any());
 	}
 	
 	@Test
@@ -96,8 +99,8 @@ public class AuthenticationCreateRootTest {
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
 		final byte[] hash = fromBase64("0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.ofEpochMilli(1000), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.ofEpochMilli(1000))
 				.build();
 		
 		final ChangePasswordAnswerMatcher matcher =
@@ -108,13 +111,14 @@ public class AuthenticationCreateRootTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000));
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(exp);
+				.when(storage).createLocalUser(eq(exp), any(PasswordHashAndSalt.class));
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
+		doAnswer(matcher).when(storage)
+				.changePassword(eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
 		
-		when(storage.getUser(UserName.ROOT)).thenReturn(LocalUser.getBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.now(), new byte[10], new byte[8])
+		when(storage.getUser(UserName.ROOT)).thenReturn(LocalUser.getLocalUserBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.now())
 				.build());
 		
 		auth.createRoot(pwd);
@@ -128,7 +132,7 @@ public class AuthenticationCreateRootTest {
 		 * need to ensure the method was actually called and therefore the matcher above ran
 		 */
 		verify(storage).changePassword(
-				eq(UserName.ROOT), any(byte[].class), any(byte[].class), eq(false));
+				eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
 	}
 	
 	@Test
@@ -144,7 +148,8 @@ public class AuthenticationCreateRootTest {
 		when(clock.instant()).thenReturn(Instant.now());
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(any(LocalUser.class));
+				.when(storage).createLocalUser(
+						any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		// ignore the change password call, tested elsewhere
 		when(storage.getUser(UserName.ROOT)).thenThrow(
@@ -171,8 +176,8 @@ public class AuthenticationCreateRootTest {
 		
 		when(clock.instant()).thenReturn(Instant.now());
 		
-		doThrow(new NoSuchRoleException("some role"))
-				.when(storage).createLocalUser(any(LocalUser.class));
+		doThrow(new NoSuchRoleException("some role")).when(storage).createLocalUser(
+				any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		try {
 			auth.createRoot(new Password("foobarbazbat".toCharArray()));
@@ -205,13 +210,15 @@ public class AuthenticationCreateRootTest {
 		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
-				.when(storage).createLocalUser(any(LocalUser.class));
+				.when(storage).createLocalUser(
+						any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		// need to check at call time before bytes are cleared
-		doAnswer(matcher).when(storage).changePassword(UserName.ROOT, hash, salt, false);
+		doAnswer(matcher).when(storage)
+				.changePassword(eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
 		
-		final LocalUser disabled = LocalUser.getBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.now(), new byte[10], new byte[8])
+		final LocalUser disabled = LocalUser.getLocalUserBuilder(
+				UserName.ROOT, new DisplayName("root"), Instant.now())
 				.withUserDisabledState(new UserDisabledState("foo", UserName.ROOT, Instant.now()))
 				.build();
 		

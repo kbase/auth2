@@ -186,7 +186,6 @@ public class Tokens {
 
 	//TODO CTX update token page with set context
 	//TODO CTX update login pages with set context
-	//TODO NOW don't return user policy IDs with API (any other fields not needed?)
 	private NewUIToken createtoken(
 			final HttpServletRequest req,
 			final String tokenName,

@@ -53,6 +53,7 @@ import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -314,6 +315,7 @@ public class Authentication {
 			throw e;
 		}
 		final char[] pwd_copy = pwd.getPassword();
+		pwd.clear();
 		final byte[] salt = randGen.generateSalt();
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 		Password.clearPasswordArray(pwd_copy);
@@ -325,15 +327,16 @@ public class Authentication {
 			} catch (IllegalParameterException | MissingParameterException e) {
 				throw new RuntimeException("This is impossible", e);
 			}
-			final LocalUser root = LocalUser.getBuilder(
-					UserName.ROOT, dn, clock.instant(), passwordHash, salt).build();
+			final LocalUser root = LocalUser.getLocalUserBuilder(
+					UserName.ROOT, dn, clock.instant()).build();
 			try {
-				storage.createLocalUser(root);
+				storage.createLocalUser(root, new PasswordHashAndSalt(passwordHash, salt));
 				// only way to avoid a race condition. Checking existence before creating user
 				// means if user is added between check and update update will fail
 			} catch (UserExistsException uee) {
 				try {
-					storage.changePassword(UserName.ROOT, passwordHash, salt, false);
+					storage.changePassword(
+							UserName.ROOT, new PasswordHashAndSalt(passwordHash, salt), false);
 					if (storage.getUser(UserName.ROOT).isDisabled()) {
 						storage.enableAccount(UserName.ROOT, UserName.ROOT);
 					}
@@ -344,7 +347,6 @@ public class Authentication {
 				throw new RuntimeException("didn't supply any roles", e);
 			}
 		} finally {
-			pwd.clear();
 			clear(passwordHash);
 			clear(salt);
 		}
@@ -379,7 +381,7 @@ public class Authentication {
 		}
 		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
-		char [] pwd_copy = null;
+		char[] pwd_copy = null;
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {
@@ -387,10 +389,10 @@ public class Authentication {
 			salt = randGen.generateSalt();
 			pwd_copy = pwd.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
-			final LocalUser lu = LocalUser.getBuilder(
-					userName, displayName, clock.instant(), passwordHash, salt)
+			final LocalUser lu = LocalUser.getLocalUserBuilder(
+					userName, displayName, clock.instant())
 					.withEmailAddress(email).withForceReset(true).build();
-			storage.createLocalUser(lu);
+			storage.createLocalUser(lu, new PasswordHashAndSalt(passwordHash, salt));
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		} catch (Throwable t) {
@@ -408,8 +410,6 @@ public class Authentication {
 		}
 		return pwd;
 	}
-	
-	//TODO NOW refactor local user to not include pwdhash and salt. pass separately in create call, add getSalt(UserName) and verify(UserName, byte[] pwdhash) method. Never pull the pwdhash from the db and only pull the salt when checking pwd.
 	
 	/** Login with a local user.
 	 * 
@@ -440,20 +440,25 @@ public class Authentication {
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, AuthenticationException, UnauthorizedException {
 		nonNull(password, "password");
+		final char[] pwd_copy = password.getPassword(); // no way to test this is cleared
+		password.clear();
 		final LocalUser u;
+		PasswordHashAndSalt creds = null;
 		try {
 			nonNull(userName, "userName");
 			try {
+				creds = storage.getPasswordHashAndSalt(userName);
+				if (!pwdcrypt.authenticate(pwd_copy, creds.getPasswordHash(), creds.getSalt())) {
+					throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+							"Username / password mismatch");
+				}
+				Password.clearPasswordArray(pwd_copy);
+				creds.clear();
 				u = storage.getLocalUser(userName);
-			} catch (NoSuchUserException e) {
+			} catch (NoSuchLocalUserException e) {
 				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch");
 			}
-			if (!pwdcrypt.authenticate(password.getPassword(), u.getPasswordHash(), u.getSalt())) {
-				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"Username / password mismatch");
-			}
-			password.clear();
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Non-admin login is disabled");
@@ -462,7 +467,10 @@ public class Authentication {
 				throw new DisabledUserException();
 			}
 		} finally {
-			password.clear();
+			Password.clearPasswordArray(pwd_copy);
+			if (creds != null) {
+				creds.clear();
+			}
 		}
 		return u;
 	}
@@ -489,17 +497,17 @@ public class Authentication {
 		byte[] passwordHash = null;
 		try {
 			nonNull(pwdnew, "pwdnew");
-			if(pwdnew.equals(password)) {
+			if (pwdnew.equals(password)) {
 				throw new IllegalPasswordException("Old and new passwords are identical.");
 			}
 			pwdnew.checkValidity();
 			getLocalUser(userName, password); //checks pwd validity and nulls
 			salt = randGen.generateSalt();
 			final char [] pwd_copy = pwdnew.getPassword();
+			pwdnew.clear();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			Password.clearPasswordArray(pwd_copy);
-			pwdnew.clear();
-			storage.changePassword(userName, passwordHash, salt, false);
+			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), false);
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
@@ -536,10 +544,12 @@ public class Authentication {
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {
-			pwd = new Password(randGen.getTemporaryPassword(TEMP_PWD_LENGTH));
+			final char[] temporaryPassword = randGen.getTemporaryPassword(TEMP_PWD_LENGTH);
+			pwd = new Password(temporaryPassword);
 			salt = randGen.generateSalt();
-			passwordHash = pwdcrypt.getEncryptedPassword(pwd.getPassword(), salt);
-			storage.changePassword(userName, passwordHash, salt, true);
+			passwordHash = pwdcrypt.getEncryptedPassword(temporaryPassword, salt);
+			Password.clearPasswordArray(temporaryPassword);
+			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), true);
 		} catch (Throwable t) {
 			if (pwd != null) {
 				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway

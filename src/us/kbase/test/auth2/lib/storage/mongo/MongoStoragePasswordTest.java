@@ -14,6 +14,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -37,8 +38,9 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	public void reset() throws Exception {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		storage.createLocalUser(LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, passwordHash, salt).build());
+		storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new PasswordHashAndSalt(passwordHash, salt));
 
 		storage.forcePasswordReset(new UserName("foo"));
 		
@@ -72,10 +74,12 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	public void resetAll() throws Exception {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		storage.createLocalUser(LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, passwordHash, salt).build());
-		storage.createLocalUser(LocalUser.getBuilder(
-				new UserName("foo2"), new DisplayName("bar"), NOW, passwordHash, salt).build());
+		storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new PasswordHashAndSalt(passwordHash, salt));
+		storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo2"), new DisplayName("bar"), NOW).build(),
+				new PasswordHashAndSalt(passwordHash, salt));
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo3"), new DisplayName("bar"), NOW, REMOTE).build());
 		
@@ -93,8 +97,9 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	public void changePassword() throws Exception {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		storage.createLocalUser(LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, passwordHash, salt).build());
+		storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
 		
@@ -104,11 +109,14 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		
 		when(mockClock.instant()).thenReturn(i);
 		
-		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, false);
+		storage.changePassword(
+				new UserName("foo"), new PasswordHashAndSalt(newPasswordHash, newSalt),false);
 		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
+		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("foo"));
+		assertThat("incorrect pasword",
+				new String(creds.getPasswordHash(), StandardCharsets.UTF_8),
 				is("foobarbaz2"));
-		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
+		assertThat("incorrect salt", new String(creds.getSalt(), StandardCharsets.UTF_8),
 				is("wo2"));
 		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(false));
 		assertThat("inccorect reset time", updated.getLastPwdReset(), is(Optional.of(i)));
@@ -118,8 +126,9 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	public void changePasswordAndForceReset() throws Exception {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		storage.createLocalUser(LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, passwordHash, salt).build());
+		storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
 		
@@ -129,11 +138,14 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		
 		when(mockClock.instant()).thenReturn(i);
 		
-		storage.changePassword(new UserName("foo"), newPasswordHash, newSalt, true);
+		storage.changePassword(
+				new UserName("foo"), new PasswordHashAndSalt(newPasswordHash, newSalt), true);
 		final LocalUser updated = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect pasword", new String(updated.getPasswordHash(), StandardCharsets.UTF_8),
+		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("foo"));
+		assertThat("incorrect pasword",
+				new String(creds.getPasswordHash(), StandardCharsets.UTF_8),
 				is("foobarbaz2"));
-		assertThat("incorrect salt", new String(updated.getSalt(), StandardCharsets.UTF_8),
+		assertThat("incorrect salt", new String(creds.getSalt(), StandardCharsets.UTF_8),
 				is("wo2"));
 		assertThat("incorrect force reset", updated.isPwdResetRequired(), is(true));
 		assertThat("inccorect reset time", updated.getLastPwdReset(), is(Optional.of(i)));
@@ -143,28 +155,17 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	public void changePasswordFailNulls() throws Exception {
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		failChangePassword(null, pwd, salt, new NullPointerException("userName"));
-		failChangePassword(new UserName("bar"), null, salt,
-				new IllegalArgumentException("pwdHash cannot be null or empty"));
-		failChangePassword(new UserName("bar"), pwd, null,
-				new IllegalArgumentException("salt cannot be null or empty"));
-	}
-	
-	@Test
-	public void changePasswordFailEmptyBytes() throws Exception {
-		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
-		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		failChangePassword(new UserName("bar"), new byte[0], salt,
-				new IllegalArgumentException("pwdHash cannot be null or empty"));
-		failChangePassword(new UserName("bar"), pwd, new byte[0],
-				new IllegalArgumentException("salt cannot be null or empty"));
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(pwd, salt);
+		failChangePassword(null, creds, new NullPointerException("userName"));
+		failChangePassword(new UserName("bar"), null, new NullPointerException("creds"));
 	}
 	
 	@Test
 	public void changePasswordFailNoUser() throws Exception {
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		failChangePassword(new UserName("foo"), pwd, salt, new NoSuchUserException("foo"));
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(pwd, salt);
+		failChangePassword(new UserName("foo"), creds, new NoSuchUserException("foo"));
 		
 	}
 	
@@ -174,16 +175,16 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		failChangePassword(new UserName("foo"), pwd, salt, new NoSuchLocalUserException("foo"));
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(pwd, salt);
+		failChangePassword(new UserName("foo"), creds, new NoSuchLocalUserException("foo"));
 	}
 	
 	private void failChangePassword(
 			final UserName name,
-			final byte[] pwd,
-			final byte salt[],
+			final PasswordHashAndSalt creds,
 			final Exception e) {
 		try {
-			storage.changePassword(name, pwd, salt, false);
+			storage.changePassword(name, creds, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

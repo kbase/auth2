@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -55,18 +56,20 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	public void createGetLocalUserMinimal() throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("local"), new DisplayName("bar"), NOW, pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("local"), new DisplayName("bar"), NOW)
 				.build();
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		
 		final LocalUser lu = storage.getLocalUser(new UserName("local"));
+		
+		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("local"));
 
 		assertThat("incorrect password hash",
-				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz2"));
+				new String(creds.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz2"));
 		assertThat("incorrect password salt",
-				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whee"));
+				new String(creds.getSalt(), StandardCharsets.UTF_8), is("whee"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
 		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
@@ -96,9 +99,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		// tests unknown email address
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), Instant.ofEpochMilli(5000),
-						pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("baz"), new DisplayName("bang"), Instant.ofEpochMilli(5000))
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("foo").withCustomRole("bar")
@@ -114,14 +116,16 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		storage.setCustomRole(new CustomRole("foo", "baz"));
 		storage.setCustomRole(new CustomRole("bar", "baz"));
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		
 		final LocalUser lu = storage.getLocalUser(new UserName("baz"));
 		
+		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("baz"));
+		
 		assertThat("incorrect password hash",
-				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz3"));
+				new String(creds.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz3"));
 		assertThat("incorrect password salt",
-				new String(lu.getSalt(), StandardCharsets.UTF_8), is("whoo"));
+				new String(creds.getSalt(), StandardCharsets.UTF_8), is("whoo"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(true));
 		assertThat("incorrect reset date", lu.getLastPwdReset(),
 				is(Optional.of(Instant.ofEpochMilli(30000))));
@@ -153,41 +157,50 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void createNullLocalUser() throws Exception {
-		failCreateLocalUser(null, new NullPointerException("local"));
+	public void createUserFailNulls() throws Exception {
+		final LocalUser lu = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now()).build();
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(new byte[10], new byte[2]);
+		failCreateLocalUser(null, creds, new NullPointerException("local"));
+		failCreateLocalUser(lu, null, new NullPointerException("creds"));
 	}
 	
 	@Test
 	public void createLocalUserWithBadCustomRole() throws Exception {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW, pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("baz"), new DisplayName("bang"), NOW)
 				.withCustomRole("Idontexist")
 				.build();
 				
-		failCreateLocalUser(nlu, new NoSuchRoleException("Idontexist"));
+		failCreateLocalUser(nlu, new PasswordHashAndSalt(pwd, salt),
+				new NoSuchRoleException("Idontexist"));
 	}
 
 	@Test
 	public void createExistingLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW, pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("baz"), new DisplayName("bang"), NOW)
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withForceReset(true)
 				.build();
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		
-		failCreateLocalUser(nlu, new UserExistsException("baz"));
+		failCreateLocalUser(nlu, new PasswordHashAndSalt(pwd, salt),
+				new UserExistsException("baz"));
 	}
 	
-	private void failCreateLocalUser(final LocalUser user, final Exception e)
+	private void failCreateLocalUser(
+			final LocalUser user,
+			final PasswordHashAndSalt creds,
+			final Exception e)
 			throws UserExistsException, AuthStorageException {
 		try {
-			storage.createLocalUser(user);
+			storage.createLocalUser(user, creds);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -203,14 +216,14 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	public void getNoSuchLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW, pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("baz"), new DisplayName("bang"), NOW)
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withForceReset(true)
 				.build();
 		
-		storage.createLocalUser(nlu);
-		failGetLocalUser(new UserName("bar"), new NoSuchUserException("bar"));
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
+		failGetLocalUser(new UserName("bar"), new NoSuchLocalUserException("bar"));
 	}
 	
 	@Test
@@ -235,14 +248,14 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final Instant create = Instant.ofEpochMilli(1000);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), create, pwd, salt)
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("baz"), new DisplayName("bang"), create)
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(5000))
 				.withForceReset(true)
 				.build();
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		
 		final AuthUser u = storage.getUser(new UserName("baz"));
 		
@@ -267,6 +280,26 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect is local", u.isLocal(), is(true));
 		assertThat("incorrect is root", u.isRoot(), is(false));
 	}
+	
+	@Test
+	public void getPasswordHashAndSaltFailNull() throws Exception {
+		failGetPasswordHashAndSalt(null, new NullPointerException("userName"));
+	}
+	
+	@Test
+	public void getPasswordHashAndSaltFailNoSuchUser() throws Exception {
+		failGetPasswordHashAndSalt(new UserName("foo"), new NoSuchLocalUserException("foo"));
+	}
+	
+	private void failGetPasswordHashAndSalt(final UserName userName, final Exception e) {
+		try {
+			storage.getPasswordHashAndSalt(userName);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 	@Test
 	public void createGetStdUserMinimal() throws Exception {
 		storage.createUser(NewUser.getBuilder(
@@ -356,7 +389,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 
-		failGetLocalUser(new UserName("user2"), new NoSuchUserException("user2"));
+		failGetUser(new UserName("user2"), new NoSuchUserException("user2"));
 	}
 	
 	private void failGetUser(final UserName user, final Exception e) {

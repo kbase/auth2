@@ -47,6 +47,7 @@ import com.mongodb.client.result.UpdateResult;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenCreationContext;
@@ -304,13 +305,12 @@ public class MongoStorage implements AuthStorage {
 	}
 
 	@Override
-	public void createLocalUser(final LocalUser local)
+	public void createLocalUser(final LocalUser local, final PasswordHashAndSalt creds)
 			throws UserExistsException, AuthStorageException, NoSuchRoleException {
 		nonNull(local, "local");
-		final String pwdhsh = Base64.getEncoder().encodeToString(
-				local.getPasswordHash());
-		final String salt = Base64.getEncoder().encodeToString(
-				local.getSalt());
+		nonNull(creds, "creds");
+		final String encpwdhsh = Base64.getEncoder().encodeToString(creds.getPasswordHash());
+		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		final Collection<ObjectId> customRoles = getCustomRoleIds(local.getCustomRoles()).values();
@@ -339,8 +339,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_RESET_PWD, local.isPwdResetRequired())
 				.append(Fields.USER_RESET_PWD_LAST, reset.isPresent() ?
 						Date.from(reset.get()) : null)
-				.append(Fields.USER_PWD_HSH, pwdhsh)
-				.append(Fields.USER_SALT, salt);
+				.append(Fields.USER_PWD_HSH, encpwdhsh)
+				.append(Fields.USER_SALT, encsalt);
 		try {
 			db.getCollection(COL_USERS).insertOne(u);
 		} catch (MongoWriteException mwe) {
@@ -354,18 +354,20 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	//note this always returns pwd info. Add boolean to avoid if needed.
 	@Override
 	public LocalUser getLocalUser(final UserName userName)
-			throws AuthStorageException, NoSuchUserException {
-		final Document user = getUserDoc(userName, true);
+			throws AuthStorageException, NoSuchLocalUserException {
+		final Document user;
+		try {
+			user = getUserDoc(userName, true);
+		} catch (NoSuchUserException e) {
+			throw new NoSuchLocalUserException(userName.getName());
+		}
 		
-		final LocalUser.Builder b = LocalUser.getBuilder(
+		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
 				getUserName(user.getString(Fields.USER_NAME)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
-				user.getDate(Fields.USER_CREATED).toInstant(),
-				Base64.getDecoder().decode(user.getString(Fields.USER_PWD_HSH)),
-				Base64.getDecoder().decode(user.getString(Fields.USER_SALT)))
+				user.getDate(Fields.USER_CREATED).toInstant())
 				.withEmailAddress(getEmail(user.getString(Fields.USER_EMAIL)))
 				.withUserDisabledState(getUserDisabledState(user))
 				.withForceReset(user.getBoolean(Fields.USER_RESET_PWD));
@@ -379,7 +381,24 @@ public class MongoStorage implements AuthStorage {
 		}
 		return b.build();
 	}
-
+	
+	@Override
+	public PasswordHashAndSalt getPasswordHashAndSalt(final UserName userName)
+			throws AuthStorageException, NoSuchLocalUserException {
+		nonNull(userName, "userName");
+		final Document d = findOne(COL_USERS,
+				new Document(Fields.USER_NAME, userName.getName())
+						.append(Fields.USER_LOCAL, true),
+				new Document(Fields.USER_SALT, 1)
+						.append(Fields.USER_PWD_HSH, 1));
+		if (d == null) {
+			throw new NoSuchLocalUserException(userName.getName());
+		}
+		return new PasswordHashAndSalt(
+				Base64.getDecoder().decode(d.getString(Fields.USER_PWD_HSH)),
+				Base64.getDecoder().decode(d.getString(Fields.USER_SALT)));
+	}
+	
 	private void addRoles(final AuthUser.AbstractBuilder<?> b, final Document user) {
 		@SuppressWarnings("unchecked")
 		final List<String> rolestr = (List<String>) user.get(Fields.USER_ROLES);
@@ -493,19 +512,13 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void changePassword(
 			final UserName name,
-			final byte[] pwdHash,
-			final byte[] salt,
+			final PasswordHashAndSalt creds,
 			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
-		if (pwdHash == null || pwdHash.length == 0) {
-			throw new IllegalArgumentException("pwdHash cannot be null or empty");
-		}
-		if (salt == null || salt.length == 0) {
-			throw new IllegalArgumentException("salt cannot be null or empty");
-		}
+		nonNull(creds, "creds");
 		getUserDoc(name, true); //check the user actually is local
-		final String pwdhsh = Base64.getEncoder().encodeToString(pwdHash);
-		final String encsalt = Base64.getEncoder().encodeToString(salt);
+		final String pwdhsh = Base64.getEncoder().encodeToString(creds.getPasswordHash());
+		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
 		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
 				.append(Fields.USER_RESET_PWD_LAST, Date.from(clock.instant()))
 				.append(Fields.USER_PWD_HSH, pwdhsh)

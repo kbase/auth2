@@ -24,6 +24,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -131,14 +132,16 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(clock.instant()).thenReturn(create);
 		
-		final LocalUser expected = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), create, hash, salt)
+		final LocalUser expected = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), create)
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withForceReset(true).build();
 		
-		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(expected);
+		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(
+				expected, new PasswordHashAndSalt(hash, salt));
 		
-		doAnswer(matcher).when(storage).createLocalUser(any(LocalUser.class));
+		doAnswer(matcher).when(storage).createLocalUser(
+				any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		final Password pwd = auth.createLocalUser(
 				token, new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"));
@@ -150,7 +153,7 @@ public class AuthenticationCreateLocalUserTest {
 		 * need to ensure the method was actually called and therefore the RootuserAnswerMatcher
 		 * ran
 		 */
-		verify(storage).createLocalUser(any());
+		verify(storage).createLocalUser(any(), any());
 	}
 	
 	@Test
@@ -186,7 +189,7 @@ public class AuthenticationCreateLocalUserTest {
 		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new UserExistsException("foo")).when(storage)
-				.createLocalUser(any(LocalUser.class));
+				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@g.com"), new UserExistsException("foo"));
@@ -224,7 +227,7 @@ public class AuthenticationCreateLocalUserTest {
 		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new NoSuchRoleException("foo")).when(storage)
-				.createLocalUser(any(LocalUser.class));
+				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@g.com"), new RuntimeException("didn't supply any roles"));
