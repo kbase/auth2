@@ -409,6 +409,8 @@ public class Authentication {
 		return pwd;
 	}
 	
+	//TODO NOW refactor local user to not include pwdhash and salt. pass separately in create call, add getSalt(UserName) and verify(UserName, byte[] pwdhash) method. Never pull the pwdhash from the db and only pull the salt when checking pwd.
+	
 	/** Login with a local user.
 	 * 
 	 * The password is always cleared once the password has been verified or if an error occurs.
