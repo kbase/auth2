@@ -17,6 +17,7 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Set;
@@ -26,13 +27,13 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
-import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -46,6 +47,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -106,12 +108,16 @@ public class AuthenticationPasswordLoginTest {
 						.build()).build(),
 				"this is a token");
 		
-		final LocalUser.Builder b = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"));
 		for (final Role r: roles) {
 			b.withRole(r);
 		}
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
+		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(b.build());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
@@ -138,6 +144,8 @@ public class AuthenticationPasswordLoginTest {
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(6000));
 		
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(false));
 		assertThat("incorrect username", t.getUserName(), is(Optional.absent()));
 		assertThat("incorrect token", t.getToken(), is(Optional.of(expectedToken)));
@@ -156,10 +164,13 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withForceReset(true).build();
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -171,6 +182,8 @@ public class AuthenticationPasswordLoginTest {
 				TokenCreationContext.getBuilder().withNullableDevice("device").build());
 		
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(true));
 		assertThat("incorrect username", t.getUserName(), is(Optional.of(new UserName("foo"))));
 		assertThat("incorrect token", t.getToken(), is(Optional.absent()));
@@ -188,14 +201,15 @@ public class AuthenticationPasswordLoginTest {
 		failLogin(auth, new UserName("foo"), null, CTX, new NullPointerException("password"));
 		failLogin(auth, new UserName("foo"), password, null, new NullPointerException("tokenCtx"));
 	}
-	
+
 	@Test
-	public void loginFailNoUser() throws Exception {
+	public void loginFailNoUserOnGetCreds() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		when(storage.getPasswordHashAndSalt(new UserName("foo")))
+				.thenThrow(new NoSuchLocalUserException("foo"));
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
 		failLogin(auth, new UserName("foo"), password, CTX,
@@ -203,6 +217,31 @@ public class AuthenticationPasswordLoginTest {
 						"Username / password mismatch"));
 		assertClear(password);
 		
+	}
+	
+	@Test
+	public void loginFailNoUserOnGetUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hash = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
+		
+		when(storage.getLocalUser(new UserName("foo")))
+				.thenThrow(new NoSuchLocalUserException("foo"));
+		
+		final Password password = new Password("foobarbazbat".toCharArray());
+		failLogin(auth, new UserName("foo"), password, CTX,
+				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"Username / password mismatch"));
+		assertClear(password);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -218,16 +257,15 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
-		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		failLogin(auth, new UserName("foo"), p, CTX,
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"Username / password mismatch") );
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -243,9 +281,12 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -256,6 +297,8 @@ public class AuthenticationPasswordLoginTest {
 		failLogin(auth, new UserName("foo"), p, CTX,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -271,11 +314,14 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -285,6 +331,8 @@ public class AuthenticationPasswordLoginTest {
 		
 		failLogin(auth, new UserName("foo"), p, CTX, new DisabledUserException());
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -304,9 +352,12 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		final UUID id = UUID.randomUUID();
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -333,6 +384,8 @@ public class AuthenticationPasswordLoginTest {
 				.withLifeTime(Instant.ofEpochMilli(4000), 14 * 24 * 3600 * 1000).build(),
 				"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
 		assertClear(p);
+		assertClear(hash);
+		assertClear(salt);
 	}
 
 	private void failLogin(
@@ -377,12 +430,16 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hashnew = AuthenticationTester.fromBase64(
 				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
-		final LocalUser.Builder b = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hashold, saltold)
+		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"));
 		for (final Role r: roles) {
 			b.withRole(r);
 		}
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hashold, saltold));
+		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(b.build());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
@@ -396,12 +453,14 @@ public class AuthenticationPasswordLoginTest {
 		
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(
-				new UserName("foo"), hashnew, saltnew, false);
+				eq(new UserName("foo")), any(PasswordHashAndSalt.class), eq(false));
 
 		auth.localPasswordChange(new UserName("foo"), pwdold, pwdnew);
 		
 		assertClear(pwdold);
 		assertClear(pwdnew);
+		assertClear(hashold);
+		assertClear(saltold);
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);
 		
@@ -410,7 +469,7 @@ public class AuthenticationPasswordLoginTest {
 		 * need to ensure the method was actually called and therefore the matcher above ran
 		 */
 		verify(storage).changePassword(
-				eq(new UserName("foo")), any(byte[].class), any(byte[].class), eq(false));
+				eq(new UserName("foo")), any(PasswordHashAndSalt.class), eq(false));
 	}
 	
 	@Test
@@ -436,12 +495,13 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void changePasswordFailNoUser() throws Exception {
+	public void changePasswordFailNoUserOnGetCreds() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		when(storage.getLocalUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
+		when(storage.getPasswordHashAndSalt(new UserName("foo")))
+				.thenThrow(new NoSuchLocalUserException("foo"));
 		
 		final Password po = new Password("foobarbazbat".toCharArray());
 		final Password pn = new Password("foobarbazbat1".toCharArray());
@@ -453,12 +513,37 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void changePasswordFailFailBadPwd() throws Exception {
+	public void changePasswordFailNoUserOnGetUser() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		AuthenticationTester.setConfigUpdateInterval(auth, 0);
+		final byte[] saltold = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
+		final byte[] hashold = AuthenticationTester.fromBase64(
+				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hashold, saltold));
+		
+		when(storage.getLocalUser(new UserName("foo")))
+				.thenThrow(new NoSuchLocalUserException("foo"));
+		
+		final Password po = new Password("foobarbazbat".toCharArray());
+		final Password pn = new Password("foobarbazbat1".toCharArray());
+		
+		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
+				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		assertClear(po);
+		assertClear(pn);
+		assertClear(hashold);
+		assertClear(saltold);
+	}
+	
+	@Test
+	public void changePasswordFailFailBadPwd() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
 		
 		final Password po = new Password("foobarbazbatch".toCharArray());
 		final Password pn = new Password("foobarbazbatch1".toCharArray());
@@ -466,37 +551,24 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
-		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
 		assertClear(po);
 		assertClear(pn);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
 	public void changePasswordFailIdenticalPwd() throws Exception {
 		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
 		final Password po = new Password("foobarbazbatch".toCharArray());
 		final Password pn = new Password("foobarbazbatch".toCharArray());
-		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
-		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
-		
-
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
-		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
 				"Old and new passwords are identical."));
@@ -507,22 +579,10 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void changePasswordFailPwdTooSimple() throws Exception {
 		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, 0);
 		
 		final Password po = new Password("foobarbazbatch".toCharArray());
 		final Password pn = new Password("open".toCharArray());
-		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
-		final byte[] hash = new PasswordCrypt().getEncryptedPassword(po.getPassword(), salt);
-		
-
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
-		
-		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new IllegalPasswordException(
 				"Password is not strong enough. A word by itself is easy to guess."));
@@ -543,11 +603,13 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
-		
 
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com")).build();
+		
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -559,6 +621,8 @@ public class AuthenticationPasswordLoginTest {
 				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
 		assertClear(po);
 		assertClear(pn);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -574,13 +638,15 @@ public class AuthenticationPasswordLoginTest {
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
-		
 
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hash, salt)
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
+
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hash, salt));
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
 		
@@ -591,6 +657,8 @@ public class AuthenticationPasswordLoginTest {
 		failChangePassword(auth, new UserName("foo"), po, pn, new DisabledUserException());
 		assertClear(po);
 		assertClear(pn);
+		assertClear(hash);
+		assertClear(salt);
 	}
 	
 	@Test
@@ -610,11 +678,12 @@ public class AuthenticationPasswordLoginTest {
 
 		final Password pwdnew = new Password("foobarbazbatbing".toCharArray());
 		final byte[] saltnew = new byte[] {1, 1, 3, 4, 5, 6, 7, 8};
-		final byte[] hashnew = AuthenticationTester.fromBase64(
-				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
-		final LocalUser exp = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now(), hashold, saltold)
+		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
+				new PasswordHashAndSalt(hashold, saltold));
+		
+		final LocalUser exp = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com")).build();
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
@@ -625,13 +694,15 @@ public class AuthenticationPasswordLoginTest {
 		
 		when(rand.generateSalt()).thenReturn(saltnew);
 		
-		doThrow(new NoSuchUserException("foo")).when(storage)
-				.changePassword(new UserName("foo"), hashnew, saltnew, false);
+		doThrow(new NoSuchUserException("foo")).when(storage).changePassword(
+				eq(new UserName("foo")), any(PasswordHashAndSalt.class), eq(false));
 		
 		failChangePassword(auth, new UserName("foo"), pwdold, pwdnew, new AuthStorageException(
 				"Sorry, you ceased to exist in the last ~10ms."));
 		assertClear(pwdold);
 		assertClear(pwdnew);
+		assertClear(hashold);
+		assertClear(saltold);
 	}
 	
 	private void failChangePassword(
@@ -968,8 +1039,6 @@ public class AuthenticationPasswordLoginTest {
 		
 		final char[] pwd = "foobarbazbat".toCharArray();
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
-		final byte[] hash = AuthenticationTester.fromBase64(
-				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
 		final StoredToken token = StoredToken.getBuilder(
@@ -985,9 +1054,10 @@ public class AuthenticationPasswordLoginTest {
 		when(rand.generateSalt()).thenReturn(salt);
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).changePassword(
-				new UserName("foo"), hash, salt, true);
+				eq(new UserName("foo")), any(PasswordHashAndSalt.class), eq(true));
 		
 		failResetPassword(auth, t, new UserName("foo"), new NoSuchUserException("foo"));
+		assertClear(pwd);
 	}
 	
 	private void failResetPassword(
@@ -1022,6 +1092,7 @@ public class AuthenticationPasswordLoginTest {
 		final RandomDataGenerator rand = testauth.randGenMock;
 		
 		final char[] pwd = "foobarbazbat".toCharArray();
+		final char[] pwd_copy = Arrays.copyOf(pwd, pwd.length);
 		final byte[] salt = new byte[] {1, 2, 3, 4, 5, 6, 7, 8};
 		final byte[] hash = AuthenticationTester.fromBase64(
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
@@ -1048,20 +1119,21 @@ public class AuthenticationPasswordLoginTest {
 		
 		// need to check at call time before bytes are cleared
 		doAnswer(matcher).when(storage).changePassword(
-				user.getUserName(), hash, salt, true);
+				eq(user.getUserName()), any(PasswordHashAndSalt.class), eq(true));
 		try {
 			final Password p = auth.resetPassword(t, user.getUserName());
 	
-			assertThat("incorrect password", p.getPassword(), is(pwd));
+			assertThat("incorrect password", p.getPassword(), is(pwd_copy));
 			assertClear(matcher.savedSalt);
 			assertClear(matcher.savedHash);
+			assertClear(pwd);
 			
 			/* ensure method was called at least once
 			 * Usually not necessary when mocking the call, but since changepwd returns null
 			 * need to ensure the method was actually called and therefore the matcher above ran
 			 */
 			verify(storage).changePassword(
-					eq(user.getUserName()), any(byte[].class), any(byte[].class), eq(true));
+					eq(user.getUserName()), any(PasswordHashAndSalt.class), eq(true));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());

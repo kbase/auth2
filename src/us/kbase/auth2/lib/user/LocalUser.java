@@ -3,7 +3,6 @@ package us.kbase.auth2.lib.user;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
@@ -24,8 +23,6 @@ import us.kbase.auth2.lib.UserName;
  */
 public class LocalUser extends AuthUser {
 	
-	private final byte[] passwordHash;
-	private final byte[] salt;
 	private final boolean forceReset;
 	private final Optional<Instant> lastReset;
 	
@@ -39,30 +36,12 @@ public class LocalUser extends AuthUser {
 			final Map<PolicyID, Instant> policyIDs,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState,
-			final byte[] passwordHash,
-			final byte[] salt,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
 		super(userName, displayName, created, Collections.emptySet(), email, roles, customRoles,
 				policyIDs, lastLogin, disabledState);
-		this.passwordHash = passwordHash;
-		this.salt = salt;
 		this.forceReset = forceReset;
 		this.lastReset = lastReset;
-	}
-
-	/** Get the salted hash of the user's password.
-	 * @return the password.
-	 */
-	public byte[] getPasswordHash() {
-		return passwordHash;
-	}
-
-	/** Get the salt for the user's password.
-	 * @return the password's salt.
-	 */
-	public byte[] getSalt() {
-		return salt;
 	}
 
 	/** Check if a password reset is required on next login.
@@ -85,8 +64,6 @@ public class LocalUser extends AuthUser {
 		int result = super.hashCode();
 		result = prime * result + (forceReset ? 1231 : 1237);
 		result = prime * result + ((lastReset == null) ? 0 : lastReset.hashCode());
-		result = prime * result + Arrays.hashCode(passwordHash);
-		result = prime * result + Arrays.hashCode(salt);
 		return result;
 	}
 
@@ -112,12 +89,6 @@ public class LocalUser extends AuthUser {
 		} else if (!lastReset.equals(other.lastReset)) {
 			return false;
 		}
-		if (!Arrays.equals(passwordHash, other.passwordHash)) {
-			return false;
-		}
-		if (!Arrays.equals(salt, other.salt)) {
-			return false;
-		}
 		return true;
 	}
 	
@@ -134,13 +105,11 @@ public class LocalUser extends AuthUser {
 	 * @param salt the salt used to hash the password.
 	 * @return a builder.
 	 */
-	public static Builder getBuilder(
+	public static Builder getLocalUserBuilder(
 			final UserName userName,
 			final DisplayName displayName,
-			final Instant creationDate,
-			final byte[] passwordHash,
-			final byte[] salt) {
-		return new Builder(userName, displayName, creationDate, passwordHash, salt);
+			final Instant creationDate) {
+		return new Builder(userName, displayName, creationDate);
 		
 	}
 	
@@ -150,27 +119,14 @@ public class LocalUser extends AuthUser {
 	 */
 	public static class Builder extends AbstractBuilder<Builder> {
 		
-		private final byte[] passwordHash;
-		private final byte[] salt;
 		private boolean forceReset = false;
 		private Optional<Instant> lastReset = Optional.absent();
 
 		private Builder(
 				final UserName userName,
 				final DisplayName displayName,
-				final Instant creationDate,
-				final byte[] passwordHash,
-				final byte[] salt) {
+				final Instant creationDate) {
 			super(userName, displayName, creationDate);
-			// what's the right # here? Have to rely on user to some extent
-			if (passwordHash == null || passwordHash.length < 10) {
-				throw new IllegalArgumentException("passwordHash missing or too small");
-			}
-			if (salt == null || salt.length < 2) {
-				throw new IllegalArgumentException("salt missing or too small");
-			}
-			this.passwordHash = passwordHash;
-			this.salt = salt;
 		}
 
 		@Override
@@ -202,8 +158,7 @@ public class LocalUser extends AuthUser {
 		 */
 		public LocalUser build() {
 			return new LocalUser(userName, displayName, created, email, roles, customRoles,
-					policyIDs, lastLogin, disabledState, passwordHash, salt, forceReset,
-					lastReset);
+					policyIDs, lastLogin, disabledState, forceReset, lastReset);
 		}
 		
 	}

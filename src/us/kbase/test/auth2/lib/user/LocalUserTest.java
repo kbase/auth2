@@ -6,7 +6,6 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Collections;
 
@@ -37,16 +36,10 @@ public class LocalUserTest {
 	
 	@Test
 	public void constructMinimal() throws Exception {
-		final LocalUser lu = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5),
-						"foobarbazb".getBytes(StandardCharsets.UTF_8),
-						"wh".getBytes(StandardCharsets.UTF_8))
+		final LocalUser lu = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
 				.build();
 		
-		assertThat("incorrect password hash",
-				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbazb"));
-		assertThat("incorrect password salt",
-				new String(lu.getSalt(), StandardCharsets.UTF_8), is("wh"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
 		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
 		
@@ -74,10 +67,8 @@ public class LocalUserTest {
 	
 	@Test
 	public void constructMaximal() throws Exception {
-		final LocalUser lu = LocalUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5),
-						"foobarbazb".getBytes(StandardCharsets.UTF_8),
-						"wh".getBytes(StandardCharsets.UTF_8))
+		final LocalUser lu = LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.withRole(Role.CREATE_ADMIN)
 				.withCustomRole("foobar")
@@ -89,10 +80,6 @@ public class LocalUserTest {
 				.withLastReset(Instant.ofEpochMilli(40000))
 				.build();
 		
-		assertThat("incorrect password hash",
-				new String(lu.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbazb"));
-		assertThat("incorrect password salt",
-				new String(lu.getSalt(), StandardCharsets.UTF_8), is("wh"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(true));
 		assertThat("incorrect reset date", lu.getLastPwdReset(),
 				is(Optional.of(Instant.ofEpochMilli(40000))));
@@ -123,34 +110,14 @@ public class LocalUserTest {
 	
 	@Test
 	public void buildFail() throws Exception {
-		final byte[] pwd = "foobarbaz8".getBytes(StandardCharsets.UTF_8);
-		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
-		final Instant reset = Instant.now();
-		failBuild(null, salt, reset,
-				new IllegalArgumentException("passwordHash missing or too small"));
-		failBuild("foobarbaz".getBytes(StandardCharsets.UTF_8), salt, reset,
-				new IllegalArgumentException("passwordHash missing or too small"));
-		failBuild(pwd, null, reset, new IllegalArgumentException("salt missing or too small"));
-		failBuild(pwd, "f".getBytes(StandardCharsets.UTF_8), reset,
-				new IllegalArgumentException("salt missing or too small"));
-		failBuild(pwd, salt, null, new NullPointerException("lastReset"));
-		
-	}
-	
-	private void failBuild(
-			final byte[] passwordHash,
-			final byte[] salt,
-			final Instant lastReset,
-			final Exception e) {
 		try {
-			LocalUser.getBuilder(
-					new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5),
-							passwordHash, salt)
-					.withLastReset(lastReset)
+			LocalUser.getLocalUserBuilder(
+					new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
+					.withLastReset(null)
 					.build();
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("lastReset"));
 		}
 	}
 }

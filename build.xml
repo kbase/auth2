@@ -236,6 +236,7 @@
       <test name="us.kbase.test.auth2.lib.LoginTokenTest"/>
       <test name="us.kbase.test.auth2.lib.LoginStateTest"/>
       <test name="us.kbase.test.auth2.lib.NameTest"/>
+      <test name="us.kbase.test.auth2.lib.PasswordHashAndSaltTest"/>
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>

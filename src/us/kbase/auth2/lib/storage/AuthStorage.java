@@ -9,6 +9,7 @@ import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
@@ -24,6 +25,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
+import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -50,25 +52,34 @@ public interface AuthStorage {
 	
 	/** Create a new local account.
 	 * @param local the user to create.
+	 * @param creds the credentials to assign to the user.
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 * @throws NoSuchRoleException if a custom role provided with the user doesn't exist.
 	 */
-	void createLocalUser(LocalUser local)
+	void createLocalUser(LocalUser local, PasswordHashAndSalt creds)
 			throws AuthStorageException, UserExistsException, NoSuchRoleException;
-
+	
+	/** Get the user's credentials.
+	 * @param userName the name of the user.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 * @throws NoSuchLocalUserException if the local user does not exist.
+	 */
+	PasswordHashAndSalt getPasswordHashAndSalt(UserName userName)
+			throws AuthStorageException, NoSuchLocalUserException;
+	
 	/** Change a local user's password.
 	 * @param name the name of the user.
-	 * @param pwdHash the new encrypted password.
-	 * @param salt the salt used to encrypt the password.
+	 * @param creds the new hashed password and salt.
 	 * @param forceReset whether the user should be forced to reset their password on the next
 	 * login.
 	 * @throws NoSuchUserException if the user doesn't exist or is not a local user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void changePassword(UserName name, byte[] pwdHash, byte[] salt, boolean forceReset)
+	void changePassword(UserName name, PasswordHashAndSalt creds, boolean forceReset)
 			throws NoSuchUserException, AuthStorageException;
 	
 	/** Force a local user to reset their password on the next login.
@@ -169,11 +180,12 @@ public interface AuthStorage {
 	/** Get a local user.
 	 * @param userName the user to get.
 	 * @return a local user.
-	 * @throws NoSuchUserException if the local user does not exist.
+	 * @throws NoSuchLocalUserException if the local user does not exist.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	LocalUser getLocalUser(UserName userName) throws AuthStorageException, NoSuchUserException;
+	LocalUser getLocalUser(UserName userName)
+			throws AuthStorageException, NoSuchLocalUserException;
 	
 	/** Update the display name and/or email address for a user.
 	 * @param userName the user to update.

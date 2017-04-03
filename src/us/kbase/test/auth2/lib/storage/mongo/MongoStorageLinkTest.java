@@ -13,6 +13,7 @@ import java.time.Instant;
 import org.junit.Test;
 
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -200,10 +201,10 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void linkFailLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("local"), new DisplayName("bar"), NOW, pwd, salt).build();
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("local"), new DisplayName("bar"), NOW).build();
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		failLink(new UserName("local"), REMOTE2,
 				new LinkFailedException("Cannot link identities to a local user"));
 	}
@@ -255,10 +256,10 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void unlinkFailLocalUser() throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
-		final LocalUser nlu = LocalUser.getBuilder(
-				new UserName("local"), new DisplayName("bar"), NOW, pwd, salt).build();
+		final LocalUser nlu = LocalUser.getLocalUserBuilder(
+				new UserName("local"), new DisplayName("bar"), NOW).build();
 				
-		storage.createLocalUser(nlu);
+		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
 		failUnlink(new UserName("local"), "foobar",
 				new UnLinkFailedException("Local users have no identities"));
 	}

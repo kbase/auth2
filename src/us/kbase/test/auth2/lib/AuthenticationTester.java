@@ -21,6 +21,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
@@ -95,19 +96,25 @@ public class AuthenticationTester {
 		private final LocalUser user;
 		public byte[] savedSalt;
 		public byte[] savedHash;
+		public byte[] expectedHash;
+		public byte[] expectedSalt;
 		
-		
-		public LocalUserAnswerMatcher(final LocalUser user) {
+		public LocalUserAnswerMatcher(final LocalUser user, final PasswordHashAndSalt creds) {
 			this.user = user;
+			this.expectedHash = creds.getPasswordHash();
+			this.expectedSalt = creds.getSalt();
 		}
 		
 		@Override
 		public Void answer(final InvocationOnMock inv) throws Throwable {
 			final LocalUser user = inv.getArgument(0);
-			savedSalt = user.getSalt();
-			savedHash = user.getPasswordHash();
+			final PasswordHashAndSalt creds = inv.getArgument(1);
+			savedHash = creds.getPasswordHash();
+			savedSalt = creds.getSalt();
 
 			assertThat("local user does not match.", user, is(this.user));
+			assertThat("password hash does not match", savedHash, is(expectedHash));
+			assertThat("salt does not match", savedSalt, is(expectedSalt));
 			return null;
 		}
 	}
@@ -135,9 +142,10 @@ public class AuthenticationTester {
 		@Override
 		public Void answer(final InvocationOnMock args) throws Throwable {
 			final UserName un = args.getArgument(0);
-			savedHash = args.getArgument(1);
-			savedSalt = args.getArgument(2);
-			final boolean forceReset = args.getArgument(3);
+			final PasswordHashAndSalt creds = args.getArgument(1);
+			savedHash = creds.getPasswordHash();
+			savedSalt = creds.getSalt();
+			final boolean forceReset = args.getArgument(2);
 			
 			assertThat("incorrect username", un, is(name));
 			assertThat("incorrect forcereset", forceReset, is(this.forceReset));
