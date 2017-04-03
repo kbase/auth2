@@ -2160,9 +2160,8 @@ public class Authentication {
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		//TODO CONFIG remove providers from config that aren't in set
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return new AuthConfigSet<T>(acs.getCfg(),
+		return new AuthConfigSet<T>(acs.getCfg().filterProviders(idProviderSet.keySet()),
 				mapper.fromMap(acs.getExtcfg().getMap()));
 	}
 	

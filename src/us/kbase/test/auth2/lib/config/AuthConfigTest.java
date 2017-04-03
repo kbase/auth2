@@ -4,8 +4,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.junit.Test;
@@ -232,6 +234,47 @@ public class AuthConfigTest {
 	}
 	
 	@Test
+	public void authConfigFilterProviders() throws Exception {
+		final Map<String, ProviderConfig> pc = new HashMap<>();
+		pc.put("pc1", new ProviderConfig(true, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, true));
+		
+		final AuthConfig ac = new AuthConfig(false, pc, null);
+		
+		final AuthConfig filtered = ac.filterProviders(new HashSet<>(Arrays.asList("pc2", "pc3")));
+		assertThat("incorrect login allowed", filtered.isLoginAllowed(), is(false));
+		assertThat("incorrect providers", filtered.getProviders(), is(ImmutableMap.of(
+				"pc2", new ProviderConfig(false, false, true))));
+		assertThat("incorrect lifetimes", filtered.getTokenLifetimeMS(),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void authConfigFilterProvidersEmpty() throws Exception {
+		final Map<String, ProviderConfig> pc = new HashMap<>();
+		pc.put("pc1", new ProviderConfig(true, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, true));
+		
+		final AuthConfig ac = new AuthConfig(false, pc, null);
+		
+		final AuthConfig filtered = ac.filterProviders(Collections.emptySet());
+		assertThat("incorrect login allowed", filtered.isLoginAllowed(), is(false));
+		assertThat("incorrect providers", filtered.getProviders(), is(Collections.emptyMap()));
+		assertThat("incorrect lifetimes", filtered.getTokenLifetimeMS(),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void authConfigFilterFailNull() throws Exception {
+		try {
+			new AuthConfig(false, null, null).filterProviders(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("identityProviders"));
+		}
+	}
+	
+	@Test
 	public void getProviderFail() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
 		pc.put("pc1", new ProviderConfig(true, true, false));
@@ -339,7 +382,6 @@ public class AuthConfigTest {
 			}
 			return true;
 		}
-
 	}
 
 	@Test
@@ -443,6 +485,7 @@ public class AuthConfigTest {
 				TokenLifetimeType.SERV, 100_000_000L * 24 * 3600 * 1000L,
 				TokenLifetimeType.EXT_CACHE, 5 * 60 * 1000L)));
 	}
+	
 	@Test
 	public void updateConfigFail() throws Exception {
 		final TokenLifetimeType tlt = TokenLifetimeType.LOGIN;

@@ -4,8 +4,11 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeMap;
+import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 
@@ -63,7 +66,7 @@ public class AuthConfig {
 		private final boolean forceLoginChoice;
 		private final boolean forceLinkChoice;
 		
-		/** Create a provider config.
+		/** Create an identity provider config.
 		 * @param enabled whether the provider is enabled.
 		 * @param forceLoginChoice if false, an account link will proceed immediately if the
 		 * provider only returns a single remote identity and that identity is already linked
@@ -164,7 +167,7 @@ public class AuthConfig {
 	
 	/** Create an authentication configuration.
 	 * @param loginAllowed true if non-admin logins are allowed, false otherwise.
-	 * @param providers the names of the providers mapped to their configurations.
+	 * @param providers the names of the identity providers mapped to their configurations.
 	 * @param tokenLifetimeMS the lifetimes of the various token types in milliseconds.
 	 */
 	public AuthConfig(
@@ -204,7 +207,7 @@ public class AuthConfig {
 		return loginAllowed;
 	}
 
-	/** Returns the providers in this configuration with their configurations.
+	/** Returns the identity providers in this configuration with their configurations.
 	 * @return the providers in this configuration.
 	 */
 	public Map<String, ProviderConfig> getProviders() {
@@ -230,7 +233,7 @@ public class AuthConfig {
 		return tokenLifetimeMS.get(type);
 	}
 	
-	/** Get the configuration for a provider.
+	/** Get the configuration for an identity provider.
 	 * @param provider the name of the provider.
 	 * @return the configuration of the provider.
 	 * @throws NoSuchIdentityProviderException if the provider is not contained in this
@@ -242,6 +245,20 @@ public class AuthConfig {
 			throw new NoSuchIdentityProviderException(provider);
 		}
 		return providers.get(provider);
+	}
+
+	/** Return a new AuthConfig with only the provided identity providers included. If a provided
+	 * provider name is not in the config, it is ignored.
+	 * @param identityProviders the providers to retain in the new AuthConfig.
+	 * @return a new AuthConfig filtered to remove all identity providers except those specified.
+	 */
+	public AuthConfig filterProviders(final Set<String> identityProviders) {
+		nonNull(identityProviders, "identityProviders");
+		final Set<String> included = new HashSet<>(identityProviders);
+		included.retainAll(providers.keySet());
+		final Map<String, ProviderConfig> newprovs = included.stream().collect(
+				Collectors.toMap(p -> p, p -> providers.get(p)));
+		return new AuthConfig(loginAllowed, newprovs, tokenLifetimeMS);
 	}
 
 	@Override
