@@ -34,6 +34,7 @@ import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
@@ -73,6 +74,8 @@ import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLoginTest {
+	
+	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
 	
 	@Test
 	public void loginImmediately() throws Exception {
@@ -128,11 +131,14 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(Instant.ofEpochMilli(30000)).thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", TokenCreationContext.getBuilder()
+				.withNullableAgent("a", "v").build());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder()
+						.withNullableAgent("a", "v").build()).build(),
 				"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
@@ -140,7 +146,9 @@ public class AuthenticationLoginTest {
 		final LoginToken expected = new LoginToken(
 				new NewToken(StoredToken.getBuilder(
 						TokenType.LOGIN, tokenID, new UserName("foo"))
-						.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+						.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+						.withContext(TokenCreationContext.getBuilder()
+								.withNullableAgent("a", "v").build()).build(),
 						"thisisatoken"), 
 				LoginState.getBuilder("prov", allowLogin).withUser(user, storageRemoteID).build());
 		
@@ -211,7 +219,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", CTX);
 		
 		verify(storage).storeIdentitiesTemporarily(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
@@ -268,7 +276,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", CTX);
 		
 		verify(storage).storeIdentitiesTemporarily(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
@@ -336,7 +344,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", CTX);
 		
 		verify(storage).storeIdentitiesTemporarily(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
@@ -421,7 +429,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", CTX);
 		
 		verify(storage).storeIdentitiesTemporarily(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
@@ -498,7 +506,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar");
+		final LoginToken lt = auth.login("prov", "foobar", CTX);
 		
 		verify(storage).storeIdentitiesTemporarily(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
@@ -525,13 +533,14 @@ public class AuthenticationLoginTest {
 		
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
-		failLogin(auth, null, "foo", new NullPointerException("provider"));
-		failLogin(auth, "   \t  \n   ", "foo",
+		failLogin(auth, null, "foo", CTX, new NullPointerException("provider"));
+		failLogin(auth, "   \t  \n   ", "foo", CTX,
 				new NoSuchIdentityProviderException("   \t  \n   "));
-		failLogin(auth, "prov", null,
+		failLogin(auth, "prov", null, CTX,
 				new MissingParameterException("authorization code"));
-		failLogin(auth, "prov", "    \t \n   ",
+		failLogin(auth, "prov", "    \t \n   ", CTX,
 				new MissingParameterException("authorization code"));
+		failLogin(auth, "prov", "foo", null, new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
@@ -542,7 +551,7 @@ public class AuthenticationLoginTest {
 		
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
-		failLogin(auth, "prov1", "foo", new NoSuchIdentityProviderException("prov1"));
+		failLogin(auth, "prov1", "foo", CTX, new NoSuchIdentityProviderException("prov1"));
 	}
 	
 	@Test
@@ -565,7 +574,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failLogin(auth, "prov", "foo", new NoSuchIdentityProviderException("prov"));
+		failLogin(auth, "prov", "foo", CTX, new NoSuchIdentityProviderException("prov"));
 	}
 	
 	@Test
@@ -590,16 +599,17 @@ public class AuthenticationLoginTest {
 		
 		when(idp.getIdentities("foobar", false)).thenThrow(new IdentityRetrievalException("foo"));
 		
-		failLogin(auth, "prov", "foobar", new IdentityRetrievalException("foo"));
+		failLogin(auth, "prov", "foobar", CTX, new IdentityRetrievalException("foo"));
 	}
 	
 	private void failLogin(
 			final Authentication auth,
 			final String provider,
 			final String authcode,
+			final TokenCreationContext ctx,
 			final Exception e) {
 		try {
-			auth.login(provider, authcode);
+			auth.login(provider, authcode, ctx);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -916,7 +926,8 @@ public class AuthenticationLoginTest {
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
 				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"),
-				set(new PolicyID("pid1"), new PolicyID("pid2")), false);
+				set(new PolicyID("pid1"), new PolicyID("pid2")),
+				TokenCreationContext.getBuilder().withNullableDevice("d").build(), false);
 
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000),
@@ -930,14 +941,18 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -972,7 +987,8 @@ public class AuthenticationLoginTest {
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
 				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"),
-				set(new PolicyID("pid1"), new PolicyID("pid2")), true);
+				set(new PolicyID("pid1"), new PolicyID("pid2")),
+				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000),
@@ -986,14 +1002,18 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 100000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 100000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -1064,7 +1084,8 @@ public class AuthenticationLoginTest {
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
 				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"),
-				Collections.emptySet(), true);
+				Collections.emptySet(),
+				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000),
@@ -1090,14 +1111,18 @@ public class AuthenticationLoginTest {
 
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -1122,18 +1147,20 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, null, id, u, d, e, pids, l,
+		failCreateUser(auth, null, id, u, d, e, pids, CTX, l,
 				new NullPointerException("Temporary token"));
-		failCreateUser(auth, t, null, u, d, e, pids, l,
+		failCreateUser(auth, t, null, u, d, e, pids, CTX, l,
 				new MissingParameterException("identityID"));
-		failCreateUser(auth, t, "   \t   ", u, d, e, pids, l,
+		failCreateUser(auth, t, "   \t   ", u, d, e, pids, CTX, l,
 				new MissingParameterException("identityID"));
-		failCreateUser(auth, t, id, null, d, e, pids, l, new NullPointerException("userName"));
-		failCreateUser(auth, t, id, u, null, e, pids, l, new NullPointerException("displayName"));
-		failCreateUser(auth, t, id, u, d, null, pids, l, new NullPointerException("email"));
-		failCreateUser(auth, t, id, u, d, e, null, l, new NullPointerException("policyIDs"));
-		failCreateUser(auth, t, id, u, d, e, set(new PolicyID("foo"), null), l,
+		failCreateUser(auth, t, id, null, d, e, pids, CTX, l, new NullPointerException("userName"));
+		failCreateUser(auth, t, id, u, null, e, pids, CTX, l,
+				new NullPointerException("displayName"));
+		failCreateUser(auth, t, id, u, d, null, pids, CTX, l, new NullPointerException("email"));
+		failCreateUser(auth, t, id, u, d, e, null, CTX, l, new NullPointerException("policyIDs"));
+		failCreateUser(auth, t, id, u, d, e, set(new PolicyID("foo"), null), CTX, l,
 				new NullPointerException("null item in policyIDs"));
+		failCreateUser(auth, t, id, u, d, e, pids, null, l, new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
@@ -1148,7 +1175,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user"));
 	}
 	
@@ -1173,7 +1200,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Account creation is disabled"));
 	}
 	
@@ -1202,7 +1229,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new InvalidTokenException("Temporary token"));
 	}
 	
@@ -1231,7 +1258,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Not authorized to create user with remote identity bar"));
 	}
@@ -1262,7 +1289,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Not authorized to create user with remote identity bar"));
 	}
@@ -1303,7 +1330,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l, new UserExistsException("baz"));
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l, new UserExistsException("baz"));
 	}
 	
 	@Test
@@ -1342,7 +1369,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new IdentityLinkedException("ef0518c79af70ed979907969c6d0a0f7"));
 	}
 	
@@ -1382,7 +1409,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new RuntimeException("Didn't supply any roles"));
 	}
 	
@@ -1429,7 +1456,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l,
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new AuthStorageException("User magically disappeared from database: baz"));
 	}
 	
@@ -1476,7 +1503,7 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = true;
 		
-		failCreateUser(auth, t, id, u, d, e, pids, l, new RuntimeException(
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l, new RuntimeException(
 				"Programming error: this method should not be called on a local user"));
 	}
 	
@@ -1514,7 +1541,7 @@ public class AuthenticationLoginTest {
 		
 		failCreateUser(auth, token, "ef0518c79af70ed979907969c6d0a0f7",
 				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"),
-				Collections.emptySet(), false, new AuthStorageException(
+				Collections.emptySet(), CTX, false, new AuthStorageException(
 						"Something is very broken. User should exist but doesn't: " +
 						"50000 No such user: foo"));
 	}
@@ -1527,10 +1554,11 @@ public class AuthenticationLoginTest {
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> pids,
+			final TokenCreationContext ctx,
 			final boolean linkAll,
 			final Exception e) {
 		try {
-			auth.createUser(token, identityID, userName, displayName, email, pids, linkAll);
+			auth.createUser(token, identityID, userName, displayName, email, pids, ctx, linkAll);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -1583,7 +1611,8 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
-				set(new PolicyID("pid1"),  new PolicyID("pid2")), false);
+				set(new PolicyID("pid1"),  new PolicyID("pid2")),
+				TokenCreationContext.getBuilder().withNullableDevice("dev").build(), false);
 		
 		verify(storage).addPolicyIDs(new UserName("foo"),
 				set(new PolicyID("pid1"), new PolicyID("pid2")));
@@ -1592,14 +1621,18 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -1641,7 +1674,8 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
-				Collections.emptySet(), true);
+				Collections.emptySet(),
+				TokenCreationContext.getBuilder().withNullableDevice("dev").build(), true);
 		
 		verify(storage, never()).addPolicyIDs(any(), any());
 		
@@ -1649,14 +1683,18 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 600000).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), 600000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(610000)).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(610000))
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -1731,7 +1769,8 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
-				Collections.emptySet(), true);
+				Collections.emptySet(),
+				TokenCreationContext.getBuilder().withNullableDevice("dev").build(), true);
 		
 		verify(storage, never()).addPolicyIDs(any(), any());
 		
@@ -1753,14 +1792,18 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000).build(),
+				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
+				.build(),
 				"mfingtoken")));
 	}
 	
@@ -1773,14 +1816,16 @@ public class AuthenticationLoginTest {
 		final Set<PolicyID> pids = Collections.emptySet();
 		final boolean l = false;
 		
-		failCompleteLogin(auth, null, id, pids, l, new NullPointerException("Temporary token"));
-		failCompleteLogin(auth, t, null, pids, l,
+		failCompleteLogin(auth, null, id, pids, CTX, l,
+				new NullPointerException("Temporary token"));
+		failCompleteLogin(auth, t, null, pids, CTX, l,
 				new MissingParameterException("identityID"));
-		failCompleteLogin(auth, t, "   \t   ", pids, l,
+		failCompleteLogin(auth, t, "   \t   ", pids, CTX, l,
 				new MissingParameterException("identityID"));
-		failCompleteLogin(auth, t, id, null, l, new NullPointerException("policyIDs"));
-		failCompleteLogin(auth, t, id, set(new PolicyID("foo"), null), l,
+		failCompleteLogin(auth, t, id, null, CTX, l, new NullPointerException("policyIDs"));
+		failCompleteLogin(auth, t, id, set(new PolicyID("foo"), null), CTX, l,
 				new NullPointerException("null item in policyIDs"));
+		failCompleteLogin(auth, t, id, pids, null, l, new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
@@ -1797,7 +1842,7 @@ public class AuthenticationLoginTest {
 		when(storage.getTemporaryIdentities(t.getHashedToken()))
 				.thenThrow(new NoSuchTokenException("foo"));
 		
-		failCompleteLogin(auth, t, id, pids, l, new InvalidTokenException("Temporary token"));
+		failCompleteLogin(auth, t, id, pids, CTX, l, new InvalidTokenException("Temporary token"));
 	}
 	
 	@Test
@@ -1815,7 +1860,8 @@ public class AuthenticationLoginTest {
 				.thenReturn(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@g.com"))));
 		
-		failCompleteLogin(auth, t, id, pids, l, new UnauthorizedException(ErrorType.UNAUTHORIZED,
+		failCompleteLogin(auth, t, id, pids, CTX, l,
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Not authorized to login to user with remote identity whee"));
 	}
 	
@@ -1838,7 +1884,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
 					.thenReturn(Optional.absent());
 		
-		failCompleteLogin(auth, t, id, pids, l, new AuthenticationException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED,
 				"There is no account linked to the provided identity ID"));
 	}
@@ -1870,7 +1916,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(false, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failCompleteLogin(auth, t, id, pids, l, new UnauthorizedException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new UnauthorizedException(
 				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
 	}
 	
@@ -1906,7 +1952,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failCompleteLogin(auth, t, id, pids, l, new DisabledUserException());
+		failCompleteLogin(auth, t, id, pids, CTX, l, new DisabledUserException());
 	}
 	
 	@Test
@@ -1942,7 +1988,7 @@ public class AuthenticationLoginTest {
 		doThrow(new NoSuchUserException("foo")).when(storage)
 				.addPolicyIDs(new UserName("foo"), set(new PolicyID("foobaz")));
 		
-		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new AuthStorageException(
 				"Something is very broken. User should exist but doesn't: " +
 				"50000 No such user: foo"));
 	}
@@ -1987,7 +2033,7 @@ public class AuthenticationLoginTest {
 				.link(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
-		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new AuthStorageException(
 				"User magically disappeared from database: foo"));
 	}
 	
@@ -2031,7 +2077,7 @@ public class AuthenticationLoginTest {
 				.link(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
-		failCompleteLogin(auth, t, id, pids, l, new RuntimeException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new RuntimeException(
 				"Programming error: this method should not be called on a local user"));
 	}
 	
@@ -2075,7 +2121,7 @@ public class AuthenticationLoginTest {
 		doThrow(new NoSuchUserException("foo")).when(storage)
 				.setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
 		
-		failCompleteLogin(auth, t, id, pids, l, new AuthStorageException(
+		failCompleteLogin(auth, t, id, pids, CTX, l, new AuthStorageException(
 				"Something is very broken. User should exist but doesn't: " +
 				"50000 No such user: foo"));
 	}
@@ -2085,10 +2131,11 @@ public class AuthenticationLoginTest {
 			final IncomingToken token,
 			final String identityID,
 			final Set<PolicyID> policyIDs,
+			final TokenCreationContext ctx, 
 			final boolean linkAll,
 			final Exception e) {
 		try {
-			auth.login(token, identityID, policyIDs, linkAll);
+			auth.login(token, identityID, policyIDs, ctx, linkAll);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

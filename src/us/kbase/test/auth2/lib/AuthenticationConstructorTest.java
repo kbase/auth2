@@ -208,8 +208,14 @@ public class AuthenticationConstructorTest {
 		ids.add(new NullIdProv("Prov2", cfg2));
 		ids.add(new NullIdProv("prov2", cfg2)); // should match on different case
 		
-		failConstruct(storage, ids, new TestExternalConfig<>(SET_THINGY),
-				new IllegalArgumentException("Duplicate provider name: prov2"));
+		try {
+			new Authentication(storage, ids, new TestExternalConfig<>(SET_THINGY));
+			fail("expected exception");
+		} catch (IllegalArgumentException got) {
+			// lower case because whether Prov2 or prov2 is returned can change
+			assertThat("incorrect exception", got.getMessage().toLowerCase(), is(
+					"duplicate provider name: prov2"));
+		}
 	}
 	
 	@Test

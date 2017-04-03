@@ -4,6 +4,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.UUID;
 
@@ -151,6 +152,75 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
 					"Illegal value stored in db: 30001 Illegal input parameter: " +
 					"token name contains control characters"));
+		}
+	}
+	
+	@Test
+	public void illegalIPAddress() throws Exception {
+		final IncomingToken t = new IncomingToken("foobar");
+		final StoredToken st = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now().plusSeconds(10))
+				.build();
+		storage.storeToken(st, t.getHashedToken().getTokenHash());
+
+		db.getCollection("tokens").updateOne(new Document("user", "baz"),
+				new Document("$set", new Document("ip", "foobar")));
+		
+		try {
+			storage.getToken(t.getHashedToken());
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
+					"Illegal value stored in db: foobar: unknown error"));
+		}
+	}
+	
+	@Test
+	public void missingCustomContextKey() throws Exception {
+		final IncomingToken t = new IncomingToken("foobar");
+		final StoredToken st = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now().plusSeconds(10))
+				.build();
+		storage.storeToken(st, t.getHashedToken().getTokenHash());
+
+		
+		db.getCollection("tokens").updateOne(new Document("user", "baz"),
+				new Document("$set", new Document("custctx", Arrays.asList(
+						new Document("k", null).append("v", "thing")))));
+		
+		try {
+			storage.getToken(t.getHashedToken());
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
+					"Illegal value stored in db: 30000 Missing input parameter: key"));
+		}
+	}
+	
+	@Test
+	public void illegalCustomContextKey() throws Exception {
+		final IncomingToken t = new IncomingToken("foobar");
+		final StoredToken st = StoredToken.getBuilder(
+					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+				.withLifeTime(Instant.now(), Instant.now().plusSeconds(10))
+				.build();
+		storage.storeToken(st, t.getHashedToken().getTokenHash());
+
+		
+		db.getCollection("tokens").updateOne(new Document("user", "baz"),
+				new Document("$set", new Document("custctx", Arrays.asList(
+						new Document("k", TestCommon.LONG101.substring(0, 21))
+						.append("v", "thing")))));
+		
+		try {
+			storage.getToken(t.getHashedToken());
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
+					"Illegal value stored in db: 30001 Illegal input parameter: " +
+					"key size greater than limit 20"));
 		}
 	}
 	

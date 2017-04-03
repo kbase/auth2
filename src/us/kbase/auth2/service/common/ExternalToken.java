@@ -1,14 +1,8 @@
 package us.kbase.auth2.service.common;
 
-import java.time.Instant;
-import java.util.UUID;
+import java.util.Map;
 
-import com.google.common.base.Optional;
-
-import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.StoredToken;
-import us.kbase.auth2.lib.token.TokenName;
-import us.kbase.auth2.lib.token.TokenType;
 
 public class ExternalToken {
 	
@@ -21,28 +15,18 @@ public class ExternalToken {
 	private final long created;
 	private final String name;
 	private final String user;
+	private final Map<String, String> custom;
 
-	public ExternalToken(final StoredToken ht) {
-		this(ht.getTokenType(), ht.getTokenName(), ht.getId(),
-				ht.getUserName(),
-				ht.getCreationDate(), ht.getExpirationDate());
+	public ExternalToken(final StoredToken st) {
+		type = st.getTokenType().getDescription();
+		id = st.getId().toString();
+		name = st.getTokenName().isPresent() ? st.getTokenName().get().getName() : null;
+		user = st.getUserName().getName();
+		expires = st.getExpirationDate().toEpochMilli();
+		created = st.getCreationDate().toEpochMilli();
+		custom = st.getContext().getCustomContext();
 	}
 
-	ExternalToken(
-			final TokenType type,
-			final Optional<TokenName> tokenName,
-			final UUID id,
-			final UserName userName,
-			final Instant creationDate,
-			final Instant expirationDate) {
-		this.type = type.getDescription();
-		this.id = id.toString();
-		this.name = tokenName.isPresent() ? tokenName.get().getName() : null;
-		this.user = userName.getName();
-		this.expires = expirationDate.toEpochMilli();
-		this.created = creationDate.toEpochMilli();
-	}
-	
 	public String getType() {
 		return type;
 	}
@@ -51,12 +35,12 @@ public class ExternalToken {
 		return id;
 	}
 
-	public long getCreated() {
-		return created;
-	}
-
 	public long getExpires() {
 		return expires;
+	}
+
+	public long getCreated() {
+		return created;
 	}
 
 	public String getName() {
@@ -67,4 +51,7 @@ public class ExternalToken {
 		return user;
 	}
 
+	public Map<String, String> getCustom() {
+		return custom;
+	}
 }

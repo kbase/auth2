@@ -415,19 +415,24 @@ public class Authentication {
 	 * 
 	 * @param userName the username of the account.
 	 * @param password the password for the account.
+	 * @param tokenCtx the context under which the token will be created.
 	 * @return the result of the login attempt.
 	 * @throws AuthenticationException if the login attempt failed.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
 	 * the user account is disabled.
 	 */
-	public LocalLoginResult localLogin(final UserName userName, final Password password)
+	public LocalLoginResult localLogin(
+			final UserName userName,
+			final Password password,
+			final TokenCreationContext tokenCtx)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException {
+		nonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
 			return new LocalLoginResult(u.getUserName());
 		}
-		return new LocalLoginResult(login(u.getUserName()));
+		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
 	}
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
@@ -617,11 +622,13 @@ public class Authentication {
 		storage.forcePasswordReset();
 	}
 	
-	private NewToken login(final UserName userName) throws AuthStorageException {
+	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
+			throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 					TokenType.LOGIN, randGen.randomUUID(), userName)
 				.withLifeTime(clock.instant(),
 						cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
+				.withContext(tokenCtx)
 				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -715,6 +722,7 @@ public class Authentication {
 	 * @param tokenName a name for the token.
 	 * @param tokenType the type of token to create. Note that login tokens may not be created
 	 * other than via logging in.
+	 * @param tokenCtx the context under which the token will be created.
 	 * @return the new token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws InvalidTokenException if the provided token is not valid.
@@ -724,10 +732,12 @@ public class Authentication {
 	public NewToken createToken(
 			final IncomingToken token,
 			final TokenName tokenName,
-			final TokenType tokenType)
+			final TokenType tokenType,
+			final TokenCreationContext tokenCtx)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenName, "tokenName");
 		nonNull(tokenType, "tokenType");
+		nonNull(tokenCtx, "tokenCtx");
 		if (TokenType.LOGIN.equals(tokenType)) {
 			throw new IllegalArgumentException("Cannot create a login token without logging in");
 		}
@@ -748,6 +758,7 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 					tokenType, randGen.randomUUID(), au.getUserName())
 				.withLifeTime(now, life)
+				.withContext(tokenCtx)
 				.withTokenName(tokenName).build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -1384,6 +1395,7 @@ public class Authentication {
 	 * 
 	 * @param provider the name of the identity provider that is servicing the login request.
 	 * @param authcode the authcode provided by the provider.
+	 * @param tokenCtx the context under which the token will be created.
 	 * @return either a login token or temporary token.
 	 * @throws MissingParameterException if the authcode is missing.
 	 * @throws IdentityRetrievalException if an error occurred when trying to retrieve identities
@@ -1391,10 +1403,13 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
 	 */
-	public LoginToken login(final String provider, final String authcode)
+	public LoginToken login(
+			final String provider,
+			final String authcode,
+			final TokenCreationContext tokenCtx)
 			throws MissingParameterException, IdentityRetrievalException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		
+		nonNull(tokenCtx, "tokenCtx");
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
@@ -1423,7 +1438,7 @@ public class Authentication {
 			} else if (user.isDisabled()) {
 				lr = storeIdentitiesTemporarily(ls);
 			} else {
-				lr = new LoginToken(login(user.getUserName()), ls);
+				lr = new LoginToken(login(user.getUserName(), tokenCtx), ls);
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
@@ -1442,10 +1457,12 @@ public class Authentication {
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
-	 * This method is expected to be called after {@link #login(String, String)}.
+	 * This method is expected to be called after
+	 * {@link #login(String, String, TokenCreationContext)}.
 	 * After user interaction is completed, a new user can be created via
-	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, boolean)}
-	 * or the login can complete via {@link #login(IncomingToken, String, Set, boolean)}.
+	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, TokenCreationContext, boolean)}
+	 * or the login can complete via
+	 * {@link #login(IncomingToken, String, Set, TokenCreationContext, boolean)}.
 	 * @param token the temporary token.
 	 * @return the state of the login process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -1488,6 +1505,7 @@ public class Authentication {
 		}
 	}
 
+	// probably need a builder for this.
 	/** Create a new user linked to a 3rd party identity.
 	 * 
 	 * This method is expected to be called after {@link #getLoginState(IncomingToken)}.
@@ -1498,6 +1516,7 @@ public class Authentication {
 	 * @param displayName the display name for the new user.
 	 * @param email the email address for the new user.
 	 * @param policyIDs the policy IDs to be added to the user account.
+	 * @param tokenCtx the context under which the token will be created.
 	 * @param linkAll link all other available identities associated with the temporary token to
 	 * this account.
 	 * @return a new login token for the new user.
@@ -1517,6 +1536,7 @@ public class Authentication {
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> policyIDs,
+			final TokenCreationContext tokenCtx,
 			final boolean linkAll)
 			throws AuthStorageException, InvalidTokenException, UserExistsException,
 			UnauthorizedException, IdentityLinkedException, MissingParameterException {
@@ -1525,6 +1545,7 @@ public class Authentication {
 		nonNull(email, "email");
 		nonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
+		nonNull(tokenCtx, "tokenCtx");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
 		}
@@ -1555,7 +1576,7 @@ public class Authentication {
 			filterLinkCandidates(ids);
 			link(userName, ids);
 		}
-		return login(userName);
+		return login(userName, tokenCtx);
 	}
 
 	/** Complete the OAuth2 login process.
@@ -1566,6 +1587,7 @@ public class Authentication {
 	 * target. This identity must be included in the login state associated with the temporary
 	 * token. 
 	 * @param policyIDs the policy IDs to add to the user account.
+	 * @param tokenCtx the context under which the token will be created.
 	 * @param linkAll link all other available identities associated with the temporary token to
 	 * this account.
 	 * @return a new login token.
@@ -1580,10 +1602,12 @@ public class Authentication {
 			final IncomingToken token,
 			final String identityID,
 			final Set<PolicyID> policyIDs,
+			final TokenCreationContext tokenCtx,
 			final boolean linkAll)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
 				MissingParameterException {
 		nonNull(policyIDs, "policyIDs");
+		nonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
@@ -1611,7 +1635,7 @@ public class Authentication {
 			filterLinkCandidates(ids);
 			link(u.get().getUserName(), ids);
 		}
-		return login(u.get().getUserName());
+		return login(u.get().getUserName(), tokenCtx);
 	}
 	
 	private Optional<RemoteIdentity> getIdentity(
@@ -2130,7 +2154,7 @@ public class Authentication {
 				mapper.fromMap(acs.getExtcfg().getMap()));
 	}
 	
-	/** Returns the suggested cache time for tokens.
+	/** Returns the suggested cache time for tokens in milliseconds.
 	 * @return the suggested cache time.
 	 * @throws AuthStorageException if an error occurred accessing the storage system. 
 	 */

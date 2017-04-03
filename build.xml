@@ -35,8 +35,17 @@
     <include name="jna/jna-3.4.0.jar"/>
     <include name="logback/logback-core-1.1.2.jar"/>
     <include name="logback/logback-classic-1.1.2.jar"/>
-    <include name="slf4j/slf4j-api-1.7.7.jar"/>
+    <include name="slf4j/slf4j-api-1.7.25.jar"/>
     <include name="syslog4j/syslog4j-0.9.46.jar"/>
+  </fileset>
+	
+  <fileset dir="${jardir}" id="yauaa">
+    <include name="yauaa/yauaa-1.3.jar"/>
+    <include name="apache_commons/commons-lang3-3.5.jar"/>
+    <include name="apache_commons/commons-collections4-4.1.jar"/>
+    <include name="apache_commons/commons-logging-1.2.jar"/>
+    <include name="kohsuke/args4j-2.33.jar"/>
+    <include name="snakeyaml/snakeyaml-1.18.jar"/>
   </fileset>
 
   <fileset dir="${jardir}" id="jackson">
@@ -84,11 +93,10 @@
   </fileset>
 	
   <fileset dir="${jardir}" id="testlibs">
-    <include name="junit/junit-4.12.jar"/>
-    <include name="apache_commons/commons-lang3-3.1.jar"/>
-    <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
     <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
     <include name="jsemver/java-semver-0.9.0.jar"/>
+    <include name="junit/junit-4.12.jar"/>
+    <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
     <!-- mockito dependencies -->
     <include name="mockito/mockito-core-2.7.10.jar"/>
     <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
@@ -99,6 +107,7 @@
   <union id="applicationjars">
     <fileset refid="jerseydeps"/>
     <fileset refid="jerseydep_hk2"/>
+    <fileset refid="yauaa"/>
     <fileset refid="jackson"/>
     <fileset refid="jersey"/>
     <fileset refid="lib"/>
@@ -230,6 +239,7 @@
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
+      <test name="us.kbase.test.auth2.lib.TokenCreationContextTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>
       <test name="us.kbase.test.auth2.lib.UserSearchSpecTest"/>

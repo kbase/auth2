@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 
 /** A token associated with a user stored in the authentication storage system.
@@ -19,6 +20,7 @@ public class StoredToken {
 	private final UUID id;
 	private final TokenType type;
 	private final Optional<TokenName> tokenName;
+	private final TokenCreationContext context;
 	private final UserName userName;
 	private final Instant creationDate;
 	private final Instant expirationDate;
@@ -28,6 +30,7 @@ public class StoredToken {
 			final TokenType type,
 			final Optional<TokenName> tokenName,
 			final UserName userName,
+			final TokenCreationContext context,
 			final Instant creationDate,
 			final Instant expirationDate) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
@@ -36,6 +39,7 @@ public class StoredToken {
 		nonNull(expirationDate, "expires");
 		this.type = type;
 		this.tokenName = tokenName;
+		this.context = context;
 		this.userName = userName;
 		this.expirationDate = expirationDate;
 		this.creationDate = creationDate;
@@ -69,6 +73,13 @@ public class StoredToken {
 	public UserName getUserName() {
 		return userName;
 	}
+	
+	/** Get the context in which this token was created.
+	 * @return the creation context.
+	 */
+	public TokenCreationContext getContext() {
+		return context;
+	}
 
 	/** Get the date the token was created.
 	 * @return the creation date.
@@ -88,6 +99,7 @@ public class StoredToken {
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((context == null) ? 0 : context.hashCode());
 		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
 		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
@@ -109,6 +121,13 @@ public class StoredToken {
 			return false;
 		}
 		StoredToken other = (StoredToken) obj;
+		if (context == null) {
+			if (other.context != null) {
+				return false;
+			}
+		} else if (!context.equals(other.context)) {
+			return false;
+		}
 		if (creationDate == null) {
 			if (other.creationDate != null) {
 				return false;
@@ -200,6 +219,12 @@ public class StoredToken {
 		 */
 		OptionalsStep withNullableTokenName(TokenName tokenName);
 		
+		/** Specify the token creation context.
+		 * @param context the token creation context.
+		 * @return this builder.
+		 */
+		OptionalsStep withContext(TokenCreationContext context);
+		
 		/** Build the token.
 		 * @return a new StoredToken.
 		 */
@@ -211,6 +236,7 @@ public class StoredToken {
 		private final UUID id;
 		private final TokenType type;
 		private Optional<TokenName> tokenName = Optional.absent();
+		private TokenCreationContext context = TokenCreationContext.getBuilder().build();
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
@@ -236,10 +262,18 @@ public class StoredToken {
 			this.tokenName = Optional.fromNullable(tokenName);
 			return this;
 		}
+		
+		@Override
+		public OptionalsStep withContext(final TokenCreationContext context) {
+			nonNull(context, "context");
+			this.context = context;
+			return this;
+		}
 
 		@Override
 		public StoredToken build() {
-			return new StoredToken(id, type, tokenName, userName, creationDate, expirationDate);
+			return new StoredToken(id, type, tokenName, userName, context,
+					creationDate, expirationDate);
 		}
 
 		@Override

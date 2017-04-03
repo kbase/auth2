@@ -1,13 +1,22 @@
 package us.kbase.auth2.service.common;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
+import java.net.InetAddress;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Set;
+
+import javax.servlet.http.HttpServletRequest;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserUpdate;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -15,10 +24,16 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 
 /* methods that are useful for the UI and API */
 public class ServiceCommon {
+	
+	private static final String HEADER_USER_AGENT = "user-agent";
+	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
+	private static final String X_REAL_IP = "X-Real-IP";
 
 	//TODO JAVADOC
 	//TODO TEST
@@ -86,4 +101,57 @@ public class ServiceCommon {
 		}
 	}
 
+	public static TokenCreationContext getTokenContext(
+			final UserAgentParser userAgentParser,
+			final HttpServletRequest request,
+			final boolean ignoreIPsInHeaders,
+			final Map<String, String> customContext)
+			throws MissingParameterException, IllegalParameterException {
+		nonNull(userAgentParser, "userAgentParser");
+		nonNull(request, "request");
+		nonNull(customContext, "customContext");
+		final TokenCreationContext.Builder tcc = userAgentParser.getTokenContextFromUserAgent(
+				request.getHeader(HEADER_USER_AGENT));
+		addIPAddress(tcc, request, ignoreIPsInHeaders);
+		for (final Entry<String, String> entry: customContext.entrySet()) {
+			tcc.withCustomContext(entry.getKey(), entry.getValue());
+		}
+		return tcc.build();
+	}
+	
+	//TODO TEST xff and realip headers
+	private static void addIPAddress(
+			final TokenCreationContext.Builder builder,
+			final HttpServletRequest request,
+			final boolean ignoreIPsInHeaders) {
+		final String xFF = request.getHeader(X_FORWARDED_FOR);
+		final String realIP = request.getHeader(X_REAL_IP);
+		final String ip;
+		if (!ignoreIPsInHeaders) {
+			if (xFF != null && !xFF.isEmpty()) {
+				ip = xFF.split(",")[0].trim();
+			} else if (realIP != null && !realIP.isEmpty()) {
+				ip = realIP.trim();
+			} else {
+				ip = request.getRemoteAddr();
+			}
+		} else {
+			ip = request.getRemoteAddr();
+		}
+		try {
+			builder.withIpAddress(InetAddress.getByName(ip));
+		} catch (Exception e) {
+			// do nothing
+		}
+	}
+	
+	public static boolean isIgnoreIPsInHeaders(final Authentication auth)
+			throws AuthStorageException {
+		try {
+			return auth.getExternalConfig(new AuthExternalConfigMapper())
+				.isIgnoreIPHeadersOrDefault();
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("There appears to be a programming error here...", e);
+		}
+	}
 }
