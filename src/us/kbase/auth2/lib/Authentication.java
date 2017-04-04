@@ -107,8 +107,8 @@ public class Authentication {
 
 	//TODO TEST test unicode for inputs and outputs
 	//TODO TEST unit tests
-	//TODO TEST test logging on startup
-	//TODO TEST test logging on calls
+	//TODO TEST LOG test logging on startup
+	//TODO TEST LOG test logging on calls
 	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO AUTH server root should return server version (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.

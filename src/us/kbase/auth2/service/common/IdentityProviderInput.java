@@ -11,7 +11,7 @@ import us.kbase.auth2.service.common.IncomingJSON;
 public class IdentityProviderInput extends IncomingJSON {
 	
 	//TODO JAVADOC
-	//TODO TESTS
+	//TODO TEST
 	
 	private final String authCode;
 	private final String state;
