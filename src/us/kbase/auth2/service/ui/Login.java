@@ -124,6 +124,22 @@ public class Login {
 		return ret;
 	}
 	
+	@GET
+	@Path(UIPaths.LOGIN_SUGGEST_NAME)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, String> getNameSuggestion(@PathParam("name") final String name)
+			throws AuthStorageException {
+		//name cannot be null here
+		final Optional<UserName> suggname = auth.getAvailableUserName(name);
+		final String retname;
+		if (suggname.isPresent()) {
+			retname = suggname.get().getName();
+		} else {
+			retname = null;
+		}
+		return ImmutableMap.of("name", retname);
+	}
+	
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_START)
@@ -253,7 +269,6 @@ public class Login {
 			}
 			return customContext;
 		}
-		
 	}
 	
 	@POST
