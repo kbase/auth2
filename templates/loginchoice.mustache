@@ -19,6 +19,7 @@ Policy IDs:</br>
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	Add policy IDs: <input type="text" name="policy_ids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="submit" value="Login"/>
 </form>
@@ -41,6 +42,7 @@ Email is only visible to you, software acting on your behalf, and system adminis
 	Display name: <input type="text" name="display" value="{{prov_fullname}}"/><br/>
 	Email: <input type="text" name="email" value="{{prov_email}}"/><br/>
 	Policy IDs: <input type="text" name="policy_ids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Create"/>

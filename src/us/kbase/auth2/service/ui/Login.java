@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
@@ -456,15 +457,14 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final String identityID,
 			@FormParam("policy_ids") final String policyIDs,
+			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
+				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				PickChoice.getString(identityID, "id"),
 				PickChoice.getPolicyIDs(policyIDs), tcc, linkAll != null);
@@ -563,6 +563,7 @@ public class Login {
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email,
 			@FormParam("policy_ids") final String policyIDs,
+			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
@@ -572,10 +573,8 @@ public class Login {
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
+				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),

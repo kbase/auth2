@@ -198,7 +198,6 @@ public class Tokens {
 		auth.revokeTokens(getToken(headerToken));
 	}
 
-	//TODO CTX update login pages with set context
 	private NewUIToken createtoken(
 			final HttpServletRequest req,
 			final String tokenName,
