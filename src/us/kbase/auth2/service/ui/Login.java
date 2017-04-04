@@ -510,7 +510,7 @@ public class Login {
 		private static Set<PolicyID> getPolicyIDs(final List<String> policyIDs)
 				throws MissingParameterException, IllegalParameterException {
 			final Set<PolicyID> ret = new HashSet<>(); 
-			if (policyIDs == null || policyIDs.isEmpty()) {
+			if (policyIDs == null) {
 				return ret;
 			}
 			for (final String id: policyIDs) {
