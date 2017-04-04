@@ -4,6 +4,7 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.net.InetAddress;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -153,5 +154,26 @@ public class ServiceCommon {
 		} catch (ExternalConfigMappingException e) {
 			throw new RuntimeException("There appears to be a programming error here...", e);
 		}
+	}
+	
+	public static Map<String, String> getCustomContextFromString(final String customContext)
+			throws IllegalParameterException {
+		final Map<String, String> ret = new HashMap<>();
+		if (customContext == null || customContext.trim().isEmpty()) {
+			return ret;
+		}
+		final String[] items = customContext.trim().split(";");
+		for (String item: items) {
+			item = item.trim();
+			if (!item.isEmpty()) {
+				final String[] keyvalue = item.trim().split(",");
+				if (keyvalue.length != 2) {
+					throw new IllegalParameterException("Bad key/value pair in custom context: " +
+							item);
+				}
+				ret.put(keyvalue[0], keyvalue[1]);
+			}
+		}
+		return ret;
 	}
 }
