@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
@@ -131,7 +132,11 @@ public class Login {
 			@FormParam("redirect") final String redirect,
 			@FormParam("stayLoggedIn") final String stayLoggedIn)
 			throws IllegalParameterException, AuthStorageException,
-			NoSuchIdentityProviderException {
+			NoSuchIdentityProviderException, MissingParameterException {
+		
+		if (provider == null || provider.trim().isEmpty()) {
+			throw new MissingParameterException("provider");
+		}
 		
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
@@ -229,6 +234,28 @@ public class Login {
 		return r;
 	}
 	
+	private static class IDProviderJSON extends IdentityProviderInput {
+
+		private final Map<String, String> customContext;
+		
+		@JsonCreator
+		public IDProviderJSON(
+				@JsonProperty("authcode") final String authCode,
+				@JsonProperty("state") final String state,
+				@JsonProperty("customcontext") final Map<String, String> customContext) {
+			super(authCode, state);
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
+		}
+		
+	}
+	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
@@ -240,7 +267,7 @@ public class Login {
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			final IdentityProviderInput input)
+			final IDProviderJSON input)
 			throws AuthenticationException, MissingParameterException, AuthStorageException,
 			IllegalParameterException {
 		if (input == null) {
@@ -250,17 +277,14 @@ public class Login {
 		input.exceptOnAdditionalProperties();
 		input.checkState(state);
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), input.getCustomContext());
 		
 		final LoginToken lr = auth.login(provider, input.getAuthCode(), tcc);
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
 			choice.put("token", new NewUIToken(lr.getToken()));
 			choice.put("logged_in", true);
-			choice.put("redirect", getRedirectURL(redirect));
 			final ResponseBuilder b = Response.ok(choice);
 			setLoginCookies(b, lr.getToken(), TRUE.equals(session));
 			return b.build();
@@ -456,15 +480,14 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final String identityID,
 			@FormParam("policy_ids") final String policyIDs,
+			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
+				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				PickChoice.getString(identityID, "id"),
 				PickChoice.getPolicyIDs(policyIDs), tcc, linkAll != null);
@@ -476,15 +499,18 @@ public class Login {
 		private final String id;
 		private final List<String> policyIDs;
 		private final Object linkAll;
+		private final Map<String, String> customContext;
 		
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
 		public PickChoice(
 				@JsonProperty("id") final String id,
 				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
 			this.id = id;
 			this.policyIDs = policyIDs;
+			this.customContext = customContext;
 			this.linkAll = linkAll;
 		}
 		
@@ -510,7 +536,7 @@ public class Login {
 		private static Set<PolicyID> getPolicyIDs(final List<String> policyIDs)
 				throws MissingParameterException, IllegalParameterException {
 			final Set<PolicyID> ret = new HashSet<>(); 
-			if (policyIDs == null || policyIDs.isEmpty()) {
+			if (policyIDs == null) {
 				return ret;
 			}
 			for (final String id: policyIDs) {
@@ -521,6 +547,13 @@ public class Login {
 		
 		public boolean isLinkAll() throws IllegalParameterException {
 			return getBoolean(linkAll, "linkall");
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
 		}
 	}
 	
@@ -541,10 +574,8 @@ public class Login {
 		}
 		
 		pick.exceptOnAdditionalProperties();
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), pick.getCustomContext());
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				pick.getIdentityID(), pick.getPolicyIDs(), tcc, pick.isLinkAll());
 		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
@@ -563,6 +594,7 @@ public class Login {
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email,
 			@FormParam("policy_ids") final String policyIDs,
+			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
@@ -572,10 +604,8 @@ public class Login {
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
+				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
@@ -603,8 +633,9 @@ public class Login {
 				@JsonProperty("display") final String displayName,
 				@JsonProperty("email") final String email,
 				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
-			super(id, policyIDs, linkAll);
+			super(id, policyIDs, customContext, linkAll);
 			this.user = userName;
 			this.displayName = displayName;
 			this.email = email;
@@ -630,10 +661,8 @@ public class Login {
 		
 		create.exceptOnAdditionalProperties();
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),

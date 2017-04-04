@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
@@ -105,27 +106,39 @@ public class Tokens {
 	public NewUIToken createTokenHTML(
 			@Context final HttpServletRequest req,
 			@Context final HttpHeaders headers,
-			@FormParam("tokenname") final String tokenName,
-			@FormParam("tokentype") final String tokenType)
+			@FormParam("name") final String tokenName,
+			@FormParam("type") final String tokenType,
+			@FormParam("customcontext") final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException, IllegalParameterException {
 		return createtoken(req, tokenName, tokenType,
-				getTokenFromCookie(headers, cfg.getTokenCookieName()));
+				getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				getCustomContextFromString(customContext));
 	}
 	
 	private static class CreateTokenParams extends IncomingJSON {
 
 		public final String name;
 		public final String type;
+		private final Map<String, String> customContext;
 		
 		@JsonCreator
 		private CreateTokenParams(
 				@JsonProperty("name") final String name,
-				@JsonProperty("type") final String type)
+				@JsonProperty("type") final String type,
+				@JsonProperty("customcontext") final Map<String, String> customContext)
 				throws MissingParameterException {
 			this.name = name;
 			this.type = type;
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
 		}
 	}
 	
@@ -141,7 +154,8 @@ public class Tokens {
 			InvalidTokenException, NoTokenProvidedException,
 			UnauthorizedException, IllegalParameterException {
 		input.exceptOnAdditionalProperties();
-		return createtoken(req, input.name, input.type, getToken(headerToken));
+		return createtoken(req, input.name, input.type, getToken(headerToken),
+				input.getCustomContext());
 	}
 	
 	@POST
@@ -184,18 +198,15 @@ public class Tokens {
 		auth.revokeTokens(getToken(headerToken));
 	}
 
-	//TODO CTX update token page with set context
-	//TODO CTX update login pages with set context
 	private NewUIToken createtoken(
 			final HttpServletRequest req,
 			final String tokenName,
 			final String tokenType,
-			final IncomingToken userToken)
+			final IncomingToken userToken,
+			final Map<String, String> customContext)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException, IllegalParameterException {
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
 		return new NewUIToken(auth.createToken(userToken, new TokenName(tokenName),

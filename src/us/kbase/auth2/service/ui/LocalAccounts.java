@@ -1,5 +1,6 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
@@ -7,7 +8,6 @@ import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collections;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -74,7 +74,8 @@ public class LocalAccounts {
 			@FormParam("user") final String userName,
 			@FormParam("pwd") String pwd, //char makes Jersey puke
 			//checkbox, so "on" = checked, null = not checked
-			@FormParam("stayLoggedIn") final String stayLoggedIn)
+			@FormParam("stayloggedin") final String stayLoggedIn,
+			@FormParam("customcontext") final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			AuthenticationException, IllegalParameterException,
 			UnauthorizedException {
@@ -86,10 +87,8 @@ public class LocalAccounts {
 		}
 		final Password cpwd = new Password(pwd.toCharArray());
 		pwd = null; // try to get pwd GC'd as quickly as possible
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
+				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		
 		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd, tcc);
 		//TODO LOG log

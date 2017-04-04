@@ -1216,7 +1216,7 @@ public class MongoStorage implements AuthStorage {
 				"\\w+\\.(\\w+)( index: |\\.\\$)([\\.\\w]+)\\s+");
 				
 		
-		//TODO TEST this class
+		//TODO NOW TEST this class
 		
 		private final boolean isDuplicate;
 		private final Optional<String> collection;

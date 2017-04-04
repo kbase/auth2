@@ -63,7 +63,7 @@ public class Token {
 	public NewAPIToken createAgentTokenForm(
 			@Context final HttpServletRequest req,
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam("tokenname") final String name)
+			@FormParam("name") final String name)
 			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
 		
@@ -76,11 +76,22 @@ public class Token {
 	
 	private static class CreateToken extends IncomingJSON {
 		
-		public final String tokenname;
+		public final String name;
+		private final Map<String, String> customContext;
 
 		@JsonCreator
-		public CreateToken(@JsonProperty("tokenname") final String name) {
-			this.tokenname = name;
+		public CreateToken(
+				@JsonProperty("name") final String name,
+				@JsonProperty("customcontext") final Map<String, String> customContext) {
+			this.name = name;
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
 		}
 	}
 	
@@ -95,13 +106,11 @@ public class Token {
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		create.exceptOnAdditionalProperties();
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
 		return new NewAPIToken(auth.createToken(
-				getToken(token), new TokenName(create.tokenname), TokenType.AGENT, tcc),
+				getToken(token), new TokenName(create.name), TokenType.AGENT, tcc),
 				auth.getSuggestedTokenCacheTime());
 	}
 }
