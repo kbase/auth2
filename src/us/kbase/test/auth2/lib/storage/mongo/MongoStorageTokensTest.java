@@ -26,8 +26,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTokensTest extends MongoStorageTester {
 	
-	//TODO NOW TEST test that temporary tokens are stored in the db correctly. Only the hash is really checked.
-
 	@Test
 	public void storeAndGet() throws Exception {
 		final UUID id = UUID.randomUUID();

@@ -7,8 +7,11 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.lang.reflect.Field;
+import java.sql.Date;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -38,33 +41,75 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 	
 	@Test
 	public void storeAndGetEmpty() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
 		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
+				id, "foobar", now, 10000)
 					.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
 		
+		assertStoredCorrectly(id, "w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=",
+				now, now.plusMillis(10000), Collections.emptySet());
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(Collections.emptySet()));
 	}
 	
+	private void assertStoredCorrectly(
+			final UUID id,
+			final String token,
+			final Instant created,
+			final Instant expires,
+			final Set<RemoteIdentity> remoteIDs) {
+		final Document ttdoc = db.getCollection("temptokens").find(
+						new Document("id", id.toString()))
+						.projection(new Document("_id", 0)).first();
+		@SuppressWarnings("unchecked")
+		final List<Document> listids = (List<Document>) ttdoc.get("idents");
+		ttdoc.put("idents", new HashSet<>(listids));
+		final Set<Document> ids = new HashSet<>();
+		for (final RemoteIdentity rid: remoteIDs) {
+			ids.add(new Document("id", rid.getRemoteID().getID())
+					.append("prov", rid.getRemoteID().getProviderName())
+					.append("prov_id", rid.getRemoteID().getProviderIdentityId())
+					.append("uid", rid.getDetails().getUsername())
+					.append("fullname", rid.getDetails().getFullname())
+					.append("email", rid.getDetails().getEmail()));
+		}
+		assertThat("token doc incorrect", ttdoc,
+				is(new Document("id", id.toString())
+						.append("token", token)
+						.append("create", Date.from(created))
+						.append("expires", Date.from(expires))
+						.append("idents", ids)));
+		
+	}
+	
 	@Test
 	public void storeAndGet1() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
 		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
+				id, "foobar", now, 10000)
 					.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, set(REMOTE2));
 		
+		assertStoredCorrectly(id, "w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=",
+				now, now.plusMillis(10000), set(REMOTE2));
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(set(REMOTE2)));
 	}
 	
 	@Test
 	public void storeAndGet2() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
 		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
+				id, "foobar", now, 10000)
 					.getHashedToken();
 		storage.storeIdentitiesTemporarily(tt, set(REMOTE2, REMOTE1));
 		
+		assertStoredCorrectly(id, "w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI=",
+				now, now.plusMillis(10000), set(REMOTE1, REMOTE2));
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(set(REMOTE2, REMOTE1)));
 	}
