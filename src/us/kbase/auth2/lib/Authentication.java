@@ -38,6 +38,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.Builder;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
@@ -151,8 +152,10 @@ public class Authentication {
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	private final Clock clock;
+	private final ExternalConfig defaultExternalConfig;
 	
-	//TODO CONFIG UI show this with note that it'll take X seconds to sync to other server instance
+	// note that this value is supposed to be a constant, but is mutable for testing purposes.
+	// do not make it mutable for any other reason.
 	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
@@ -203,6 +206,7 @@ public class Authentication {
 		nonNull(identityProviderSet, "identityProviderSet");
 		noNulls(identityProviderSet, "Null identity provider in set");
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		this.defaultExternalConfig = defaultExternalConfig;
 		this.storage = storage;
 		for (final IdentityProvider idp: identityProviderSet) {
 			nonNull(idp.getProviderName(), "provider name");
@@ -212,19 +216,9 @@ public class Authentication {
 			}
 			idProviderSet.put(idp.getProviderName(), idp);
 		}
-		final Builder<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
-				.withLoginAllowed(AuthConfig.DEFAULT_LOGIN_ALLOWED)
-				.withExternalConfig(defaultExternalConfig)
-				.withDefaultTokenLifeTimes();
-		for (final Entry<String, IdentityProvider> e: idProviderSet.entrySet()) {
-			try {
-				acu.withProviderUpdate(e.getKey(), AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE);
-			} catch (MissingParameterException ex) {
-				throw new IllegalArgumentException("Bad provider name: " + e.getKey());
-			}
-		}
+		final AuthConfigUpdate<ExternalConfig> acu = buildDefaultConfig();
 		try {
-			storage.updateConfig(acu.build(), false);
+			storage.updateConfig(acu, false);
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to set config in storage: " +
 					e.getMessage(), e);
@@ -2142,6 +2136,35 @@ public class Authentication {
 		cfg.updateConfig();
 	}
 	
+	/** Reset the service configuration to the initial configuration supplied at startup.
+	 * @param token a token for a user with the administrator role.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user account associated with the token doesn't have
+	 * the appropriate role or the token is not a login token.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void resetConfigToDefault(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		storage.updateConfig(buildDefaultConfig(), true);
+		cfg.updateConfig();
+	}
+
+	private AuthConfigUpdate<ExternalConfig> buildDefaultConfig() {
+		final Builder<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(AuthConfig.DEFAULT_LOGIN_ALLOWED)
+				.withExternalConfig(defaultExternalConfig)
+				.withDefaultTokenLifeTimes();
+		for (final Entry<String, IdentityProvider> e: idProviderSet.entrySet()) {
+			try {
+				acu.withProviderUpdate(e.getKey(), AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE);
+			} catch (MissingParameterException ex) {
+				throw new IllegalArgumentException("Bad provider name: " + e.getKey());
+			}
+		}
+		return acu.build();
+	}
+	
 	/** Gets the authentication configuration.
 	 * @param token a token for a user with the administrator role.
 	 * @param mapper a mapper for the external configuration.
@@ -2153,17 +2176,18 @@ public class Authentication {
 	 * @throws ExternalConfigMappingException if the mapper failed to map the external
 	 * configuration into a class.
 	 */
-	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+	public <T extends ExternalConfig> AuthConfigSetWithUpdateTime<T> getConfig(
 			final IncomingToken token,
 			final ExternalConfigMapper<T> mapper)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		//TODO CONFIG remove providers from config that aren't in set
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return new AuthConfigSet<T>(acs.getCfg(),
-				mapper.fromMap(acs.getExtcfg().getMap()));
+		return new AuthConfigSetWithUpdateTime<T>(
+				acs.getCfg().filterProviders(idProviderSet.keySet()),
+				mapper.fromMap(acs.getExtcfg().getMap()),
+				cfgUpdateIntervalSec);
 	}
 	
 	/** Returns the suggested cache time for tokens in milliseconds.

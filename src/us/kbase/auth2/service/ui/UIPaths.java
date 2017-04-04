@@ -86,9 +86,11 @@ public class UIPaths {
 	public static final String ADMIN_CONFIG = "config";
 	public static final String ADMIN_CONFIG_BASIC = ADMIN_CONFIG + SEP + "basic";
 	public static final String ADMIN_CONFIG_PROVIDER = ADMIN_CONFIG + SEP + "provider";
+	public static final String ADMIN_CONFIG_RESET = ADMIN_CONFIG + SEP + RESET;
 	public static final String ADMIN_CONFIG_TOKEN = ADMIN_CONFIG + SEP + TOKEN;
 	public static final String ADMIN_ROOT_CONFIG_BASIC = ADMIN_ROOT + ADMIN_CONFIG_BASIC;
 	public static final String ADMIN_ROOT_CONFIG_PROVIDER = ADMIN_ROOT + ADMIN_CONFIG_PROVIDER;
+	public static final String ADMIN_ROOT_CONFIG_RESET = ADMIN_ROOT + ADMIN_CONFIG_RESET;
 	public static final String ADMIN_ROOT_CONFIG_TOKEN = ADMIN_ROOT + ADMIN_CONFIG_TOKEN;
 	
 	/* localaccount endpoint */

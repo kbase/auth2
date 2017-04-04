@@ -4,8 +4,10 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 import org.junit.Test;
@@ -16,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
@@ -232,6 +235,47 @@ public class AuthConfigTest {
 	}
 	
 	@Test
+	public void authConfigFilterProviders() throws Exception {
+		final Map<String, ProviderConfig> pc = new HashMap<>();
+		pc.put("pc1", new ProviderConfig(true, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, true));
+		
+		final AuthConfig ac = new AuthConfig(false, pc, null);
+		
+		final AuthConfig filtered = ac.filterProviders(new HashSet<>(Arrays.asList("pc2", "pc3")));
+		assertThat("incorrect login allowed", filtered.isLoginAllowed(), is(false));
+		assertThat("incorrect providers", filtered.getProviders(), is(ImmutableMap.of(
+				"pc2", new ProviderConfig(false, false, true))));
+		assertThat("incorrect lifetimes", filtered.getTokenLifetimeMS(),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void authConfigFilterProvidersEmpty() throws Exception {
+		final Map<String, ProviderConfig> pc = new HashMap<>();
+		pc.put("pc1", new ProviderConfig(true, true, false));
+		pc.put("pc2", new ProviderConfig(false, false, true));
+		
+		final AuthConfig ac = new AuthConfig(false, pc, null);
+		
+		final AuthConfig filtered = ac.filterProviders(Collections.emptySet());
+		assertThat("incorrect login allowed", filtered.isLoginAllowed(), is(false));
+		assertThat("incorrect providers", filtered.getProviders(), is(Collections.emptyMap()));
+		assertThat("incorrect lifetimes", filtered.getTokenLifetimeMS(),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void authConfigFilterFailNull() throws Exception {
+		try {
+			new AuthConfig(false, null, null).filterProviders(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("identityProviders"));
+		}
+	}
+	
+	@Test
 	public void getProviderFail() throws Exception {
 		final Map<String, ProviderConfig> pc = new HashMap<>();
 		pc.put("pc1", new ProviderConfig(true, true, false));
@@ -339,7 +383,6 @@ public class AuthConfigTest {
 			}
 			return true;
 		}
-
 	}
 
 	@Test
@@ -443,6 +486,7 @@ public class AuthConfigTest {
 				TokenLifetimeType.SERV, 100_000_000L * 24 * 3600 * 1000L,
 				TokenLifetimeType.EXT_CACHE, 5 * 60 * 1000L)));
 	}
+	
 	@Test
 	public void updateConfigFail() throws Exception {
 		final TokenLifetimeType tlt = TokenLifetimeType.LOGIN;
@@ -518,5 +562,26 @@ public class AuthConfigTest {
 		} catch (NullPointerException e) {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
+	}
+	
+	@Test
+	public void configSetWithUpdateEquals() {
+		EqualsVerifier.forClass(AuthConfigSetWithUpdateTime.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void configSetWithUpdateConstructAndGetters() throws Exception {
+		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
+		lts.put(TokenLifetimeType.DEV, 350000L);
+		final AuthConfig cfg = new AuthConfig(false, null, lts);
+		final AuthConfigSetWithUpdateTime<TestExtCfg> ac =
+				new AuthConfigSetWithUpdateTime<TestExtCfg>(cfg, new TestExtCfg(), -1);
+		assertThat("incorrect config login", ac.getCfg().isLoginAllowed(), is(false));
+		assertThat("incorrect config providers", ac.getCfg().getProviders(), is(new HashMap<>()));
+		assertThat("incorrect config token lifetimes", ac.getCfg().getTokenLifetimeMS(),
+				is(lts));
+		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
+				is(ImmutableMap.of("foo", ConfigItem.set("bar"))));
+		assertThat("incorrect update time", ac.getUpdateTimeInSec(), is(-1));
 	}
 }

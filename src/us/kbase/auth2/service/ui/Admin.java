@@ -49,7 +49,7 @@ import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
-import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
@@ -523,7 +523,15 @@ public class Admin {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
-	//TODO CONFIG reset to defaults
+	@POST
+	@Path(UIPaths.ADMIN_CONFIG_RESET)
+	public void resetConfig(
+			@Context final HttpHeaders headers)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
+		auth.resetConfigToDefault(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+	}
+	
 	@GET
 	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")
@@ -533,7 +541,7 @@ public class Admin {
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, AuthStorageException {
-		final AuthConfigSet<AuthExternalConfig<State>> cfgset;
+		final AuthConfigSetWithUpdateTime<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthExternalConfigMapper());
@@ -580,9 +588,12 @@ public class Admin {
 		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.SERV) / DAY_IN_MS);
 
+		ret.put("updatetimesec", cfgset.getUpdateTimeInSec());
+		
 		ret.put("basicurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
 		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
 		ret.put("providerurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
+		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_RESET));
 		return ret;
 	}
 	
