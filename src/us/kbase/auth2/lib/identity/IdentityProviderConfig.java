@@ -1,7 +1,12 @@
 package us.kbase.auth2.lib.identity;
 
+import static us.kbase.auth2.lib.Utils.nonNull;
+
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
 
 /** A configuration for an identity provider.
  * @author gaprice@lbl.gov
@@ -18,6 +23,9 @@ public class IdentityProviderConfig {
 	private final URL apiURL;
 	private final URL loginRedirectURL;
 	private final URL linkRedirectURL;
+	private final Map<String, String> customConfig;
+	
+	// a builder would be nice, but there's only 1 optional item...
 	
 	/** Create a configuration for an identity provider.
 	 * @param identityProviderFactoryClass the class name of the identity provider factory for this
@@ -40,8 +48,10 @@ public class IdentityProviderConfig {
 			final String clientID,
 			final String clientSecret,
 			final URL loginRedirectURL,
-			final URL linkRedirectURL)
+			final URL linkRedirectURL,
+			final Map<String, String> customConfig)
 			throws IdentityProviderConfigurationException {
+		nonNull(customConfig, "customConfig");
 		notNullOrEmpty(identityProviderFactoryClass, "Identity provider name");
 		notNullOrEmpty(clientID, "Client ID for " + identityProviderFactoryClass +
 				" identity provider");
@@ -54,6 +64,7 @@ public class IdentityProviderConfig {
 		this.apiURL = apiURL;
 		this.loginRedirectURL = loginRedirectURL;
 		this.linkRedirectURL = linkRedirectURL;
+		this.customConfig = Collections.unmodifiableMap(new HashMap<>(customConfig));
 
 		checkValidURI(this.loginURL, "Login URL");
 		checkValidURI(this.apiURL, "API URL");
@@ -132,6 +143,13 @@ public class IdentityProviderConfig {
 	 */
 	public URL getLinkRedirectURL() {
 		return linkRedirectURL;
+	}
+	
+	/** Get any custom configuration options that have been provided for the identity provider.
+	 * @return the custom configuration.
+	 */
+	public Map<String, String> getCustomConfiguation() {
+		return customConfig;
 	}
 	
 	/** Thrown when the creating an identity provider configuration fails due to bad input.

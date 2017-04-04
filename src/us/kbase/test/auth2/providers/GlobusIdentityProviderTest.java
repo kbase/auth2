@@ -10,6 +10,7 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Base64;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -92,7 +93,8 @@ public class GlobusIdentityProviderTest {
 					"foo",
 					"bar",
 					new URL("https://loginredir.com"),
-					new URL("https://linkredir.com"));
+					new URL("https://linkredir.com"),
+					Collections.emptyMap());
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -145,7 +147,8 @@ public class GlobusIdentityProviderTest {
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL()),
+				CFG.getLinkRedirectURL(),
+				Collections.emptyMap()),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -475,7 +478,8 @@ public class GlobusIdentityProviderTest {
 				"foo",
 				"bar",
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com"));
+				new URL("https://linkredir.com"),
+				Collections.emptyMap());
 	}
 
 	private String getBasicAuth(final IdentityProviderConfig idconfig) {
@@ -609,7 +613,8 @@ public class GlobusIdentityProviderTest {
 				clientID,
 				"bar2",
 				new URL("https://loginredir2.com"),
-				new URL("https://linkredir2.com"));
+				new URL("https://linkredir2.com"),
+				Collections.emptyMap());
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
 		final String bauth = getBasicAuth(idconfig);
 		
