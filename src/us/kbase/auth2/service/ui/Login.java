@@ -132,7 +132,11 @@ public class Login {
 			@FormParam("redirect") final String redirect,
 			@FormParam("stayLoggedIn") final String stayLoggedIn)
 			throws IllegalParameterException, AuthStorageException,
-			NoSuchIdentityProviderException {
+			NoSuchIdentityProviderException, MissingParameterException {
+		
+		if (provider == null || provider.trim().isEmpty()) {
+			throw new MissingParameterException("provider");
+		}
 		
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
@@ -476,15 +480,18 @@ public class Login {
 		private final String id;
 		private final List<String> policyIDs;
 		private final Object linkAll;
+		private final Map<String, String> customContext;
 		
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
 		public PickChoice(
 				@JsonProperty("id") final String id,
 				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
 			this.id = id;
 			this.policyIDs = policyIDs;
+			this.customContext = customContext;
 			this.linkAll = linkAll;
 		}
 		
@@ -522,6 +529,13 @@ public class Login {
 		public boolean isLinkAll() throws IllegalParameterException {
 			return getBoolean(linkAll, "linkall");
 		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
+		}
 	}
 	
 	@POST // non-idempotent
@@ -541,10 +555,8 @@ public class Login {
 		}
 		
 		pick.exceptOnAdditionalProperties();
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), pick.getCustomContext());
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				pick.getIdentityID(), pick.getPolicyIDs(), tcc, pick.isLinkAll());
 		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
@@ -602,8 +614,9 @@ public class Login {
 				@JsonProperty("display") final String displayName,
 				@JsonProperty("email") final String email,
 				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
-			super(id, policyIDs, linkAll);
+			super(id, policyIDs, customContext, linkAll);
 			this.user = userName;
 			this.displayName = displayName;
 			this.email = email;
@@ -629,10 +642,8 @@ public class Login {
 		
 		create.exceptOnAdditionalProperties();
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
