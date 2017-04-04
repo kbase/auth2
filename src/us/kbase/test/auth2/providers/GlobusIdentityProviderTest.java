@@ -433,11 +433,30 @@ public class GlobusIdentityProviderTest {
 			final int retcode,
 			final String primaryReturn)
 			throws Exception {
+		setUpCallPrimaryID(authtoken, bauth, contentType, retcode, primaryReturn, true);
+	}
+	
+	private void setUpCallPrimaryID(
+			final String authtoken,
+			final String bauth,
+			final String contentType,
+			final int retcode,
+			final String primaryReturn,
+			final boolean includeIdentitiesSet)
+			throws Exception {
 		final HttpResponse resp = new HttpResponse()
 				.withStatusCode(retcode)
 				.withHeader(new Header(CONTENT_TYPE, contentType));
 		if (primaryReturn != null) {
 			resp.withBody(primaryReturn);
+		}
+		final ParameterBody parameterBody;
+		if (includeIdentitiesSet) {
+			parameterBody = new ParameterBody(
+					new Parameter("include", "identities_set"),
+					new Parameter("token", authtoken));
+		} else {
+			parameterBody = new ParameterBody(new Parameter("token", authtoken));
 		}
 		mockClientAndServer.when(
 				new HttpRequest()
@@ -445,9 +464,7 @@ public class GlobusIdentityProviderTest {
 					.withPath("/v2/oauth2/token/introspect")
 					.withHeader(ACCEPT, APP_JSON)
 					.withHeader("Authorization", bauth)
-					.withBody(new ParameterBody(
-							new Parameter("include", "identities_set"),
-							new Parameter("token", authtoken))
+					.withBody(parameterBody
 					),
 				Times.exactly(1)
 			).respond(
@@ -471,6 +488,11 @@ public class GlobusIdentityProviderTest {
 	private IdentityProviderConfig getTestIDConfig()
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
+		return getTestIDConfig(Collections.emptyMap());
+	}
+	
+	private IdentityProviderConfig getTestIDConfig(final Map<String, String> customConfig)
+			throws MalformedURLException, IdentityProviderConfigurationException {
 		return new IdentityProviderConfig(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
@@ -479,7 +501,7 @@ public class GlobusIdentityProviderTest {
 				"bar",
 				new URL("https://loginredir.com"),
 				new URL("https://linkredir.com"),
-				Collections.emptyMap());
+				customConfig);
 	}
 
 	private String getBasicAuth(final IdentityProviderConfig idconfig) {
@@ -544,7 +566,8 @@ public class GlobusIdentityProviderTest {
 	@Test
 	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
 		final String authCode = "authcode";
-		final IdentityProviderConfig testIDConfig = getTestIDConfig();
+		final IdentityProviderConfig testIDConfig = getTestIDConfig(
+				ImmutableMap.of("ignore-secondary-identities", "ntrue"));
 		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
 		final String bauth = getBasicAuth(testIDConfig);
 		final String token = "footoken";
@@ -577,6 +600,42 @@ public class GlobusIdentityProviderTest {
 				new RemoteIdentityDetails("user1", "name1", null)));
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "id2"),
 				new RemoteIdentityDetails("user2", null, "email2")));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithSecondariesDisabledAndLoginURL() throws Exception {
+		final String authCode = "authcode";
+		final IdentityProviderConfig testIDConfig = getTestIDConfig(
+				ImmutableMap.of("ignore-secondary-identities", "true"));
+		final IdentityProvider idp = new GlobusIdentityProvider(testIDConfig);
+		final String bauth = getBasicAuth(testIDConfig);
+		final String token = "footoken";
+		final int respCode = 200;
+
+		setUpCallAuthToken(authCode, token, "https://loginredir.com", bauth);
+		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
+				new ImmutableMap.Builder<String, Object>()
+						.put("aud", Arrays.asList(testIDConfig.getClientID()))
+						.put("sub", "anID")
+						.put("username", "aUsername")
+						.put("name", "fullname")
+						.put("email", "anEmail")
+						.build()),
+				false);
+		
+		// allow this call to proceed in case there's a bug such that it does
+		final List<Map<String, Object>> idents = new LinkedList<>();
+		idents.add(map("id", "id1", "username", "user1", "name", "name1", "email", null));
+		idents.add(map("id", "id2", "username", "user2", "name", null, "email", "email2"));
+		setupCallSecondaryID(token, "^id2,id1|id1,id2$", APP_JSON, respCode,
+				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
+				
+				
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
+				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 

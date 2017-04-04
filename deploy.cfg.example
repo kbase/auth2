@@ -43,6 +43,10 @@ identity-providers=Globus, Google
 # identity-provider-<provider name>-link-redirect - where the identity provider should redirect
 # after a user logs in at the provider website when a link is requested.
 
+# identity-provider-<provider name>-custom-X=Y - Custom per provider configuration options. These
+# options will be provided to the identity provider as a set of keys and values where X is the key
+# any Y is the value.
+
 identity-provider-Globus-factory = us.kbase.auth2.providers.GlobusIdentityProviderFactory
 identity-provider-Globus-login-url=https://auth.globus.org
 identity-provider-Globus-api-url=https://auth.globus.org
@@ -50,6 +54,8 @@ identity-provider-Globus-client-id=
 identity-provider-Globus-client-secret=
 identity-provider-Globus-login-redirect-url=https://kbase.us/services/authorization2/login/complete/globus
 identity-provider-Globus-link-redirect-url=https://kbase.us/services/authorization2/link/complete/globus
+# uncomment to only use Globus primary identities when determining access to accounts.
+#identity-provider-Globus-custom-ignore-secondary-identities=true
 
 identity-provider-Google-factory = us.kbase.auth2.providers.GoogleIdentityProviderFactory
 identity-provider-Google-login-url=https://accounts.google.com/
