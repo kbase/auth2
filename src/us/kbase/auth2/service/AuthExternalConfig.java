@@ -30,7 +30,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	private static final String IGNORE_IP_HEADERS = "ignoreIPHeaders";
 	private static final String INCLUDE_STACK_TRACE_IN_RESPONSE = "includeStackTraceInResponse";
 
-	private static final ConfigItem<URL, Action> MT_URL = ConfigItem.noAction();
+	private static final ConfigItem<URL, Action> MT_URL = ConfigItem.remove();
 	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
 
 	public static final AuthExternalConfig<Action> SET_DEFAULT;

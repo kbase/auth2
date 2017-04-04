@@ -152,6 +152,7 @@ public class Authentication {
 	private final PasswordCrypt pwdcrypt;
 	private final ConfigManager cfg;
 	private final Clock clock;
+	private final ExternalConfig defaultExternalConfig;
 	
 	// note that this value is supposed to be a constant, but is mutable for testing purposes.
 	// do not make it mutable for any other reason.
@@ -205,6 +206,7 @@ public class Authentication {
 		nonNull(identityProviderSet, "identityProviderSet");
 		noNulls(identityProviderSet, "Null identity provider in set");
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		this.defaultExternalConfig = defaultExternalConfig;
 		this.storage = storage;
 		for (final IdentityProvider idp: identityProviderSet) {
 			nonNull(idp.getProviderName(), "provider name");
@@ -214,19 +216,9 @@ public class Authentication {
 			}
 			idProviderSet.put(idp.getProviderName(), idp);
 		}
-		final Builder<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
-				.withLoginAllowed(AuthConfig.DEFAULT_LOGIN_ALLOWED)
-				.withExternalConfig(defaultExternalConfig)
-				.withDefaultTokenLifeTimes();
-		for (final Entry<String, IdentityProvider> e: idProviderSet.entrySet()) {
-			try {
-				acu.withProviderUpdate(e.getKey(), AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE);
-			} catch (MissingParameterException ex) {
-				throw new IllegalArgumentException("Bad provider name: " + e.getKey());
-			}
-		}
+		final AuthConfigUpdate<ExternalConfig> acu = buildDefaultConfig();
 		try {
-			storage.updateConfig(acu.build(), false);
+			storage.updateConfig(acu, false);
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to set config in storage: " +
 					e.getMessage(), e);
@@ -2142,6 +2134,35 @@ public class Authentication {
 		}
 		storage.updateConfig(acs, true);
 		cfg.updateConfig();
+	}
+	
+	/** Reset the service configuration to the initial configuration supplied at startup.
+	 * @param token a token for a user with the administrator role.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the user account associated with the token doesn't have
+	 * the appropriate role or the token is not a login token.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void resetConfigToDefault(final IncomingToken token)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
+		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		storage.updateConfig(buildDefaultConfig(), true);
+		cfg.updateConfig();
+	}
+
+	private AuthConfigUpdate<ExternalConfig> buildDefaultConfig() {
+		final Builder<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(AuthConfig.DEFAULT_LOGIN_ALLOWED)
+				.withExternalConfig(defaultExternalConfig)
+				.withDefaultTokenLifeTimes();
+		for (final Entry<String, IdentityProvider> e: idProviderSet.entrySet()) {
+			try {
+				acu.withProviderUpdate(e.getKey(), AuthConfigUpdate.DEFAULT_PROVIDER_UPDATE);
+			} catch (MissingParameterException ex) {
+				throw new IllegalArgumentException("Bad provider name: " + e.getKey());
+			}
+		}
+		return acu.build();
 	}
 	
 	/** Gets the authentication configuration.

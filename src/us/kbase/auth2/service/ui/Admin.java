@@ -523,7 +523,15 @@ public class Admin {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
-	//TODO CONFIG reset to defaults
+	@POST
+	@Path(UIPaths.ADMIN_CONFIG_RESET)
+	public void resetConfig(
+			@Context final HttpHeaders headers)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
+		auth.resetConfigToDefault(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+	}
+	
 	@GET
 	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")
@@ -585,6 +593,7 @@ public class Admin {
 		ret.put("basicurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
 		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
 		ret.put("providerurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
+		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_RESET));
 		return ret;
 	}
 	
