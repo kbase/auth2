@@ -605,8 +605,8 @@ public class MongoStorage implements AuthStorage {
 	private Document getUserDoc(final UserName userName, final boolean local)
 			throws AuthStorageException, NoSuchUserException {
 		nonNull(userName, "userName");
-		final Document projection = local ? null : new Document(
-				Fields.USER_PWD_HSH, 0).append(Fields.USER_SALT, 0);
+		final Document projection = new Document(Fields.USER_PWD_HSH, 0)
+				.append(Fields.USER_SALT, 0);
 		final Document user = findOne(COL_USERS,
 				new Document(Fields.USER_NAME, userName.getName()), projection);
 		if (user == null) {

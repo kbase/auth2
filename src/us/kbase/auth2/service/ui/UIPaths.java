@@ -115,6 +115,7 @@ public class UIPaths {
 	public static final String LOGIN_ROOT_START = LOGIN_ROOT + START;
 	public static final String LOGIN_ROOT_COMPLETE = LOGIN_ROOT + COMPLETE;
 	public static final String LOGIN_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
+	public static final String LOGIN_SUGGEST_NAME = "suggestname/{name}";
 	public static final String LOGIN_CHOICE = CHOICE;
 	public static final String LOGIN_ROOT_CHOICE = LOGIN_ROOT + LOGIN_CHOICE;
 	public static final String LOGIN_PICK = PICK;
