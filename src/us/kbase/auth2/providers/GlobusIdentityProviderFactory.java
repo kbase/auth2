@@ -58,6 +58,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 	
 		/* Docs: https://docs.globus.org/api/auth/ */
 		
+		private static final String IGNORE_SECONDARY_IDENTITIES = "ignore-secondary-identities";
 		private static final String NAME = "Globus";
 		private static final String SCOPE =
 				"urn:globus:auth:scope:auth.globus.org:view_identities email";
@@ -72,6 +73,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		
 		private final IdentityProviderConfig cfg;
+		private final boolean ignoreSecondaries;
 		
 		/** Create a new identity provider for the Globus service.
 		 * @param idc the configuration for the provider.
@@ -85,6 +87,8 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 						idc.getIdentityProviderFactoryClassName());
 			}
 			this.cfg = idc;
+			ignoreSecondaries = "true".equals(idc.getCustomConfiguation()
+					.get(IGNORE_SECONDARY_IDENTITIES));
 		}
 		
 		@Override
@@ -146,7 +150,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
 			final String accessToken = getAccessToken(authcode, link);
-			final Idents idents = getPrimaryIdentity(accessToken);
+			final Idents idents = getPrimaryIdentity(accessToken, ignoreSecondaries);
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 					accessToken, idents.secondaryIDs);
 			secondaries.add(idents.primary);
@@ -195,7 +199,9 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			return l;
 		}
 	
-		private Idents getPrimaryIdentity(final String accessToken)
+		private Idents getPrimaryIdentity(
+				final String accessToken,
+				final boolean ignoreSecondaries)
 				throws IdentityRetrievalException {
 			
 			final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
@@ -203,7 +209,9 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			
 			final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 			formParameters.add("token", accessToken);
-			formParameters.add("include", "identities_set");
+			if (!ignoreSecondaries) {
+				formParameters.add("include", "identities_set");
+			}
 			
 			final Map<String, Object> m;
 			try {
@@ -232,7 +240,10 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 					new RemoteIdentityID(NAME, id),
 					new RemoteIdentityDetails(username, name, email));
 			@SuppressWarnings("unchecked")
-			final List<String> secids = (List<String>) m.get("identities_set");
+			List<String> secids = (List<String>) m.get("identities_set");
+			if (secids == null) {
+				secids = Collections.emptyList();
+			}
 			trim(secids);
 			secids.remove(id); // avoids another call to globus if no other ids
 			
