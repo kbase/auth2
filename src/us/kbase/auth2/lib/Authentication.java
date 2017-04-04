@@ -106,7 +106,6 @@ import us.kbase.auth2.lib.token.IncomingToken;
 public class Authentication {
 
 	//TODO TEST test unicode for inputs and outputs
-	//TODO TEST unit tests
 	//TODO TEST LOG test logging on startup
 	//TODO TEST LOG test logging on calls
 	//TODO ZZLATER EMAIL validate email address by sending an email
