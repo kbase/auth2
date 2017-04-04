@@ -18,6 +18,7 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
@@ -561,5 +562,26 @@ public class AuthConfigTest {
 		} catch (NullPointerException e) {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
+	}
+	
+	@Test
+	public void configSetWithUpdateEquals() {
+		EqualsVerifier.forClass(AuthConfigSetWithUpdateTime.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void configSetWithUpdateConstructAndGetters() throws Exception {
+		final Map<TokenLifetimeType, Long> lts = new HashMap<>();
+		lts.put(TokenLifetimeType.DEV, 350000L);
+		final AuthConfig cfg = new AuthConfig(false, null, lts);
+		final AuthConfigSetWithUpdateTime<TestExtCfg> ac =
+				new AuthConfigSetWithUpdateTime<TestExtCfg>(cfg, new TestExtCfg(), -1);
+		assertThat("incorrect config login", ac.getCfg().isLoginAllowed(), is(false));
+		assertThat("incorrect config providers", ac.getCfg().getProviders(), is(new HashMap<>()));
+		assertThat("incorrect config token lifetimes", ac.getCfg().getTokenLifetimeMS(),
+				is(lts));
+		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
+				is(ImmutableMap.of("foo", ConfigItem.set("bar"))));
+		assertThat("incorrect update time", ac.getUpdateTimeInSec(), is(-1));
 	}
 }

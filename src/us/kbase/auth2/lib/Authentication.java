@@ -38,6 +38,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.Builder;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
@@ -152,7 +153,8 @@ public class Authentication {
 	private final ConfigManager cfg;
 	private final Clock clock;
 	
-	//TODO CONFIG UI show this with note that it'll take X seconds to sync to other server instance
+	// note that this value is supposed to be a constant, but is mutable for testing purposes.
+	// do not make it mutable for any other reason.
 	private int cfgUpdateIntervalSec = 30;
 	
 	/** Create a new Authentication instance.
@@ -2153,7 +2155,7 @@ public class Authentication {
 	 * @throws ExternalConfigMappingException if the mapper failed to map the external
 	 * configuration into a class.
 	 */
-	public <T extends ExternalConfig> AuthConfigSet<T> getConfig(
+	public <T extends ExternalConfig> AuthConfigSetWithUpdateTime<T> getConfig(
 			final IncomingToken token,
 			final ExternalConfigMapper<T> mapper)
 			throws InvalidTokenException, UnauthorizedException,
@@ -2161,8 +2163,10 @@ public class Authentication {
 		nonNull(mapper, "mapper");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return new AuthConfigSet<T>(acs.getCfg().filterProviders(idProviderSet.keySet()),
-				mapper.fromMap(acs.getExtcfg().getMap()));
+		return new AuthConfigSetWithUpdateTime<T>(
+				acs.getCfg().filterProviders(idProviderSet.keySet()),
+				mapper.fromMap(acs.getExtcfg().getMap()),
+				cfgUpdateIntervalSec);
 	}
 	
 	/** Returns the suggested cache time for tokens in milliseconds.
