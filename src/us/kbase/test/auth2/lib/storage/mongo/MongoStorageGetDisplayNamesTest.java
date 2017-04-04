@@ -580,7 +580,74 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				is(expected));
 	}
 	
-	//TODO TEST will need tests for punctuation removal
+	@Test
+	public void canonicalSearchPunctuation1() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
+		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation2() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+e").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation3() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+o").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation4() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("fwhe").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
 	@Test
 	public void canonicalSearch1() throws Exception {
 		createUsersForCanonicalSearch();
