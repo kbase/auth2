@@ -1,5 +1,7 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
+import static org.hamcrest.core.StringStartsWith.startsWith;
+import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
@@ -170,9 +172,10 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 		try {
 			storage.getToken(t.getHashedToken());
 			fail("expected exception");
-		} catch (Exception e) {
-			TestCommon.assertExceptionCorrect(e, new AuthStorageException(
-					"Illegal value stored in db: foobar: unknown error"));
+		} catch (AuthStorageException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					// error message from InetAddress changes based on test context
+					startsWith("Illegal value stored in db: foobar"));
 		}
 	}
 	
