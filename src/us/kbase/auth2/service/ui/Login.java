@@ -234,6 +234,28 @@ public class Login {
 		return r;
 	}
 	
+	private static class IDProviderJSON extends IdentityProviderInput {
+
+		private final Map<String, String> customContext;
+		
+		@JsonCreator
+		public IDProviderJSON(
+				@JsonProperty("authcode") final String authCode,
+				@JsonProperty("state") final String state,
+				@JsonProperty("customcontext") final Map<String, String> customContext) {
+			super(authCode, state);
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
+		}
+		
+	}
+	
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
@@ -245,7 +267,7 @@ public class Login {
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			final IdentityProviderInput input)
+			final IDProviderJSON input)
 			throws AuthenticationException, MissingParameterException, AuthStorageException,
 			IllegalParameterException {
 		if (input == null) {
@@ -255,17 +277,14 @@ public class Login {
 		input.exceptOnAdditionalProperties();
 		input.checkState(state);
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), input.getCustomContext());
 		
 		final LoginToken lr = auth.login(provider, input.getAuthCode(), tcc);
 		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
 		if (lr.isLoggedIn()) {
 			choice.put("token", new NewUIToken(lr.getToken()));
 			choice.put("logged_in", true);
-			choice.put("redirect", getRedirectURL(redirect));
 			final ResponseBuilder b = Response.ok(choice);
 			setLoginCookies(b, lr.getToken(), TRUE.equals(session));
 			return b.build();
