@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -28,12 +28,36 @@ public class DisplayName extends Name {
 	}
 	
 	/** Get the canonical display name for this name. Returns a list of the whitespace separated
-	 * tokens in the display name. The tokens are lowercased.
+	 * tokens in the display name. The tokens are lowercased and punctuation on either side of the
+	 * token is removed.
 	 * @return the canonical display name.
 	 */
 	public List<String> getCanonicalDisplayName() {
-		//TODO SEARCH remove punctuation on the outside of tokens, needs to handle unicode
-		return Arrays.asList(getName().toLowerCase().split("\\s+"));
+		final String[] tokens = getName().toLowerCase().split("\\s+");
+		final List<String> ret = new LinkedList<>();
+		for (final String t: tokens) {
+			final int[] codepoints = t.codePoints().toArray();
+			int start;
+			for (start = 0; start < codepoints.length; start++) {
+				if (Character.isLetterOrDigit(codepoints[start])) {
+					break;
+				}
+			}
+			int end;
+			for (end = codepoints.length - 1; end > start; end--) {
+				if (Character.isLetterOrDigit(codepoints[end])) {
+					break;
+				}
+			}
+			if (start <= end) {
+				final StringBuilder sb = new StringBuilder();
+				for (int i = start; i <= end; i++) {
+					sb.appendCodePoint(codepoints[i]);
+				}
+				ret.add(sb.toString());
+			}
+		}
+		return ret;
 	}
 	
 	@Override

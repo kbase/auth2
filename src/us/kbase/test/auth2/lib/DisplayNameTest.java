@@ -51,9 +51,9 @@ public class DisplayNameTest {
 	
 	@Test
 	public void canonical() throws Exception {
-		final DisplayName dn = new DisplayName("whEe      BAR   bleΔah   wuΞgga");
+		final DisplayName dn = new DisplayName("whEe   ΅·   +΅BA՞+R·   (bleΔah)  ՞  wuΞgga");
 		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(),
-				is(Arrays.asList("whee", "bar", "bleδah", "wuξgga")));
+				is(Arrays.asList("whee", "ba՞+r", "bleδah", "wuξgga")));
 	}
 
 }
