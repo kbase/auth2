@@ -9,6 +9,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -90,7 +91,8 @@ public class GoogleIdentityProviderTest {
 					"gfoo",
 					"gbar",
 					new URL("https://gloginredir.com"),
-					new URL("https://glinkredir.com"));
+					new URL("https://glinkredir.com"),
+					Collections.emptyMap());
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -142,7 +144,8 @@ public class GoogleIdentityProviderTest {
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL()),
+				CFG.getLinkRedirectURL(),
+				Collections.emptyMap()),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -188,7 +191,8 @@ public class GoogleIdentityProviderTest {
 				"gfoo",
 				"gbar",
 				new URL("https://gloginredir.com"),
-				new URL("https://glinkredir.com"));
+				new URL("https://glinkredir.com"),
+				Collections.emptyMap());
 	}
 	
 	@Test
@@ -383,7 +387,8 @@ public class GoogleIdentityProviderTest {
 				"someclient",
 				"bar2",
 				new URL("https://gloginredir2.com"),
-				new URL("https://glinkredir2.com"));
+				new URL("https://glinkredir2.com"),
+				Collections.emptyMap());
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
 		setUpCallAuthToken(authCode, "footoken2", "https://glinkredir2.com",

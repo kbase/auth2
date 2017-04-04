@@ -113,7 +113,8 @@ public class AuthenticationConstructorTest {
 	public void nulls() throws Exception {
 		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
 				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
-				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"),
+				Collections.emptyMap());
 		
 		final AuthStorage storage = mock(AuthStorage.class);
 		failConstruct(null, Collections.emptySet(), new TestExternalConfig<>(SET_FOO),
@@ -161,10 +162,12 @@ public class AuthenticationConstructorTest {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
 				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
-				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"),
+				Collections.emptyMap());
 		final IdentityProviderConfig cfg2 = new IdentityProviderConfig(
 				"prov2", new URL("https://login2.com"), new URL("https://link2.com"),
-				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"));
+				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"),
+				Collections.emptyMap());
 		
 		final Set<IdentityProvider> ids = new HashSet<>();
 		ids.add(new NullIdProv("Prov1", cfg1));
@@ -198,10 +201,12 @@ public class AuthenticationConstructorTest {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
 				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
-				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"),
+				Collections.emptyMap());
 		final IdentityProviderConfig cfg2 = new IdentityProviderConfig(
 				"prov2", new URL("https://login2.com"), new URL("https://link2.com"),
-				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"));
+				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"),
+				Collections.emptyMap());
 		
 		final Set<IdentityProvider> ids = new HashSet<>();
 		ids.add(new NullIdProv("Prov1", cfg1));
@@ -223,7 +228,8 @@ public class AuthenticationConstructorTest {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final IdentityProviderConfig cfg1 = new IdentityProviderConfig(
 				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
-				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"));
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"),
+				Collections.emptyMap());
 		
 		final Set<IdentityProvider> ids = new HashSet<>();
 		ids.add(new NullIdProv(null, cfg1));

@@ -5,11 +5,15 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.net.URL;
+import java.util.Collections;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.test.auth2.TestCommon;
 
 public class IdentityProviderConfigTest {
 
@@ -22,7 +26,8 @@ public class IdentityProviderConfigTest {
 				"foo",
 				"bar",
 				new URL("https://loginredirect.com"),
-				new URL("https://linkredirect.com"));
+				new URL("https://linkredirect.com"),
+				ImmutableMap.of("foo", "bar", "baz", "bat"));
 		assertThat("incorrect api URL", c.getApiURL(), is(new URL("http://api.com")));
 		assertThat("incorrect client id", c.getClientID(), is("foo"));
 		assertThat("incorrect client secret", c.getClientSecret(), is("bar"));
@@ -32,6 +37,8 @@ public class IdentityProviderConfigTest {
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL(),
 				is(new URL("https://loginredirect.com")));
 		assertThat("incorrect login URL", c.getLoginURL(), is(new URL("http://login.com")));
+		assertThat("incorrect custom config", c.getCustomConfiguation(),
+				is(ImmutableMap.of("foo", "bar", "baz", "bat")));
 	}
 	
 	@Test
@@ -98,6 +105,14 @@ public class IdentityProviderConfigTest {
 				"Link redirect URL http://linkredir^foobar.com for MyProv identity provider is " +
 				"not a valid URI: Illegal character in authority at index 7: " +
 				"http://linkredir^foobar.com");
+		
+		try {
+			new IdentityProviderConfig(name, login, api, clientID, clientSecret, loginRedirect,
+					linkRedirect, null);
+			fail("expected NPE");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("customConfig"));
+		}
 	}
 
 	private void failCreateConfig(
@@ -111,7 +126,7 @@ public class IdentityProviderConfigTest {
 			final String exception) {
 		try {
 			new IdentityProviderConfig(name, login, api, clientID, clientSecret,
-					loginRedirect, linkRedirect);
+					loginRedirect, linkRedirect, Collections.emptyMap());
 			fail("created bad id provider config");
 		} catch (IdentityProviderConfigurationException e) {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
