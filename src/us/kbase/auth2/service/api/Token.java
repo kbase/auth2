@@ -63,7 +63,7 @@ public class Token {
 	public NewAPIToken createAgentTokenForm(
 			@Context final HttpServletRequest req,
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam("tokenname") final String name)
+			@FormParam("name") final String name)
 			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
 		
@@ -74,18 +74,16 @@ public class Token {
 				auth.getSuggestedTokenCacheTime());
 	}
 	
-	//TODO NOW switch tokenname -> name
-	
 	private static class CreateToken extends IncomingJSON {
 		
-		public final String tokenname;
+		public final String name;
 		private final Map<String, String> customContext;
 
 		@JsonCreator
 		public CreateToken(
-				@JsonProperty("tokenname") final String name,
+				@JsonProperty("name") final String name,
 				@JsonProperty("customcontext") final Map<String, String> customContext) {
-			this.tokenname = name;
+			this.name = name;
 			this.customContext = customContext;
 		}
 		
@@ -112,7 +110,7 @@ public class Token {
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
 		return new NewAPIToken(auth.createToken(
-				getToken(token), new TokenName(create.tokenname), TokenType.AGENT, tcc),
+				getToken(token), new TokenName(create.name), TokenType.AGENT, tcc),
 				auth.getSuggestedTokenCacheTime());
 	}
 }
