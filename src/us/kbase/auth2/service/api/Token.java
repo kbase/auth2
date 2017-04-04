@@ -74,13 +74,26 @@ public class Token {
 				auth.getSuggestedTokenCacheTime());
 	}
 	
+	//TODO NOW switch tokenname -> name
+	
 	private static class CreateToken extends IncomingJSON {
 		
 		public final String tokenname;
+		private final Map<String, String> customContext;
 
 		@JsonCreator
-		public CreateToken(@JsonProperty("tokenname") final String name) {
+		public CreateToken(
+				@JsonProperty("tokenname") final String name,
+				@JsonProperty("customcontext") final Map<String, String> customContext) {
 			this.tokenname = name;
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
 		}
 	}
 	
@@ -95,10 +108,8 @@ public class Token {
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		create.exceptOnAdditionalProperties();
 		
-		//TODO CTX add custom context to input
-		final Map<String, String> customContext = Collections.emptyMap();
 		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
 		return new NewAPIToken(auth.createToken(
 				getToken(token), new TokenName(create.tokenname), TokenType.AGENT, tcc),

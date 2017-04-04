@@ -106,8 +106,8 @@ public class Tokens {
 	public NewUIToken createTokenHTML(
 			@Context final HttpServletRequest req,
 			@Context final HttpHeaders headers,
-			@FormParam("tokenname") final String tokenName,
-			@FormParam("tokentype") final String tokenType,
+			@FormParam("name") final String tokenName,
+			@FormParam("type") final String tokenType,
 			@FormParam("customcontext") final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
