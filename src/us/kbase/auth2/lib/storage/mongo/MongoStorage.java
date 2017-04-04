@@ -1214,9 +1214,6 @@ public class MongoStorage implements AuthStorage {
 		private final Pattern indexPattern = Pattern.compile(
 				"duplicate key error (index|collection): " +
 				"\\w+\\.(\\w+)( index: |\\.\\$)([\\.\\w]+)\\s+");
-				
-		
-		//TODO NOW TEST this class
 		
 		private final boolean isDuplicate;
 		private final Optional<String> collection;
@@ -1271,22 +1268,6 @@ public class MongoStorage implements AuthStorage {
 		public Optional<String> getKey() {
 			return key;
 		}
-
-		@Override
-		public String toString() {
-			StringBuilder builder = new StringBuilder();
-			builder.append("DuplicateKeyExceptionChecker [isDuplicate=");
-			builder.append(isDuplicate);
-			builder.append(", collection=");
-			builder.append(collection);
-			builder.append(", index=");
-			builder.append(index);
-			builder.append(", key=");
-			builder.append(key);
-			builder.append("]");
-			return builder.toString();
-		}
-		
 	}
 
 	@Override
