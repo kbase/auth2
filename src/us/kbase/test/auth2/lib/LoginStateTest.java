@@ -75,7 +75,7 @@ public class LoginStateTest {
 	
 	private void failStartBuild(final String provider, final Exception e) {
 		try {
-			LoginState.getBuilder(null, false);
+			LoginState.getBuilder(provider, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -225,33 +225,33 @@ public class LoginStateTest {
 		
 		try {
 			ls.getIdentities(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}
 		try {
 			ls.getIdentities(new UserName("foo4"));
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getMessage(), is("No such user: foo4"));
 		}
 		
 		try {
 			ls.getUser(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}
 		try {
 			ls.getUser(new UserName("foo4"));
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getMessage(), is("No such user: foo4"));
 		}
 		
 		try {
 			ls.isAdmin(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}
