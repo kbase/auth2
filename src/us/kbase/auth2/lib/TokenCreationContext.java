@@ -26,7 +26,7 @@ public class TokenCreationContext {
 	private final Optional<String> agent;
 	private final Optional<String> agentVersion;
 	private final Optional<String> device;
-	private final Optional<String> ipAddress;
+	private final Optional<InetAddress> ipAddress;
 	private final Map<String, String> customContext;
 	
 	private TokenCreationContext(
@@ -35,7 +35,7 @@ public class TokenCreationContext {
 			final Optional<String> agent,
 			final Optional<String> agentVersion,
 			final Optional<String> device,
-			final Optional<String> ipAddress,
+			final Optional<InetAddress> ipAddress,
 			final Map<String, String> customContext) {
 		this.os = os;
 		this.osVersion = osVersion;
@@ -84,7 +84,7 @@ public class TokenCreationContext {
 	/** Get the IP address, if supplied.
 	 * @return the IP address.
 	 */
-	public Optional<String> getIpAddress() {
+	public Optional<InetAddress> getIpAddress() {
 		return ipAddress;
 	}
 
@@ -195,7 +195,7 @@ public class TokenCreationContext {
 		private Optional<String> agent = Optional.absent();
 		private Optional<String> agentVersion = Optional.absent();
 		private Optional<String> device = Optional.absent();
-		private Optional<String> ipAddress = Optional.absent();
+		private Optional<InetAddress> ipAddress = Optional.absent();
 		private Map<String, String> customContext = new HashMap<>();
 		
 		private Builder() {};
@@ -266,7 +266,7 @@ public class TokenCreationContext {
 		 */
 		public Builder withIpAddress(final InetAddress ipAddress) {
 			nonNull(ipAddress, "ipAddress");
-			this.ipAddress = Optional.of(ipAddress.getHostAddress());
+			this.ipAddress = Optional.of(ipAddress);
 			return this;
 		}
 		
@@ -279,7 +279,7 @@ public class TokenCreationContext {
 			if (ipAddress == null) {
 				this.ipAddress = Optional.absent();
 			} else {
-				this.ipAddress = Optional.of(ipAddress.getHostAddress());
+				this.ipAddress = Optional.of(ipAddress);
 			}
 			return this;
 		}
