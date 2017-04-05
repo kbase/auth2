@@ -118,8 +118,7 @@ public class Link {
 	@Path(UIPaths.LINK_START)
 	public Response linkStart(
 			@FormParam("provider") final String provider)
-			throws NoTokenProvidedException, NoSuchIdentityProviderException,
-			AuthStorageException, InvalidTokenException, DisabledUserException {
+			throws NoSuchIdentityProviderException, AuthStorageException {
 		
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));

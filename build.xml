@@ -93,7 +93,7 @@
   </fileset>
 	
   <fileset dir="${jardir}" id="testlibs">
-    <include name="equalsverifier/equalsverifier-2.2.1.jar"/>
+    <include name="equalsverifier/equalsverifier-2.2.2.jar"/>
     <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
@@ -210,6 +210,7 @@
       <sysproperty key="AUTH2_TEST_CONFIG" value="./test.cfg" />
       <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
       <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
+      <test name="us.kbase.test.auth2.lib.AuthenticationConfigTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.AuthenticationCreateRootTest"/>

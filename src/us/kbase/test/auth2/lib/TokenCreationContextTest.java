@@ -52,7 +52,7 @@ public class TokenCreationContextTest {
 		assertThat("incorrect agent", tcc.getAgent(), is(Optional.of("a")));
 		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.of("av")));
 		assertThat("incorrect ip", tcc.getIpAddress(),
-				is(Optional.of("1.1.1.1")));
+				is(Optional.of(InetAddress.getByName("1.1.1.1"))));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(ImmutableMap.of(
 				"a", "1", "b", "2")));
 	}
@@ -88,7 +88,7 @@ public class TokenCreationContextTest {
 		assertThat("incorrect agent", tcc.getAgent(), is(Optional.absent()));
 		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
 		assertThat("incorrect ip", tcc.getIpAddress(),
-				is(Optional.of("2.2.2.2")));
+				is(Optional.of(InetAddress.getByName("2.2.2.2"))));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
 	}
 	

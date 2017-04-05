@@ -28,15 +28,23 @@ public class LoginState {
 	 * to a subset of the AuthUser identities, even if they're all from the same provider (e.g.
 	 * the user account may be linked to multiple different provider accounts).
 	 */
-	private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
-	private final Map<UserName, AuthUser> users = new HashMap<>();
-	private final Set<RemoteIdentity> noUser = new HashSet<>();
+	private final Map<UserName, Set<RemoteIdentity>> userIDs;
+	private final Map<UserName, AuthUser> users;
+	private final Set<RemoteIdentity> noUser;
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
 
-	private LoginState(final String provider, final boolean nonAdminLoginAllowed) {
+	private LoginState(
+			final String provider,
+			final boolean nonAdminLoginAllowed,
+			final Map<UserName, Set<RemoteIdentity>> userIDs,
+			final Map<UserName, AuthUser> users,
+			final Set<RemoteIdentity> noUser) {
 		this.provider = provider;
 		this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+		this.userIDs = Collections.unmodifiableMap(userIDs);
+		this.users = Collections.unmodifiableMap(users);
+		this.noUser = Collections.unmodifiableSet(noUser);
 	}
 	
 	/** Get the name of the identity provider that provided the identities for the user.
@@ -66,7 +74,7 @@ public class LoginState {
 	 * @return the set of identities that are not associated with a user account.
 	 */
 	public Set<RemoteIdentity> getIdentities() {
-		return Collections.unmodifiableSet(noUser);
+		return noUser;
 	}
 	
 	/** Get the names of the user accounts to which the user has login privileges based on the
@@ -74,7 +82,7 @@ public class LoginState {
 	 * @return the user names.
 	 */
 	public Set<UserName> getUsers() {
-		return Collections.unmodifiableSet(users.keySet());
+		return users.keySet();
 	}
 	
 	/** Get the user information for a given user name.
@@ -178,13 +186,18 @@ public class LoginState {
 	 */
 	public static class Builder {
 		
-		private final LoginState ls;
-
+		private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
+		private final Map<UserName, AuthUser> users = new HashMap<>();
+		private final Set<RemoteIdentity> noUser = new HashSet<>();
+		private final String provider;
+		private final boolean nonAdminLoginAllowed;
+		
 		private Builder(final String provider, final boolean nonAdminLoginAllowed) {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
 			}
-			ls = new LoginState(provider, nonAdminLoginAllowed);
+			this.provider = provider;
+			this.nonAdminLoginAllowed = nonAdminLoginAllowed;
 		}
 
 		/** Add a remote identity that is not associated with a user account.
@@ -196,12 +209,12 @@ public class LoginState {
 			// maps... but eh for now
 			nonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
-			ls.noUser.add(remoteID);
+			noUser.add(remoteID);
 			return this;
 		}
 
 		private void checkProvider(final RemoteIdentity remoteID) {
-			if (!ls.provider.equals(remoteID.getRemoteID().getProviderName())) {
+			if (!provider.equals(remoteID.getRemoteID().getProviderName())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}
@@ -222,11 +235,11 @@ public class LoginState {
 				throw new IllegalArgumentException("user does not contain remote ID");
 			}
 			final UserName name = user.getUserName();
-			ls.users.put(name, user);
-			if (!ls.userIDs.containsKey(name)) {
-				ls.userIDs.put(name, new HashSet<>());
+			users.put(name, user);
+			if (!userIDs.containsKey(name)) {
+				userIDs.put(name, new HashSet<>());
 			}
-			ls.userIDs.get(name).add(remoteID);
+			userIDs.get(name).add(remoteID);
 			return this;
 		}
 
@@ -234,7 +247,7 @@ public class LoginState {
 		 * @return the new instance.
 		 */
 		public LoginState build() {
-			return ls;
+			return new LoginState(provider, nonAdminLoginAllowed, userIDs, users, noUser);
 		}
 	}
 }

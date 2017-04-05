@@ -668,7 +668,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_DEVICE, ctx.getDevice().isPresent() ?
 						ctx.getDevice().get() : null)
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
-						ctx.getIpAddress().get() : null)
+						ctx.getIpAddress().get().getHostAddress() : null)
 				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
 		try {
 			db.getCollection(COL_TOKEN).insertOne(td);
