@@ -30,6 +30,10 @@ public class UIPaths {
 	private static final String TOKENS = "tokens";
 	private static final String CUSTOM_ROLES = "customroles";
 	
+	/* Root endpoint */
+
+	public static final String ROOT = SEP;
+	
 	/* Admin endpoint */
 	
 	public static final String ADMIN_ROOT = "/admin/";

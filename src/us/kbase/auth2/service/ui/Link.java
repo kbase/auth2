@@ -9,7 +9,6 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.NoSuchProviderException;
-import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -319,8 +318,6 @@ public class Link {
 		if (ids.getExpires().isPresent()) {
 			ret.put("expires", ids.getExpires().get().toEpochMilli());
 		}
-		ret.put("servertime", Instant.now().toEpochMilli());
-		
 		return ret;
 	}
 

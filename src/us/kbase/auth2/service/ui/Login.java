@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -503,7 +502,6 @@ public class Login {
 			l.put("prov_usernames", remoteIDs);
 			login.add(l);
 		}
-		ret.put("servertime", Instant.now().toEpochMilli());
 		return ret;
 	}
 

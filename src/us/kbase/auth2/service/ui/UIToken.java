@@ -24,7 +24,7 @@ public class UIToken extends ExternalToken {
 		agent = ctx.getAgent().isPresent() ? ctx.getAgent().get() : null;
 		agentver = ctx.getAgentVersion().isPresent() ? ctx.getAgentVersion().get() : null;
 		device = ctx.getDevice().isPresent() ? ctx.getDevice().get() : null;
-		ip = ctx.getIpAddress().isPresent() ? ctx.getIpAddress().get().toString() : null;
+		ip = ctx.getIpAddress().isPresent() ? ctx.getIpAddress().get().getHostAddress() : null;
 	}
 
 	public String getOs() {
