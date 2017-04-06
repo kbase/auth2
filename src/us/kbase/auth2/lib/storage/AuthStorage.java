@@ -355,6 +355,13 @@ public interface AuthStorage {
 			IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
+	/** Delete the set of identities stored with a token.
+	 * @param token the temporary token.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	void deleteTemporaryIdentities(IncomingHashedToken token)
+			throws AuthStorageException;
+	
 	/** Link an account to a remote identity.
 	 * If the account is already linked to the identity, the method proceeds without error, but
 	 * if the provider details (provider username, email address, and full name) are different,

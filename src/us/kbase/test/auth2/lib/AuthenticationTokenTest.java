@@ -1443,4 +1443,29 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
+	@Test
+	public void deleteLoginOrLinkState() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		auth.deleteLinkOrLoginState(t);
+		
+		verify(storage).deleteTemporaryIdentities(t.getHashedToken());
+	}
+	
+	@Test
+	public void deleteLoginOrLinkStateNull() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		try {
+			auth.deleteLinkOrLoginState(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
+	
 }

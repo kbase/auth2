@@ -2022,6 +2022,16 @@ public class Authentication {
 		}
 		
 	}
+	
+	/** Deletes any state associated with a link or login process, canceling the login or 
+	 * link operation.
+	 * @param token the token associated with the link or login operation.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void deleteLinkOrLoginState(final IncomingToken token) throws AuthStorageException {
+		nonNull(token, "token");
+		storage.deleteTemporaryIdentities(token.getHashedToken());
+	}
 
 	/** Update a user's details.
 	 * @param token the user's token.

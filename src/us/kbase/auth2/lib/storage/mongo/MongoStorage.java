@@ -1362,6 +1362,19 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 	
+	@Override
+	public void deleteTemporaryIdentities(final IncomingHashedToken token)
+			throws AuthStorageException {
+		nonNull(token, "token");
+		try {
+			db.getCollection(COL_TEMP_TOKEN).deleteOne(
+					new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
+			// if it's not there, fine. Job's done.
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
 	/* See notes for this method between this method and the next. These two methods are tightly
 	 * coupled.
 	 */

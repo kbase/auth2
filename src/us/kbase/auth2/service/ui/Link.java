@@ -18,6 +18,7 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -313,6 +314,7 @@ public class Link {
 			s.put("prov_username", ri.getDetails().getUsername());
 			ris.add(s);
 		}
+		ret.put("cancelurl", relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
 		if (ids.getExpires().isPresent()) {
 			ret.put("expires", ids.getExpires().get().toEpochMilli());
@@ -331,6 +333,26 @@ public class Link {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE); 
 		}
 		return incToken;
+	}
+	
+	@POST
+	@Path(UIPaths.LINK_CANCEL)
+	public Response cancelLinkPOST(@CookieParam(IN_PROCESS_LINK_COOKIE) final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		return cancelLink(token);
+	}
+	
+	@DELETE
+	@Path(UIPaths.LINK_CANCEL)
+	public Response cancelLinkDELETE(@CookieParam(IN_PROCESS_LINK_COOKIE) final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		return cancelLink(token);
+	}
+
+	private Response cancelLink(final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		auth.deleteLinkOrLoginState(getLinkInProcessToken(token));
+		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
 	}
 	
 	// for dumb HTML pages that use forms
