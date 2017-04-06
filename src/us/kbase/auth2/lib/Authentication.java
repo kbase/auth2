@@ -109,7 +109,6 @@ public class Authentication {
 	//TODO TEST LOG test logging on startup
 	//TODO TEST LOG test logging on calls
 	//TODO ZZLATER EMAIL validate email address by sending an email
-	//TODO AUTH server root should return server version, server time (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
 	//TODO ZLATER SCOPES configure scopes via ui
 	//TODO ZLATER SCOPES configure scope on login via ui

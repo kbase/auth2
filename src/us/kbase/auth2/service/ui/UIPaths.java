@@ -18,6 +18,8 @@ public class UIPaths {
 	private static final String RESULT = "result";
 	private static final String REVOKE = "revoke";
 	private static final String REVOKE_ALL = "revokeall";
+	private static final String SUGGESTNAME = "suggestname";
+	private static final String NAME_ID = "{name}";
 	private static final String TOKEN_ID = "{tokenid}";
 	private static final String ID = "{id}";
 	private static final String LOGIN = "login";
@@ -29,6 +31,10 @@ public class UIPaths {
 	private static final String TOKEN = "token";
 	private static final String TOKENS = "tokens";
 	private static final String CUSTOM_ROLES = "customroles";
+	
+	/* Root endpoint */
+
+	public static final String ROOT = SEP;
 	
 	/* Admin endpoint */
 	
@@ -116,7 +122,8 @@ public class UIPaths {
 	public static final String LOGIN_ROOT_START = LOGIN_ROOT + START;
 	public static final String LOGIN_ROOT_COMPLETE = LOGIN_ROOT + COMPLETE;
 	public static final String LOGIN_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
-	public static final String LOGIN_SUGGEST_NAME = "suggestname/{name}";
+	public static final String LOGIN_SUGGEST_NAME = SUGGESTNAME + SEP + NAME_ID;
+	public static final String LOGIN_ROOT_SUGGESTNAME = LOGIN_ROOT + SUGGESTNAME;
 	public static final String LOGIN_CHOICE = CHOICE;
 	public static final String LOGIN_ROOT_CHOICE = LOGIN_ROOT + LOGIN_CHOICE;
 	public static final String LOGIN_CANCEL = CANCEL;

@@ -1,6 +1,5 @@
 package us.kbase.auth2.service.common;
 
-import java.time.Instant;
 import java.util.Map;
 
 import us.kbase.auth2.lib.token.StoredToken;
@@ -16,7 +15,6 @@ public class ExternalToken {
 	private final long created;
 	private final String name;
 	private final String user;
-	private final long servertime = Instant.now().toEpochMilli();
 	private final Map<String, String> custom;
 
 	public ExternalToken(final StoredToken st) {
@@ -45,10 +43,6 @@ public class ExternalToken {
 		return created;
 	}
 	
-	public long getServertime() {
-		return servertime;
-	}
-
 	public String getName() {
 		return name;
 	}

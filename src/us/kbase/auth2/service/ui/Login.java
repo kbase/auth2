@@ -11,7 +11,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -457,8 +456,9 @@ public class Login {
 		ret.put("cancelurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
-		ret.put("provider", loginState.getProvider());
+		ret.put("suggestnameurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
+		ret.put("provider", loginState.getProvider());
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		if (loginState.getExpires().isPresent()) {
 			ret.put("expires", loginState.getExpires().get().toEpochMilli());
@@ -503,7 +503,6 @@ public class Login {
 			l.put("prov_usernames", remoteIDs);
 			login.add(l);
 		}
-		ret.put("servertime", Instant.now().toEpochMilli());
 		return ret;
 	}
 
