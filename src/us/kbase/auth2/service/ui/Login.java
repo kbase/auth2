@@ -162,7 +162,7 @@ public class Login {
 		
 		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
 				.cookie(getSessionChoiceCookie(stayLoggedIn == null,
-				PROVIDER_RETURN_EXPIRATION_SEC));
+						PROVIDER_RETURN_EXPIRATION_SEC));
 		if (redirect != null && !redirect.trim().isEmpty()) {
 			r.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC));
 		}
@@ -200,11 +200,12 @@ public class Login {
 	}
 
 	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
+		final boolean noRedir = redirect == null || redirect.isEmpty();
 		return new NewCookie(new Cookie(REDIRECT_COOKIE,
-				redirect == null || redirect.isEmpty() ? "no redirect" : redirect,
+				noRedir ? "no redirect" : redirect,
 						UIPaths.LOGIN_ROOT, null),
 				"redirect url",
-				redirect == null ? 0 : expirationTimeSec,
+				noRedir ? 0 : expirationTimeSec,
 				UIConstants.SECURE_COOKIES);
 	}
 
