@@ -213,19 +213,6 @@ public class LoginStateTest {
 		}
 	}
 	
-	@Test
-	public void updateExpires() throws Exception {
-		final LoginState ls = LoginState.getBuilder("p", false).build();
-		assertThat("incorrect expires", ls.getExpires(), is(Optional.absent()));
-		
-		final LoginState ls2 = ls.withUpdatedExpires(Instant.ofEpochMilli(10000));
-		assertThat("incorrect expires", ls2.getExpires(),
-				is(Optional.of(Instant.ofEpochMilli(10000))));
-		
-		final LoginState ls3 = ls2.withUpdatedExpires(null);
-		assertThat("incorrect expires", ls3.getExpires(), is(Optional.absent()));
-	}
-	
 	private void failAddUser(
 			final LoginState.Builder b,
 			final AuthUser u,

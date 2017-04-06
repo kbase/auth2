@@ -1419,14 +1419,14 @@ public class Authentication {
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
-		final LoginState ls = getLoginState(ris, null);
+		final LoginState lstate = getLoginState(ris, null);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
-		final LoginToken lr;
-		if (ls.getUsers().size() == 1 &&
-				ls.getIdentities().isEmpty() &&
+		final LoginToken token;
+		if (lstate.getUsers().size() == 1 &&
+				lstate.getIdentities().isEmpty() &&
 				!pc.isForceLoginChoice()) {
-			final UserName userName = ls.getUsers().iterator().next();
-			final AuthUser user = ls.getUser(userName);
+			final UserName userName = lstate.getUsers().iterator().next();
+			final AuthUser user = lstate.getUser(userName);
 			/* Don't throw an error here since an auth UI may not be controlling the call -
 			 * this call may be the result of a redirect from a 3rd party
 			 * provider. Any controllable error should be thrown when the process flow is back
@@ -1438,26 +1438,25 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				lr = storeIdentitiesTemporarily(ls);
+				token = storeIdentitiesTemporarily(lstate);
 			} else if (user.isDisabled()) {
-				lr = storeIdentitiesTemporarily(ls);
+				token = storeIdentitiesTemporarily(lstate);
 			} else {
-				lr = new LoginToken(login(user.getUserName(), tokenCtx), ls);
+				token = new LoginToken(login(user.getUserName(), tokenCtx));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			lr = storeIdentitiesTemporarily(ls);
+			token = storeIdentitiesTemporarily(lstate);
 		}
-		return lr;
+		return token;
 	}
 
 	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = storeIdentitiesTemporarily(store, 30 * 60 * 1000);
-		return new LoginToken(tt, ls);
+		return new LoginToken(storeIdentitiesTemporarily(store, 30 * 60 * 1000));
 	}
 
 	/** Get the current state of a login process associated with a temporary token.

@@ -126,15 +126,6 @@ public class LoginState {
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
 	
-	/** Returns a new login state with a new expiration time.
-	 * @param expires the expiration time, or null to set the expiration time to absent.
-	 * @return a new login state.
-	 */
-	public LoginState withUpdatedExpires(final Instant expires) {
-		return new LoginState(provider, nonAdminLoginAllowed, Optional.fromNullable(expires),
-				userIDs, users, noUser);
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;

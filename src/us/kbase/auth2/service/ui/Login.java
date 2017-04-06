@@ -3,6 +3,8 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
+import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
+import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
@@ -79,7 +81,6 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.UserAgentParser;
-import us.kbase.auth2.service.common.IdentityProviderInput;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LOGIN_ROOT)
@@ -91,8 +92,7 @@ public class Login {
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
-	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";
-	private static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
+	private static final String IN_PROCESS_LOGIN_COOKIE = "in-process-login-token";
 	
 	private static final String REDIRECT_URL = "redirecturl";
 
@@ -252,7 +252,7 @@ public class Login {
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
-		IdentityProviderInput.checkState(state, retstate);
+		checkState(state, retstate);
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
 		final LoginToken lr = auth.login(provider, authcode, tcc);
@@ -261,11 +261,11 @@ public class Login {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lr.isLoggedIn()) {
-			r = createLoginResponse(redirect, lr.getToken(), !FALSE.equals(session));
+			r = createLoginResponse(redirect, lr.getToken().get(), !FALSE.equals(session));
 		} else {
-			final int age = getMaxCookieAge(lr.getTemporaryToken());
+			final int age = getMaxCookieAge(lr.getTemporaryToken().get());
 			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
-					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
+					.cookie(getLoginInProcessCookie(lr.getTemporaryToken().get()))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(redirect, age))
 					.cookie(getSessionChoiceCookie(session, age))
@@ -274,71 +274,6 @@ public class Login {
 		return r;
 	}
 	
-	private static class IDProviderJSON extends IdentityProviderInput {
-
-		private final Map<String, String> customContext;
-		
-		@JsonCreator
-		public IDProviderJSON(
-				@JsonProperty("authcode") final String authCode,
-				@JsonProperty("state") final String state,
-				@JsonProperty("customcontext") final Map<String, String> customContext) {
-			super(authCode, state);
-			this.customContext = customContext;
-		}
-		
-		public Map<String, String> getCustomContext() {
-			if (customContext == null) {
-				return Collections.emptyMap();
-			}
-			return customContext;
-		}
-	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
-	public Response login(
-			@Context final HttpServletRequest req,
-			@PathParam("provider") final String provider,
-			@Context final UriInfo uriInfo,
-			@CookieParam(LOGIN_STATE_COOKIE) final String state,
-			@CookieParam(REDIRECT_COOKIE) final String redirect,
-			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			final IDProviderJSON input)
-			throws AuthenticationException, MissingParameterException, AuthStorageException,
-			IllegalParameterException {
-		if (input == null) {
-			throw new MissingParameterException("JSON body missing");
-		}
-		//TODO INPUT handle error in provider
-		input.exceptOnAdditionalProperties();
-		input.checkState(state);
-		
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), input.getCustomContext());
-		
-		final LoginToken lr = auth.login(provider, input.getAuthCode(), tcc);
-		final Map<String, Object> choice = buildLoginChoice(uriInfo, lr.getLoginState(), redirect);
-		if (lr.isLoggedIn()) {
-			choice.put("token", new NewUIToken(lr.getToken()));
-			choice.put("logged_in", true);
-			final ResponseBuilder b = Response.ok(choice);
-			setLoginCookies(b, lr.getToken(), TRUE.equals(session));
-			return b.build();
-		} else {
-			choice.put("logged_in", false);
-			final int age = getMaxCookieAge(lr.getTemporaryToken());
-			return Response.ok(choice)
-					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
-					.cookie(getStateCookie(null))
-					.cookie(getRedirectCookie(redirect, age))
-					.cookie(getSessionChoiceCookie(session, age))
-					.build();
-		}
-	}
-
 	private Response createLoginResponse(
 			final String redirect,
 			final NewToken newtoken,
@@ -404,7 +339,7 @@ public class Login {
 	}
 
 	private NewCookie getLoginInProcessCookie(final TemporaryToken token) {
-		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_TOKEN,
+		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_COOKIE,
 				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
 				"logintoken",
 				token == null ? 0 : getMaxCookieAge(token), UIConstants.SECURE_COOKIES);
@@ -415,7 +350,7 @@ public class Login {
 	@Template(name = "/loginchoice")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> loginChoiceHTML(
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
@@ -423,12 +358,11 @@ public class Login {
 		return loginChoice(token, uriInfo, redirect);
 	}
 
-	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
 	@GET
 	@Path(UIPaths.LOGIN_CHOICE)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> loginChoiceJSON(
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
@@ -444,14 +378,6 @@ public class Login {
 			IllegalParameterException {
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
-		return buildLoginChoice(uriInfo, loginState, redirect);
-	}
-
-	private Map<String, Object> buildLoginChoice(
-			final UriInfo uriInfo,
-			final LoginState loginState,
-			final String redirect)
-			throws AuthStorageException, IllegalParameterException {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put("cancelurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
@@ -512,21 +438,21 @@ public class Login {
 		try {
 			incToken = new IncomingToken(token);
 		} catch (MissingParameterException e) {
-			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN); 
+			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_COOKIE); 
 		}
 		return incToken;
 	}
 	
 	@POST
 	@Path(UIPaths.LOGIN_CANCEL)
-	public Response cancelLoginPOST(@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token)
+	public Response cancelLoginPOST(@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token)
 			throws NoTokenProvidedException, AuthStorageException {
 		return cancelLogin(token);
 	}
 	
 	@DELETE
 	@Path(UIPaths.LOGIN_CANCEL)
-	public Response cancelLoginDELETE(@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token)
+	public Response cancelLoginDELETE(@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token)
 			throws NoTokenProvidedException, AuthStorageException {
 		return cancelLogin(token);
 	}
@@ -544,7 +470,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
 			@Context final HttpServletRequest req,
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final String identityID,
@@ -632,7 +558,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_PICK)
 	public Response pickAccount(
 			@Context final HttpServletRequest req,
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
@@ -655,7 +581,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
 			@Context final HttpServletRequest req,
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam("id") final String identityID,
@@ -717,7 +643,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_CREATE)
 	public Response createUser(
 			@Context final HttpServletRequest req,
-			@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			final CreateChoice create)
 			throws AuthenticationException, AuthStorageException,

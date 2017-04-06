@@ -1,6 +1,7 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
@@ -75,7 +76,6 @@ public class Link {
 	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
 	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
-	private static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
 
 	@Inject
 	private Authentication auth;
