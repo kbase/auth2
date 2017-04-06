@@ -42,6 +42,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -55,6 +56,9 @@ import us.kbase.test.auth2.lib.config.TestExternalConfig;
 
 public class AuthenticationTester {
 	
+	public static final TestExternalConfig<Action> TEST_EXTERNAL_CONFIG =
+			new TestExternalConfig<>(ConfigItem.set("foo"));
+
 	public static class TestMocks {
 		final AuthStorage storageMock;
 		final RandomDataGenerator randGenMock;
@@ -93,7 +97,7 @@ public class AuthenticationTester {
 				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Authentication instance = c.newInstance(storage, providers,
-				new TestExternalConfig<>(ConfigItem.set("foo")), randGen, clock);
+				TEST_EXTERNAL_CONFIG, randGen, clock);
 		reset(storage);
 		return new TestMocks(storage, randGen, instance, clock);
 	}

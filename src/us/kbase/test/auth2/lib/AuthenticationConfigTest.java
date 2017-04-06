@@ -250,5 +250,63 @@ public class AuthenticationConfigTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void resetConfig() throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		when(idp2.getProviderName()).thenReturn("prov2");
+		
+		final TestMocks testauth = initTestMocks(set(idp1,idp2));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		auth.resetConfigToDefault(token);
+		
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withProviderUpdate("prov1", new ProviderUpdate(false, false, false))
+				.withProviderUpdate("prov2", new ProviderUpdate(false, false, false))
+				.withDefaultTokenLifeTimes()
+				.withExternalConfig(AuthenticationTester.TEST_EXTERNAL_CONFIG)
+				.build(), true);
+		
+		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+	}
+	
+	@Test
+	public void resetConfigFailNulls() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		try {
+			auth.resetConfigToDefault(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
+	
+	@Test
+	public void resetConfigExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.resetConfigToDefault(token);
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
+	}
 
 }
