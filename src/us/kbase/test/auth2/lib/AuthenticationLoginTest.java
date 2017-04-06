@@ -152,8 +152,7 @@ public class AuthenticationLoginTest {
 						.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 						.withContext(TokenCreationContext.getBuilder()
 								.withNullableAgent("a", "v").build()).build(),
-						"thisisatoken"), 
-				LoginState.getBuilder("prov", allowLogin).withUser(user, storageRemoteID).build());
+						"thisisatoken"));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}
@@ -231,9 +230,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken expected = new LoginToken(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
-						30 * 60 * 1000),
-				LoginState.getBuilder("prov", allowLogin)
-						.withUser(user.build(), storageRemoteID).build());
+						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}
@@ -288,8 +285,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken expected = new LoginToken(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
-						30 * 60 * 1000),
-				LoginState.getBuilder("prov", true).withIdentity(storageRemoteID).build());
+						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}
@@ -356,9 +352,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken expected = new LoginToken(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
-						30 * 60 * 1000),
-				LoginState.getBuilder("prov", true).withIdentity(storageRemoteID1)
-						.withUser(user, storageRemoteID2).build());
+						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}
@@ -441,12 +435,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken expected = new LoginToken(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
-						30 * 60 * 1000),
-				LoginState.getBuilder("prov", true)
-						.withUser(user, storageRemoteID1)
-						.withUser(user, storageRemoteID2)
-						.withUser(user2, storageRemoteID3)
-						.build());
+						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}
@@ -518,12 +507,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginToken expected = new LoginToken(
 				new TemporaryToken(tokenID, "thisisatoken", Instant.ofEpochMilli(20000),
-						30 * 60 * 1000),
-				LoginState.getBuilder("prov", true)
-						.withIdentity(storageRemoteID1)
-						.withIdentity(storageRemoteID2)
-						.withIdentity(storageRemoteID3)
-						.build());
+						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
 	}

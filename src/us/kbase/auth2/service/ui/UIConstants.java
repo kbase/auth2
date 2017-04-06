@@ -12,4 +12,6 @@ public class UIConstants {
 	public static final boolean SECURE_COOKIES = false;
 	
 	public static final String HEADER_TOKEN = APIConstants.HEADER_TOKEN;
+	
+	public static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
 }

@@ -19,34 +19,21 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 public class LinkToken {
 	
 	private final Optional<TemporaryToken> token;
-	private final Optional<LinkIdentities> idents;
 	
 	/** Create a LinkToken for the case where the linking process is concluded and no further
 	 * actions are required.
 	 */
 	public LinkToken() {
 		this.token = Optional.absent();
-		this.idents = Optional.absent();
 	}
 	
-	/* sigh, not sure how to deal with the dual expiration dates. Want to use LinkIDs in
-	 * a context without a token, and thus needs expires, but also don't want yet another class
-	 * to hold the IDs and tokens when both are needed.
-	 */
 	/** Create a LinkToken for the case where more actions are required, and thus a token is
 	 * provided to allow continuing with the linking process.
 	 * @param token a temporary token associated with the state of the linking process in the auth
 	 * storage system.
-	 * @param linkIdentities the identities available for linking.
 	 */
-	public LinkToken(final TemporaryToken token, final LinkIdentities linkIdentities) {
+	public LinkToken(final TemporaryToken token) {
 		nonNull(token, "token");
-		nonNull(linkIdentities, "linkIdentities");
-		if (linkIdentities.getExpires().isPresent() &&
-				!token.getExpirationDate().equals(linkIdentities.getExpires().get())) {
-			throw new IllegalStateException("expires does not match for linkIDs and token");
-		}
-		this.idents = Optional.of(linkIdentities);
 		this.token = Optional.of(token);
 	}
 
@@ -64,18 +51,10 @@ public class LinkToken {
 		return token;
 	}
 	
-	/** Get the identities available for linking.
-	 * @return the identities available for linking, or absent if linking process is complete.
-	 */
-	public Optional<LinkIdentities> getLinkIdentities() {
-		return idents;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((idents == null) ? 0 : idents.hashCode());
 		result = prime * result + ((token == null) ? 0 : token.hashCode());
 		return result;
 	}
@@ -92,13 +71,6 @@ public class LinkToken {
 			return false;
 		}
 		LinkToken other = (LinkToken) obj;
-		if (idents == null) {
-			if (other.idents != null) {
-				return false;
-			}
-		} else if (!idents.equals(other.idents)) {
-			return false;
-		}
 		if (token == null) {
 			if (other.token != null) {
 				return false;

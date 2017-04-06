@@ -1419,14 +1419,14 @@ public class Authentication {
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
-		final LoginState ls = getLoginState(ris, null);
+		final LoginState lstate = getLoginState(ris, null);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
-		final LoginToken lr;
-		if (ls.getUsers().size() == 1 &&
-				ls.getIdentities().isEmpty() &&
+		final LoginToken token;
+		if (lstate.getUsers().size() == 1 &&
+				lstate.getIdentities().isEmpty() &&
 				!pc.isForceLoginChoice()) {
-			final UserName userName = ls.getUsers().iterator().next();
-			final AuthUser user = ls.getUser(userName);
+			final UserName userName = lstate.getUsers().iterator().next();
+			final AuthUser user = lstate.getUser(userName);
 			/* Don't throw an error here since an auth UI may not be controlling the call -
 			 * this call may be the result of a redirect from a 3rd party
 			 * provider. Any controllable error should be thrown when the process flow is back
@@ -1438,26 +1438,25 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				lr = storeIdentitiesTemporarily(ls);
+				token = storeIdentitiesTemporarily(lstate);
 			} else if (user.isDisabled()) {
-				lr = storeIdentitiesTemporarily(ls);
+				token = storeIdentitiesTemporarily(lstate);
 			} else {
-				lr = new LoginToken(login(user.getUserName(), tokenCtx), ls);
+				token = new LoginToken(login(user.getUserName(), tokenCtx));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			lr = storeIdentitiesTemporarily(ls);
+			token = storeIdentitiesTemporarily(lstate);
 		}
-		return lr;
+		return token;
 	}
 
 	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = storeIdentitiesTemporarily(store, 30 * 60 * 1000);
-		return new LoginToken(tt, ls);
+		return new LoginToken(storeIdentitiesTemporarily(store, 30 * 60 * 1000));
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -1794,7 +1793,7 @@ public class Authentication {
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
 				UnauthorizedException {
 		final IdentityProvider idp = getIdentityProvider(provider);
-		 // UI shouldn't allow disabled users to link
+		// UI shouldn't allow disabled users to link
 		final AuthUser u = getUser(token, set(TokenType.LOGIN));
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
@@ -1809,27 +1808,22 @@ public class Authentication {
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
-			lt = getLinkToken(idp, u, ids.iterator().next());
+			lt = getLinkToken(idp, u.getUserName(), ids.iterator().next());
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
-			if (ids.isEmpty()) {
-				lt = new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
-			} else {
-				lt = new LinkToken(tt, new LinkIdentities(u, ids, tt.getExpirationDate()));
-			}
+			lt = new LinkToken(storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS));
 		}
 		return lt;
 	}
 
-	// expects that u is not a local user. Will throw link failed if so.
+	// expects that user is not a local user. Will throw link failed if so.
 	// will store empty identity set if identity is already linked.
 	private LinkToken getLinkToken(
 			final IdentityProvider idp,
-			final AuthUser u,
+			final UserName userName,
 			final RemoteIdentity remoteIdentity)
 			throws AuthStorageException, LinkFailedException {
 		try {
-			storage.link(u.getUserName(), remoteIdentity);
+			storage.link(userName, remoteIdentity);
 			return new LinkToken();
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
@@ -1838,7 +1832,7 @@ public class Authentication {
 			// well, crap. race condition and now there are no link candidates left.
 			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
 					LINK_TOKEN_LIFETIME_MS);
-			return new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
+			return new LinkToken(tt);
 		}
 	}
 

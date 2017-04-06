@@ -2,6 +2,8 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 
@@ -18,80 +20,53 @@ import us.kbase.auth2.lib.token.TemporaryToken;
  */
 public class LoginToken {
 	
-	private final NewToken token;
-	private final TemporaryToken temporaryToken;
-	private final LoginState ls;
-	
-	/* sigh, not sure how to deal with the dual expiration dates. Want to use LoginState in
-	 * a context without a token, and thus needs expires, but also don't want yet another class
-	 * to hold the state and tokens when both are needed.
-	 */
+	private final Optional<NewToken> token;
+	private final Optional<TemporaryToken> temporaryToken;
 	
 	/** Create a LoginToken with a temporary token, indicating that the login process is
-	 * incomplete. Note that the LoginState's expiration date is automatically updated to that of
-	 * the token.
+	 * incomplete.
 	 * @param token the temporary token.
-	 * @param loginState the current login state.
 	 */
-	public LoginToken(final TemporaryToken token, final LoginState loginState) {
+	public LoginToken(final TemporaryToken token) {
 		nonNull(token, "token");
-		nonNull(loginState, "loginState");
-		this.temporaryToken = token;
-		this.token = null;
-		this.ls = loginState.withUpdatedExpires(token.getExpirationDate());
+		this.temporaryToken = Optional.of(token);
+		this.token = Optional.absent();
 	}
 	
-	/** Create a LoginToken with a new token, indicating the login process is complete. Note that
-	 * the LoginState's expiration data is automatically removed.
+	/** Create a LoginToken with a new token, indicating the login process is complete.
 	 * @param token the new token.
-	 * @param loginState the current login state.
 	 */
-	public LoginToken(final NewToken token, final LoginState loginState) {
+	public LoginToken(final NewToken token) {
 		nonNull(token, "token");
-		nonNull(loginState, "loginState");
-		this.temporaryToken = null;
-		this.token = token;
-		this.ls = loginState.withUpdatedExpires(null);
-		if (loginState.getUsers().size() != 1 || !loginState.getIdentities().isEmpty()) {
-			throw new IllegalStateException(
-					"Login process is complete but user count != 1 or unlinked identities > 0");
-		}
+		this.temporaryToken = Optional.absent();
+		this.token = Optional.of(token);
 	}
 
 	/** Returns true if the login process is complete, false otherwise.
 	 * @return true if the login process is complete.
 	 */
 	public boolean isLoggedIn() {
-		return token != null;
+		return token.isPresent();
 	}
 	
 	/** Get the new token for a logged in user.
-	 * @return the new token, or null if the user is not logged in.
+	 * @return the new token, or absent if the user is not logged in.
 	 */
-	public NewToken getToken() {
+	public Optional<NewToken> getToken() {
 		return token;
 	}
 	
 	/** Get the temporary token for a user for which the login process is incomplete.
-	 * @return the temporary token, or null if the user is logged in.
+	 * @return the temporary token, or absent if the user is logged in.
 	 */
-	public TemporaryToken getTemporaryToken() {
+	public Optional<TemporaryToken> getTemporaryToken() {
 		return temporaryToken;
 	}
 	
-	/** Gets the state of the login process. If the login is complete, the login state will
-	 * contain one user and no unlinked identities.
-	 * @return the login state.
-	 */
-	public LoginState getLoginState() {
-		return ls;
-	}
-
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result + ((ls == null) ? 0 : ls.hashCode());
 		result = prime * result + ((temporaryToken == null) ? 0 : temporaryToken.hashCode());
 		result = prime * result + ((token == null) ? 0 : token.hashCode());
 		return result;
@@ -109,13 +84,6 @@ public class LoginToken {
 			return false;
 		}
 		LoginToken other = (LoginToken) obj;
-		if (ls == null) {
-			if (other.ls != null) {
-				return false;
-			}
-		} else if (!ls.equals(other.ls)) {
-			return false;
-		}
 		if (temporaryToken == null) {
 			if (other.temporaryToken != null) {
 				return false;
