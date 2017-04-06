@@ -16,6 +16,7 @@ import javax.ws.rs.core.Response.StatusType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -79,6 +80,14 @@ public class ErrorMessage {
 			appError = null;
 			status = ((WebApplicationException) ex).getResponse()
 					.getStatusInfo();
+		} else if (ex instanceof JsonMappingException) {
+			/* we assume that any json exceptions are because the client sent bad JSON data.
+			 * This may not 100% accurate, but if we're attempting to return unserializable data
+			 * that should be caught in tests.
+			 */
+			appCode = null;
+			appError = null;
+			status = Response.Status.BAD_REQUEST;
 		} else {
 			appCode = null;
 			appError = null;
