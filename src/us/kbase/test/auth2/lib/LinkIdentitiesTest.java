@@ -56,7 +56,7 @@ public class LinkIdentitiesTest {
 		final Set<RemoteIdentity> ids = new HashSet<>();
 		ids.add(REMOTE2);
 		
-		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids);
+		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids, Instant.ofEpochMilli(10000));
 		
 		//check the user is correct
 		assertThat("incorrect username", li.getUser().getUserName(), is(new UserName("foo")));
@@ -74,6 +74,10 @@ public class LinkIdentitiesTest {
 		
 		// check provider is correct
 		assertThat("incorrect provider", li.getProvider(), is("foo1"));
+		
+		// check expires is correct
+		assertThat("incorrect expires", li.getExpires(),
+				is(Optional.of(Instant.ofEpochMilli(10000))));
 		
 		//check the identity is correct
 		assertThat("incorrect identity number", li.getIdentities().size(), is(1));
@@ -104,6 +108,9 @@ public class LinkIdentitiesTest {
 		// check provider is correct
 		assertThat("incorrect provider", li.getProvider(), is("foobar"));
 		
+		// check expires is correct
+		assertThat("incorrect expires", li.getExpires(), is(Optional.absent()));
+		
 		//check the identity is correct
 		assertThat("incorrect identity number", li.getIdentities().size(), is(0));
 	}
@@ -113,7 +120,7 @@ public class LinkIdentitiesTest {
 		final Set<RemoteIdentity> ids = new HashSet<>();
 		ids.add(REMOTE2);
 		
-		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids);
+		final LinkIdentities li = new LinkIdentities(AUTH_USER, ids, Instant.now());
 		assertThat("incorrect ids size", li.getIdentities().size(), is(1));
 		try {
 			li.getIdentities().add(REMOTE1);
@@ -126,14 +133,16 @@ public class LinkIdentitiesTest {
 	
 	@Test
 	public void constructFail() throws Exception {
-		failConstruct(null, new HashSet<>(Arrays.asList(REMOTE1)),
+		failConstruct(null, new HashSet<>(Arrays.asList(REMOTE1)), Instant.now(),
 				new NullPointerException("user"));
-		failConstruct(AUTH_USER, (Set<RemoteIdentity>) null,
+		failConstruct(AUTH_USER, (Set<RemoteIdentity>) null, Instant.now(),
 				new IllegalArgumentException("No remote IDs provided"));
-		failConstruct(AUTH_USER, new HashSet<>(),
+		failConstruct(AUTH_USER, new HashSet<>(), Instant.now(),
 				new IllegalArgumentException("No remote IDs provided"));
-		failConstruct(AUTH_USER, TestCommon.set(REMOTE1, null),
+		failConstruct(AUTH_USER, TestCommon.set(REMOTE1, null), Instant.now(),
 				new NullPointerException("null item in ids"));
+		failConstruct(AUTH_USER, new HashSet<>(Arrays.asList(REMOTE1)), null,
+				new NullPointerException("expires"));
 		
 		failConstruct(null, "foo", new NullPointerException("user"));
 		failConstruct(AUTH_USER, (String) null,
@@ -145,9 +154,10 @@ public class LinkIdentitiesTest {
 	private void failConstruct(
 			final AuthUser au,
 			final Set<RemoteIdentity> ids,
+			final Instant expires,
 			final Exception e) {
 		try {
-			new LinkIdentities(au, ids);
+			new LinkIdentities(au, ids, expires);
 			fail("created bad LinkIdentities");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

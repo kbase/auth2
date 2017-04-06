@@ -11,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -91,6 +92,7 @@ public class Login {
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	private static final String IN_PROCESS_LOGIN_TOKEN = "in-process-login-token";
+	private static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
 	
 	private static final String REDIRECT_URL = "redirecturl";
 
@@ -159,9 +161,10 @@ public class Login {
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 		
 		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(stayLoggedIn == null));
+				.cookie(getSessionChoiceCookie(stayLoggedIn == null,
+				PROVIDER_RETURN_EXPIRATION_SEC));
 		if (redirect != null && !redirect.trim().isEmpty()) {
-			r.cookie(getRedirectCookie(redirect));
+			r.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC));
 		}
 		return r.build();
 	}
@@ -196,23 +199,40 @@ public class Login {
 		}
 	}
 
-	private NewCookie getRedirectCookie(final String redirect) {
+	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
 		return new NewCookie(new Cookie(REDIRECT_COOKIE,
-				redirect == null ? "no redirect" : redirect, UIPaths.LOGIN_ROOT, null),
-				"redirect url", redirect == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+				redirect == null || redirect.isEmpty() ? "no redirect" : redirect,
+						UIPaths.LOGIN_ROOT, null),
+				"redirect url",
+				redirect == null ? 0 : expirationTimeSec,
+				UIConstants.SECURE_COOKIES);
 	}
 
 	private NewCookie getStateCookie(final String state) {
 		return new NewCookie(new Cookie(LOGIN_STATE_COOKIE,
 				state == null ? "no state" : state, UIPaths.LOGIN_ROOT_COMPLETE, null),
-				"loginstate", state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+				"loginstate",
+				state == null ? 0 : PROVIDER_RETURN_EXPIRATION_SEC,
+				UIConstants.SECURE_COOKIES);
 	}
 	
-	private NewCookie getSessionChoiceCookie(final Boolean session) {
+	private NewCookie getSessionChoiceCookie(final String session, final int expirationTimeSec) {
+		if (TRUE.equals(session)) {
+			return getSessionChoiceCookie(true, expirationTimeSec);
+		} else if (FALSE.equals(session)) {
+			return getSessionChoiceCookie(false, expirationTimeSec);
+		} else {
+			return getSessionChoiceCookie((Boolean) null, expirationTimeSec);
+		}
+	}
+	
+	private NewCookie getSessionChoiceCookie(final Boolean session, final int expirationTimeSec) {
 		final String sessionValue = session == null ? "no session" : session ? TRUE : FALSE;
 		return new NewCookie(new Cookie(SESSION_CHOICE_COOKIE,
 				sessionValue, UIPaths.LOGIN_ROOT, null),
-				"session choice", session == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+				"session choice",
+				session == null ? 0 : expirationTimeSec,
+				UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
@@ -242,9 +262,12 @@ public class Login {
 		if (lr.isLoggedIn()) {
 			r = createLoginResponse(redirect, lr.getToken(), !FALSE.equals(session));
 		} else {
+			final int age = getMaxCookieAge(lr.getTemporaryToken());
 			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
 					.cookie(getStateCookie(null))
+					.cookie(getRedirectCookie(redirect, age))
+					.cookie(getSessionChoiceCookie(session, age))
 					.build();
 		}
 		return r;
@@ -305,9 +328,12 @@ public class Login {
 			return b.build();
 		} else {
 			choice.put("logged_in", false);
+			final int age = getMaxCookieAge(lr.getTemporaryToken());
 			return Response.ok(choice)
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken()))
 					.cookie(getStateCookie(null))
+					.cookie(getRedirectCookie(redirect, age))
+					.cookie(getSessionChoiceCookie(session, age))
 					.build();
 		}
 	}
@@ -331,10 +357,10 @@ public class Login {
 	}
 	
 	private ResponseBuilder removeLoginProcessCookies(final ResponseBuilder resp) {
-		return resp.cookie(getSessionChoiceCookie(null))
+		return resp.cookie(getSessionChoiceCookie((Boolean) null, 0))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getStateCookie(null))
-				.cookie(getRedirectCookie(null));
+				.cookie(getRedirectCookie(null, 0));
 	}
 	
 	private Response createLoginResponseJSON(
@@ -380,7 +406,7 @@ public class Login {
 		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_TOKEN,
 				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
 				"logintoken",
-				token == null ? 0 : getMaxCookieAge(token, false), UIConstants.SECURE_COOKIES);
+				token == null ? 0 : getMaxCookieAge(token), UIConstants.SECURE_COOKIES);
 	}
 
 	@GET
@@ -431,6 +457,9 @@ public class Login {
 		ret.put("provider", loginState.getProvider());
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
+		if (loginState.getExpires().isPresent()) {
+			ret.put("expires", loginState.getExpires().get().toEpochMilli());
+		}
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, Object>> login = new LinkedList<>();
@@ -471,6 +500,7 @@ public class Login {
 			l.put("prov_usernames", remoteIDs);
 			login.add(l);
 		}
+		ret.put("servertime", Instant.now().toEpochMilli());
 		return ret;
 	}
 

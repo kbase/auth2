@@ -29,6 +29,10 @@ public class LinkToken {
 		this.idents = Optional.absent();
 	}
 	
+	/* sigh, not sure how to deal with the dual expiration dates. Want to use LinkIDs in
+	 * a context without a token, and thus needs expires, but also don't want yet another class
+	 * to hold the IDs and tokens when both are needed.
+	 */
 	/** Create a LinkToken for the case where more actions are required, and thus a token is
 	 * provided to allow continuing with the linking process.
 	 * @param token a temporary token associated with the state of the linking process in the auth
@@ -38,6 +42,10 @@ public class LinkToken {
 	public LinkToken(final TemporaryToken token, final LinkIdentities linkIdentities) {
 		nonNull(token, "token");
 		nonNull(linkIdentities, "linkIdentities");
+		if (linkIdentities.getExpires().isPresent() &&
+				!token.getExpirationDate().equals(linkIdentities.getExpires().get())) {
+			throw new IllegalStateException("expires does not match for linkIDs and token");
+		}
 		this.idents = Optional.of(linkIdentities);
 		this.token = Optional.of(token);
 	}

@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -1319,7 +1320,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public Set<RemoteIdentity> getTemporaryIdentities(
+	public TemporaryIdentities getTemporaryIdentities(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
 		nonNull(token, "token");
@@ -1339,7 +1340,11 @@ public class MongoStorage implements AuthStorage {
 			throw new AuthStorageException(String.format(
 					"Temporary token %s has no associated IDs field", tid));
 		}
-		return toIdentities(ids);
+		return new TemporaryIdentities(
+				UUID.fromString(d.getString(Fields.TOKEN_ID)),
+				d.getDate(Fields.TOKEN_CREATION).toInstant(),
+				d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+				toIdentities(ids));
 	}
 
 	private Set<RemoteIdentity> toIdentities(final List<Document> ids) {

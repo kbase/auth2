@@ -22,8 +22,14 @@ public class LoginToken {
 	private final TemporaryToken temporaryToken;
 	private final LoginState ls;
 	
+	/* sigh, not sure how to deal with the dual expiration dates. Want to use LoginState in
+	 * a context without a token, and thus needs expires, but also don't want yet another class
+	 * to hold the state and tokens when both are needed.
+	 */
+	
 	/** Create a LoginToken with a temporary token, indicating that the login process is
-	 * incomplete.
+	 * incomplete. Note that the LoginState's expiration date is automatically updated to that of
+	 * the token.
 	 * @param token the temporary token.
 	 * @param loginState the current login state.
 	 */
@@ -32,11 +38,12 @@ public class LoginToken {
 		nonNull(loginState, "loginState");
 		this.temporaryToken = token;
 		this.token = null;
-		this.ls = loginState;
+		this.ls = loginState.withUpdatedExpires(token.getExpirationDate());
 	}
 	
-	/** Create a LoginToken with a new token, indicating the login process is complete.
-	 * @param token the new token
+	/** Create a LoginToken with a new token, indicating the login process is complete. Note that
+	 * the LoginState's expiration data is automatically removed.
+	 * @param token the new token.
 	 * @param loginState the current login state.
 	 */
 	public LoginToken(final NewToken token, final LoginState loginState) {
@@ -44,7 +51,7 @@ public class LoginToken {
 		nonNull(loginState, "loginState");
 		this.temporaryToken = null;
 		this.token = token;
-		this.ls = loginState;
+		this.ls = loginState.withUpdatedExpires(null);
 		if (loginState.getUsers().size() != 1 || !loginState.getIdentities().isEmpty()) {
 			throw new IllegalStateException(
 					"Login process is complete but user count != 1 or unlinked identities > 0");

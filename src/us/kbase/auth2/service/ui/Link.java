@@ -9,6 +9,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.security.NoSuchProviderException;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -75,6 +76,7 @@ public class Link {
 	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
 	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
+	private static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
 
 	@Inject
 	private Authentication auth;
@@ -128,7 +130,9 @@ public class Link {
 	private NewCookie getStateCookie(final String state) {
 		return new NewCookie(new Cookie(LINK_STATE_COOKIE,
 				state == null ? "no state" : state, UIPaths.LINK_ROOT_COMPLETE, null),
-				"linkstate", state == null ? 0 : 30 * 60, UIConstants.SECURE_COOKIES);
+				"linkstate",
+				state == null ? 0 : PROVIDER_RETURN_EXPIRATION_SEC,
+				UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET
@@ -249,7 +253,7 @@ public class Link {
 	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
 		return new NewCookie(new Cookie(IN_PROCESS_LINK_COOKIE,
 				token == null ? "no token" : token.getToken(), UIPaths.LINK_ROOT, null),
-				"linktoken", token == null ? 0 : getMaxCookieAge(token, false),
+				"linktoken", token == null ? 0 : getMaxCookieAge(token),
 				UIConstants.SECURE_COOKIES);
 	}
 	
@@ -310,6 +314,11 @@ public class Link {
 			ris.add(s);
 		}
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
+		if (ids.getExpires().isPresent()) {
+			ret.put("expires", ids.getExpires().get().toEpochMilli());
+		}
+		ret.put("servertime", Instant.now().toEpochMilli());
+		
 		return ret;
 	}
 

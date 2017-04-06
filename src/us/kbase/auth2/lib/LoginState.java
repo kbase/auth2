@@ -2,11 +2,14 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+
+import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -33,15 +36,18 @@ public class LoginState {
 	private final Set<RemoteIdentity> noUser;
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
+	private final Optional<Instant> expires;
 
 	private LoginState(
 			final String provider,
 			final boolean nonAdminLoginAllowed,
+			final Optional<Instant> expires,
 			final Map<UserName, Set<RemoteIdentity>> userIDs,
 			final Map<UserName, AuthUser> users,
 			final Set<RemoteIdentity> noUser) {
 		this.provider = provider;
 		this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+		this.expires = expires;
 		this.userIDs = Collections.unmodifiableMap(userIDs);
 		this.users = Collections.unmodifiableMap(users);
 		this.noUser = Collections.unmodifiableSet(noUser);
@@ -59,6 +65,13 @@ public class LoginState {
 	 */
 	public boolean isNonAdminLoginAllowed() {
 		return nonAdminLoginAllowed;
+	}
+	
+	/** When the login state expires from the system.
+	 * @return the expiration date.
+	 */
+	public Optional<Instant> getExpires() {
+		return expires;
 	}
 	
 	/** Returns whether a user is an admin.
@@ -112,11 +125,21 @@ public class LoginState {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
+	
+	/** Returns a new login state with a new expiration time.
+	 * @param expires the expiration time, or null to set the expiration time to absent.
+	 * @return a new login state.
+	 */
+	public LoginState withUpdatedExpires(final Instant expires) {
+		return new LoginState(provider, nonAdminLoginAllowed, Optional.fromNullable(expires),
+				userIDs, users, noUser);
+	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((expires == null) ? 0 : expires.hashCode());
 		result = prime * result + ((noUser == null) ? 0 : noUser.hashCode());
 		result = prime * result + (nonAdminLoginAllowed ? 1231 : 1237);
 		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
@@ -137,6 +160,13 @@ public class LoginState {
 			return false;
 		}
 		LoginState other = (LoginState) obj;
+		if (expires == null) {
+			if (other.expires != null) {
+				return false;
+			}
+		} else if (!expires.equals(other.expires)) {
+			return false;
+		}
 		if (noUser == null) {
 			if (other.noUser != null) {
 				return false;
@@ -189,6 +219,7 @@ public class LoginState {
 		private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
 		private final Map<UserName, AuthUser> users = new HashMap<>();
 		private final Set<RemoteIdentity> noUser = new HashSet<>();
+		private Optional<Instant> expires = Optional.absent();
 		private final String provider;
 		private final boolean nonAdminLoginAllowed;
 		
@@ -198,6 +229,25 @@ public class LoginState {
 			}
 			this.provider = provider;
 			this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+		}
+		
+		/** Set the time this login state expires.
+		 * @param expires the expiration date.
+		 * @return this builder.
+		 */
+		public Builder withExpires(final Instant expires) {
+			nonNull(expires, "expires");
+			this.expires = Optional.of(expires);
+			return this;
+		}
+		
+		/** Set the time this login state expires, or pass null to provide no expiration date.
+		 * @param expires the expiration date.
+		 * @return this builder.
+		 */
+		public Builder withNullableExpires(final Instant expires) {
+			this.expires = Optional.fromNullable(expires);
+			return this;
 		}
 
 		/** Add a remote identity that is not associated with a user account.
@@ -247,7 +297,7 @@ public class LoginState {
 		 * @return the new instance.
 		 */
 		public LoginState build() {
-			return new LoginState(provider, nonAdminLoginAllowed, userIDs, users, noUser);
+			return new LoginState(provider, nonAdminLoginAllowed, expires, userIDs, users, noUser);
 		}
 	}
 }
