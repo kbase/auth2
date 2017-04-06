@@ -28,7 +28,6 @@ public class Root {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> rootJSON() {
 		return root();
-		
 	}
 	
 	@GET

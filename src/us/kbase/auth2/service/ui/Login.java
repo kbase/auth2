@@ -456,8 +456,9 @@ public class Login {
 		ret.put("cancelurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
-		ret.put("provider", loginState.getProvider());
+		ret.put("suggestnameurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
+		ret.put("provider", loginState.getProvider());
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		if (loginState.getExpires().isPresent()) {
 			ret.put("expires", loginState.getExpires().get().toEpochMilli());
