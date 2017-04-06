@@ -5,11 +5,11 @@ import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import java.nio.file.Paths;
 
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
-import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.mongodb.MongoClient;
 
 import ch.qos.logback.classic.Level;
@@ -84,7 +84,7 @@ public class AuthenticationService extends ResourceConfig {
 			}
 		}
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");
-		register(JacksonFeature.class);
+		register(JacksonJaxbJsonProvider.class);
 		register(MustacheMvcFeature.class);
 		final String templatePath = "templates";
 		property(MustacheMvcFeature.TEMPLATE_BASE_PATH, templatePath);
