@@ -1794,7 +1794,7 @@ public class Authentication {
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
 				UnauthorizedException {
 		final IdentityProvider idp = getIdentityProvider(provider);
-		 // UI shouldn't allow disabled users to link
+		// UI shouldn't allow disabled users to link
 		final AuthUser u = getUser(token, set(TokenType.LOGIN));
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
@@ -1809,27 +1809,22 @@ public class Authentication {
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
-			lt = getLinkToken(idp, u, ids.iterator().next());
+			lt = getLinkToken(idp, u.getUserName(), ids.iterator().next());
 		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
-			if (ids.isEmpty()) {
-				lt = new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
-			} else {
-				lt = new LinkToken(tt, new LinkIdentities(u, ids, tt.getExpirationDate()));
-			}
+			lt = new LinkToken(storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS));
 		}
 		return lt;
 	}
 
-	// expects that u is not a local user. Will throw link failed if so.
+	// expects that user is not a local user. Will throw link failed if so.
 	// will store empty identity set if identity is already linked.
 	private LinkToken getLinkToken(
 			final IdentityProvider idp,
-			final AuthUser u,
+			final UserName userName,
 			final RemoteIdentity remoteIdentity)
 			throws AuthStorageException, LinkFailedException {
 		try {
-			storage.link(u.getUserName(), remoteIdentity);
+			storage.link(userName, remoteIdentity);
 			return new LinkToken();
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
@@ -1838,7 +1833,7 @@ public class Authentication {
 			// well, crap. race condition and now there are no link candidates left.
 			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
 					LINK_TOKEN_LIFETIME_MS);
-			return new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
+			return new LinkToken(tt);
 		}
 	}
 

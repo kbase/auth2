@@ -16,6 +16,8 @@ import javax.ws.rs.core.UriInfo;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -54,6 +56,19 @@ public class UIUtils {
 			rel = rel + "/";
 		}
 		return rel;
+	}
+	
+	public static void checkState(
+			final String cookieSessionState,
+			final String providerSuppliedState)
+			throws MissingParameterException, AuthenticationException {
+		if (cookieSessionState == null || cookieSessionState.trim().isEmpty()) {
+			throw new MissingParameterException("Couldn't retrieve state value from cookie");
+		}
+		if (!cookieSessionState.equals(providerSuppliedState)) {
+			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+					"State values do not match, this may be a CXRF attack");
+		}
 	}
 
 	public static NewCookie getLoginCookie(final String cookieName, final NewToken token) {

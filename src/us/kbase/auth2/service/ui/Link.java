@@ -1,6 +1,7 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
@@ -32,7 +33,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.ResponseBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
@@ -64,7 +64,6 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
-import us.kbase.auth2.service.common.IdentityProviderInput;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LINK_ROOT)
@@ -150,7 +149,7 @@ public class Link {
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst("code"); //may need to be configurable
 		final String retstate = qps.getFirst("state"); //may need to be configurable
-		IdentityProviderInput.checkState(state, retstate);
+		checkState(state, retstate);
 		final Optional<IncomingToken> token =
 				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
 		final Optional<TemporaryToken> tt;
@@ -179,39 +178,6 @@ public class Link {
 		}
 		return r;
 	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
-	public Response link(
-			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
-			@PathParam("provider") final String provider,
-			@CookieParam(LINK_STATE_COOKIE) final String state,
-			@Context final UriInfo uriInfo,
-			final IdentityProviderInput input)
-			throws MissingParameterException, AuthenticationException,
-				LinkFailedException, NoTokenProvidedException,
-				AuthStorageException, IllegalParameterException, UnauthorizedException {
-		if (input == null) {
-			throw new MissingParameterException("JSON body missing");
-		}
-		//TODO INPUT handle error in provider
-		input.exceptOnAdditionalProperties();
-		input.checkState(state);
-		final LinkToken lt = auth.link(getToken(token), provider, input.getAuthCode());
-		final Map<String, Object> linkChoice = new HashMap<>();
-		final ResponseBuilder r = Response.ok(linkChoice).cookie(getStateCookie(null));
-		if (lt.isLinked()) {
-			linkChoice.put("linked", true);
-		} else {
-			linkChoice.putAll(buildLinkChoice(uriInfo, lt.getLinkIdentities().get()));
-			linkChoice.put("linked", false);
-			r.cookie(getLinkInProcessCookie(lt.getTemporaryToken().get()));
-		}
-		return r.build();
-	}
-	
 	
 	// the two methods below are very similar and there's another similar method in Login
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
@@ -271,7 +237,6 @@ public class Link {
 				linktoken, uriInfo);
 	}
 	
-	// trying to combine JSON and HTML doesn't work - @Template = always HTML regardless of Accept:
 	@GET
 	@Path(UIPaths.LINK_CHOICE)
 	@Produces(MediaType.APPLICATION_JSON)
@@ -292,10 +257,6 @@ public class Link {
 			LinkFailedException, UnauthorizedException {
 		final LinkIdentities ids = auth.getLinkState(incomingToken,
 				getLinkInProcessToken(linktoken));
-		return buildLinkChoice(uriInfo, ids);
-	}
-
-	private Map<String, Object> buildLinkChoice(final UriInfo uriInfo, final LinkIdentities ids) {
 		/* there's a possibility here that between the redirects the number
 		 * of identities that aren't already linked was reduced to 1. The
 		 * probability is so low that it's not worth special casing it,

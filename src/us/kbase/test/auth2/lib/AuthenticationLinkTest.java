@@ -176,11 +176,7 @@ public class AuthenticationLinkTest {
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000),
-				new LinkIdentities(AuthUser.getBuilder(
-						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
-						.withIdentity(REMOTE).build(),
-						"Prov"))));
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
@@ -240,12 +236,7 @@ public class AuthenticationLinkTest {
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000),
-				new LinkIdentities(AuthUser.getBuilder(
-						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
-						.withIdentity(REMOTE).build(),
-						set(storageRemoteID),
-						Instant.ofEpochMilli(10000 + 10 * 60 * 1000)))));
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
@@ -309,11 +300,7 @@ public class AuthenticationLinkTest {
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000),
-				new LinkIdentities(AuthUser.getBuilder(
-						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
-						.withIdentity(REMOTE).build(),
-						"prov"))));
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
@@ -391,12 +378,7 @@ public class AuthenticationLinkTest {
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000),
-				new LinkIdentities(AuthUser.getBuilder(
-						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
-						.withIdentity(REMOTE).build(),
-						set(storageRemoteID3, storageRemoteID4),
-						Instant.ofEpochMilli(10000 + 10 * 60 * 1000)))));
+				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
