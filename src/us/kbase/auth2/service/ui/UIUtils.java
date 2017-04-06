@@ -77,10 +77,8 @@ public class UIUtils {
 		return getMaxCookieAge(token.getStoredToken().getExpirationDate(), session);
 	}
 
-	public static int getMaxCookieAge(
-			final TemporaryToken token,
-			final boolean session) {
-		return getMaxCookieAge(token.getExpirationDate(), session);
+	public static int getMaxCookieAge(final TemporaryToken token) {
+		return getMaxCookieAge(token.getExpirationDate(), false);
 	}
 
 	private static int getMaxCookieAge(

@@ -10,6 +10,8 @@ import java.time.Instant;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -67,6 +69,7 @@ public class LoginStateTest {
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect num users", ls.getUsers().size(), is(0));
 		assertThat("incorrect num identities", ls.getIdentities().size(), is(0));
+		assertThat("incorrect expires", ls.getExpires(), is(Optional.absent()));
 		
 		failStartBuild(null, new IllegalArgumentException("provider cannot be null or empty"));
 		failStartBuild("  \t    \n",
@@ -84,17 +87,23 @@ public class LoginStateTest {
 	
 	@Test
 	public void buildWithIdentities() throws Exception {
+		/* also with non-null nullable expiration date */
 		final LoginState ls = LoginState.getBuilder("prov", false)
-				.withIdentity(REMOTE1).withIdentity(REMOTE2).build();
+				.withIdentity(REMOTE1).withIdentity(REMOTE2)
+				.withNullableExpires(Instant.ofEpochMilli(20000)).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect num users", ls.getUsers().size(), is(0));
 		assertThat("incorrect identities", ls.getIdentities(), is(set(REMOTE2, REMOTE1)));
+		assertThat("incorrect expires", ls.getExpires(),
+				is(Optional.of(Instant.ofEpochMilli(20000))));
 	}
 	
 	@Test
 	public void buildWithUsers() throws Exception {
+		/* also with null nullable expiration date */
 		final LoginState ls = LoginState.getBuilder("prov", true)
+				.withNullableExpires(null)
 				.withUser(AUTH_USER1, REMOTE1).withUser(AUTH_USER2, REMOTE3)
 				.withUser(AUTH_USER2, REMOTE2).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
@@ -119,12 +128,15 @@ public class LoginStateTest {
 		
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo4")), is(false));
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo5")), is(true));
+		assertThat("incorrect expires", ls.getExpires(), is(Optional.absent()));
 	}
 	
 	@Test
 	public void buildWithUsersAndIdentities() throws Exception {
+		/* also an expiration date */
 		final LoginState ls = LoginState.getBuilder("prov", false)
-				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
+				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1)
+				.withExpires(Instant.ofEpochMilli(10000)).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect identities", ls.getIdentities(), is(set(REMOTE1)));
@@ -139,6 +151,8 @@ public class LoginStateTest {
 				is(new DisplayName("bar5")));
 		
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo5")), is(true));
+		assertThat("incorrect expires", ls.getExpires(),
+				is(Optional.of(Instant.ofEpochMilli(10000))));
 	}
 	
 	@Test
@@ -187,6 +201,29 @@ public class LoginStateTest {
 		
 		failAddIdentity(LoginState.getBuilder("prov1", false), REMOTE1, new IllegalStateException(
 				"Cannot have multiple providers in the same login state"));
+	}
+	
+	@Test
+	public void addExpiresFail() throws Exception {
+		try {
+			LoginState.getBuilder("p", false).withExpires(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("expires"));
+		}
+	}
+	
+	@Test
+	public void updateExpires() throws Exception {
+		final LoginState ls = LoginState.getBuilder("p", false).build();
+		assertThat("incorrect expires", ls.getExpires(), is(Optional.absent()));
+		
+		final LoginState ls2 = ls.withUpdatedExpires(Instant.ofEpochMilli(10000));
+		assertThat("incorrect expires", ls2.getExpires(),
+				is(Optional.of(Instant.ofEpochMilli(10000))));
+		
+		final LoginState ls3 = ls2.withUpdatedExpires(null);
+		assertThat("incorrect expires", ls3.getExpires(), is(Optional.absent()));
 	}
 	
 	private void failAddUser(

@@ -9,6 +9,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -39,6 +41,7 @@ public class LoginTokenTest {
 							new UserName("foo"), new DisplayName("bar"), Instant.now(), REMOTE)
 							.withEmailAddress(new EmailAddress("f@g.com")).build(),
 					REMOTE)
+					.withExpires(Instant.ofEpochMilli(70000))
 					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests nub", e);
@@ -63,12 +66,15 @@ public class LoginTokenTest {
 		assertThat("incorrect login state provider", lt.getLoginState().getProvider(), is("foo"));
 		assertThat("incorrect login state login allowed",
 				lt.getLoginState().isNonAdminLoginAllowed(), is(false));
+		assertThat("incorrect login state expires", lt.getLoginState().getExpires(),
+				is(Optional.absent()));
 	}
 	
 	@Test
 	public void constructorTemporaryToken() throws Exception {
+		final Instant now = Instant.now();
 		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "baz", Instant.now(), 5000);
+				UUID.randomUUID(), "baz", now, 5000);
 		final LoginToken lt = new LoginToken(tt, LOGIN_STATE);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(false));
 		assertThat("incorrect token id", lt.getTemporaryToken().getId(), is(tt.getId()));
@@ -80,6 +86,8 @@ public class LoginTokenTest {
 		assertThat("incorrect login state provider", lt.getLoginState().getProvider(), is("foo"));
 		assertThat("incorrect login state login allowed",
 				lt.getLoginState().isNonAdminLoginAllowed(), is(false));
+		assertThat("incorrect login state expires", lt.getLoginState().getExpires(),
+				is(Optional.of(now.plusMillis(5000))));
 	}
 	
 	@Test

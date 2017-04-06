@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
@@ -65,6 +66,8 @@ import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLinkTest {
+	
+	private final Instant NOW = Instant.now();
 	
 	private final RemoteIdentity REMOTE = new RemoteIdentity(new RemoteIdentityID("Prov", "id1"),
 			new RemoteIdentityDetails("user1", "full1", "f1@g.com"));
@@ -241,7 +244,8 @@ public class AuthenticationLinkTest {
 				new LinkIdentities(AuthUser.getBuilder(
 						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 						.withIdentity(REMOTE).build(),
-						set(storageRemoteID)))));
+						set(storageRemoteID),
+						Instant.ofEpochMilli(10000 + 10 * 60 * 1000)))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
@@ -391,7 +395,8 @@ public class AuthenticationLinkTest {
 				new LinkIdentities(AuthUser.getBuilder(
 						new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 						.withIdentity(REMOTE).build(),
-						set(storageRemoteID3, storageRemoteID4)))));
+						set(storageRemoteID3, storageRemoteID4),
+						Instant.ofEpochMilli(10000 + 10 * 60 * 1000)))));
 		
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
@@ -1045,13 +1050,15 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), Instant.now(),
+						Instant.ofEpochMilli(20000),
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
 		
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1077,7 +1084,8 @@ public class AuthenticationLinkTest {
 		assertThat("incorrect link identities", li, is(new LinkIdentities(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build(),
-				set(storageRemoteID3, storageRemoteID4))));
+				set(storageRemoteID3, storageRemoteID4),
+				Instant.ofEpochMilli(20000))));
 	}
 	
 	@Test
@@ -1248,9 +1256,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
 				.thenReturn(null);
 		
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1297,13 +1306,14 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+									new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+							new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+									new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+							new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+									new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
 		
 		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
@@ -1330,7 +1340,8 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build());
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set());
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set()));
 		
 		failLinkIdentity(auth, null, tempToken, "foo", new NullPointerException("token"));
 		failLinkIdentity(auth, userToken, null, "foo",
@@ -1488,9 +1499,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid",
@@ -1516,9 +1528,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new NoSuchUserException("baz")).when(storage).link(new UserName("baz"),
@@ -1549,9 +1562,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new IdentityLinkedException("de0702aa7927b562e0d6be5b6527cfb2"))
@@ -1582,9 +1596,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new LinkFailedException("foobar"))
@@ -1631,13 +1646,14 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1834,9 +1850,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemote3 = new RemoteIdentity(
@@ -1871,11 +1888,11 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
-		
 
 		final RemoteIdentity storageRemote3 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "id3"),

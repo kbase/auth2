@@ -109,7 +109,7 @@ public class Authentication {
 	//TODO TEST LOG test logging on startup
 	//TODO TEST LOG test logging on calls
 	//TODO ZZLATER EMAIL validate email address by sending an email
-	//TODO AUTH server root should return server version (and urls for endpoints?)
+	//TODO AUTH server root should return server version, server time (and urls for endpoints?)
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
 	//TODO ZLATER SCOPES configure scopes via ui
 	//TODO ZLATER SCOPES configure scope on login via ui
@@ -1420,7 +1420,7 @@ public class Authentication {
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
-		final LoginState ls = getLoginState(ris);
+		final LoginState ls = getLoginState(ris, null);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken lr;
 		if (ls.getUsers().size() == 1 &&
@@ -1475,19 +1475,19 @@ public class Authentication {
 	 */
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
-		if (ids.isEmpty()) {
+		final TemporaryIdentities ids = getTemporaryIdentities(token);
+		if (ids.getIdentities().isEmpty()) {
 			throw new RuntimeException(
 					"Programming error: temporary login token stored with no identities");
 		}
-		return getLoginState(ids);
+		return getLoginState(ids.getIdentities(), ids.getExpires());
 	}
 
-	private LoginState getLoginState(final Set<RemoteIdentity> ids)
+	private LoginState getLoginState(final Set<RemoteIdentity> ids, final Instant expires)
 			throws AuthStorageException {
 		final String provider = ids.iterator().next().getRemoteID().getProviderName();
 		final LoginState.Builder builder = LoginState.getBuilder(provider,
-				cfg.getAppConfig().isLoginAllowed());
+				cfg.getAppConfig().isLoginAllowed()).withNullableExpires(expires);
 		for (final RemoteIdentity ri: ids) {
 			final Optional<AuthUser> u = storage.getUser(ri);
 			if (!u.isPresent()) {
@@ -1499,7 +1499,7 @@ public class Authentication {
 		return builder.build();
 	}
 
-	private Set<RemoteIdentity> getTemporaryIdentities(
+	private TemporaryIdentities getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
 		nonNull(token, "Temporary token");
@@ -1558,7 +1558,8 @@ public class Authentication {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
 					"Account creation is disabled");
 		}
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
+		final Set<RemoteIdentity> ids = new HashSet<>(
+				getTemporaryIdentities(token).getIdentities());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
@@ -1614,7 +1615,8 @@ public class Authentication {
 		nonNull(policyIDs, "policyIDs");
 		nonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(token);
+		final Set<RemoteIdentity> ids = new HashSet<>(
+				getTemporaryIdentities(token).getIdentities());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
@@ -1814,7 +1816,7 @@ public class Authentication {
 			if (ids.isEmpty()) {
 				lt = new LinkToken(tt, new LinkIdentities(u, idp.getProviderName()));
 			} else {
-				lt = new LinkToken(tt, new LinkIdentities(u, ids));
+				lt = new LinkToken(tt, new LinkIdentities(u, ids, tt.getExpirationDate()));
 			}
 		}
 		return lt;
@@ -1877,12 +1879,13 @@ public class Authentication {
 		if (u.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken);
+		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
+		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities());
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
 			throw new LinkFailedException("All provided identities are already linked");
 		}
-		return new LinkIdentities(u, ids);
+		return new LinkIdentities(u, ids, tids.getExpires());
 	}
 
 	/** Complete the OAuth2 account linking process by linking one identity to the current user.
@@ -1914,7 +1917,7 @@ public class Authentication {
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken);
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities();
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
@@ -1944,7 +1947,8 @@ public class Authentication {
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> identities = getTemporaryIdentities(linkToken);
+		final Set<RemoteIdentity> identities = new HashSet<>(
+				getTemporaryIdentities(linkToken).getIdentities());
 		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
 	}

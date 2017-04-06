@@ -241,6 +241,7 @@
       <test name="us.kbase.test.auth2.lib.PasswordTest"/>
       <test name="us.kbase.test.auth2.lib.PolicyIDTest"/>
       <test name="us.kbase.test.auth2.lib.RoleTest"/>
+      <test name="us.kbase.test.auth2.lib.TemporaryIdentitiesTest"/>
       <test name="us.kbase.test.auth2.lib.TokenCreationContextTest"/>
       <test name="us.kbase.test.auth2.lib.UserDisabledStateTest"/>
       <test name="us.kbase.test.auth2.lib.UserNameTest"/>

@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -95,11 +96,26 @@ public class LinkTokenTest {
 	}
 	
 	@Test
+	public void tokenConstructorWithRemoteIDs() throws Exception {
+		final LinkIdentities linkids = new LinkIdentities(
+				AUTH_USER, set(REMOTE1), Instant.ofEpochMilli(20001));
+		final TemporaryToken tt = new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10001), 10000);
+		final LinkToken lt = new LinkToken(tt, linkids);
+		assertThat("incorrect token", lt.getTemporaryToken(), is(Optional.of(tt)));
+		assertThat("incorrect linkids", lt.getLinkIdentities(), is(Optional.of(linkids)));
+	}
+	
+	@Test
 	public void constructFail() throws Exception {
 		failConstruct(null, new LinkIdentities(AUTH_USER, "foo"),
 				new NullPointerException("token"));
 		failConstruct(new TemporaryToken(UUID.randomUUID(), "foo", Instant.now(), 10000), null,
 				new NullPointerException("linkIdentities"));
+		failConstruct(new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000), 10000),
+				new LinkIdentities(AUTH_USER, set(REMOTE1), Instant.ofEpochMilli(20001)),
+				new IllegalStateException("expires does not match for linkIDs and token"));
 	}
 	
 	private void failConstruct(
