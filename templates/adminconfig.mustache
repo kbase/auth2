@@ -93,8 +93,7 @@ provider, e.g. a choice of accounts is required.
 </p>
 <p>On login show login choices even if there's only one choice:
 <input type="checkbox" name="forceloginchoice" {{#forceloginchoice}}checked{{/forceloginchoice}}/></br>
-Select this option if a custom UI is setting its own login cookies but is not intercepting the 
-3rd party identity provider redirect. The server will then always
+Select this option if a custom UI is setting its own login cookies. The server will then always
 redirect to the UI prior to logging in a user (but after processing the return from the identity
 provider), so the UI can then use JSON endpoints that don't set a cookie with a login token.</br>
 

@@ -2116,7 +2116,7 @@ public class Authentication {
 	//TODO CONFIG TEST update and various get config methods
 	/** Update the server configuration.
 	 * @param token a token for a user with the administrator role.
-	 * @param acs the new server configuration.
+	 * @param update the new server configuration.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user account associated with the token doesn't have
 	 * the appropriate role or the token is not a login token.
@@ -2126,19 +2126,19 @@ public class Authentication {
 	 */
 	public <T extends ExternalConfig> void updateConfig(
 			final IncomingToken token,
-			final AuthConfigUpdate<T> acs)
+			final AuthConfigUpdate<T> update)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		nonNull(acs, "acs");
+		nonNull(update, "update");
 		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
-		for (final String provider: acs.getProviders().keySet()) {
+		for (final String provider: update.getProviders().keySet()) {
 			// since idProviderSet is case insensitive
 			final IdentityProvider idp = idProviderSet.get(provider);
 			if (idp == null || !idp.getProviderName().equals(provider)) {
 				throw new NoSuchIdentityProviderException(provider);
 			}
 		}
-		storage.updateConfig(acs, true);
+		storage.updateConfig(update, true);
 		cfg.updateConfig();
 	}
 	
