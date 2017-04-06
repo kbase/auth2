@@ -187,5 +187,33 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void deleteTempIDs() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporaryHashedToken tt = new TemporaryToken(
+				id, "foobar", now, 10000)
+					.getHashedToken();
+		storage.storeIdentitiesTemporarily(tt, set(REMOTE2));
+		
+		// check token is there
+		storage.getTemporaryIdentities(new IncomingToken("foobar").getHashedToken());
+		
+		storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken());
+		
+		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
+				new NoSuchTokenException("Token not found"));
+	}
+	
+	@Test
+	public void deleteTempIDsFailNull() throws Exception {
+		try {
+			storage.deleteTemporaryIdentities(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
 
 }

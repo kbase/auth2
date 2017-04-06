@@ -12,6 +12,7 @@ public class UIPaths {
 	private static final String COMPLETE = "complete";
 	private static final String COMPLETE_PROVIDER = COMPLETE + SEP + "{provider}";
 	private static final String CHOICE = "choice";
+	private static final String CANCEL = "cancel";
 	private static final String PICK = "pick";
 	private static final String CREATE = "create";
 	private static final String RESULT = "result";
@@ -118,6 +119,8 @@ public class UIPaths {
 	public static final String LOGIN_SUGGEST_NAME = "suggestname/{name}";
 	public static final String LOGIN_CHOICE = CHOICE;
 	public static final String LOGIN_ROOT_CHOICE = LOGIN_ROOT + LOGIN_CHOICE;
+	public static final String LOGIN_CANCEL = CANCEL;
+	public static final String LOGIN_ROOT_CANCEL = LOGIN_ROOT + LOGIN_CANCEL;
 	public static final String LOGIN_PICK = PICK;
 	public static final String LOGIN_ROOT_PICK = LOGIN_ROOT + LOGIN_PICK;
 	public static final String LOGIN_CREATE = CREATE;
@@ -133,6 +136,8 @@ public class UIPaths {
 	public static final String LINK_COMPLETE_PROVIDER = COMPLETE_PROVIDER;
 	public static final String LINK_CHOICE = CHOICE;
 	public static final String LINK_ROOT_CHOICE = LINK_ROOT + LINK_CHOICE;
+	public static final String LINK_CANCEL = CANCEL;
+	public static final String LINK_ROOT_CANCEL = LINK_ROOT + LINK_CANCEL;
 	public static final String LINK_PICK = PICK;
 	public static final String LINK_ROOT_PICK = LINK_ROOT + LINK_PICK;
 	

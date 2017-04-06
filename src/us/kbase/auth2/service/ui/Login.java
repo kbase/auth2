@@ -26,6 +26,7 @@ import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.CookieParam;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -453,6 +454,7 @@ public class Login {
 			final String redirect)
 			throws AuthStorageException, IllegalParameterException {
 		final Map<String, Object> ret = new HashMap<>();
+		ret.put("cancelurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
 		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put("provider", loginState.getProvider());
@@ -514,6 +516,28 @@ public class Login {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LOGIN_TOKEN); 
 		}
 		return incToken;
+	}
+	
+	@POST
+	@Path(UIPaths.LOGIN_CANCEL)
+	public Response cancelLoginPOST(@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		return cancelLogin(token);
+	}
+	
+	@DELETE
+	@Path(UIPaths.LOGIN_CANCEL)
+	public Response cancelLoginDELETE(@CookieParam(IN_PROCESS_LOGIN_TOKEN) final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		return cancelLogin(token);
+	}
+
+	private Response cancelLogin(final String token)
+			throws NoTokenProvidedException, AuthStorageException {
+		auth.deleteLinkOrLoginState(getLoginInProcessToken(token));
+		final ResponseBuilder r = Response.noContent();
+		removeLoginProcessCookies(r);
+		return r.build();
 	}
 	
 	@POST
