@@ -631,8 +631,8 @@ public class AuthenticationLoginTest {
 		
 		final LoginState got = auth.getLoginState(token);
 		
-		final LoginState expected = LoginState.getBuilder("prov", true)
-				.withExpires(Instant.ofEpochMilli(10000))
+		final LoginState expected = LoginState.getBuilder(
+				"prov", true, Instant.ofEpochMilli(10000))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
 		
@@ -673,8 +673,8 @@ public class AuthenticationLoginTest {
 		
 		final LoginState got = auth.getLoginState(token);
 		
-		final LoginState expected = LoginState.getBuilder("prov", false)
-				.withExpires(Instant.ofEpochMilli(10000))
+		final LoginState expected = LoginState.getBuilder(
+				"prov", false, Instant.ofEpochMilli(10000))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -716,8 +716,7 @@ public class AuthenticationLoginTest {
 		
 		final LoginState got = auth.getLoginState(token);
 		
-		final LoginState expected = LoginState.getBuilder("prov", true)
-				.withExpires(Instant.ofEpochMilli(10000))
+		final LoginState expected = LoginState.getBuilder("prov", true,Instant.ofEpochMilli(10000))
 				.withUser(AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -773,7 +772,9 @@ public class AuthenticationLoginTest {
 		
 		final LoginState got = auth.getLoginState(token);
 		
-		final LoginState expected = LoginState.getBuilder("prov", true).withUser(
+		
+		final Instant exp = Instant.ofEpochMilli(10000);
+		final LoginState expected = LoginState.getBuilder("prov", true, exp).withUser(
 				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -787,7 +788,7 @@ public class AuthenticationLoginTest {
 								new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build(),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")))
-				.withExpires(Instant.ofEpochMilli(10000)).build();
+				.build();
 		
 		assertThat("incorrect login state", got, is(expected));
 	}
@@ -832,7 +833,8 @@ public class AuthenticationLoginTest {
 		
 		final LoginState got = auth.getLoginState(token);
 		
-		final LoginState expected = LoginState.getBuilder("prov", true).withUser(
+		final Instant exp = Instant.ofEpochMilli(10000);
+		final LoginState expected = LoginState.getBuilder("prov", true, exp).withUser(
 				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -842,7 +844,7 @@ public class AuthenticationLoginTest {
 				
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")))
-				.withExpires(Instant.ofEpochMilli(10000)).build();
+				.build();
 		
 		assertThat("incorrect login state", got, is(expected));
 	}

@@ -9,8 +9,6 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
-import com.google.common.base.Optional;
-
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
 
@@ -36,12 +34,12 @@ public class LoginState {
 	private final Set<RemoteIdentity> noUser;
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
-	private final Optional<Instant> expires;
+	private final Instant expires;
 
 	private LoginState(
 			final String provider,
 			final boolean nonAdminLoginAllowed,
-			final Optional<Instant> expires,
+			final Instant expires,
 			final Map<UserName, Set<RemoteIdentity>> userIDs,
 			final Map<UserName, AuthUser> users,
 			final Set<RemoteIdentity> noUser) {
@@ -70,7 +68,7 @@ public class LoginState {
 	/** When the login state expires from the system.
 	 * @return the expiration date.
 	 */
-	public Optional<Instant> getExpires() {
+	public Instant getExpires() {
 		return expires;
 	}
 	
@@ -196,9 +194,13 @@ public class LoginState {
 	 * @param provider the name of the identity provider that provided the identities for this
 	 * login attempt.
 	 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
+	 * @param expires the date the login state expires.
 	 */
-	public static Builder getBuilder(final String provider, final boolean nonAdminLoginAllowed) {
-		return new Builder(provider, nonAdminLoginAllowed);
+	public static Builder getBuilder(
+			final String provider,
+			final boolean nonAdminLoginAllowed,
+			final Instant expires) {
+		return new Builder(provider, nonAdminLoginAllowed, expires);
 	}
 
 	/** A builder for a LoginState instance.
@@ -210,37 +212,23 @@ public class LoginState {
 		private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
 		private final Map<UserName, AuthUser> users = new HashMap<>();
 		private final Set<RemoteIdentity> noUser = new HashSet<>();
-		private Optional<Instant> expires = Optional.absent();
+		private final Instant expires;
 		private final String provider;
 		private final boolean nonAdminLoginAllowed;
 		
-		private Builder(final String provider, final boolean nonAdminLoginAllowed) {
+		private Builder(
+				final String provider,
+				final boolean nonAdminLoginAllowed,
+				final Instant expires) {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
 			}
+			nonNull(expires, "expires");
 			this.provider = provider;
 			this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+			this.expires = expires;
 		}
 		
-		/** Set the time this login state expires.
-		 * @param expires the expiration date.
-		 * @return this builder.
-		 */
-		public Builder withExpires(final Instant expires) {
-			nonNull(expires, "expires");
-			this.expires = Optional.of(expires);
-			return this;
-		}
-		
-		/** Set the time this login state expires, or pass null to provide no expiration date.
-		 * @param expires the expiration date.
-		 * @return this builder.
-		 */
-		public Builder withNullableExpires(final Instant expires) {
-			this.expires = Optional.fromNullable(expires);
-			return this;
-		}
-
 		/** Add a remote identity that is not associated with a user account.
 		 * @param remoteID the remote identity to add.
 		 * @return this builder.

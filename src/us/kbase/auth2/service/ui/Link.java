@@ -276,9 +276,7 @@ public class Link {
 		}
 		ret.put("cancelurl", relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
-		if (ids.getExpires().isPresent()) {
-			ret.put("expires", ids.getExpires().get().toEpochMilli());
-		}
+		ret.put("expires", ids.getExpires().toEpochMilli());
 		return ret;
 	}
 

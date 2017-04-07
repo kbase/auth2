@@ -7,8 +7,6 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 
-import com.google.common.base.Optional;
-
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
 
@@ -22,12 +20,12 @@ public class LinkIdentities {
 	private final AuthUser user;
 	private final Set<RemoteIdentity> idents;
 	private final String provider;
-	private final Optional<Instant> expires;
+	private final Instant expires;
 
 	/** Create a set of identities that are linkable to a user account.
 	 * @param user the user to which the identities may be linked.
 	 * @param ids the remote identities.
-	 * @param instant the time the identities expire.
+	 * @param expires the time the identities expire.
 	 */
 	public LinkIdentities(
 			final AuthUser user,
@@ -42,27 +40,15 @@ public class LinkIdentities {
 		this.user = user;
 		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
 		this.provider = ids.iterator().next().getRemoteID().getProviderName();
-		this.expires = Optional.of(expires);
+		this.expires = expires;
+		for (final RemoteIdentity ri: ids) {
+			if (!provider.equals(ri.getRemoteID().getProviderName())) {
+				throw new IllegalArgumentException(
+						"Only identities from one provider can be included in the set");
+			}
+		}
 	}
 	
-	/** Create an empty identity set, implying that no identities were available for linking
-	 * from this provider.
-	 * @param user the user on which the link was attempted.
-	 * @param provider the provider from which the identities were retrieved.
-	 */
-	public LinkIdentities(
-			final AuthUser user,
-			final String provider) {
-		nonNull(user, "user");
-		if (provider == null || provider.trim().isEmpty()) {
-			throw new IllegalArgumentException("provider cannot be null or empty");
-		}
-		this.user = user;
-		this.idents = Collections.unmodifiableSet(Collections.emptySet());
-		this.provider = provider;
-		this.expires = Optional.absent();
-	}
-
 	/** Get the user associated with the remote identities.
 	 * @return the user.
 	 */
@@ -84,10 +70,10 @@ public class LinkIdentities {
 		return provider;
 	}
 	
-	/** Get the time that these link identities expire. Absent if there are no identities.
+	/** Get the time that these link identities expire.
 	 * @return the expiration time.
 	 */
-	public Optional<Instant> getExpires() {
+	public Instant getExpires() {
 		return expires;
 	}
 
