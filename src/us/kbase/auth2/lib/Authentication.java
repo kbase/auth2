@@ -108,8 +108,10 @@ public class Authentication {
 	//TODO TEST test unicode for inputs and outputs
 	//TODO TEST LOG test logging on startup
 	//TODO TEST LOG test logging on calls
+	//TODO LOG modify unauthorized exceptions to include username
 	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
+	//TODO ZLATER LOG Make a way to note that an exception stack trace shouldn't be logged - usually for unauthorized exceptions
 	//TODO ZLATER SCOPES configure scopes via ui
 	//TODO ZLATER SCOPES configure scope on login via ui
 	//TODO ZLATER SCOPES restricted scopes - allow for specific roles or users (or for specific clients via oauth2)

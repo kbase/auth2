@@ -101,8 +101,6 @@ public class LocalUser extends AuthUser {
 	 * @param userName the users's user name.
 	 * @param displayName the user's display name.
 	 * @param creationDate the user's creation date.
-	 * @param passwordHash the hash of the user's password.
-	 * @param salt the salt used to hash the password.
 	 * @return a builder.
 	 */
 	public static Builder getLocalUserBuilder(
