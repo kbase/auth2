@@ -3,9 +3,6 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doAnswer;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -25,8 +22,10 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.AuthConfigSet;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
@@ -37,6 +36,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.test.auth2.TestCommon;
@@ -308,5 +308,90 @@ public class AuthenticationConfigTest {
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
-
+	
+	@Test
+	public void getConfig() throws Exception {
+		/* This tests filtering providers in the storage system that aren't registered on 
+		 * startup
+		 */
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		when(idp2.getProviderName()).thenReturn("prov2");
+		
+		final TestMocks testauth = initTestMocks(set(idp1,idp2));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 1);
+		Thread.sleep(1001);
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true,
+								ImmutableMap.of(
+										"prov1", new ProviderConfig(true, false, true),
+										"prov2", new ProviderConfig(true, false, false),
+										"prov3", new ProviderConfig(false, false, true)),
+								ImmutableMap.of(TokenLifetimeType.DEV, 300000L)),
+						new CollectingExternalConfig(
+								ImmutableMap.of("thing", ConfigItem.state("whiz")))))
+				.thenReturn(null);
+		
+		final AuthConfigSetWithUpdateTime<TestExternalConfig<State>> res =
+				auth.getConfig(token, new TestExternalConfigMapper());
+		
+		assertThat("incorrect config state", res, is(new AuthConfigSetWithUpdateTime<>(
+				new AuthConfig(true,
+						ImmutableMap.of(
+								"prov1", new ProviderConfig(true, false, true),
+								"prov2", new ProviderConfig(true, false, false)),
+						ImmutableMap.of(TokenLifetimeType.DEV, 300000L)),
+				new TestExternalConfig<>(ConfigItem.state("whiz")),
+				1)));
+	}
+	
+	@Test
+	public void getConfigFailNulls() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failGetConfig(auth, null, new TestExternalConfigMapper(),
+				new NullPointerException("token"));
+		failGetConfig(auth, new IncomingToken("foo"), null, new NullPointerException("mapper"));
+	}
+	
+	@Test
+	public void getConfigExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getConfig(token, new TestExternalConfigMapper());
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
+	}
+	
+	private <T extends ExternalConfig> void failGetConfig(
+			final Authentication auth,
+			final IncomingToken token,
+			final ExternalConfigMapper<T> mapper,
+			final Exception e) {
+		try {
+			auth.getConfig(token, mapper);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 }
