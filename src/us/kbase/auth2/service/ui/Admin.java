@@ -588,7 +588,7 @@ public class Admin {
 		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.SERV) / DAY_IN_MS);
 
-		ret.put("updatetimesec", cfgset.getUpdateTimeInSec());
+		ret.put("updatetimesec", cfgset.getUpdateTimeInMillis() / 1000);
 		
 		ret.put("basicurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
 		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));

@@ -9,33 +9,33 @@ package us.kbase.auth2.lib.config;
  */
 public class AuthConfigSetWithUpdateTime<T extends ExternalConfig> extends AuthConfigSet<T> {
 	
-	private final int updateTimeInSec;
+	private final int updateTimeInMillis;
 	
 	/** Create a new config set.
 	 * @param cfg the authorization configuration.
 	 * @param extcfg the external configuration.
-	 * @param updateTimeInSec the update time in seconds.
+	 * @param updateTimeInMillis the update time in milliseconds.
 	 */
 	public AuthConfigSetWithUpdateTime(
 			final AuthConfig cfg,
 			final T extcfg,
-			final int updateTimeInSec) {
+			final int updateTimeInMillis) {
 		super(cfg, extcfg);
-		this.updateTimeInSec = updateTimeInSec;
+		this.updateTimeInMillis = updateTimeInMillis;
 	}
 
-	/** Get the update time in seconds.
+	/** Get the update time in milliseconds.
 	 * @return the update time.
 	 */
-	public int getUpdateTimeInSec() {
-		return updateTimeInSec;
+	public int getUpdateTimeInMillis() {
+		return updateTimeInMillis;
 	}
 
 	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = super.hashCode();
-		result = prime * result + updateTimeInSec;
+		result = prime * result + updateTimeInMillis;
 		return result;
 	}
 
@@ -51,7 +51,7 @@ public class AuthConfigSetWithUpdateTime<T extends ExternalConfig> extends AuthC
 			return false;
 		}
 		AuthConfigSetWithUpdateTime<?> other = (AuthConfigSetWithUpdateTime<?>) obj;
-		if (updateTimeInSec != other.updateTimeInSec) {
+		if (updateTimeInMillis != other.updateTimeInMillis) {
 			return false;
 		}
 		return true;

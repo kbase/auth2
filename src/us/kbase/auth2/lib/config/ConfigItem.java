@@ -91,6 +91,17 @@ public class ConfigItem<T, A extends ConfigAction> {
 	}
 	
 	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("ConfigItem [item=");
+		builder.append(item);
+		builder.append(", action=");
+		builder.append(action);
+		builder.append("]");
+		return builder.toString();
+	}
+
+	@Override
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
