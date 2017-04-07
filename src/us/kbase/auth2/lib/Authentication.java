@@ -1419,7 +1419,7 @@ public class Authentication {
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
-		final LoginState lstate = getLoginState(ris, null);
+		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken token;
 		if (lstate.getUsers().size() == 1 &&
@@ -1452,6 +1452,7 @@ public class Authentication {
 		return token;
 	}
 
+	// ignores expiration date of login state
 	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
@@ -1485,7 +1486,7 @@ public class Authentication {
 			throws AuthStorageException {
 		final String provider = ids.iterator().next().getRemoteID().getProviderName();
 		final LoginState.Builder builder = LoginState.getBuilder(provider,
-				cfg.getAppConfig().isLoginAllowed()).withNullableExpires(expires);
+				cfg.getAppConfig().isLoginAllowed(), expires);
 		for (final RemoteIdentity ri: ids) {
 			final Optional<AuthUser> u = storage.getUser(ri);
 			if (!u.isPresent()) {

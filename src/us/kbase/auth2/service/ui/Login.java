@@ -386,9 +386,7 @@ public class Login {
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
 		ret.put("provider", loginState.getProvider());
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
-		if (loginState.getExpires().isPresent()) {
-			ret.put("expires", loginState.getExpires().get().toEpochMilli());
-		}
+		ret.put("expires", loginState.getExpires().toEpochMilli());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, Object>> login = new LinkedList<>();
