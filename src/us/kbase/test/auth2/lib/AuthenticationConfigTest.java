@@ -394,4 +394,98 @@ public class AuthenticationConfigTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void configManager() throws Exception {
+		/* Tons of methods interact with the config manager, way too many to test every single
+		 * one with config update timing. Hence we'll just test the update timing with one method
+		 * to check getting the entire config and one method to check getting the app config only.
+		 * 
+		 * All the other methods *should* be tested with code that runs through the config
+		 * manager, but probably doesn't exercise the update timing.
+		 */
+		
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
+				new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null,
+								ImmutableMap.of(TokenLifetimeType.EXT_CACHE, 400000L)),
+						new CollectingExternalConfig(ImmutableMap.of(
+								"thing", ConfigItem.state("foo1"),
+								"nothing", ConfigItem.state("bar1")))))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null,
+								ImmutableMap.of(TokenLifetimeType.EXT_CACHE, 500000L)),
+						new CollectingExternalConfig(ImmutableMap.of(
+								"thing", ConfigItem.state("foo2"),
+								"nothing", ConfigItem.state("bar2")))))
+				.thenReturn(null);
+		
+		final TestExternalConfig<State> exp0 = new TestExternalConfig<>(
+				ConfigItem.state(AuthenticationTester.TEST_EXTERNAL_CONFIG.aThing.getItem()));
+		final TestExternalConfig<State> exp1 = new TestExternalConfig<>(ConfigItem.state("foo1"));
+		final TestExternalConfig<State> exp2 = new TestExternalConfig<>(ConfigItem.state("foo2"));
+
+		AuthenticationTester.setConfigUpdateInterval(auth, 200);
+
+		assertThat("incorrect external config", auth.getExternalConfig(
+				new TestExternalConfigMapper()),
+				is(exp0));
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(300000L));
+		
+		Thread.sleep(100);
+		
+		assertThat("incorrect external config", auth.getExternalConfig(
+				new TestExternalConfigMapper()),
+				is(exp0));
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(300000L));
+		
+		Thread.sleep(101);
+		
+		assertThat("incorrect external config", auth.getExternalConfig(
+				new TestExternalConfigMapper()),
+				is(exp1));
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(400000L));
+		
+		Thread.sleep(100);
+		
+		assertThat("incorrect external config", auth.getExternalConfig(
+				new TestExternalConfigMapper()),
+				is(exp1));
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(400000L));
+		
+		Thread.sleep(101);
+		
+		assertThat("incorrect external config", auth.getExternalConfig(
+				new TestExternalConfigMapper()),
+				is(exp2));
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(500000L));
+	}
+	
+	@Test
+	public void configManagerFail() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenThrow(
+				new ExternalConfigMappingException("foo"));
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, 200);
+
+		assertThat("incorrect cache time", auth.getSuggestedTokenCacheTime(), is(300000L));
+		
+		Thread.sleep(201);
+		
+		try {
+			auth.getSuggestedTokenCacheTime();
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got,
+					new RuntimeException("This should be impossible"));
+		}
+	}
 }

@@ -32,6 +32,11 @@ public abstract class ConfigAction {
 	 */
 	public abstract boolean isRemove();
 	
+	@Override
+	public String toString() {
+		return getClass().getSimpleName();
+	}
+	
 	static State state() {
 		return State.INSTANCE;
 	}

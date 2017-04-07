@@ -47,6 +47,8 @@ public class AuthConfigTest {
 		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
 		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
 		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		assertThat("incorrect toString", ci.toString(),
+				is("ConfigItem [item=null, action=NoAction]"));
 		failGetItem(ci);
 	}
 	
@@ -59,6 +61,8 @@ public class AuthConfigTest {
 		assertThat("incorrect isremove", ci.getAction().isRemove(), is(true));
 		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
 		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		assertThat("incorrect toString", ci.toString(),
+				is("ConfigItem [item=null, action=RemoveAction]"));
 		failGetItem(ci);
 	}
 	
@@ -72,6 +76,8 @@ public class AuthConfigTest {
 		assertThat("incorrect isset", ci.getAction().isSet(), is(true));
 		assertThat("incorrect hasItem", ci.hasItem(), is(true));
 		assertThat("incorrect getItem", ci.getItem(), is("foo"));
+		assertThat("incorrect toString", ci.toString(),
+				is("ConfigItem [item=foo, action=SetAction]"));
 		
 		try {
 			ConfigItem.set(null);
@@ -91,6 +97,7 @@ public class AuthConfigTest {
 		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
 		assertThat("incorrect hasItem", ci.hasItem(), is(true));
 		assertThat("incorrect getItem", ci.getItem(), is("foo"));
+		assertThat("incorrect toString", ci.toString(), is("ConfigItem [item=foo, action=State]"));
 		
 		try {
 			ConfigItem.state(null);
@@ -109,6 +116,8 @@ public class AuthConfigTest {
 		assertThat("incorrect isremove", ci.getAction().isRemove(), is(false));
 		assertThat("incorrect isset", ci.getAction().isSet(), is(false));
 		assertThat("incorrect hasItem", ci.hasItem(), is(false));
+		assertThat("incorrect toString", ci.toString(),
+				is("ConfigItem [item=null, action=State]"));
 		failGetItem(ci);
 	}
 	
@@ -582,6 +591,6 @@ public class AuthConfigTest {
 				is(lts));
 		assertThat("incorrect ext config", ac.getExtcfg().toMap(),
 				is(ImmutableMap.of("foo", ConfigItem.set("bar"))));
-		assertThat("incorrect update time", ac.getUpdateTimeInSec(), is(-1));
+		assertThat("incorrect update time", ac.getUpdateTimeInMillis(), is(-1));
 	}
 }

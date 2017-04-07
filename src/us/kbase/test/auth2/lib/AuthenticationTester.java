@@ -102,12 +102,12 @@ public class AuthenticationTester {
 		return new TestMocks(storage, randGen, instance, clock);
 	}
 	
-	public static void setConfigUpdateInterval(final Authentication auth, final int sec)
+	public static void setConfigUpdateInterval(final Authentication auth, final int millis)
 			throws Exception {
 		final Method method = auth.getClass().getDeclaredMethod(
 				"setConfigUpdateInterval", int.class);
 		method.setAccessible(true);
-		method.invoke(auth, sec);
+		method.invoke(auth, millis);
 	}
 	
 	/* Match a LocalUser.

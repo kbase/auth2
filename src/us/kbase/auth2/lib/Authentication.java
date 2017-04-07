@@ -154,7 +154,7 @@ public class Authentication {
 	
 	// note that this value is supposed to be a constant, but is mutable for testing purposes.
 	// do not make it mutable for any other reason.
-	private int cfgUpdateIntervalSec = 30;
+	private int cfgUpdateIntervalMillis = 30000;
 	
 	/** Create a new Authentication instance.
 	 * @param storage the storage system to use for information persistance.
@@ -229,13 +229,13 @@ public class Authentication {
 		}
 	}
 	
-	// for test purposes. Resets the next update time to be the previous update + seconds.
+	// for test purposes. Resets the next update time to be the previous update + millis.
 	@SuppressWarnings("unused")
-	private void setConfigUpdateInterval(int seconds) {
+	private void setConfigUpdateInterval(int millis) {
 		final Instant prevUpdate = cfg.getNextUpdateTime();
-		final Instant newUpdate = prevUpdate.minusSeconds(cfgUpdateIntervalSec)
-				.plusSeconds(seconds);
-		cfgUpdateIntervalSec = seconds;
+		final Instant newUpdate = prevUpdate.minusMillis(cfgUpdateIntervalMillis)
+				.plusMillis(millis);
+		cfgUpdateIntervalMillis = millis;
 		cfg.setNextUpdateTime(newUpdate);
 	}
 	
@@ -247,11 +247,9 @@ public class Authentication {
 	
 		private AuthConfigSet<CollectingExternalConfig> cfg;
 		private Instant nextConfigUpdate;
-		private AuthStorage storage;
 		
 		public ConfigManager(final AuthStorage storage)
 				throws AuthStorageException {
-			this.storage = storage;
 			updateConfig();
 		}
 		
@@ -283,7 +281,7 @@ public class Authentication {
 			} catch (ExternalConfigMappingException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}
-			nextConfigUpdate = Instant.now().plusSeconds(cfgUpdateIntervalSec);
+			nextConfigUpdate = Instant.now().plusMillis(cfgUpdateIntervalMillis);
 		}
 	}
 
@@ -2193,7 +2191,7 @@ public class Authentication {
 		return new AuthConfigSetWithUpdateTime<T>(
 				acs.getCfg().filterProviders(idProviderSet.keySet()),
 				mapper.fromMap(acs.getExtcfg().getMap()),
-				cfgUpdateIntervalSec);
+				cfgUpdateIntervalMillis);
 	}
 	
 	/** Returns the suggested cache time for tokens in milliseconds.
