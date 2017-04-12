@@ -450,6 +450,7 @@ public class Login {
 	
 	@DELETE
 	@Path(UIPaths.LOGIN_CANCEL)
+	@Produces(MediaType.APPLICATION_JSON)
 	public Response cancelLoginDELETE(@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token)
 			throws NoTokenProvidedException, AuthStorageException {
 		return cancelLogin(token);
