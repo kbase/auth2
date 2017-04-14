@@ -12,6 +12,7 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
@@ -67,6 +68,8 @@ public class AuthCLITest {
 			"    -v, --verbose\n" +
 			"       Show error stacktraces.\n" +
 			"       Default: false\n";
+	
+	private final static Path WORK_DIR = Paths.get("").toAbsolutePath();
 	
 	private final static String DB_NAME = "authclitest";
 
@@ -234,8 +237,8 @@ public class AuthCLITest {
 		runCliPriorToPwdInput(new String[] {"-d", "imreallyhopingthisfiledoesntexist"}, 1,
 				Collections.emptyList(),
 				Arrays.asList("Error: Could not read configuration file " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist: " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist: " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist " +
 						"(No such file or directory)"));
 		
 	}
@@ -245,13 +248,13 @@ public class AuthCLITest {
 		runCliPriorToPwdInput(new String[] {"-v", "-d", "imreallyhopingthisfiledoesntexist"}, 1,
 				Collections.emptyList(),
 				Arrays.asList("Error: Could not read configuration file " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist: " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist: " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist " +
 						"(No such file or directory)",
 						"us.kbase.auth2.service.exceptions.AuthConfigurationException: " +
 						"Could not read configuration file " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist: " +
-						"/home/crusherofheads/localgit/auth2/imreallyhopingthisfiledoesntexist " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist: " +
+						WORK_DIR + "/imreallyhopingthisfiledoesntexist " +
 						"(No such file or directory)"),
 				2);
 	}
