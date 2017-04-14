@@ -54,6 +54,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.TOKENS_ROOT)
@@ -81,7 +82,7 @@ public class Tokens {
 			NoTokenProvidedException, UnauthorizedException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put("user", ((UIToken) t.get("current")).getUser());
+		t.put(Fields.USER, ((UIToken) t.get("current")).getUser());
 		t.put("createurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
 		t.put("revokeurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
 				UIPaths.SEP));

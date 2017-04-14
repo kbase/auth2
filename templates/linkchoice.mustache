@@ -13,13 +13,13 @@ Choices expire: {{expires}}<br/>
 <p>Link one of the following provider accounts to your <strong>{{user}}</strong>
 account:</p>
 
-{{#ids}}
-Provider username: {{prov_username}}<br/>
+{{#idents}}
+Provider username: {{provusername}}<br/>
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Link"/>
 </form>
-{{/ids}}
+{{/idents}}
 
 <p> or
 <form action="{{pickurl}}" method="post">

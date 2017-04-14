@@ -25,7 +25,8 @@ public class UIPaths {
 	private static final String LOGIN = "login";
 	private static final String LOCAL = "localaccount";
 	private static final String RESET = "reset";
-	private static final String USER = "user";
+	public static final String USER = "user";
+	private static final String USER_PARAM = "{" + USER + "}";
 	private static final String ROLES = "roles";
 	private static final String START = "start";
 	private static final String TOKEN = "token";
@@ -45,7 +46,7 @@ public class UIPaths {
 	public static final String ADMIN_ROOT_LOCAL_CREATE = ADMIN_ROOT + ADMIN_LOCAL_CREATE;
 
 	public static final String ADMIN_ROOT_USER = ADMIN_ROOT + USER;
-	public static final String ADMIN_USER_PARAM = USER + SEP + "{user}";
+	public static final String ADMIN_USER_PARAM = USER + SEP + USER_PARAM;
 
 	public static final String ADMIN_DISABLE = "disable";
 	public static final String ADMIN_USER_DISABLE = ADMIN_USER_PARAM + SEP + ADMIN_DISABLE;

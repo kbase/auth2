@@ -15,16 +15,16 @@ Choices expire: {{expires}}<br/>
 <p>The login information from the provider allows you to access these
 accounts:</p>
 {{#login}}
-Username: {{username}} {{#disabled}}DISABLED{{/disabled}} {{#adminonly}}***Currently only admin accounts can log in***{{/adminonly}}<br/>
-Provider usernames: {{prov_usernames}}<br/>
+Username: {{user}} {{#disabled}}DISABLED{{/disabled}} {{#adminonly}}***Currently only admin accounts can log in***{{/adminonly}}<br/>
+Provider usernames: {{provusernames}}<br/>
 Policy IDs:<br/>
-{{#policy_ids}}
-{{id}}: {{agreed_on}}<br/>
-{{/policy_ids}}
+{{#policyids}}
+{{id}}: {{agreedon}}<br/>
+{{/policyids}}
 {{#loginallowed}}
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
-	Add policy IDs: <input type="text" name="policy_ids"/><br>
+	Add policy IDs: <input type="text" name="policyids"/><br>
 	Custom token creation context: <input type="text" name="customcontext"/><br/>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="submit" value="Login"/>
@@ -41,13 +41,13 @@ Email is only visible to you, software acting on your behalf, and system adminis
 </p>
 {{#create}}
 {{#creationallowed}}
-<p>Create an account linked to {{prov_username}}</p>
+<p>Create an account linked to {{provusername}}</p>
 
 <form action="{{createurl}}" method="post">
 	User name: <input type="text" name="user" value="{{usernamesugg}}"/><br/>
-	Display name: <input type="text" name="display" value="{{prov_fullname}}"/><br/>
-	Email: <input type="text" name="email" value="{{prov_email}}"/><br/>
-	Policy IDs: <input type="text" name="policy_ids"/><br>
+	Display name: <input type="text" name="display" value="{{provfullname}}"/><br/>
+	Email: <input type="text" name="email" value="{{provemail}}"/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
 	Custom token creation context: <input type="text" name="customcontext"/><br/>
 	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
 	<input type="hidden" name="id" value="{{id}}"/>
@@ -55,7 +55,7 @@ Email is only visible to you, software acting on your behalf, and system adminis
 </form>
 {{/creationallowed}}
 {{^creationallowed}}
-Provider username: {{prov_username}}<br/>
+Provider username: {{provusername}}<br/>
 Sorry, account creation is currently disabled.<br/>
 {{/creationallowed}}
 {{/create}}

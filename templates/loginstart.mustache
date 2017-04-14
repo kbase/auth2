@@ -6,9 +6,9 @@
 
 <form action="{{starturl}}" method="post">
 {{#providers}}
-	<input type="radio" name="provider" value="{{name}}"/>{{name}}<br/>
+	<input type="radio" name="provider" value="{{provider}}"/>{{provider}}<br/>
 {{/providers}}
-	<input type="checkbox" name="stayLoggedIn"/> Keep me logged in<br/>
+	<input type="checkbox" name="stayloggedin"/> Keep me logged in<br/>
 	Redirect after login: <input type="text" name="redirect"/><br/>
 	<input type="submit" value="Submit"/>
 </form>

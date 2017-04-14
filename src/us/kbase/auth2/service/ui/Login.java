@@ -81,6 +81,7 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LOGIN_ROOT)
@@ -115,13 +116,13 @@ public class Login {
 			IllegalParameterException {
 		final Map<String, Object> ret = new HashMap<>();
 		final List<Map<String, String>> provs = new LinkedList<>();
-		ret.put("providers", provs);
+		ret.put(Fields.PROVIDERS, provs);
 		for (final String prov: auth.getIdentityProviders()) {
 			final Map<String, String> rep = new HashMap<>();
-			rep.put("name", prov);
+			rep.put(Fields.PROVIDER, prov);
 			provs.add(rep);
 		}
-		ret.put("hasprov", !provs.isEmpty());
+		ret.put(Fields.HAS_PROVIDERS, !provs.isEmpty());
 		ret.put("starturl", relativize(uriInfo, UIPaths.LOGIN_ROOT_START));
 		return ret;
 	}
@@ -146,14 +147,14 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_START)
 	public Response loginStart(
-			@FormParam("provider") final String provider,
+			@FormParam(Fields.PROVIDER) final String provider,
 			@FormParam("redirect") final String redirect,
-			@FormParam("stayLoggedIn") final String stayLoggedIn)
+			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn)
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException, MissingParameterException {
 		
 		if (provider == null || provider.trim().isEmpty()) {
-			throw new MissingParameterException("provider");
+			throw new MissingParameterException(Fields.PROVIDER);
 		}
 		
 		getRedirectURL(redirect); // check redirect url is ok
@@ -240,7 +241,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_COMPLETE_PROVIDER)
 	public Response login(
 			@Context final HttpServletRequest req,
-			@PathParam("provider") final String provider,
+			@PathParam(Fields.PROVIDER) final String provider,
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
@@ -384,7 +385,7 @@ public class Login {
 		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put("suggestnameurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
 		ret.put(REDIRECT_URL, getRedirectURL(redirect));
-		ret.put("provider", loginState.getProvider());
+		ret.put(Fields.PROVIDER, loginState.getProvider());
 		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
 		ret.put("expires", loginState.getExpires().toEpochMilli());
 		
@@ -395,14 +396,14 @@ public class Login {
 		
 		for (final RemoteIdentity id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
-			c.put("id", id.getRemoteID().getID());
+			c.put(Fields.ID, id.getRemoteID().getID());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
 			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
 			c.put("usernamesugg", availName.isPresent() ? availName.get().getName() : null);
 			//TODO UI return null for full name & email if they're not valid by our rules
-			c.put("prov_username", id.getDetails().getUsername());
-			c.put("prov_fullname", id.getDetails().getFullname());
-			c.put("prov_email", id.getDetails().getEmail());
+			c.put(Fields.PROV_USER, id.getDetails().getUsername());
+			c.put(Fields.PROV_FULL, id.getDetails().getFullname());
+			c.put(Fields.PROV_EMAIL, id.getDetails().getEmail());
 			create.add(c);
 		}
 		final boolean adminOnly = !loginState.isNonAdminLoginAllowed();
@@ -410,21 +411,22 @@ public class Login {
 			final AuthUser user = loginState.getUser(userName);
 			final boolean loginRestricted = adminOnly && !loginState.isAdmin(userName);
 			final Map<String, Object> l = new HashMap<>();
-			l.put("username", userName.getName());
+			l.put(Fields.USER, userName.getName());
 			l.put("loginallowed", !(user.isDisabled() || loginRestricted));
 			l.put("disabled", user.isDisabled());
 			l.put("adminonly", loginRestricted);
-			l.put("id", loginState.getIdentities(userName).iterator().next()
+			l.put(Fields.ID, loginState.getIdentities(userName).iterator().next()
 					.getRemoteID().getID());
-			l.put("policy_ids", user.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
-					"id", id.getName(),
-					"agreed_on", user.getPolicyIDs().get(id).toEpochMilli()))
+			l.put(Fields.POLICY_IDS, user.getPolicyIDs().keySet().stream().map(id ->
+					ImmutableMap.of(
+							Fields.ID, id.getName(),
+							Fields.AGREED_ON, user.getPolicyIDs().get(id).toEpochMilli()))
 					.collect(Collectors.toSet()));
 			final List<String> remoteIDs = new LinkedList<>();
 			for (final RemoteIdentity id: loginState.getIdentities(userName)) {
 				remoteIDs.add(id.getDetails().getUsername());
 			}
-			l.put("prov_usernames", remoteIDs);
+			l.put(Fields.PROV_USERS, remoteIDs);
 			login.add(l);
 		}
 		return ret;
@@ -471,8 +473,8 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			@FormParam("id") final String identityID,
-			@FormParam("policy_ids") final String policyIDs,
+			@FormParam(Fields.ID) final String identityID,
+			@FormParam(Fields.POLICY_IDS) final String policyIDs,
 			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
@@ -497,8 +499,8 @@ public class Login {
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
 		public PickChoice(
-				@JsonProperty("id") final String id,
-				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty(Fields.ID) final String id,
+				@JsonProperty(Fields.POLICY_IDS) final List<String> policyIDs,
 				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
 			this.id = id;
@@ -508,7 +510,7 @@ public class Login {
 		}
 		
 		public String getIdentityID() throws MissingParameterException {
-			return getString(id, "id");
+			return getString(id, Fields.ID);
 		}
 		
 		public Set<PolicyID> getPolicyIDs()
@@ -582,11 +584,11 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
-			@FormParam("id") final String identityID,
-			@FormParam("user") final String userName,
+			@FormParam(Fields.ID) final String identityID,
+			@FormParam(Fields.USER) final String userName,
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email,
-			@FormParam("policy_ids") final String policyIDs,
+			@FormParam(Fields.POLICY_IDS) final String policyIDs,
 			@FormParam("customcontext") final String customContext,
 			@FormParam("linkall") final String linkAll)
 			throws AuthenticationException, AuthStorageException,
@@ -602,7 +604,7 @@ public class Login {
 
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
-				CreateChoice.getString(identityID, "id"),
+				CreateChoice.getString(identityID, Fields.ID),
 				new UserName(userName),
 				new DisplayName(displayName),
 				new EmailAddress(email),
@@ -621,11 +623,11 @@ public class Login {
 		// don't throw error from constructor, doesn't get picked up by the custom error handler 
 		@JsonCreator
 		public CreateChoice(
-				@JsonProperty("id") final String id,
-				@JsonProperty("user") final String userName,
+				@JsonProperty(Fields.ID) final String id,
+				@JsonProperty(Fields.USER) final String userName,
 				@JsonProperty("display") final String displayName,
 				@JsonProperty("email") final String email,
-				@JsonProperty("policy_ids") final List<String> policyIDs,
+				@JsonProperty(Fields.POLICY_IDS) final List<String> policyIDs,
 				@JsonProperty("customcontext") final Map<String, String> customContext,
 				@JsonProperty("linkall") final Object linkAll) {
 			super(id, policyIDs, customContext, linkAll);

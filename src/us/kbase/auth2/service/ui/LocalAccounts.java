@@ -41,6 +41,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.common.Fields;
 
 @Path(UIPaths.LOCAL_ROOT)
 public class LocalAccounts {
@@ -71,16 +72,16 @@ public class LocalAccounts {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public Response loginResult(
 			@Context final HttpServletRequest req,
-			@FormParam("user") final String userName,
+			@FormParam(Fields.USER) final String userName,
 			@FormParam("pwd") String pwd, //char makes Jersey puke
 			//checkbox, so "on" = checked, null = not checked
-			@FormParam("stayloggedin") final String stayLoggedIn,
+			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn,
 			@FormParam("customcontext") final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			AuthenticationException, IllegalParameterException,
 			UnauthorizedException {
 		if (userName == null || userName.trim().isEmpty()) {
-			throw new MissingParameterException("user");
+			throw new MissingParameterException(Fields.USER);
 		}
 		if (pwd == null || pwd.trim().isEmpty()) {
 			throw new MissingParameterException("pwd");
@@ -106,24 +107,24 @@ public class LocalAccounts {
 	@Path(UIPaths.LOCAL_RESET)
 	@Template(name = "/localreset")
 	public Map<String, Object> resetPasswordStart(
-			@QueryParam("user") final String user,
+			@QueryParam(Fields.USER) final String user,
 			@Context final UriInfo uriInfo) {
 		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET_RESULT),
-				"user", user == null ? "" : user);
+				Fields.USER, user == null ? "" : user);
 	}
 	
 	//TODO UI will need an ajax version
 	@POST
 	@Path(UIPaths.LOCAL_RESET_RESULT)
 	public Response resetPassword(
-			@FormParam("user") final String userName,
+			@FormParam(Fields.USER) final String userName,
 			@FormParam("pwdold") String pwdold,
 			@FormParam("pwdnew") String pwdnew)
 			throws MissingParameterException, IllegalParameterException,
 				AuthenticationException, UnauthorizedException, AuthStorageException,
 				IllegalPasswordException {
 		if (userName == null || userName.trim().isEmpty()) {
-			throw new MissingParameterException("user");
+			throw new MissingParameterException(Fields.USER);
 		}
 		if (pwdold == null || pwdold.trim().isEmpty()) {
 			throw new MissingParameterException("pwdold");

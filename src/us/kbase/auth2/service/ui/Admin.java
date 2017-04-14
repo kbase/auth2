@@ -76,6 +76,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
 
 @Path(UIPaths.ADMIN_ROOT)
 public class Admin {
@@ -156,7 +157,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_POLICY_ID)
 	public void removePolicyID(
 			@Context final HttpHeaders headers,
-			@FormParam("policy_id") final String policyID)
+			@FormParam(Fields.POLICY_ID) final String policyID)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException, AuthStorageException {
 		auth.removePolicyID(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -204,7 +205,7 @@ public class Admin {
 		final List<Map<String, String>> uiusers = new LinkedList<>();
 		for (final UserName user: users.keySet()) {
 			final Map<String, String> u = new HashMap<>();
-			u.put("user", user.getName());
+			u.put(Fields.USER, user.getName());
 			u.put("display", users.get(user).getName());
 			u.put("url", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP + user.getName()));
 			uiusers.add(u);
@@ -227,7 +228,7 @@ public class Admin {
 	@Template(name = "/adminlocalaccountcreated")
 	public Map<String, String> createLocalAccountComplete(
 			@Context final HttpHeaders headers,
-			@FormParam("user") final String userName,
+			@FormParam(Fields.USER) final String userName,
 			@FormParam("display") final String displayName,
 			@FormParam("email") final String email)
 			throws AuthStorageException, UserExistsException,
@@ -239,7 +240,7 @@ public class Admin {
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		final Map<String, String> ret = ImmutableMap.of(
-				"user", userName,
+				Fields.USER, userName,
 				"display", displayName,
 				"email", email,
 				"password", new String(pwd.getPassword())); // char[] won't work
@@ -253,7 +254,7 @@ public class Admin {
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> userDisplay(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, NoSuchUserException,
 			MissingParameterException, IllegalParameterException,
@@ -272,7 +273,7 @@ public class Admin {
 		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
 		ret.put("forcereseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_FORCE_RESET_PWD));
 		ret.put("tokenurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
-		ret.put("user", au.getUserName().getName());
+		ret.put(Fields.USER, au.getUserName().getName());
 		ret.put("display", au.getDisplayName().getName());
 		ret.put("email", au.getEmail().getAddress());
 		ret.put("local", au.isLocal());
@@ -301,7 +302,7 @@ public class Admin {
 		for (final CustomRole r: roles) {
 			ret.add(ImmutableMap.of(
 					"desc", r.getDesc(),
-					"id", r.getID(),
+					Fields.ID, r.getID(),
 					"has", set.contains(r.getID())));
 		}
 		return ret;
@@ -313,7 +314,7 @@ public class Admin {
 	public Map<String, Object> getUserTokens(
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		
@@ -324,7 +325,7 @@ public class Admin {
 		final String urlPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP +
 				UIPaths.ADMIN_TOKENS + SEP;
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", user);
+		ret.put(Fields.USER, user);
 		ret.put("tokens", uitokens);
 		ret.put("revokeurl", relativize(uriInfo, urlPrefix +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP));
@@ -336,7 +337,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ID)
 	public void revokeUserToken(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			@PathParam("tokenid") final UUID tokenID)
 			throws InvalidTokenException, NoSuchTokenException, UnauthorizedException,
 			NoTokenProvidedException, MissingParameterException, IllegalParameterException,
@@ -349,7 +350,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ALL)
 	public void revokeUserToken(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -362,7 +363,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void disableUser(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			@FormParam("disable") final String disableStr,
 			@FormParam("reason") final String reason)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
@@ -381,7 +382,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void forcePasswordReset(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
@@ -394,14 +395,14 @@ public class Admin {
 	@Template(name = "/adminpwdreset")
 	public Map<String, Object> resetUserPassword(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws NoTokenProvidedException, InvalidTokenException, NoSuchUserException,
 			UnauthorizedException, MissingParameterException, IllegalParameterException,
 			AuthStorageException{
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final Password pwd = auth.resetPassword(token, new UserName(user));
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", user);
+		ret.put(Fields.USER, user);
 		ret.put("pwd", new String(pwd.getPassword()));
 		pwd.clear();
 		return ret;
@@ -412,7 +413,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeRoles(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			final MultivaluedMap<String, String> form)
 			throws NoSuchUserException, AuthStorageException,
 			NoSuchRoleException, MissingParameterException,
@@ -452,7 +453,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeCustomRoles(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			final MultivaluedMap<String, String> form)
 			throws NoSuchUserException, AuthStorageException,
 			NoSuchRoleException, MissingParameterException,
@@ -503,7 +504,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES_SET)
 	public void createCustomRole(
 			@Context final HttpHeaders headers,
-			@FormParam("id") final String roleId,
+			@FormParam(Fields.ID) final String roleId,
 			@FormParam("desc") final String description)
 			throws MissingParameterException, AuthStorageException,
 			InvalidTokenException, UnauthorizedException,
@@ -516,7 +517,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES_DELETE)
 	public void deleteCustomRole(
 			@Context final HttpHeaders headers,
-			@FormParam("id") final String roleId)
+			@FormParam(Fields.ID) final String roleId)
 			throws MissingParameterException, AuthStorageException,
 			InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, NoSuchRoleException, IllegalParameterException {
@@ -552,11 +553,11 @@ public class Admin {
 		
 		final Map<String, Object> ret = new HashMap<>();
 		final List<Map<String, Object>> prov = new ArrayList<>();
-		ret.put("providers", prov);
+		ret.put(Fields.PROVIDERS, prov);
 		for (final Entry<String, ProviderConfig> e:
 				cfgset.getCfg().getProviders().entrySet()) {
 			final Map<String, Object> p = new HashMap<>();
-			p.put("name", e.getKey());
+			p.put(Fields.PROVIDER, e.getKey());
 			p.put("enabled", e.getValue().isEnabled());
 			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
 			p.put("forceloginchoice", e.getValue().isForceLoginChoice());
@@ -650,7 +651,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void configProvider(
 			@Context final HttpHeaders headers,
-			@FormParam("provname") final String provname,
+			@FormParam(Fields.PROVIDER) final String provname,
 			@FormParam("enabled") final String enabled,
 			@FormParam("forceloginchoice") final String forceLogin,
 			@FormParam("forcelinkchoice") final String forcelink)

@@ -56,6 +56,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.ME_ROOT)
@@ -99,7 +100,7 @@ public class Me {
 		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));
 		ret.put("unlinkurl", relativize(uriInfo, UIPaths.ME_ROOT_UNLINK));
 		ret.put("rolesurl", relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
-		ret.put("user", u.getUserName().getName());
+		ret.put(Fields.USER, u.getUserName().getName());
 		ret.put("local", u.isLocal());
 		ret.put("display", u.getDisplayName().getName());
 		ret.put("email", u.getEmail().getAddress());
@@ -111,24 +112,24 @@ public class Me {
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();
-			role.put("id", r.getID());
+			role.put(Fields.ID, r.getID());
 			role.put("desc", r.getDescription());
 			roles.add(role);
 		}
 		ret.put("roles", roles);
-		ret.put("hasRoles", !roles.isEmpty());
+		ret.put(Fields.HAS_ROLES, !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
-		ret.put("idents", idents);
+		ret.put(Fields.IDENTITIES, idents);
 		for (final RemoteIdentity ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
-			i.put("provider", ri.getRemoteID().getProviderName());
-			i.put("username", ri.getDetails().getUsername());
-			i.put("id", ri.getRemoteID().getID());
+			i.put(Fields.PROVIDER, ri.getRemoteID().getProviderName());
+			i.put(Fields.PROV_USER, ri.getDetails().getUsername());
+			i.put(Fields.ID, ri.getRemoteID().getID());
 			idents.add(i);
 		}
-		ret.put("policy_ids", u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
+		ret.put(Fields.POLICY_IDS, u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
 			"id", id.getName(),
-			"agreed_on", u.getPolicyIDs().get(id).toEpochMilli()))
+			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
 			.collect(Collectors.toSet()));
 		return ret;
 	}
