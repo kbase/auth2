@@ -42,7 +42,6 @@ import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
@@ -50,6 +49,7 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -213,8 +213,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
 		failLogin(auth, new UserName("foo"), password, CTX,
-				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"Username / password mismatch"));
+				new PasswordMismatchException("foo"));
 		assertClear(password);
 		
 	}
@@ -237,8 +236,7 @@ public class AuthenticationPasswordLoginTest {
 		
 		final Password password = new Password("foobarbazbat".toCharArray());
 		failLogin(auth, new UserName("foo"), password, CTX,
-				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"Username / password mismatch"));
+				new PasswordMismatchException("foo"));
 		assertClear(password);
 		assertClear(hash);
 		assertClear(salt);
@@ -260,9 +258,7 @@ public class AuthenticationPasswordLoginTest {
 		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
 				new PasswordHashAndSalt(hash, salt));
 		
-		failLogin(auth, new UserName("foo"), p, CTX,
-				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"Username / password mismatch") );
+		failLogin(auth, new UserName("foo"), p, CTX, new PasswordMismatchException("foo"));
 		assertClear(p);
 		assertClear(hash);
 		assertClear(salt);
@@ -506,8 +502,8 @@ public class AuthenticationPasswordLoginTest {
 		final Password po = new Password("foobarbazbat".toCharArray());
 		final Password pn = new Password("foobarbazbat1".toCharArray());
 		
-		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
-				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		failChangePassword(auth, new UserName("foo"), po, pn,
+				new PasswordMismatchException("foo"));
 		assertClear(po);
 		assertClear(pn);
 	}
@@ -531,8 +527,8 @@ public class AuthenticationPasswordLoginTest {
 		final Password po = new Password("foobarbazbat".toCharArray());
 		final Password pn = new Password("foobarbazbat1".toCharArray());
 		
-		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
-				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		failChangePassword(auth, new UserName("foo"), po, pn,
+				new PasswordMismatchException("foo"));
 		assertClear(po);
 		assertClear(pn);
 		assertClear(hashold);
@@ -554,8 +550,8 @@ public class AuthenticationPasswordLoginTest {
 		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
 				new PasswordHashAndSalt(hash, salt));
 		
-		failChangePassword(auth, new UserName("foo"), po, pn, new AuthenticationException(
-				ErrorType.AUTHENTICATION_FAILED, "Username / password mismatch"));
+		failChangePassword(auth, new UserName("foo"), po, pn,
+				new PasswordMismatchException("foo"));
 		assertClear(po);
 		assertClear(pn);
 		assertClear(hash);

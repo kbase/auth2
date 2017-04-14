@@ -58,6 +58,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -410,16 +411,17 @@ public class Authentication {
 	 * @param password the password for the account.
 	 * @param tokenCtx the context under which the token will be created.
 	 * @return the result of the login attempt.
-	 * @throws AuthenticationException if the login attempt failed.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
-	 * the user account is disabled.
+	 * @throws PasswordMismatchException if the username and password do not match.
+	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled.
 	 */
 	public LocalLoginResult localLogin(
 			final UserName userName,
 			final Password password,
 			final TokenCreationContext tokenCtx)
-			throws AuthenticationException, AuthStorageException, UnauthorizedException {
+			throws AuthStorageException, PasswordMismatchException, DisabledUserException,
+				UnauthorizedException {
 		nonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
@@ -429,7 +431,8 @@ public class Authentication {
 	}
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
-			throws AuthStorageException, AuthenticationException, UnauthorizedException {
+			throws AuthStorageException, PasswordMismatchException, DisabledUserException,
+				UnauthorizedException {
 		nonNull(password, "password");
 		final char[] pwd_copy = password.getPassword(); // no way to test this is cleared
 		password.clear();
@@ -440,15 +443,13 @@ public class Authentication {
 			try {
 				creds = storage.getPasswordHashAndSalt(userName);
 				if (!pwdcrypt.authenticate(pwd_copy, creds.getPasswordHash(), creds.getSalt())) {
-					throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-							"Username / password mismatch");
+					throw new PasswordMismatchException(userName.getName());
 				}
 				Password.clearPasswordArray(pwd_copy);
 				creds.clear();
 				u = storage.getLocalUser(userName);
 			} catch (NoSuchLocalUserException e) {
-				throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"Username / password mismatch");
+				throw new PasswordMismatchException(userName.getName());
 			}
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
 				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -473,17 +474,19 @@ public class Authentication {
 	 * @param userName the user name of the account.
 	 * @param password the old password for the user account.
 	 * @param pwdnew the new password for the user account.
-	 * @throws AuthenticationException if the username and password do not match.
-	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled or
-	 * the user account is disabled.
+	 * @throws PasswordMismatchException if the username and password do not match.
+	 * @throws DisabledUserException if the user is disabled.
+	 * @throws UnauthorizedException if the user is not an admin and non-admin login is disabled.
+	 * @throws IllegalPasswordException if the new password is not a legal password or if the
+	 * new and old passwords are identical.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void localPasswordChange(
 			final UserName userName,
 			final Password password,
 			final Password pwdnew)
-			throws AuthenticationException, UnauthorizedException, AuthStorageException,
-					IllegalPasswordException {
+			throws PasswordMismatchException, DisabledUserException, UnauthorizedException,
+				AuthStorageException, IllegalPasswordException {
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {

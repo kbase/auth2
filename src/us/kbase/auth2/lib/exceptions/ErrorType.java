@@ -6,7 +6,7 @@ package us.kbase.auth2.lib.exceptions;
  */
 public enum ErrorType {
 	
-	/** A password mismatch, lack of a required identity, or other error. */
+	/** Lack of a required identity or other error. */
 	AUTHENTICATION_FAILED	(10000, "Authentication failed"),
 	/** No token was provided when required */
 	NO_TOKEN				(10010, "No authentication token"),
@@ -14,6 +14,8 @@ public enum ErrorType {
 	INVALID_TOKEN			(10011, "Invalid token"),
 	/** Retrieving identities from a 3rd party provider failed. */
 	ID_RETRIEVAL_FAILED		(10020, "Identity retrieval failed"),
+	/** The password and username did not match. */
+	PASSWORD_MISMATCH		(10030, "Password / username mismatch"),
 	/** The user is not authorized to perform the requested action. */
 	UNAUTHORIZED			(20000, "Unauthorized"),
 	/** The account to be accessed is disabled. */

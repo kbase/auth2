@@ -26,6 +26,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -265,6 +266,15 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ae.getErr(), is(et));
 		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
 		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
+	}
+	
+	@Test
+	public void passwordMismatch() throws Exception {
+		final ErrorType et = ErrorType.PASSWORD_MISMATCH;
+		final PasswordMismatchException pme = new PasswordMismatchException("foo");
+		assertThat("incorrect error code", pme.getErr(), is(et));
+		assertThat("incorrect message", pme.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", pme.getCause(), is((Throwable) null));
 	}
 	
 	@Test
