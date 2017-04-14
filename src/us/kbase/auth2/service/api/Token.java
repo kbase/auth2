@@ -34,6 +34,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(APIPaths.API_V2_TOKEN)
@@ -63,7 +64,7 @@ public class Token {
 	public NewAPIToken createAgentTokenForm(
 			@Context final HttpServletRequest req,
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam("name") final String name)
+			@FormParam(Fields.TOKEN_NAME) final String name)
 			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
 			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
 		
@@ -81,8 +82,8 @@ public class Token {
 
 		@JsonCreator
 		public CreateToken(
-				@JsonProperty("name") final String name,
-				@JsonProperty("customcontext") final Map<String, String> customContext) {
+				@JsonProperty(Fields.TOKEN_NAME) final String name,
+				@JsonProperty(Fields.CUSTOM_CONTEXT) final Map<String, String> customContext) {
 			this.name = name;
 			this.customContext = customContext;
 		}

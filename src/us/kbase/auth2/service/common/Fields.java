@@ -7,6 +7,7 @@ public class Fields {
 	/* general */
 	
 	public static final String ID = "id";
+	public static final String DESCRIPTION = "desc";
 	
 	/* login */
 	
@@ -25,6 +26,23 @@ public class Fields {
 	/* users */
 	
 	public static final String USER = "user";
+	public static final String LOCAL = "local";
+	public static final String DISPLAY = "display";
+	public static final String EMAIL = "email";
+	public static final String CREATED = "created";
+	public static final String LAST_LOGIN = "lastlogin";
+	
+	/* roles */
+	
+	public static final String ROLES = "roles";
+	public static final String CUSTOM_ROLES = "customroles";
+	
+	/* search */
+	
+	public static final String SEARCH_USER = "username";
+	public static final String SEARCH_DISPLAY = "displayname";
+	public static final String LIST = "list";
+	public static final String FIELDS = "fields";
 	
 	/* provider info */
 	
@@ -36,4 +54,9 @@ public class Fields {
 	public static final String PROV_EMAIL = "provemail";
 	public static final String PROV_FULL = "provfullname";
 	public static final String IDENTITIES = "idents";
+	
+	/* tokens */
+	
+	public static final String TOKEN_NAME = "name";
+	public static final String CUSTOM_CONTEXT = "customcontext";
 }

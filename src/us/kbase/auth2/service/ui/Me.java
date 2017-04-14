@@ -101,22 +101,22 @@ public class Me {
 		ret.put("unlinkurl", relativize(uriInfo, UIPaths.ME_ROOT_UNLINK));
 		ret.put("rolesurl", relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
 		ret.put(Fields.USER, u.getUserName().getName());
-		ret.put("local", u.isLocal());
-		ret.put("display", u.getDisplayName().getName());
-		ret.put("email", u.getEmail().getAddress());
-		ret.put("created", u.getCreated().toEpochMilli());
+		ret.put(Fields.LOCAL, u.isLocal());
+		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
+		ret.put(Fields.EMAIL, u.getEmail().getAddress());
+		ret.put(Fields.CREATED, u.getCreated().toEpochMilli());
 		final Optional<Instant> ll = u.getLastLogin();
-		ret.put("lastlogin", ll.isPresent() ? ll.get().toEpochMilli() : null);
-		ret.put("customroles", u.getCustomRoles());
+		ret.put(Fields.LAST_LOGIN, ll.isPresent() ? ll.get().toEpochMilli() : null);
+		ret.put(Fields.CUSTOM_ROLES, u.getCustomRoles());
 		ret.put("unlink", u.getIdentities().size() > 1);
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();
 			role.put(Fields.ID, r.getID());
-			role.put("desc", r.getDescription());
+			role.put(Fields.DESCRIPTION, r.getDescription());
 			roles.add(role);
 		}
-		ret.put("roles", roles);
+		ret.put(Fields.ROLES, roles);
 		ret.put(Fields.HAS_ROLES, !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put(Fields.IDENTITIES, idents);
@@ -128,7 +128,7 @@ public class Me {
 			idents.add(i);
 		}
 		ret.put(Fields.POLICY_IDS, u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
-			"id", id.getName(),
+			Fields.ID, id.getName(),
 			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
 			.collect(Collectors.toSet()));
 		return ret;
@@ -138,8 +138,8 @@ public class Me {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void update(
 			@Context final HttpHeaders headers,
-			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
+			@FormParam(Fields.DISPLAY) final String displayName,
+			@FormParam(Fields.EMAIL) final String email)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -153,8 +153,8 @@ public class Me {
 		
 		@JsonCreator
 		public Update(
-				@JsonProperty("display") final String display,
-				@JsonProperty("email") final String email) {
+				@JsonProperty(Fields.DISPLAY) final String display,
+				@JsonProperty(Fields.EMAIL) final String email) {
 			this.display = display;
 			this.email = email;
 		}
@@ -180,7 +180,7 @@ public class Me {
 	public void unlink(
 			@Context final HttpHeaders headers,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
-			@PathParam("id") final String id)
+			@PathParam(Fields.ID) final String id)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			UnLinkFailedException, NoSuchIdentityException, UnauthorizedException,
 			MissingParameterException {
@@ -207,7 +207,7 @@ public class Me {
 		public List<String> roles;
 		
 		@JsonCreator
-		public RolesToRemove(@JsonProperty("roles") final List<String> roles) {
+		public RolesToRemove(@JsonProperty(Fields.ROLES) final List<String> roles) {
 			this.roles = roles;
 		}
 		
