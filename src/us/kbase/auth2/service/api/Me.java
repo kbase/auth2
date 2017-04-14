@@ -34,6 +34,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.service.common.Fields;
 
 @Path(APIPaths.API_V2_ME)
 public class Me {
@@ -52,7 +53,7 @@ public class Me {
 		// this code is almost identical to ui.Me but I don't want to couple the API and UI outputs
 		final AuthUser u = auth.getUser(getToken(token));
 		final Map<String, Object> ret = new HashMap<String, Object>();
-		ret.put("user", u.getUserName().getName());
+		ret.put(Fields.USER, u.getUserName().getName());
 		ret.put("local", u.isLocal());
 		ret.put("display", u.getDisplayName().getName());
 		ret.put("email", u.getEmail().getAddress());
@@ -63,23 +64,23 @@ public class Me {
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();
-			role.put("id", r.getID());
+			role.put(Fields.ID, r.getID());
 			role.put("desc", r.getDescription());
 			roles.add(role);
 		}
 		ret.put("roles", roles);
 		final List<Map<String, String>> idents = new LinkedList<>();
-		ret.put("idents", idents);
+		ret.put(Fields.IDENTITIES, idents);
 		for (final RemoteIdentity ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
-			i.put("provider", ri.getRemoteID().getProviderName());
-			i.put("username", ri.getDetails().getUsername());
-			i.put("id", ri.getRemoteID().getID());
+			i.put(Fields.PROVIDER, ri.getRemoteID().getProviderName());
+			i.put(Fields.PROV_USER, ri.getDetails().getUsername());
+			i.put(Fields.ID, ri.getRemoteID().getID());
 			idents.add(i);
 		}
-		ret.put("policy_ids", u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
-			"id", id.getName(),
-			"agreed_on", u.getPolicyIDs().get(id).toEpochMilli()))
+		ret.put(Fields.POLICY_IDS, u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
+			Fields.ID, id.getName(),
+			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
 			.collect(Collectors.toSet()));
 		return ret;
 	}

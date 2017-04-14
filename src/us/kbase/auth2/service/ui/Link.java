@@ -65,6 +65,7 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LINK_ROOT)
@@ -94,17 +95,17 @@ public class Link {
 		final IncomingToken incToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final AuthUser u = auth.getUser(incToken);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", u.getUserName().getName());
+		ret.put(Fields.USER, u.getUserName().getName());
 		ret.put("local", u.isLocal());
 		final List<Map<String, String>> provs = new LinkedList<>();
-		ret.put("providers", provs);
+		ret.put(Fields.PROVIDERS, provs);
 		for (final String prov: auth.getIdentityProviders()) {
 			final Map<String, String> rep = new HashMap<>();
-			rep.put("name", prov);
+			rep.put(Fields.PROVIDER, prov);
 			provs.add(rep);
 		}
 		ret.put("starturl", relativize(uriInfo, UIPaths.LINK_ROOT_START));
-		ret.put("hasprov", !provs.isEmpty());
+		ret.put(Fields.HAS_PROVIDERS, !provs.isEmpty());
 		return ret;
 	}
 	
@@ -118,7 +119,7 @@ public class Link {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_START)
 	public Response linkStart(
-			@FormParam("provider") final String provider)
+			@FormParam(Fields.PROVIDER) final String provider)
 			throws NoSuchIdentityProviderException, AuthStorageException {
 		
 		final String state = auth.getBareToken();
@@ -138,7 +139,7 @@ public class Link {
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
 			@Context final HttpHeaders headers,
-			@PathParam("provider") final String provider,
+			@PathParam(Fields.PROVIDER) final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException,
@@ -264,14 +265,14 @@ public class Link {
 		 * choice for link targets.
 		 */ 
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", ids.getUser().getUserName().getName());
-		ret.put("provider", ids.getProvider());
+		ret.put(Fields.USER, ids.getUser().getUserName().getName());
+		ret.put(Fields.PROVIDER, ids.getProvider());
 		final List<Map<String, String>> ris = new LinkedList<>();
-		ret.put("ids", ris);
+		ret.put(Fields.IDENTITIES, ris);
 		for (final RemoteIdentity ri: ids.getIdentities()) {
 			final Map<String, String> s = new HashMap<>();
-			s.put("id", ri.getRemoteID().getID());
-			s.put("prov_username", ri.getDetails().getUsername());
+			s.put(Fields.ID, ri.getRemoteID().getID());
+			s.put(Fields.PROV_USER, ri.getDetails().getUsername());
 			ris.add(s);
 		}
 		ret.put("cancelurl", relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
@@ -319,7 +320,7 @@ public class Link {
 	public Response pickAccount(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
-			@FormParam("id") String identityID)
+			@FormParam(Fields.ID) String identityID)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
 				MissingParameterException {
@@ -338,7 +339,7 @@ public class Link {
 		
 		// don't throw exception in constructor. Bypasses custom error handler.
 		@JsonCreator
-		public LinkPick(@JsonProperty("id") final String id) {
+		public LinkPick(@JsonProperty(Fields.ID) final String id) {
 			this.id = id;
 		}
 		

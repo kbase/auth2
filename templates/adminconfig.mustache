@@ -83,9 +83,9 @@ provider, e.g. a choice of accounts is required.
 <h3>Identity Providers</h3>
 
 {{#providers}}
-<h4>{{name}}</h4>
+<h4>{{provider}}</h4>
 <form action="{{providerurl}}" method="post">
-<input type="hidden" name="provname" value="{{name}}"/>
+<input type="hidden" name="provider" value="{{provider}}"/>
 <p>Enabled: <input type="checkbox" name="enabled" {{#enabled}}checked{{/enabled}}/>
 </p>
 <p>When linking accounts show link choices even if there's only one choice:
