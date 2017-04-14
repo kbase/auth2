@@ -8,6 +8,7 @@ public class Fields {
 	
 	public static final String ID = "id";
 	public static final String DESCRIPTION = "desc";
+	public static final String HAS = "has";
 	
 	/* login */
 	
@@ -59,4 +60,12 @@ public class Fields {
 	
 	public static final String TOKEN_NAME = "name";
 	public static final String CUSTOM_CONTEXT = "customcontext";
+	
+	/* urls */
+	
+	public static final String URL_RESET = "reseturl";
+	public static final String URL_REVOKE = "revokeurl";
+	public static final String URL_TOKEN = "tokenurl";
+	public static final String URL_POLICY = "policyurl";
+	public static final String URL_SEARCH = "searchurl";
 }

@@ -104,13 +104,13 @@ public class Admin {
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
-		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
-		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
-		ret.put("policyurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
-		ret.put("searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
-		ret.put("croles", auth.getCustomRoles(getTokenFromCookie(
-						headers, cfg.getTokenCookieName()), true));
+		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
+		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
+		ret.put(Fields.URL_POLICY, relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
+		ret.put(Fields.URL_SEARCH, relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
+		ret.put(Fields.CUSTOM_ROLES, CustomRoles.customRolesToList(
+				auth.getCustomRoles(getTokenFromCookie(headers, cfg.getTokenCookieName()), true)));
 		return ret;
 	}
 	
@@ -265,7 +265,7 @@ public class Admin {
 		final Set<CustomRole> roles = auth.getCustomRoles(adminToken, true);
 		final String userPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP;
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("custom", setUpCustomRoles(roles, au.getCustomRoles()));
+		ret.put("custom", customRolesToList(roles, au.getCustomRoles()));
 		ret.put("hascustom", !roles.isEmpty());
 		ret.put("roleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
 		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
@@ -294,16 +294,15 @@ public class Admin {
 		return ret;
 	}
 	
-	// might make more sense to have separate create and edit methods for roles
-
-	private List<Map<String, Object>> setUpCustomRoles(
-			final Set<CustomRole> roles, final Set<String> set) {
+	private List<Map<String, Object>> customRolesToList(
+			final Set<CustomRole> roles,
+			final Set<String> userHas) {
 		final List<Map<String, Object>> ret = new LinkedList<>();
 		for (final CustomRole r: roles) {
 			ret.add(ImmutableMap.of(
-					"desc", r.getDesc(),
+					Fields.DESCRIPTION, r.getDesc(),
 					Fields.ID, r.getID(),
-					"has", set.contains(r.getID())));
+					Fields.HAS, userHas.contains(r.getID())));
 		}
 		return ret;
 	}
@@ -493,13 +492,15 @@ public class Admin {
 			throws AuthStorageException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		final Set<CustomRole> roles = auth.getCustomRoles(token, true);
+		final List<Map<String, String>> roles = CustomRoles.customRolesToList(
+				auth.getCustomRoles(token, true));
 		return ImmutableMap.of(
 				"custroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET),
 				"delroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_DELETE),
 				"roles", roles);
 	}
 	
+	// might make more sense to have separate create and edit methods for roles
 	@POST // should take PUT as well
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES_SET)
 	public void createCustomRole(
