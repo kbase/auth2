@@ -312,7 +312,6 @@ public class Authentication {
 		final byte[] passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 		Password.clearPasswordArray(pwd_copy);
 		try {
-			pwd.clear();
 			final DisplayName dn;
 			try {
 				dn = new DisplayName("root");

@@ -2,6 +2,7 @@ package us.kbase.auth2.cli;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.io.Console;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.net.URI;
@@ -33,6 +34,7 @@ import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
+import com.beust.jcommander.ParameterException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ch.qos.logback.classic.Level;
@@ -66,9 +68,7 @@ import us.kbase.auth2.service.exceptions.AuthConfigurationException;
  */
 public class AuthCLI {
 	
-	//TODO TEST
-	
-	private static final String NAME = "manageauth";
+	private static final String NAME = "manage_auth";
 	private static final String GLOBUS = "Globus";
 	private static final String GLOBUS_CLASS = GlobusIdentityProviderFactory.class.getName();
 	
@@ -83,9 +83,7 @@ public class AuthCLI {
 	 */
 	public static void main(String[] args) {
 		// these lines are only tested manually, so don't make changes without testing manually.
-		// console will be null if output is redirected to a file
-		final ConsoleWrapper cw = System.console() == null ? null : new ConsoleWrapper();
-		System.exit(new AuthCLI(args, cw, System.out, System.err).execute());
+		System.exit(new AuthCLI(args, new ConsoleWrapper(), System.out, System.err).execute());
 	}
 	
 	// this is also only tested manually. Don't change without testing manually.
@@ -95,13 +93,29 @@ public class AuthCLI {
 	 */
 	public static class ConsoleWrapper {
 		
-		public ConsoleWrapper() {}
+		private final Console console;
+		
+		public ConsoleWrapper() {
+			// console will be null if output is redirected to a file
+			console = System.console();
+		}
 		
 		/** Read a password from the console with echoing disabled.
 		 * @return the password, not including line termination characters. Null if EOL.
+		 * @throws IllegalStateException if no console is available.
 		 */
 		public char[] readPassword() {
-			return System.console().readPassword();
+			if (console == null) {
+				throw new IllegalStateException("Cannot read password from null console");
+			}
+			return console.readPassword();
+		}
+		
+		/** Returns whether a console is available.
+		 * @return true if a console is available.
+		 */
+		public boolean hasConsole() {
+			return console != null;
 		}
 		
 	}
@@ -123,6 +137,7 @@ public class AuthCLI {
 			final PrintStream out,
 			final PrintStream err) {
 		nonNull(args, "args");
+		nonNull(console, "console");
 		nonNull(out, "out");
 		nonNull(err, "err");
 		this.args = args;
@@ -142,7 +157,7 @@ public class AuthCLI {
 
 		try {
 			jc.parse(args);
-		} catch (RuntimeException e) {
+		} catch (ParameterException e) {
 			printError(e, a);
 			return 1;
 		}
@@ -162,33 +177,11 @@ public class AuthCLI {
 		}
 		int ret = 0;
 		if (a.setroot) {
-			if (console == null) {
-				err.println("No console available for entering password. Aborting.");
-				ret = 1;
-			} else {
-				out.println("Enter the new root password:");
-				final char[] pwd = console.readPassword();
-				if (pwd == null || pwd.length == 0) {
-					err.println("No password provided");
-					ret = 1;
-				} else {
-					final Password p = new Password(pwd);
-					Password.clearPasswordArray(pwd);
-					try {
-						auth.createRoot(p);
-					} catch (AuthStorageException | IllegalPasswordException e) {
-						p.clear(); //hardly necessary
-						printError(e, a);
-						ret = 1;
-					} finally {
-						p.clear(); //hardly necessary
-					}
-				}
-			}
+			ret = setRootPassword(a, auth);
 		
 		//TODO POSTPROD remove this code and all dependent code
 		
-		/* The code below this line is not covered by tests and will be removed after
+		/* The code below in the next block is not covered by tests and will be removed after
 		 * the auth2 service is released in KBase production and the Globus endpoint shutdown.
 		 */
 		
@@ -206,6 +199,33 @@ public class AuthCLI {
 			ret = importGlobusUsers(a, auth, globusAPIURL);
 		} else {
 			usage(jc);
+		}
+		return ret;
+	}
+
+	private int setRootPassword(final Args a, final Authentication auth) {
+		int ret = 0;
+		if (!console.hasConsole()) {
+			err.println("No console available for entering password. Aborting.");
+			ret = 1;
+		} else {
+			out.println("Enter the new root password:");
+			final char[] pwd = console.readPassword();
+			if (pwd == null || pwd.length == 0) {
+				err.println("No password provided");
+				ret = 1;
+			} else {
+				final Password p = new Password(pwd);
+				Password.clearPasswordArray(pwd);
+				try {
+					auth.createRoot(p);
+				} catch (AuthStorageException | IllegalPasswordException e) {
+					printError(e, a);
+					ret = 1;
+				} finally {
+					p.clear(); //hardly necessary
+				}
+			}
 		}
 		return ret;
 	}
@@ -478,7 +498,7 @@ public class AuthCLI {
 			final Args a) {
 		err.println(msg + ": " + e.getMessage());
 		if (a.verbose) {
-			e.printStackTrace();
+			e.printStackTrace(err);
 		}
 	}
 
