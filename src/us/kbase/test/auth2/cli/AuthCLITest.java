@@ -78,7 +78,7 @@ public class AuthCLITest {
 	private static MongoDatabase db;
 	private static MongoStorage storage;
 	
-	//TODO NOW make mongo test manger class that does this stuff
+	//TODO TEST make mongo test manger class that does this stuff
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {

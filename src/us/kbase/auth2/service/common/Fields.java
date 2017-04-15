@@ -42,6 +42,7 @@ public class Fields {
 	public static final String HAS_ROLES = "hasroles";
 	public static final String CUSTOM_ROLES = "customroles";
 	public static final String HAS_CUSTOM_ROLES = "hascustomroles";
+	public static final String CUSTOM_ROLE_FORM_PREFIX = "crole_";
 	
 	/* search */
 	

@@ -194,9 +194,9 @@ public class Admin {
 			build.withSearchOnRole(r);
 		}
 		for (final String key: form.keySet()) {
-			if (key.startsWith("crole_")) {
-				if (!nullOrEmpty(form.getFirst(key))) { //TODO NOW handle crole_
-					build.withSearchOnCustomRole(key.replace("crole_", ""));
+			if (key.startsWith(Fields.CUSTOM_ROLE_FORM_PREFIX)) {
+				if (!nullOrEmpty(form.getFirst(key))) {
+					build.withSearchOnCustomRole(key.replace(Fields.CUSTOM_ROLE_FORM_PREFIX, ""));
 				}
 			}
 		}
