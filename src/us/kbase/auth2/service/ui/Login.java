@@ -95,8 +95,6 @@ public class Login {
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	private static final String IN_PROCESS_LOGIN_COOKIE = "in-process-login-token";
 	
-	private static final String REDIRECT_URL = "redirecturl";
-
 	private static final String TRUE = "true";
 	private static final String FALSE = "false";
 	
@@ -123,7 +121,7 @@ public class Login {
 			provs.add(rep);
 		}
 		ret.put(Fields.HAS_PROVIDERS, !provs.isEmpty());
-		ret.put("starturl", relativize(uriInfo, UIPaths.LOGIN_ROOT_START));
+		ret.put(Fields.URL_START, relativize(uriInfo, UIPaths.LOGIN_ROOT_START));
 		return ret;
 	}
 	
@@ -140,7 +138,7 @@ public class Login {
 		} else {
 			retname = null;
 		}
-		return ImmutableMap.of("name", retname);
+		return ImmutableMap.of(Fields.AVAILABLE_NAME, retname);
 	}
 	
 	@POST
@@ -148,7 +146,7 @@ public class Login {
 	@Path(UIPaths.LOGIN_START)
 	public Response loginStart(
 			@FormParam(Fields.PROVIDER) final String provider,
-			@FormParam("redirect") final String redirect,
+			@FormParam(Fields.URL_REDIRECT) final String redirect,
 			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn)
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException, MissingParameterException {
@@ -251,8 +249,8 @@ public class Login {
 		//TODO INPUT handle error in params (provider, state)
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
-		final String authcode = qps.getFirst("code"); //may need to be configurable
-		final String retstate = qps.getFirst("state"); //may need to be configurable
+		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
+		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
 		checkState(state, retstate);
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
@@ -307,8 +305,8 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException {
 		
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put(REDIRECT_URL, getRedirectURL(redirect));
-		ret.put("token", new NewUIToken(newtoken));
+		ret.put(Fields.URL_REDIRECT, getRedirectURL(redirect));
+		ret.put(Fields.TOKEN, new NewUIToken(newtoken));
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	
@@ -380,26 +378,26 @@ public class Login {
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("cancelurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
-		ret.put("createurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
-		ret.put("pickurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
-		ret.put("suggestnameurl", relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
-		ret.put(REDIRECT_URL, getRedirectURL(redirect));
+		ret.put(Fields.URL_CANCEL, relativize(uriInfo, UIPaths.LOGIN_ROOT_CANCEL));
+		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
+		ret.put(Fields.URL_PICK, relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
+		ret.put(Fields.URL_SUGGESTNAME, relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
+		ret.put(Fields.URL_REDIRECT, getRedirectURL(redirect));
 		ret.put(Fields.PROVIDER, loginState.getProvider());
-		ret.put("creationallowed", loginState.isNonAdminLoginAllowed());
-		ret.put("expires", loginState.getExpires().toEpochMilli());
+		ret.put(Fields.CREATION_ALLOWED, loginState.isNonAdminLoginAllowed());
+		ret.put(Fields.CHOICE_EXPIRES, loginState.getExpires().toEpochMilli());
 		
 		final List<Map<String, String>> create = new LinkedList<>();
 		final List<Map<String, Object>> login = new LinkedList<>();
-		ret.put("create", create);
-		ret.put("login", login);
+		ret.put(Fields.CREATE, create);
+		ret.put(Fields.LOGIN, login);
 		
 		for (final RemoteIdentity id: loginState.getIdentities()) {
 			final Map<String, String> c = new HashMap<>();
 			c.put(Fields.ID, id.getRemoteID().getID());
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
 			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
-			c.put("usernamesugg", availName.isPresent() ? availName.get().getName() : null);
+			c.put(Fields.AVAILABLE_NAME, availName.isPresent() ? availName.get().getName() : null);
 			//TODO UI return null for full name & email if they're not valid by our rules
 			c.put(Fields.PROV_USER, id.getDetails().getUsername());
 			c.put(Fields.PROV_FULL, id.getDetails().getFullname());
@@ -412,9 +410,9 @@ public class Login {
 			final boolean loginRestricted = adminOnly && !loginState.isAdmin(userName);
 			final Map<String, Object> l = new HashMap<>();
 			l.put(Fields.USER, userName.getName());
-			l.put("loginallowed", !(user.isDisabled() || loginRestricted));
-			l.put("disabled", user.isDisabled());
-			l.put("adminonly", loginRestricted);
+			l.put(Fields.LOGIN_ALLOWED, !(user.isDisabled() || loginRestricted));
+			l.put(Fields.DISABLED, user.isDisabled());
+			l.put(Fields.ADMIN_ONLY, loginRestricted);
 			l.put(Fields.ID, loginState.getIdentities(userName).iterator().next()
 					.getRemoteID().getID());
 			l.put(Fields.POLICY_IDS, user.getPolicyIDs().keySet().stream().map(id ->
@@ -475,8 +473,8 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam(Fields.ID) final String identityID,
 			@FormParam(Fields.POLICY_IDS) final String policyIDs,
-			@FormParam("customcontext") final String customContext,
-			@FormParam("linkall") final String linkAll)
+			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext,
+			@FormParam(Fields.LINK_ALL) final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
@@ -484,7 +482,7 @@ public class Login {
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
-				PickChoice.getString(identityID, "id"),
+				PickChoice.getString(identityID, Fields.ID),
 				PickChoice.getPolicyIDs(policyIDs), tcc, linkAll != null);
 		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
 	}
@@ -501,8 +499,8 @@ public class Login {
 		public PickChoice(
 				@JsonProperty(Fields.ID) final String id,
 				@JsonProperty(Fields.POLICY_IDS) final List<String> policyIDs,
-				@JsonProperty("customcontext") final Map<String, String> customContext,
-				@JsonProperty("linkall") final Object linkAll) {
+				@JsonProperty(Fields.CUSTOM_CONTEXT) final Map<String, String> customContext,
+				@JsonProperty(Fields.LINK_ALL) final Object linkAll) {
 			this.id = id;
 			this.policyIDs = policyIDs;
 			this.customContext = customContext;
@@ -541,7 +539,7 @@ public class Login {
 		}
 		
 		public boolean isLinkAll() throws IllegalParameterException {
-			return getBoolean(linkAll, "linkall");
+			return getBoolean(linkAll, Fields.LINK_ALL);
 		}
 		
 		public Map<String, String> getCustomContext() {
@@ -586,11 +584,11 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@FormParam(Fields.ID) final String identityID,
 			@FormParam(Fields.USER) final String userName,
-			@FormParam("display") final String displayName,
-			@FormParam("email") final String email,
+			@FormParam(Fields.DISPLAY) final String displayName,
+			@FormParam(Fields.EMAIL) final String email,
 			@FormParam(Fields.POLICY_IDS) final String policyIDs,
-			@FormParam("customcontext") final String customContext,
-			@FormParam("linkall") final String linkAll)
+			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext,
+			@FormParam(Fields.LINK_ALL) final String linkAll)
 			throws AuthenticationException, AuthStorageException,
 				UserExistsException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException,
@@ -625,11 +623,11 @@ public class Login {
 		public CreateChoice(
 				@JsonProperty(Fields.ID) final String id,
 				@JsonProperty(Fields.USER) final String userName,
-				@JsonProperty("display") final String displayName,
-				@JsonProperty("email") final String email,
+				@JsonProperty(Fields.DISPLAY) final String displayName,
+				@JsonProperty(Fields.EMAIL) final String email,
 				@JsonProperty(Fields.POLICY_IDS) final List<String> policyIDs,
-				@JsonProperty("customcontext") final Map<String, String> customContext,
-				@JsonProperty("linkall") final Object linkAll) {
+				@JsonProperty(Fields.CUSTOM_CONTEXT) final Map<String, String> customContext,
+				@JsonProperty(Fields.LINK_ALL) final Object linkAll) {
 			super(id, policyIDs, customContext, linkAll);
 			this.user = userName;
 			this.displayName = displayName;

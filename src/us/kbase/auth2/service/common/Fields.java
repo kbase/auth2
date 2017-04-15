@@ -13,6 +13,12 @@ public class Fields {
 	/* login */
 	
 	public static final String STAY_LOGGED_IN = "stayloggedin";
+	public static final String LOGIN = "login";
+	public static final String CREATE = "create";
+	public static final String LOGIN_ALLOWED = "loginallowed";
+	public static final String CREATION_ALLOWED = "creationallowed";
+	public static final String ADMIN_ONLY = "adminonly";
+	public static final String LINK_ALL = "linkall";
 	
 	/* login and linking */
 	
@@ -44,6 +50,9 @@ public class Fields {
 	public static final String PASSWORD = "pwd";
 	public static final String PASSWORD_OLD = "pwdold";
 	public static final String PASSWORD_NEW = "pwdnew";
+	
+	/* suggested names */
+	public static final String AVAILABLE_NAME = "availablename";
 	
 	/* roles */
 	
@@ -102,6 +111,8 @@ public class Fields {
 	public static final String URL_CANCEL = "cancelurl";
 	public static final String URL_PICK = "pickurl";
 	public static final String URL_LOGIN = "loginurl";
+	public static final String URL_REDIRECT = "redirecturl";
+	public static final String URL_SUGGESTNAME = "suggestnameurl";
 	
 	/* errors */
 	
