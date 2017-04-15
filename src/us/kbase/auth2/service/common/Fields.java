@@ -14,6 +14,10 @@ public class Fields {
 	
 	public static final String STAY_LOGGED_IN = "stayloggedin";
 	
+	/* login and linking */
+	
+	public static final String CHOICE_EXPIRES = "expires";
+	
 	/* policy ids */
 	
 	public static final String POLICY_ID = "policyid";
@@ -62,6 +66,8 @@ public class Fields {
 	public static final String PROV_EMAIL = "provemail";
 	public static final String PROV_FULL = "provfullname";
 	public static final String IDENTITIES = "idents";
+	public static final String PROVIDER_CODE = "code";
+	public static final String PROVIDER_STATE = "state";
 	
 	/* tokens */
 	
@@ -87,6 +93,9 @@ public class Fields {
 	public static final String URL_FORCE_RESET = "forcereseturl";
 	public static final String URL_BASIC = "basicurl";
 	public static final String URL_PROVIDER = "providerurl";
+	public static final String URL_START = "starturl";
+	public static final String URL_CANCEL = "cancelurl";
+	public static final String URL_PICK = "pickurl";
 	
 	/* errors */
 	

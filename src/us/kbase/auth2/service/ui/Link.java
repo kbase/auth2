@@ -96,7 +96,7 @@ public class Link {
 		final AuthUser u = auth.getUser(incToken);
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.USER, u.getUserName().getName());
-		ret.put("local", u.isLocal());
+		ret.put(Fields.LOCAL, u.isLocal());
 		final List<Map<String, String>> provs = new LinkedList<>();
 		ret.put(Fields.PROVIDERS, provs);
 		for (final String prov: auth.getIdentityProviders()) {
@@ -104,7 +104,7 @@ public class Link {
 			rep.put(Fields.PROVIDER, prov);
 			provs.add(rep);
 		}
-		ret.put("starturl", relativize(uriInfo, UIPaths.LINK_ROOT_START));
+		ret.put(Fields.URL_START, relativize(uriInfo, UIPaths.LINK_ROOT_START));
 		ret.put(Fields.HAS_PROVIDERS, !provs.isEmpty());
 		return ret;
 	}
@@ -148,8 +148,8 @@ public class Link {
 		//TODO INPUT handle error in params (provider, state)
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		//TODO ERRHANDLE handle returned OAuth error code in queryparams
-		final String authcode = qps.getFirst("code"); //may need to be configurable
-		final String retstate = qps.getFirst("state"); //may need to be configurable
+		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
+		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
 		checkState(state, retstate);
 		final Optional<IncomingToken> token =
 				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
@@ -275,9 +275,9 @@ public class Link {
 			s.put(Fields.PROV_USER, ri.getDetails().getUsername());
 			ris.add(s);
 		}
-		ret.put("cancelurl", relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
-		ret.put("pickurl", relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
-		ret.put("expires", ids.getExpires().toEpochMilli());
+		ret.put(Fields.URL_CANCEL, relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
+		ret.put(Fields.URL_PICK, relativize(uriInfo, UIPaths.LINK_ROOT_PICK));
+		ret.put(Fields.CHOICE_EXPIRES, ids.getExpires().toEpochMilli());
 		return ret;
 	}
 
