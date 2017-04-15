@@ -97,9 +97,9 @@ public class Me {
 			throws InvalidTokenException, AuthStorageException, DisabledUserException {
 		final AuthUser u = auth.getUser(token);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("userupdateurl", relativize(uriInfo, UIPaths.ME_ROOT));
-		ret.put("unlinkurl", relativize(uriInfo, UIPaths.ME_ROOT_UNLINK));
-		ret.put("rolesurl", relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
+		ret.put(Fields.URL_USER_UPDATE, relativize(uriInfo, UIPaths.ME_ROOT));
+		ret.put(Fields.URL_UNLINK, relativize(uriInfo, UIPaths.ME_ROOT_UNLINK));
+		ret.put(Fields.URL_ROLE, relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
 		ret.put(Fields.USER, u.getUserName().getName());
 		ret.put(Fields.LOCAL, u.isLocal());
 		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
@@ -108,7 +108,7 @@ public class Me {
 		final Optional<Instant> ll = u.getLastLogin();
 		ret.put(Fields.LAST_LOGIN, ll.isPresent() ? ll.get().toEpochMilli() : null);
 		ret.put(Fields.CUSTOM_ROLES, u.getCustomRoles());
-		ret.put("unlink", u.getIdentities().size() > 1);
+		ret.put(Fields.UNLINK, u.getIdentities().size() > 1);
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();

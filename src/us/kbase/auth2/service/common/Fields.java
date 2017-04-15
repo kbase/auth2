@@ -25,6 +25,10 @@ public class Fields {
 	public static final String ADMIN_ONLY = "adminonly";
 	public static final String LINK_ALL = "linkall";
 	
+	/* linking */
+	
+	public static final String UNLINK = "unlink";
+	
 	/* login and linking */
 	
 	public static final String CHOICE_EXPIRES = "expires";
@@ -119,6 +123,8 @@ public class Fields {
 	public static final String URL_LOGOUT = "logouturl";
 	public static final String URL_REDIRECT = "redirecturl";
 	public static final String URL_SUGGESTNAME = "suggestnameurl";
+	public static final String URL_USER_UPDATE = "userupdateurl";
+	public static final String URL_UNLINK = "unlinkurl";
 	
 	/* errors */
 	
