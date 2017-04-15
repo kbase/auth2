@@ -81,22 +81,18 @@ public class Tokens {
 			throws AuthStorageException, InvalidTokenException,
 			NoTokenProvidedException, UnauthorizedException {
 		final Map<String, Object> t = getTokens(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put(Fields.USER, ((UIToken) t.get(Fields.CURRENT)).getUser());
-		t.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
-		t.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
-				UIPaths.SEP));
-		t.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
+				getTokenFromCookie(headers, cfg.getTokenCookieName()), uriInfo);
 		return t;
 	}
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getTokensJSON(
-			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
+			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
 			NoTokenProvidedException, UnauthorizedException {
-		return getTokens(getToken(headerToken));
+		return getTokens(getToken(headerToken), uriInfo);
 	}
 	
 	@POST
@@ -214,7 +210,7 @@ public class Tokens {
 				Fields.TOKEN_SERVICE.equals(tokenType) ? TokenType.SERV : TokenType.DEV, tcc));
 	}
 
-	private Map<String, Object> getTokens(final IncomingToken token)
+	private Map<String, Object> getTokens(final IncomingToken token, final UriInfo uriInfo)
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException {
 		final AuthUser au = auth.getUser(token);
@@ -227,6 +223,11 @@ public class Tokens {
 		ret.put(Fields.TOKENS, ats);
 		ret.put(Fields.TOKEN_DEV, Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
 		ret.put(Fields.TOKEN_SERVICE, Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.USER, au.getUserName().getName());
+		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
+		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
+				UIPaths.SEP));
+		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
 		return ret;
 	}
 }
