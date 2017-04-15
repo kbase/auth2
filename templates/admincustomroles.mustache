@@ -10,14 +10,14 @@
 Description:<br/>
 {{desc}}
 <br/>
-<form action="{{delroleurl}}" method="post">
+<form action="{{deletecustomroleurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Delete"/>
 </form>
 </p>
 {{/roles}}
 
-<form action="{{custroleurl}}" method="post" id="custroleform">
+<form action="{{customroleurl}}" method="post" id="custroleform">
 ID: <input type="text" name="id"/><br/>
 Description:<br/>
 <textarea name="desc" form="custroleform" cols="40" rows="5"></textarea><br/>

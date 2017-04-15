@@ -20,7 +20,6 @@ public class UIPaths {
 	private static final String REVOKE_ALL = "revokeall";
 	private static final String SUGGESTNAME = "suggestname";
 	private static final String NAME_ID = "{name}";
-	private static final String TOKEN_ID = "{tokenid}";
 	private static final String ID = "{id}";
 	private static final String LOGIN = "login";
 	private static final String LOCAL = "localaccount";
@@ -31,6 +30,8 @@ public class UIPaths {
 	private static final String START = "start";
 	private static final String TOKEN = "token";
 	private static final String TOKENS = "tokens";
+	public static final String TOKEN_ID = "tokenid";
+	private static final String TOKEN_ID_PARAM = "{" + TOKEN_ID + "}";
 	private static final String CUSTOM_ROLES = "customroles";
 	
 	/* Root endpoint */
@@ -78,7 +79,7 @@ public class UIPaths {
 	public static final String ADMIN_USER_TOKENS_REVOKE_ALL = ADMIN_USER_TOKENS + SEP + REVOKE_ALL;
 	public static final String ADMIN_USER_TOKENS_REVOKE = REVOKE;
 	public static final String ADMIN_USER_TOKENS_REVOKE_ID = ADMIN_USER_TOKENS + SEP + 
-			ADMIN_USER_TOKENS_REVOKE + SEP + TOKEN_ID;
+			ADMIN_USER_TOKENS_REVOKE + SEP + TOKEN_ID_PARAM;
 	
 	public static final String ADMIN_CUSTOM_ROLES = CUSTOM_ROLES;
 	public static final String ADMIN_USER_CUSTOM_ROLES = ADMIN_USER_PARAM + SEP +
@@ -175,7 +176,7 @@ public class UIPaths {
 	public static final String TOKENS_ROOT_CREATE = TOKENS_ROOT + TOKENS_CREATE;
 	public static final String TOKENS_REVOKE = REVOKE;
 	public static final String TOKENS_ROOT_REVOKE = TOKENS_ROOT + TOKENS_REVOKE;
-	public static final String TOKENS_REVOKE_ID = TOKENS_REVOKE + SEP + TOKEN_ID;
+	public static final String TOKENS_REVOKE_ID = TOKENS_REVOKE + SEP + TOKEN_ID_PARAM;
 	public static final String TOKENS_REVOKE_ALL = REVOKE_ALL;
 	public static final String TOKENS_ROOT_REVOKE_ALL = TOKENS_ROOT + TOKENS_REVOKE_ALL;
 	
