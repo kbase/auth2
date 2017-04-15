@@ -97,7 +97,11 @@ public class Fields {
 	public static final String TOKEN = "token";
 	public static final String TOKENS = "tokens";
 	public static final String TOKEN_NAME = "name";
+	public static final String TOKEN_TYPE = "type";
+	public static final String TOKEN_DEV = "dev";
+	public static final String TOKEN_SERVICE = "service";
 	public static final String CUSTOM_CONTEXT = "customcontext";
+	public static final String CURRENT = "current";
 	
 	/* urls */
 	

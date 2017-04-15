@@ -82,11 +82,11 @@ public class Tokens {
 			NoTokenProvidedException, UnauthorizedException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put(Fields.USER, ((UIToken) t.get("current")).getUser());
-		t.put("createurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
-		t.put("revokeurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
+		t.put(Fields.USER, ((UIToken) t.get(Fields.CURRENT)).getUser());
+		t.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
+		t.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
 				UIPaths.SEP));
-		t.put("revokeallurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
+		t.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
 		return t;
 	}
 	
@@ -107,9 +107,9 @@ public class Tokens {
 	public NewUIToken createTokenHTML(
 			@Context final HttpServletRequest req,
 			@Context final HttpHeaders headers,
-			@FormParam("name") final String tokenName,
-			@FormParam("type") final String tokenType,
-			@FormParam("customcontext") final String customContext)
+			@FormParam(Fields.TOKEN_NAME) final String tokenName,
+			@FormParam(Fields.TOKEN_TYPE) final String tokenType,
+			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException, IllegalParameterException {
@@ -126,9 +126,9 @@ public class Tokens {
 		
 		@JsonCreator
 		private CreateTokenParams(
-				@JsonProperty("name") final String name,
-				@JsonProperty("type") final String type,
-				@JsonProperty("customcontext") final Map<String, String> customContext)
+				@JsonProperty(Fields.TOKEN_NAME) final String name,
+				@JsonProperty(Fields.TOKEN_TYPE) final String type,
+				@JsonProperty(Fields.CUSTOM_CONTEXT) final Map<String, String> customContext)
 				throws MissingParameterException {
 			this.name = name;
 			this.type = type;
@@ -163,7 +163,7 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenPOST(
 			@Context final HttpHeaders headers,
-			@PathParam("tokenid") final UUID tokenId)
+			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException {
@@ -173,7 +173,7 @@ public class Tokens {
 	@DELETE
 	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenDELETE(
-			@PathParam("tokenid") final UUID tokenId,
+			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
 			NoSuchTokenException, NoTokenProvidedException,
@@ -211,7 +211,7 @@ public class Tokens {
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
 		return new NewUIToken(auth.createToken(userToken, new TokenName(tokenName),
-				"server".equals(tokenType) ? TokenType.SERV : TokenType.DEV, tcc));
+				Fields.TOKEN_SERVICE.equals(tokenType) ? TokenType.SERV : TokenType.DEV, tcc));
 	}
 
 	private Map<String, Object> getTokens(final IncomingToken token)
@@ -220,13 +220,13 @@ public class Tokens {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("current", new UIToken(ts.getCurrentToken()));
+		ret.put(Fields.CURRENT, new UIToken(ts.getCurrentToken()));
 		
 		final List<UIToken> ats = ts.getTokens().stream()
 				.map(t -> new UIToken(t)).collect(Collectors.toList());
-		ret.put("tokens", ats);
-		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
-		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.TOKENS, ats);
+		ret.put(Fields.TOKEN_DEV, Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.TOKEN_SERVICE, Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
 		return ret;
 	}
 }
