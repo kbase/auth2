@@ -50,7 +50,8 @@ public class CustomRoles {
 			throws AuthStorageException, NoTokenProvidedException, InvalidTokenException,
 			UnauthorizedException { // can't actually be thrown
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		return ImmutableMap.of("roles", customRolesToList(auth.getCustomRoles(token, false)));
+		return ImmutableMap.of(Fields.CUSTOM_ROLES,
+				customRolesToList(auth.getCustomRoles(token, false)));
 	}
 	
 	public static List<Map<String, String>> customRolesToList(final Set<CustomRole> roles) {
