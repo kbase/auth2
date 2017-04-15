@@ -38,7 +38,12 @@ public class Fields {
 	public static final String ENABLE_TOGGLE_DATE = "enabletoggledate";
 	public static final String ENABLE_TOGGLED_BY = "enabletoggledby";
 	public static final String LAST_LOGIN = "lastlogin";
+	
+	/* passwords */
+	
 	public static final String PASSWORD = "pwd";
+	public static final String PASSWORD_OLD = "pwdold";
+	public static final String PASSWORD_NEW = "pwdnew";
 	
 	/* roles */
 	
@@ -96,6 +101,7 @@ public class Fields {
 	public static final String URL_START = "starturl";
 	public static final String URL_CANCEL = "cancelurl";
 	public static final String URL_PICK = "pickurl";
+	public static final String URL_LOGIN = "loginurl";
 	
 	/* errors */
 	
