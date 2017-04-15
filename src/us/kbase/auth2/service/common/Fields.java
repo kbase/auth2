@@ -10,6 +10,11 @@ public class Fields {
 	public static final String DESCRIPTION = "desc";
 	public static final String HAS = "has";
 	
+	/* root */
+	
+	public static final String VERSION = "version";
+	public static final String SERVER_TIME = "servertime";
+	
 	/* login */
 	
 	public static final String STAY_LOGGED_IN = "stayloggedin";

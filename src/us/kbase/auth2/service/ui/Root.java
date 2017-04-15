@@ -12,6 +12,8 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.service.common.Fields;
+
 @Path(UIPaths.ROOT)
 public class Root {
 	
@@ -38,7 +40,8 @@ public class Root {
 	}
 	
 	private Map<String, Object> root() {
-		return ImmutableMap.of("version", VERSION, "servertime", Instant.now().toEpochMilli());
+		return ImmutableMap.of(Fields.VERSION, VERSION,
+				Fields.SERVER_TIME, Instant.now().toEpochMilli());
 	}
 
 }
