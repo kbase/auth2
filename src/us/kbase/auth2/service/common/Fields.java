@@ -111,6 +111,7 @@ public class Fields {
 	public static final String URL_CANCEL = "cancelurl";
 	public static final String URL_PICK = "pickurl";
 	public static final String URL_LOGIN = "loginurl";
+	public static final String URL_LOGOUT = "logouturl";
 	public static final String URL_REDIRECT = "redirecturl";
 	public static final String URL_SUGGESTNAME = "suggestnameurl";
 	

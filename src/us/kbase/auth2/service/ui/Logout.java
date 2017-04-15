@@ -48,7 +48,7 @@ public class Logout {
 		final StoredToken ht = auth.getToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return ImmutableMap.of(Fields.USER, ht.getUserName().getName(),
-				"logouturl", relativize(uriInfo, UIPaths.LOGOUT_ROOT_RESULT));
+				Fields.URL_LOGOUT, relativize(uriInfo, UIPaths.LOGOUT_ROOT_RESULT));
 	}
 	
 	@POST
