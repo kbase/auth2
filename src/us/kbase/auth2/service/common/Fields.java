@@ -88,6 +88,10 @@ public class Fields {
 	public static final String URL_BASIC = "basicurl";
 	public static final String URL_PROVIDER = "providerurl";
 	
+	/* errors */
+	
+	public static final String ERROR = "error";
+	
 	/* ***** config ***** */
 	
 	/* providers */
