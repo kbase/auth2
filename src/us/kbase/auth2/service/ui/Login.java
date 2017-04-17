@@ -159,13 +159,13 @@ public class Login {
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
 		
-		final ResponseBuilder r = Response.seeOther(target).cookie(getStateCookie(state))
+		return Response.seeOther(target)
+				.cookie(getStateCookie(state))
 				.cookie(getSessionChoiceCookie(stayLoggedIn == null,
-						PROVIDER_RETURN_EXPIRATION_SEC));
-		if (redirect != null && !redirect.trim().isEmpty()) {
-			r.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC));
-		}
-		return r.build();
+						PROVIDER_RETURN_EXPIRATION_SEC))
+				// will remove redirect cookie if redirect isn't set and one exists
+				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
+				.build();
 	}
 
 	private URL getRedirectURL(final String redirect)
@@ -199,10 +199,9 @@ public class Login {
 	}
 
 	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
-		final boolean noRedir = redirect == null || redirect.isEmpty();
+		final boolean noRedir = redirect == null || redirect.trim().isEmpty();
 		return new NewCookie(new Cookie(REDIRECT_COOKIE,
-				noRedir ? "no redirect" : redirect,
-						UIPaths.LOGIN_ROOT, null),
+				noRedir ? "no redirect" : redirect, UIPaths.LOGIN_ROOT, null),
 				"redirect url",
 				noRedir ? 0 : expirationTimeSec,
 				UIConstants.SECURE_COOKIES);
