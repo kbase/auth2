@@ -26,16 +26,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.mongodb.MongoClient;
-import com.mongodb.client.MongoDatabase;
-
 import us.kbase.auth2.cli.AuthCLI;
 import us.kbase.auth2.cli.AuthCLI.ConsoleWrapper;
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.storage.mongo.MongoStorage;
-import us.kbase.common.test.controllers.mongo.MongoController;
+import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.TestCommon;
 
 public class AuthCLITest {
@@ -72,47 +68,24 @@ public class AuthCLITest {
 	private final static Path WORK_DIR = Paths.get("").toAbsolutePath();
 	
 	private final static String DB_NAME = "authclitest";
-
-	private static MongoController mongo;
-	private static MongoClient mc;
-	private static MongoDatabase db;
-	private static MongoStorage storage;
 	
-	//TODO TEST make mongo test manger class that does this stuff
+	private static MongoStorageTestManager manager;
+
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
-		TestCommon.stfuLoggers();
-		mongo = new MongoController(TestCommon.getMongoExe().toString(),
-				TestCommon.getTempDir(),
-				TestCommon.useWiredTigerEngine());
-		System.out.println(String.format("Testing against mongo excutable %s on port %s",
-				TestCommon.getMongoExe(), mongo.getServerPort()));
-		mc = new MongoClient("localhost:" + mongo.getServerPort());
-		db = mc.getDatabase(DB_NAME);
-		storage = new MongoStorage(db);
+		manager = new MongoStorageTestManager(DB_NAME);
 		
 	}
 	
 	@AfterClass
 	public static void tearDownClass() throws Exception {
-		if (mc != null) {
-			mc.close();
-		}
-		if (mongo != null) {
-			try {
-				mongo.destroy(TestCommon.isDeleteTempFiles());
-			} catch (IOException e) {
-				System.out.println("Error deleting temporarary files at: " +
-						TestCommon.getTempDir());
-				e.printStackTrace();
-			}
-		}
+		manager.destroy();
 	}
 	
 	@Before
 	public void clearDB() throws Exception {
-		TestCommon.destroyDB(db);
+		manager.reset();
 	}
 	
 	public class CollectingPrintStream extends PrintStream {
@@ -173,7 +146,7 @@ public class AuthCLITest {
 		assertThat("incorrect return code", retcode, is(0));
 		assertClear(pwd);
 		
-		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(UserName.ROOT);
+		final PasswordHashAndSalt creds = manager.storage.getPasswordHashAndSalt(UserName.ROOT);
 
 		assertThat("incorrect creds", new PasswordCrypt().authenticate(
 				pwdcopy, creds.getPasswordHash(), creds.getSalt()), is(true));
@@ -182,7 +155,7 @@ public class AuthCLITest {
 	private Path generateTempConfigFile() throws IOException {
 		final Ini ini = new Ini();
 		final Section sec = ini.add("authserv2");
-		sec.add("mongo-host", "localhost:" + mongo.getServerPort());
+		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", DB_NAME);
 		sec.add("token-cookie-name", "foobar");
 		final Path temp = TestCommon.getTempDir();
@@ -261,10 +234,10 @@ public class AuthCLITest {
 	
 	@Test
 	public void authStartupFail() throws Exception {
-		db.getCollection("config").insertOne(
-				new Document("schemaver", 40)
+		manager.db.getCollection("config").updateOne(new Document("schema", "schema"),
+				new Document("$set", new Document("schemaver", 40)
 					.append("schema", "schema")
-					.append("inupdate", false));
+					.append("inupdate", false)));
 		
 		final Path deploy = generateTempConfigFile();
 		runCliPriorToPwdInput(new String[] {"-d", deploy.toString()}, 1,
@@ -382,9 +355,9 @@ public class AuthCLITest {
 			errfinal = errfinal.subList(0, numErrLines);
 		}
 		
-		assertThat("incorrect ret", ret, is(retcode));
 		assertThat("incorrect output", outs.out, is(out));
 		assertThat("incorrect error", errfinal, is(err));
+		assertThat("incorrect ret", ret, is(retcode));
 	}
 
 	private void failConstructCLI(
