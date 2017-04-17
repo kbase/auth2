@@ -245,7 +245,6 @@ public class Authentication {
 	/* Caches the configuration to avoid pulling the configuration from the storage system
 	 * on every request. Synchronized to prevent multiple storage accesses for one update.
 	 */
-	//TODO CONFIG TEST config manager
 	private class ConfigManager {
 	
 		private AuthConfigSet<CollectingExternalConfig> cfg;
@@ -2116,7 +2115,6 @@ public class Authentication {
 		storage.enableAccount(userName, admin.getUserName());
 	}
 	
-	//TODO CONFIG TEST update and various get config methods
 	/** Update the server configuration.
 	 * @param token a token for a user with the administrator role.
 	 * @param update the new server configuration.
