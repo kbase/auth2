@@ -18,18 +18,19 @@
   <property name="jar.file" value="KBaseAuth2.jar"/>
   <property name="war.file" value="KBaseAuth2.war"/>
   <property name="war.dir" value="war"/>
-  <property name="script.file" value="manage_auth"/>
+  <property name="script.file" value="./manage_auth"/>
+  <property name="deploy.dir" value="./jettybase"/>
 
   <target name="help">
     <echo message="build    - Generates a new files as specified by 'compile', 'buildwar', 'script' and 'javadoc'."/>
-    <echo message="buildwar - Generates a new war file ${war.dir}/${war.file}."/>
+    <echo message="buildwar - Generates a new war file ${war.dir}/${war.file} and deploys it to ${deploy.dir}."/>
     <echo message="clean    - Removes all generated files and directories."/>
     <echo message="compile  - Generates a new set of classes in ${classes.dir}, ${line.separator}
          and a new set of jar files in ${dist.dir}."/>
     <echo message="init     - Creates a new set of empty directories where generated files are to be written. ${line.separator}
          Deletes any existing directories before creating new ones."/>
     <echo message="javadoc  - Generates javadoc documentation at ${doc.dir}."/>
-    <echo message="script   - Generates a new CLI script ./${script.file}."/>
+    <echo message="script   - Generates a new CLI script ${script.file}."/>
     <echo message="test     - Executes unit tests."/>
   </target>
 
@@ -142,10 +143,11 @@
   <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
 
-  <target name="init" description="make directories">
+  <target name="init" depends="clean" description="make directories">
     <!-- Create the output directory structure-->
     <mkdir dir="${classes.dir}"/>
     <mkdir dir="${dist.dir}"/>
+    <mkdir dir="${doc.dir}"/>
   </target>
 
   <target name="compile" depends="init" description="compile the source">
@@ -185,11 +187,11 @@
     <!-- Remove uncompressed class files and libs-->
     <delete dir="${war.dir}/lib"/>
     <!-- copy war to jettybase -->
-    <copy tofile="./jettybase/webapps/ROOT.war" file="${dist.dir}/${war.file}" />
+    <copy tofile="${deploy.dir}/webapps/ROOT.war" file="${dist.dir}/${war.file}" />
     <!-- probably a better way to do this -->
-    <delete dir="./jettybase/templates"/>
-    <mkdir dir="./jettybase/templates"/>
-    <copy todir="./jettybase/templates">
+    <delete dir="${deploy.dir}/templates"/>
+    <mkdir dir="${deploy.dir}/templates"/>
+    <copy todir="${deploy.dir}/templates">
       <fileset dir="./templates" includes="**"/>  
     </copy>
   </target>
@@ -296,16 +298,19 @@
 	
   <target name="script" depends="compile" description="create cli script">
     <pathconvert targetos="unix" property="lib.classpath" refid="applicationjars"/>
-    <echo file="./{$script.file}">#!/bin/sh
+    <echo file="${script.file}">#!/bin/sh
 java -cp ${dist.dir}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     </echo>
-    <chmod file="./{script.file}" perm="a+x"/>
+    <chmod file="${script.file}" perm="a+x"/>
   </target>
 	
   <target name="clean" description="clean up" >
     <!-- Clean up internal temporary files and folders-->
     <delete dir="${classes.dir}"/>
     <delete dir="${dist.dir}"/>
+    <delete file="${war.file}"/>
+    <delete dir="${doc.dir}"/>
+    <delete file="${script.file}"/>
   </target>
 </project>
 
