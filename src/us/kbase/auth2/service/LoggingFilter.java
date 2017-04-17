@@ -49,8 +49,7 @@ public class LoggingFilter implements ContainerRequestFilter,
 					"An error occurred in the logger when attempting " +
 					"to get the server configuration", e); 
 		}
-		logger.setCallInfo(reqcon.getMethod(),
-				("" + Math.random()).substring(2),
+		logger.setCallInfo(reqcon.getMethod(), ("" + Math.random()).substring(2),
 				getIpAddress(reqcon, ignoreIPheaders));
 	}
 	

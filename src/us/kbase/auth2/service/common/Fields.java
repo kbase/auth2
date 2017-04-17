@@ -61,6 +61,7 @@ public class Fields {
 	public static final String PASSWORD_NEW = "pwdnew";
 	
 	/* suggested names */
+	
 	public static final String AVAILABLE_NAME = "availablename";
 	
 	/* roles */
