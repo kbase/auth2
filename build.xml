@@ -3,23 +3,37 @@
   <description>
       Build file for the second KBase Authentication Service 
   </description>
-	
+
   <!-- TODO ZLATER BUILD switch to gradle or at least ivy -->
 
   <!-- set global properties for this build -->
   <property name="package" value="KBase authentication service"/>
   <property name="src" location="src"/>
   <property name="lib" location="lib"/>
-  <property name="dist" location="dist"/>
-  <property name="jardir" location="../jars/lib/jars/"/>
-  <property name="classes" location="classes"/>
-  <property name="doc" location="docs/javadoc"/>
+  <property name="dist.dir" location="dist"/>
+  <property name="jar.dir" location="../jars/lib/jars/"/>
+  <property name="classes.dir" location="classes"/>
+  <property name="doc.dir" location="docs/javadoc"/>
   <property name="testjar.file" value="KBaseAuth2Test.jar"/>
   <property name="jar.file" value="KBaseAuth2.jar"/>
   <property name="war.file" value="KBaseAuth2.war"/>
   <property name="war.dir" value="war"/>
+  <property name="script.file" value="manage_auth"/>
 
-  <fileset dir="${jardir}" id="lib">
+  <target name="help">
+    <echo message="build    - Generates a new files as specified by 'compile', 'buildwar', 'script' and 'javadoc'."/>
+    <echo message="buildwar - Generates a new war file ${war.dir}/${war.file}."/>
+    <echo message="clean    - Removes all generated files and directories."/>
+    <echo message="compile  - Generates a new set of classes in ${classes.dir}, ${line.separator}
+         and a new set of jar files in ${dist.dir}."/>
+    <echo message="init     - Creates a new set of empty directories where generated files are to be written. ${line.separator}
+         Deletes any existing directories before creating new ones."/>
+    <echo message="javadoc  - Generates javadoc documentation at ${doc.dir}."/>
+    <echo message="script   - Generates a new CLI script ./${script.file}."/>
+    <echo message="test     - Executes unit tests."/>
+  </target>
+
+  <fileset dir="${jar.dir}" id="lib">
     <include name="apache_commons/commons-codec-1.8.jar"/>
     <include name="apache_commons/commons-validator-1.5.1.jar"/>
     <include name="google/guava-18.0.jar"/>
@@ -30,7 +44,7 @@
     <include name="nulab-inc/zxcvbn-1.2.2.jar"/>
   </fileset>
 
-  <fileset dir="${jardir}" id="logging">
+  <fileset dir="${jar.dir}" id="logging">
     <include name="kbase/common/kbase-common-0.0.22.jar"/>
     <include name="jna/jna-3.4.0.jar"/>
     <include name="logback/logback-core-1.1.2.jar"/>
@@ -39,7 +53,7 @@
     <include name="syslog4j/syslog4j-0.9.46.jar"/>
   </fileset>
 	
-  <fileset dir="${jardir}" id="yauaa">
+  <fileset dir="${jar.dir}" id="yauaa">
     <include name="yauaa/yauaa-1.3.jar"/>
     <include name="apache_commons/commons-lang3-3.5.jar"/>
     <include name="apache_commons/commons-collections4-4.1.jar"/>
@@ -48,7 +62,7 @@
     <include name="snakeyaml/snakeyaml-1.18.jar"/>
   </fileset>
 
-  <fileset dir="${jardir}" id="jackson">
+  <fileset dir="${jar.dir}" id="jackson">
     <include name="jackson/jackson-annotations-2.5.4.jar"/>
     <include name="jackson/jackson-core-2.5.4.jar"/>
     <include name="jackson/jackson-databind-2.5.4.jar"/>
@@ -57,7 +71,7 @@
     <include name="jackson/jackson-module-jaxb-annotations-2.5.4.jar"/>
   </fileset>
 	
-  <fileset dir="${jardir}" id="jersey">
+  <fileset dir="${jar.dir}" id="jersey">
     <include name="jersey/entity-filtering/jersey-entity-filtering-2.23.2.jar"/>
     <include name="jersey/entity-filtering/jersey-media-json-jackson-2.23.2.jar"/>
     <include name="jersey/mvc/jersey-mvc-2.23.2.jar"/>
@@ -71,7 +85,7 @@
     <include name="jersey/jersey-server-2.23.2.jar"/>
   </fileset>
 
-  <fileset dir="${jardir}" id="jerseydeps">
+  <fileset dir="${jar.dir}" id="jerseydeps">
     <include name="annotation/javax.annotation-api-1.2.jar"/>
     <include name="asm/asm-debug-all-5.0.4.jar"/>
     <include name="inject/javax.inject-2.5.0-b05.jar"/>
@@ -84,7 +98,7 @@
     <include name="validationapi/validation-api-1.1.0.Final.jar"/>
   </fileset>
 
-  <fileset dir="${jardir}" id="jerseydep_hk2">
+  <fileset dir="${jar.dir}" id="jerseydep_hk2">
     <include name="hk2/aopalliance-repackaged-2.5.0-b05.jar"/>
     <include name="hk2/hk2-api-2.5.0-b05.jar"/>
     <include name="hk2/hk2-locator-2.5.0-b05.jar"/>
@@ -92,7 +106,7 @@
     <include name="hk2/osgi-resource-locator-1.0.1.jar"/>
   </fileset>
 	
-  <fileset dir="${jardir}" id="testlibs">
+  <fileset dir="${jar.dir}" id="testlibs">
     <include name="equalsverifier/equalsverifier-2.2.2.jar"/>
     <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
@@ -121,8 +135,8 @@
 
   <path id="test.classpath">
     <path refid="compile.classpath"/>
-    <fileset file="${dist}/${jar.file}"/>
-    <fileset file="${dist}/${testjar.file}"/>
+    <fileset file="${dist.dir}/${jar.file}"/>
+    <fileset file="${dist.dir}/${testjar.file}"/>
   </path>
 	
   <target name="build" depends="compile,buildwar,script,javadoc"
@@ -130,14 +144,14 @@
 
   <target name="init" description="make directories">
     <!-- Create the output directory structure-->
-    <mkdir dir="${classes}"/>
-    <mkdir dir="${dist}"/>
+    <mkdir dir="${classes.dir}"/>
+    <mkdir dir="${dist.dir}"/>
   </target>
 
   <target name="compile" depends="init" description="compile the source">
     <!-- Compile class files-->
     <javac srcdir="${src}"
-           destdir="${classes}"
+           destdir="${classes.dir}"
            excludes="**/StartAuthServer.java"
            includeantruntime="false"
            debug="true"
@@ -147,13 +161,13 @@
       <compilerarg line="-encoding utf-8"/>
     </javac>
     <!-- Make main jar file-->
-    <jar destfile="${dist}/${jar.file}"
-         basedir="${classes}"
+    <jar destfile="${dist.dir}/${jar.file}"
+         basedir="${classes.dir}"
          includes="us/kbase/auth2/**"
     />
     <!-- Make test jar file-->
-    <jar destfile="${dist}/${testjar.file}"
-         basedir="${classes}"
+    <jar destfile="${dist.dir}/${testjar.file}"
+         basedir="${classes.dir}"
          includes="us/kbase/test/**"
     />
   </target>
@@ -164,14 +178,14 @@
     <copy todir="${war.dir}/lib/" flatten="true">
       <union refid="applicationjars"/>
     </copy>
-    <war destfile="${dist}/${war.file}" webxml="${war.dir}/web.xml">
-      <classes dir="${classes}" includes="us/kbase/auth2/**"/>
+    <war destfile="${dist.dir}/${war.file}" webxml="${war.dir}/web.xml">
+      <classes dir="${classes.dir}" includes="us/kbase/auth2/**"/>
       <lib dir="${war.dir}/lib/"/>
     </war>
     <!-- Remove uncompressed class files and libs-->
     <delete dir="${war.dir}/lib"/>
     <!-- copy war to jettybase -->
-    <copy tofile="./jettybase/webapps/ROOT.war" file="${dist}/${war.file}" />
+    <copy tofile="./jettybase/webapps/ROOT.war" file="${dist.dir}/${war.file}" />
     <!-- probably a better way to do this -->
     <delete dir="./jettybase/templates"/>
     <mkdir dir="./jettybase/templates"/>
@@ -184,7 +198,7 @@
     <javadoc access="protected"
              author="false"
              classpathref="compile.classpath"
-             destdir="${doc}"
+             destdir="${doc.dir}"
              sourcepath="${src}"
              excludepackagenames="us.kbase.test.*"
              nodeprecated="false"
@@ -282,16 +296,16 @@
 	
   <target name="script" depends="compile" description="create cli script">
     <pathconvert targetos="unix" property="lib.classpath" refid="applicationjars"/>
-    <echo file="./manage_auth">#!/bin/sh
-java -cp ${dist}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
+    <echo file="./{$script.file}">#!/bin/sh
+java -cp ${dist.dir}/${jar.file}:${lib.classpath} us.kbase.auth2.cli.AuthCLI $@
     </echo>
-    <chmod file="./manage_auth" perm="a+x"/>
+    <chmod file="./{script.file}" perm="a+x"/>
   </target>
 	
   <target name="clean" description="clean up" >
     <!-- Clean up internal temporary files and folders-->
-    <delete dir="${classes}"/>
-    <delete dir="${dist}"/>
+    <delete dir="${classes.dir}"/>
+    <delete dir="${dist.dir}"/>
   </target>
 </project>
 
