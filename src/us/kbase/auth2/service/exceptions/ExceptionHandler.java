@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.template.TemplateProcessor;
 
@@ -71,7 +72,7 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {
 			final Map<String, Object> err = new HashMap<>();
-			err.put("error", em);
+			err.put(Fields.ERROR, em);
 			try {
 				ret = mapper.writeValueAsString(err);
 			} catch (JsonProcessingException e) {
@@ -81,9 +82,9 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 				LoggerFactory.getLogger(getClass()).error(ret, e);
 			}
 		} else {
-			ret = template.process("error", em);
+			ret = template.process(Fields.ERROR, em);
 		}
-		return Response.status(em.getHttpCode()).entity(ret).type(mt).build();
+		return Response.status(em.getHttpcode()).entity(ret).type(mt).build();
 	}
 	
 	private final static Set<MediaType> MEDIA_SUPPORTED = new HashSet<>(Arrays.asList(

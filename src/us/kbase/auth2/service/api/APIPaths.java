@@ -2,9 +2,13 @@ package us.kbase.auth2.service.api;
 
 public class APIPaths {
 
+	//TODO JAVADOC
+	
 	private static final String SEP = "/";
 	private static final String TOKEN = "token";
 	private static final String USERS = "users";
+	public static final String PREFIX = "prefix";
+	private static final String PREFIX_PARAM = "{" + PREFIX + "}";
 	
 	private static final String API = "/api";
 	private static final String API_V2 = API + "/V2";
@@ -20,7 +24,7 @@ public class APIPaths {
 	public static final String API_V2_TOKEN = API_V2 + SEP + TOKEN;
 	
 	public static final String API_V2_USERS = API_V2 + SEP + USERS;
-	public static final String USERS_SEARCH = "search/{prefix}";
+	public static final String USERS_SEARCH = "search" + SEP + PREFIX_PARAM;
 	
 	public static final String API_V2_ME = API_V2 + SEP + "me";
 }

@@ -63,7 +63,8 @@ public class LocalAccounts {
 	@Template(name = "/locallogin")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, String> login(@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN_RESULT));
+		return ImmutableMap.of(Fields.URL_LOGIN,
+				relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN_RESULT));
 	}
 	
 	//TODO UI will need ajax version or at least something in the body that says a reset is required
@@ -73,10 +74,10 @@ public class LocalAccounts {
 	public Response loginResult(
 			@Context final HttpServletRequest req,
 			@FormParam(Fields.USER) final String userName,
-			@FormParam("pwd") String pwd, //char makes Jersey puke
+			@FormParam(Fields.PASSWORD) String pwd, //char makes Jersey puke
 			//checkbox, so "on" = checked, null = not checked
 			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn,
-			@FormParam("customcontext") final String customContext)
+			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext)
 			throws AuthStorageException, MissingParameterException,
 			AuthenticationException, IllegalParameterException,
 			UnauthorizedException {
@@ -84,7 +85,7 @@ public class LocalAccounts {
 			throw new MissingParameterException(Fields.USER);
 		}
 		if (pwd == null || pwd.trim().isEmpty()) {
-			throw new MissingParameterException("pwd");
+			throw new MissingParameterException(Fields.PASSWORD);
 		}
 		final Password cpwd = new Password(pwd.toCharArray());
 		pwd = null; // try to get pwd GC'd as quickly as possible
@@ -94,7 +95,7 @@ public class LocalAccounts {
 		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd, tcc);
 		//TODO LOG log
 		if (llr.isPwdResetRequired()) {
-			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?user=" +
+			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?" + Fields.USER + "=" +
 					llr.getUserName().get().getName())).build();
 		}
 		return Response.seeOther(toURI(UIPaths.ME_ROOT))
@@ -109,7 +110,8 @@ public class LocalAccounts {
 	public Map<String, Object> resetPasswordStart(
 			@QueryParam(Fields.USER) final String user,
 			@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET_RESULT),
+		return ImmutableMap.of(Fields.URL_RESET,
+					relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET_RESULT),
 				Fields.USER, user == null ? "" : user);
 	}
 	
@@ -118,8 +120,8 @@ public class LocalAccounts {
 	@Path(UIPaths.LOCAL_RESET_RESULT)
 	public Response resetPassword(
 			@FormParam(Fields.USER) final String userName,
-			@FormParam("pwdold") String pwdold,
-			@FormParam("pwdnew") String pwdnew)
+			@FormParam(Fields.PASSWORD_OLD) String pwdold,
+			@FormParam(Fields.PASSWORD_NEW) String pwdnew)
 			throws MissingParameterException, IllegalParameterException,
 				AuthenticationException, UnauthorizedException, AuthStorageException,
 				IllegalPasswordException {
@@ -127,10 +129,10 @@ public class LocalAccounts {
 			throw new MissingParameterException(Fields.USER);
 		}
 		if (pwdold == null || pwdold.trim().isEmpty()) {
-			throw new MissingParameterException("pwdold");
+			throw new MissingParameterException(Fields.PASSWORD_OLD);
 		}
 		if (pwdnew == null || pwdnew.trim().isEmpty()) {
-			throw new MissingParameterException("pwdnew");
+			throw new MissingParameterException(Fields.PASSWORD_NEW);
 		}
 		final Password cpwdold = new Password(pwdold.toCharArray());
 		final Password cpwdnew = new Password(pwdnew.toCharArray());

@@ -28,6 +28,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.service.common.Fields;
 
 @Path(APIPaths.API_V2_USERS)
 public class Users {
@@ -45,7 +46,7 @@ public class Users {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, String> getUsers(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@QueryParam("list") final String users)
+			@QueryParam(Fields.LIST) final String users)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {
 		final Map<String, String> ret = new HashMap<>();
@@ -74,8 +75,8 @@ public class Users {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, String> getUsersByPrefix(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@PathParam("prefix") final String prefix,
-			@QueryParam("fields") final String fields)
+			@PathParam(APIPaths.PREFIX) final String prefix,
+			@QueryParam(Fields.FIELDS) final String fields)
 			throws InvalidTokenException, NoTokenProvidedException, AuthStorageException,
 			IllegalParameterException {
 		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder();
@@ -87,9 +88,9 @@ public class Users {
 			final String[] splitFields = fields.split(",");
 			for (String s: splitFields) {
 				s = s.trim();
-				if (s.equals("username")) {
+				if (s.equals(Fields.SEARCH_USER)) {
 					build.withSearchOnUserName(true);
-				} else if (s.equals("displayname")) {
+				} else if (s.equals(Fields.SEARCH_DISPLAY)) {
 					build.withSearchOnDisplayName(true);
 				}
 			}

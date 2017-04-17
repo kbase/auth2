@@ -2,7 +2,7 @@
 <html lang="en">
   <head>
     <meta charset='utf-8'>
-    <title>{{httpCode}} {{httpStatus}}</title>
+    <title>{{httpcode}} {{httpstatus}}</title>
   </head>
   <body>
     <p>Note that in a proper UI, the error message and exception should be HTML-escaped.</p>
@@ -10,25 +10,25 @@
     Gee whiz, I sure am sorry, but an error occurred. Gosh!
     </p>
     Timestamp: {{time}}<br/>
-    {{#callID}}
-        Call ID: {{callID}}</br>
-    {{/callID}}
-    Http code: {{httpCode}}<br/>
-    Http status: {{httpStatus}}<br/>
-    {{#appCode}}
-        Application code: {{appCode}}</br>
-    {{/appCode}}
-    {{#appError}}
-        Application error: {{appError}}</br>
-    {{/appError}}
+    {{#callid}}
+        Call ID: {{callid}}</br>
+    {{/callid}}
+    Http code: {{httpcode}}<br/>
+    Http status: {{httpstatus}}<br/>
+    {{#appcode}}
+        Application code: {{appcode}}</br>
+    {{/appcode}}
+    {{#apperror}}
+        Application error: {{apperror}}</br>
+    {{/apperror}}
     Message: {{message}}<br/>
-    {{#hasException}}
+    {{#hasexception}}
     Exception:<br/>
     <pre>
-    {{#exceptionLines}}
+    {{#exceptionlines}}
         {{{.}}}
-    {{/exceptionLines}}
+    {{/exceptionlines}}
     </pre>
-    {{/hasException}}
+    {{/hasexception}}
   </body>
 </html>

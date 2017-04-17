@@ -54,21 +54,21 @@ public class Me {
 		final AuthUser u = auth.getUser(getToken(token));
 		final Map<String, Object> ret = new HashMap<String, Object>();
 		ret.put(Fields.USER, u.getUserName().getName());
-		ret.put("local", u.isLocal());
-		ret.put("display", u.getDisplayName().getName());
-		ret.put("email", u.getEmail().getAddress());
-		ret.put("created", u.getCreated().toEpochMilli());
+		ret.put(Fields.LOCAL, u.isLocal());
+		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
+		ret.put(Fields.EMAIL, u.getEmail().getAddress());
+		ret.put(Fields.CREATED, u.getCreated().toEpochMilli());
 		final Optional<Instant> ll = u.getLastLogin();
-		ret.put("lastlogin", ll.isPresent() ? ll.get().toEpochMilli() : null);
-		ret.put("customroles", u.getCustomRoles());
+		ret.put(Fields.LAST_LOGIN, ll.isPresent() ? ll.get().toEpochMilli() : null);
+		ret.put(Fields.CUSTOM_ROLES, u.getCustomRoles());
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();
 			role.put(Fields.ID, r.getID());
-			role.put("desc", r.getDescription());
+			role.put(Fields.DESCRIPTION, r.getDescription());
 			roles.add(role);
 		}
-		ret.put("roles", roles);
+		ret.put(Fields.ROLES, roles);
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put(Fields.IDENTITIES, idents);
 		for (final RemoteIdentity ri: u.getIdentities()) {
@@ -89,8 +89,8 @@ public class Me {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void updateForm(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
+			@FormParam(Fields.DISPLAY) final String displayName,
+			@FormParam(Fields.EMAIL) final String email)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getToken(token), displayName, email);
@@ -103,6 +103,6 @@ public class Me {
 			final Map<String, String> params)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
 			IllegalParameterException, UnauthorizedException {
-		updateUser(auth, getToken(token), params.get("display"), params.get("email"));
+		updateUser(auth, getToken(token), params.get(Fields.DISPLAY), params.get(Fields.EMAIL));
 	}
 }
