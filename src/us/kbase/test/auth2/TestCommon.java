@@ -218,4 +218,8 @@ public class TestCommon {
 		m.setAccessible(true);
 		return (Map<String, String>) m.get(unmodifiable);
 	}
+	
+	public static String getCurrentMethodName() {
+		return Thread.currentThread().getStackTrace()[2].getMethodName();
+	}
 }

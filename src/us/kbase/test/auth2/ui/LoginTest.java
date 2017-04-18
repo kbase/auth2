@@ -5,8 +5,11 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
 import java.util.Map;
 
 import javax.ws.rs.client.Client;
@@ -14,6 +17,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 
+import org.apache.commons.io.IOUtils;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 import org.junit.AfterClass;
@@ -23,6 +27,8 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import difflib.DiffUtils;
+import difflib.Patch;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
@@ -108,6 +114,29 @@ public class LoginTest {
 		deploy.toFile().deleteOnExit();
 		System.out.println("Generated temporary config file " + deploy);
 		return deploy.toAbsolutePath();
+	}
+	
+	private String getTestExpectedFile(final String methodName) throws Exception {
+		final String expectedFile = getClass().getSimpleName() + "_" + methodName;
+		final InputStream is = getClass().getResourceAsStream(expectedFile);
+		return IOUtils.toString(is);
+	}
+	
+	@Test
+	public void startDisplayLoginDisabled() throws Exception {
+		// returns crappy html only
+		final Client cli = ClientBuilder.newClient();
+		final WebTarget wt = cli.target(host + "/login/");
+		final String res = wt.request().get().readEntity(String.class);
+		
+		assertNoDiffs(res, getTestExpectedFile(TestCommon.getCurrentMethodName()));
+	}
+
+	private void assertNoDiffs(final String got, final String expected) throws Exception {
+		final Patch<String> diff = DiffUtils.diff(
+				Arrays.asList(expected.split("\r\n?|\n")),
+				Arrays.asList(got.split("\r\n?|\n")));
+		assertThat("output does not match", diff.getDeltas(), is(Collections.emptyList()));
 	}
 	
 	@Test
