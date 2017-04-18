@@ -356,14 +356,19 @@ public class AuthUser {
 	
 	/** An AuthUser builder. This builder can be used to build either local users
 	 * or standard users, but the local users will not include password related information.
-	 * @param userName the user's user name.
 	 * @author gaprice@lbl.gov
 	 *
 	 */
 	public static class Builder extends AbstractBuilder<Builder> {
 		
 		private final Set<RemoteIdentity> identities = new HashSet<>();
-		
+
+		/**
+		 *
+		 * @param userName the user's user name.
+		 * @param displayName
+		 * @param creationDate
+		 */
 		private Builder(
 				final UserName userName,
 				final DisplayName displayName,

@@ -10,8 +10,8 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 /** An admin defined role that can be assigned to a user.
  * 
- * A role consists of an ID that is a < 100 character string consisting of ASCII letters, digits,
- * and the underscore, and a description that is a < 1000 character string.
+ * A role consists of an ID that is {@literal a < 100} character string consisting of ASCII letters, digits,
+ * and the underscore, and a description that is {@literal a < 1000} character string.
  * @author gaprice@lbl.gov
  *
  */

@@ -80,7 +80,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 
 /** The main class for the Authentication application.
  * 
- * Handles creating accounts, login & un/linking accounts via OAuth2 flow, creating, deleting, and
+ * Handles creating accounts, login and un/linking accounts via OAuth2 flow, creating, deleting, and
  * validating tokens, handling internal and external configuration, managing user roles and
  * passwords, and searching for users.
  * 
