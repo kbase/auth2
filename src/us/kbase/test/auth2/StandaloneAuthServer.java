@@ -14,7 +14,6 @@ public class StandaloneAuthServer {
 	private Integer port = null;
 	private Server server;
 	
-	//TODO NOW rename to standalone auth server
 	public StandaloneAuthServer(final String configClass) throws Exception {
 		
 		AuthenticationService.setConfig(configClass);

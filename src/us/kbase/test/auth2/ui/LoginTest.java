@@ -42,6 +42,8 @@ public class LoginTest {
 	
 	private static final String DB_NAME = "test_login_ui";
 	
+	private static final Client CLI = ClientBuilder.newClient();
+	
 	private static MongoStorageTestManager manager = null;
 	private static StandaloneAuthServer server = null;
 	private static int port = -1;
@@ -115,36 +117,22 @@ public class LoginTest {
 		System.out.println("Generated temporary config file " + deploy);
 		return deploy.toAbsolutePath();
 	}
-	
-	private String getTestExpectedFile(final String methodName) throws Exception {
-		final String expectedFile = getClass().getSimpleName() + "_" + methodName;
-		final InputStream is = getClass().getResourceAsStream(expectedFile);
-		return IOUtils.toString(is);
-	}
-	
+
 	@Test
 	public void startDisplayLoginDisabled() throws Exception {
 		// returns crappy html only
-		final Client cli = ClientBuilder.newClient();
-		final WebTarget wt = cli.target(host + "/login/");
+		final WebTarget wt = CLI.target(host + "/login/");
 		final String res = wt.request().get().readEntity(String.class);
 		
-		assertNoDiffs(res, getTestExpectedFile(TestCommon.getCurrentMethodName()));
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(), TestCommon.getCurrentMethodName()));
 	}
 
-	private void assertNoDiffs(final String got, final String expected) throws Exception {
-		final Patch<String> diff = DiffUtils.diff(
-				Arrays.asList(expected.split("\r\n?|\n")),
-				Arrays.asList(got.split("\r\n?|\n")));
-		assertThat("output does not match", diff.getDeltas(), is(Collections.emptyList()));
-	}
-	
 	@Test
 	public void suggestName() {
-		final Client cli = ClientBuilder.newClient();
-		final WebTarget wt = cli.target(host + "/login/suggestname/***FOOTYPANTS***");
-		final Response r = wt.request().get();
-		assertThat("incorrect expected name", r.readEntity(Map.class),
+		final WebTarget wt = CLI.target(host + "/login/suggestname/***FOOTYPANTS***");
+		@SuppressWarnings("unchecked")
+		final Map<String, String> res = wt.request().get().readEntity(Map.class);
+		assertThat("incorrect expected name", res,
 				is(ImmutableMap.of("availablename", "footypants")));
 	}
 
