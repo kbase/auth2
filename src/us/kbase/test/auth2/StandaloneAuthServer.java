@@ -9,13 +9,13 @@ import org.glassfish.jersey.servlet.ServletContainer;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.service.AuthenticationService;
 
-public class StartAuthServer {
+public class StandaloneAuthServer {
 
 	private Integer port = null;
 	private Server server;
 	
 	//TODO NOW rename to standalone auth server
-	public StartAuthServer(final String configClass) throws Exception {
+	public StandaloneAuthServer(final String configClass) throws Exception {
 		
 		AuthenticationService.setConfig(configClass);
 	}
@@ -47,9 +47,9 @@ public class StartAuthServer {
 	}
 	
 	public static class ServerThread extends Thread {
-		private final StartAuthServer server;
+		private final StandaloneAuthServer server;
 		
-		public ServerThread(final StartAuthServer server) {
+		public ServerThread(final StandaloneAuthServer server) {
 			this.server = server;
 		}
 		
@@ -64,6 +64,6 @@ public class StartAuthServer {
 	}
 	
 	public static void main(String[] args) throws Exception {
-		new StartAuthServer(KBaseAuthConfig.class.getName()).start(Integer.valueOf(args[0]));
+		new StandaloneAuthServer(KBaseAuthConfig.class.getName()).start(Integer.valueOf(args[0]));
 	}
 }

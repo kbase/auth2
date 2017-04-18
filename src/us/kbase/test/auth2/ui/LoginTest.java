@@ -26,9 +26,9 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
-import us.kbase.test.auth2.StartAuthServer;
+import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
-import us.kbase.test.auth2.StartAuthServer.ServerThread;
+import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 
 public class LoginTest {
 	
@@ -37,7 +37,7 @@ public class LoginTest {
 	private static final String DB_NAME = "test_login_ui";
 	
 	private static MongoStorageTestManager manager = null;
-	private static StartAuthServer server = null;
+	private static StandaloneAuthServer server = null;
 	private static int port = -1;
 	private static String host = null;
 	
@@ -47,7 +47,7 @@ public class LoginTest {
 		manager = new MongoStorageTestManager(DB_NAME);
 		final Path cfgfile = generateTempConfigFile();
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
-		server = new StartAuthServer(KBaseAuthConfig.class.getName());
+		server = new StandaloneAuthServer(KBaseAuthConfig.class.getName());
 		new ServerThread(server).start();
 		System.out.println("Main thread waiting for server to start up");
 		while (server.getPort() == null) {
