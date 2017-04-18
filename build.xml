@@ -10,7 +10,6 @@
   <property name="package" value="KBase authentication service"/>
   <property name="src.dir" location="src"/>
   <property name="src.tests.dir" location="src"/>
-  <property name="lib" location="lib"/>
   <property name="dist.dir" location="dist"/>
   <property name="jar.dir" location="../jars/lib/jars/"/>
   <property name="classes.dir" location="classes"/>
@@ -202,7 +201,7 @@
              author="false"
              classpathref="compile.classpath"
              destdir="${doc.dir}"
-             sourcepath="${src}"
+             sourcepath="${src.dir}"
              excludepackagenames="us.kbase.test.*"
              nodeprecated="false"
              nodeprecatedlist="false"
