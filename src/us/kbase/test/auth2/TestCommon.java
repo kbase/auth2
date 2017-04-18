@@ -7,6 +7,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -54,11 +55,14 @@ public class TestCommon {
 	private static Map<String, String> testConfig = null;
 	
 	public static void stfuLoggers() {
-//		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
-//				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
-//			.setLevel(ch.qos.logback.classic.Level.OFF);
 		java.util.logging.Logger.getLogger("com.mongodb")
-			.setLevel(java.util.logging.Level.OFF);
+				.setLevel(java.util.logging.Level.OFF);
+		// these don't work to shut off the jetty logger
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		System.setProperty("org.eclipse.jetty.LEVEL", "OFF");
+		System.setProperty("us.kbase.LEVEL", "OFF");
 	}
 	
 	public static void assertExceptionCorrect(
@@ -201,5 +205,17 @@ public class TestCommon {
 				db.getCollection(name).deleteMany(new Document());
 			}
 		}
+	}
+	
+	//http://quirkygba.blogspot.com/2009/11/setting-environment-variables-in-java.html
+	@SuppressWarnings("unchecked")
+	public static Map<String, String> getenv()
+			throws NoSuchFieldException, SecurityException,
+			IllegalArgumentException, IllegalAccessException {
+		Map<String, String> unmodifiable = System.getenv();
+		Class<?> cu = unmodifiable.getClass();
+		Field m = cu.getDeclaredField("m");
+		m.setAccessible(true);
+		return (Map<String, String>) m.get(unmodifiable);
 	}
 }

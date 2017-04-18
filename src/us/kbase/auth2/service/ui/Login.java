@@ -136,7 +136,7 @@ public class Login {
 		if (suggname.isPresent()) {
 			retname = suggname.get().getName();
 		} else {
-			retname = null;
+			retname = null; // this is basically impossible to test
 		}
 		return ImmutableMap.of(Fields.AVAILABLE_NAME, retname);
 	}
