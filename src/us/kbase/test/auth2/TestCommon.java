@@ -6,6 +6,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
@@ -239,6 +240,9 @@ public class TestCommon {
 			throws Exception {
 		final String expectedFile = clazz.getSimpleName() + "_" + methodName;
 		final InputStream is = clazz.getResourceAsStream(expectedFile);
+		if (is == null) {
+			throw new FileNotFoundException(expectedFile);
+		}
 		return IOUtils.toString(is);
 	}
 }

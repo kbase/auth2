@@ -1,0 +1,22 @@
+<html>
+<body>
+
+<h3>Login with:</h3>
+
+<form action="start" method="post">
+	<input type="radio" name="provider" value="prov1"/>prov1<br/>
+	<input type="radio" name="provider" value="prov2"/>prov2<br/>
+	<input type="checkbox" name="stayloggedin"/> Keep me logged in<br/>
+	Redirect after login: <input type="text" name="redirecturl"/><br/>
+	<input type="submit" value="Submit"/>
+</form>
+
+
+You will be redirected to the identity provider website where you will be asked
+to allow us to view your account information - your account ID, email
+address, and name.<br/>
+You will have 30 minutes to complete the identity provider's login process.
+
+
+</body>
+</html>

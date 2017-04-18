@@ -668,8 +668,8 @@ public class Admin {
 			throws MissingParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		if (provname == null || provname.isEmpty()) {
-			throw new MissingParameterException("provname");
+		if (provname == null || provname.trim().isEmpty()) {
+			throw new MissingParameterException(Fields.PROVIDER);
 		}
 		auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				AuthConfigUpdate.getBuilder().withProviderUpdate(provname, new ProviderUpdate(
