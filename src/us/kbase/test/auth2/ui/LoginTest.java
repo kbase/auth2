@@ -2,7 +2,6 @@ package us.kbase.test.auth2.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -38,6 +37,10 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthExternalConfig;
@@ -160,10 +163,14 @@ public class LoginTest {
 	private void enableLogin(final IncomingToken admintoken) {
 		final Form allowloginform = new Form();
 		allowloginform.param("allowlogin", "true");
+		setAdminBasic(admintoken, allowloginform);
+	}
+
+	private void setAdminBasic(final IncomingToken admintoken, final Form form) {
 		final Response r = CLI.target(host + "/admin/config/basic").request()
 				.cookie(COOKIE_NAME, admintoken.getToken())
-				.post(Entity.entity(allowloginform, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-		assertThat("failed to set allow login", r.getStatus(), is(204));
+				.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+		assertThat("failed to set config", r.getStatus(), is(204));
 	}
 
 	private void enableProvider(final IncomingToken admintoken, final String prov) {
@@ -175,6 +182,12 @@ public class LoginTest {
 				.post(Entity.entity(providerform,
 						MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 		assertThat("failed to set provider config", rprov.getStatus(), is(204));
+	}
+	
+	private void enableRedirect(final IncomingToken adminToken, final String redirectURLPrefix) {
+		final Form redirectform = new Form();
+		redirectform.param("allowedloginredirect", redirectURLPrefix);
+		setAdminBasic(adminToken, redirectform);
 	}
 
 	@Test
@@ -227,12 +240,57 @@ public class LoginTest {
 	
 	@Test
 	public void loginStartMinimalInput() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+
+		loginStart(form, expectedsession, expectedredirect);
+	}
+	
+	@Test
+	public void loginStartEmptyStrings() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		form.param("redirecturl", "  \t   \n   ");
+		form.param("stayloggedin", "  \t   \n   ");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+
+		loginStart(form, expectedsession, expectedredirect);
+	}
+	
+	@Test
+	public void loginStartWithRedirectAndNonSessionCookie() throws Exception {
+		final String redirect = "https://foobar.com/thingy/stuff";
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		form.param("redirecturl", redirect);
+		form.param("stayloggedin", "f");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "false",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
+				"/login", null, "redirect url", 30 * 60, false);
+
+		loginStart(form, expectedsession, expectedredirect);
+	}
+
+	private void loginStart(
+			final Form form,
+			final NewCookie expectedsession,
+			final NewCookie expectedredirect)
+			throws Exception {
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
 		enableLogin(admintoken);
 		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
 		
 		final String url = "https://foo.com/someurlorother";
 		
@@ -240,8 +298,6 @@ public class LoginTest {
 		when(provmock.getLoginURL(argThat(stateMatcher), eq(false))).thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
-		final Form form = new Form();
-		form.param("provider", "prov1");
 		final Response res = wt.request().post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 		assertThat("incorrect status code", res.getStatus(), is(303));
@@ -253,16 +309,69 @@ public class LoginTest {
 		assertThat("incorrect state cookie", state, is(expectedstate));
 		
 		final NewCookie session = res.getCookies().get("issessiontoken");
-		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
-				"/login", null, "session choice", 30 * 60, false);
 		assertThat("incorrect session cookie", session, is(expectedsession));
 		
 		final NewCookie redirect = res.getCookies().get("loginredirect");
-		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
-				"/login", null, "redirect url", 0, false);
 		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
+	}
+	
+	@Test
+	public void loginStartFailNoProvider() throws Exception {
+		failLoginStart(new Form(), 400, "Bad Request", new MissingParameterException("provider"));
 		
-		//TODO NOW add test with session = false & redirect
+		final Form form = new Form();
+		form.param("provider", null);
+		failLoginStart(form, 400, "Bad Request", new MissingParameterException("provider"));
+		
+		final Form form2 = new Form();
+		form2.param("provider", "   \t  \n   ");
+		failLoginStart(form2, 400, "Bad Request", new MissingParameterException("provider"));
+	}
+	
+	
+	@Test
+	public void loginStartFailNoSuchProvider() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "prov3");
+		failLoginStart(form, 401, "Unauthorized", new NoSuchIdentityProviderException("prov3"));
+	}
+	
+	@Test
+	public void loginStartFailBadRedirect() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "fake");
+		form.param("redirecturl", "this ain't no gotdamned url");
+		failLoginStart(form, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: this ain't no gotdamned url"));
+		
+		final Form form2 = new Form();
+		form2.param("provider", "fake");
+		form2.param("redirecturl", "https://foobar.com/stuff/thingy");
+		failLoginStart(form2, 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled"));
+		
+		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		failLoginStart(form2, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+	}
+
+	private void failLoginStart(
+			final Form form,
+			final int expectedHTTPCode,
+			final String expectedHTTPError,
+			final AuthException e)
+			throws Exception {
+		final WebTarget wt = CLI.target(host + "/login/start");
+		final Response res = wt.request().header("Accept", MediaType.APPLICATION_JSON).post(
+				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+
+		assertThat("incorrect status code", res.getStatus(), is(expectedHTTPCode));
+
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> error = res.readEntity(Map.class);
+		
+		UITestUtils.assertErrorCorrect(expectedHTTPCode, expectedHTTPError, e, error);
 	}
 
 }

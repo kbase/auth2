@@ -59,6 +59,7 @@ import us.kbase.auth2.lib.LoginToken;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -152,9 +153,7 @@ public class Login {
 			throws IllegalParameterException, AuthStorageException,
 			NoSuchIdentityProviderException, MissingParameterException {
 		
-		if (provider == null || provider.trim().isEmpty()) {
-			throw new MissingParameterException(Fields.PROVIDER);
-		}
+		Utils.checkString(provider, Fields.PROVIDER);
 		
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
@@ -171,7 +170,10 @@ public class Login {
 	
 	private URL getRedirectURL(final String redirect)
 			throws AuthStorageException, IllegalParameterException {
-		if (redirect != null && !redirect.trim().isEmpty()) {
+		final URL retRedirect;
+		if (nullOrEmpty(redirect)) {
+			retRedirect = null;
+		} else {
 			final AuthExternalConfig<State> ext;
 			try {
 				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
@@ -188,19 +190,18 @@ public class Login {
 				if (!redirect.startsWith(
 						ext.getAllowedLoginRedirectPrefix().getItem().toString())) {
 					throw new IllegalParameterException(
-							"Illegal redirect url: " + redirect);
+							"Illegal redirect URL: " + redirect);
 				}
 			} else {
 				throw new IllegalParameterException("Post-login redirects are not enabled");
 			}
-			return url;
-		} else {
-			return null;
+			retRedirect = url;
 		}
+		return retRedirect;
 	}
 
 	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
-		final boolean noRedir = redirect == null || redirect.trim().isEmpty();
+		final boolean noRedir = nullOrEmpty(redirect);
 		return new NewCookie(new Cookie(REDIRECT_COOKIE,
 				noRedir ? "no redirect" : redirect, UIPaths.LOGIN_ROOT, null),
 				"redirect url",

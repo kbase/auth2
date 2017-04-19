@@ -13,6 +13,7 @@ import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -244,5 +245,11 @@ public class TestCommon {
 			throw new FileNotFoundException(expectedFile);
 		}
 		return IOUtils.toString(is);
+	}
+	
+	public static void assertCloseToNow(final long epochMillis) {
+		final long now = Instant.now().toEpochMilli();
+		assertThat(String.format("time (%s) not within 10000ms of now: %s", epochMillis, now),
+				Math.abs(epochMillis - now) < 10000, is(true));
 	}
 }
