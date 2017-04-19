@@ -18,7 +18,7 @@ public class GitCommit {
 		String commit = null;
 		if (is == null) {
 			commit = "Missing git commit file " + COMMIT_FILE_NAME +
-					", should be in us/kbase/auth2";
+					", should be in " + GitCommit.class.getPackage().getName();
 		} else {
 			final Scanner s = new Scanner(is);
 			s.useDelimiter("\\A");
