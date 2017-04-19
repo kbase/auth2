@@ -14,6 +14,7 @@ public class Fields {
 	
 	public static final String VERSION = "version";
 	public static final String SERVER_TIME = "servertime";
+	public static final String GIT_HASH = "gitcommithash";
 	
 	/* login */
 	
