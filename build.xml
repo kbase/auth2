@@ -156,6 +156,10 @@
         </patternset>
       </fileset>
     </copy>
+    <!-- add git commit to file -->
+    <exec executable="git" output="${classes}/us/kbase/auth2/gitcommit">
+      <arg line="rev-parse HEAD"/>
+    </exec>
     <!-- Make main jar file-->
     <jar destfile="${dist}/${jar.file}"
          basedir="${classes}"
