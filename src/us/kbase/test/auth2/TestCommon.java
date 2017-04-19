@@ -6,21 +6,28 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
+import java.lang.reflect.Field;
 import java.net.ServerSocket;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.bson.Document;
 import org.ini4j.Ini;
 
 import com.mongodb.client.MongoDatabase;
 
+import difflib.DiffUtils;
+import difflib.Patch;
 import us.kbase.auth2.lib.Password;
 import us.kbase.common.test.TestException;
 
@@ -54,11 +61,14 @@ public class TestCommon {
 	private static Map<String, String> testConfig = null;
 	
 	public static void stfuLoggers() {
-//		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
-//				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
-//			.setLevel(ch.qos.logback.classic.Level.OFF);
 		java.util.logging.Logger.getLogger("com.mongodb")
-			.setLevel(java.util.logging.Level.OFF);
+				.setLevel(java.util.logging.Level.OFF);
+		// these don't work to shut off the jetty logger
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		System.setProperty("org.eclipse.jetty.LEVEL", "OFF");
+		System.setProperty("us.kbase.LEVEL", "OFF");
 	}
 	
 	public static void assertExceptionCorrect(
@@ -150,7 +160,7 @@ public class TestCommon {
 	}
 
 	public static boolean useWiredTigerEngine() {
-		return "true".equals(System.getProperty(MONGO_USE_WIRED_TIGER));
+		return "true".equals(getTestProperty(MONGO_USE_WIRED_TIGER));
 	}
 	
 	private static String getTestProperty(final String propertyKey) {
@@ -201,5 +211,38 @@ public class TestCommon {
 				db.getCollection(name).deleteMany(new Document());
 			}
 		}
+	}
+	
+	//http://quirkygba.blogspot.com/2009/11/setting-environment-variables-in-java.html
+	@SuppressWarnings("unchecked")
+	public static Map<String, String> getenv()
+			throws NoSuchFieldException, SecurityException,
+			IllegalArgumentException, IllegalAccessException {
+		Map<String, String> unmodifiable = System.getenv();
+		Class<?> cu = unmodifiable.getClass();
+		Field m = cu.getDeclaredField("m");
+		m.setAccessible(true);
+		return (Map<String, String>) m.get(unmodifiable);
+	}
+	
+	public static String getCurrentMethodName() {
+		return Thread.currentThread().getStackTrace()[2].getMethodName();
+	}
+	
+	public static void assertNoDiffs(final String got, final String expected) throws Exception {
+		final Patch<String> diff = DiffUtils.diff(
+				Arrays.asList(expected.split("\r\n?|\n")),
+				Arrays.asList(got.split("\r\n?|\n")));
+		assertThat("output does not match", diff.getDeltas(), is(Collections.emptyList()));
+	}
+	
+	public static String getTestExpectedData(final Class<?> clazz, final String methodName)
+			throws Exception {
+		final String expectedFile = clazz.getSimpleName() + "_" + methodName + ".testdata";
+		final InputStream is = clazz.getResourceAsStream(expectedFile);
+		if (is == null) {
+			throw new FileNotFoundException(expectedFile);
+		}
+		return IOUtils.toString(is);
 	}
 }

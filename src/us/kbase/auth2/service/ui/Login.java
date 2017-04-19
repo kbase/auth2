@@ -3,6 +3,7 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
@@ -136,7 +137,7 @@ public class Login {
 		if (suggname.isPresent()) {
 			retname = suggname.get().getName();
 		} else {
-			retname = null;
+			retname = null; // this is basically impossible to test
 		}
 		return ImmutableMap.of(Fields.AVAILABLE_NAME, retname);
 	}
@@ -161,13 +162,13 @@ public class Login {
 		
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
-				.cookie(getSessionChoiceCookie(stayLoggedIn == null,
+				.cookie(getSessionChoiceCookie(nullOrEmpty(stayLoggedIn),
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
 				.build();
 	}
-
+	
 	private URL getRedirectURL(final String redirect)
 			throws AuthStorageException, IllegalParameterException {
 		if (redirect != null && !redirect.trim().isEmpty()) {

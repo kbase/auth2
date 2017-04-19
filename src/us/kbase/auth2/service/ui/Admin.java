@@ -1,6 +1,7 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
@@ -668,8 +669,8 @@ public class Admin {
 			throws MissingParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		if (provname == null || provname.isEmpty()) {
-			throw new MissingParameterException("provname");
+		if (provname == null || provname.trim().isEmpty()) {
+			throw new MissingParameterException(Fields.PROVIDER);
 		}
 		auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				AuthConfigUpdate.getBuilder().withProviderUpdate(provname, new ProviderUpdate(
@@ -731,9 +732,4 @@ public class Admin {
 		}
 		return l1 * l2;
 	}
-
-	private boolean nullOrEmpty(final String s) {
-		return s == null || s.isEmpty();
-	}
-
 }
