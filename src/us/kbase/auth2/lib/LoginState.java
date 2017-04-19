@@ -195,6 +195,7 @@ public class LoginState {
 	 * login attempt.
 	 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
 	 * @param expires the date the login state expires.
+	 * @return the builder.
 	 */
 	public static Builder getBuilder(
 			final String provider,

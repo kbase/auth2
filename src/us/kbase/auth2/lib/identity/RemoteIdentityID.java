@@ -41,6 +41,8 @@ public class RemoteIdentityID {
 	 *  
 	 *  The ID is subjected to a MD5 digest to prevent abstraction-challenged programmers from
 	 *  parsing the ID.
+	 *  
+	 *  @return the ID.
 	 */
 	public String getID() {
 		if (memoizedID == null) {

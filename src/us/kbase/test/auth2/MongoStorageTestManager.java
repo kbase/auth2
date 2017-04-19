@@ -31,7 +31,7 @@ public class MongoStorageTestManager {
 		mongo = new MongoController(TestCommon.getMongoExe().toString(),
 				TestCommon.getTempDir(),
 				TestCommon.useWiredTigerEngine());
-		System.out.println(String.format("Testing against mongo excutable %s on port %s",
+		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				TestCommon.getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());
 		db = mc.getDatabase(dbName);

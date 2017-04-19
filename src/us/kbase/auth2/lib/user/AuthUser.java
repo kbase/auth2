@@ -356,7 +356,6 @@ public class AuthUser {
 	
 	/** An AuthUser builder. This builder can be used to build either local users
 	 * or standard users, but the local users will not include password related information.
-	 * @param userName the user's user name.
 	 * @author gaprice@lbl.gov
 	 *
 	 */

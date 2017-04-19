@@ -101,6 +101,7 @@ public class Utils {
 	/** Throws a null pointer exception if any elements in a collection are null.
 	 * @param col the collection to check.
 	 * @param message the exception message.
+	 * @param <T> the type of the elements in the collection.
 	 */
 	public static <T> void noNulls(final Collection<T> col, final String message) {
 		for (final T item: col) {
