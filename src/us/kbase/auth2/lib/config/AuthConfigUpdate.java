@@ -256,6 +256,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 	}
 	
 	/** Get a builder for an authorization configuration update.
+	 * @param <T> the type of the external configuration class to include in the update, if any.
 	 * @return a builder.
 	 */
 	public static <T extends ExternalConfig> Builder<T> getBuilder() {

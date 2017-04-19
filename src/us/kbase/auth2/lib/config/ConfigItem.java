@@ -20,6 +20,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	/** Get a configuration state action that, rather than being a true action, represents the
 	 * state of the configuration item.
 	 * @param item the item to associate with the action.
+	 * @param <T> the type of the item in this configuration item.
 	 * @return a new ConfigItem with the state "action".
 	 */
 	public static <T> ConfigItem<T, State> state(T item) {
@@ -30,6 +31,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	/** Get an empty configuration state action that, rather than being a true action, represents
 	 * the state of the configuration item. This configuration item has no item associated with
 	 * the action.
+	 * @param <T> the type of the item the empty state represents.
 	 * @return an empty ConfigItem with the state "action".
 	 */
 	public static <T> ConfigItem<T, State> emptyState() {
@@ -37,6 +39,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	}
 	
 	/** Get a remove action. There is never an item associated with this type of action.
+	 * @param <T> the type of the item to be removed.
 	 * @return a new ConfigItem with the remove action.
 	 */
 	public static <T> ConfigItem<T, Action> remove() {
@@ -45,6 +48,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	
 	/** Get an action specifying that no action should be taken. There is never an item associated
 	 * with this type of action.
+	 * @param <T> the type of the item upon which no action should be taken.
 	 * @return a new ConfigItem with a no-op action.
 	 */
 	public static <T> ConfigItem<T, Action> noAction() {
@@ -53,6 +57,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	
 	/** Get a set action with an associated item.
 	 * @param item the item to associate with the set action.
+	 * @param <T> the type of the item in this configuration item.
 	 * @return a new ConfigItem with a set action.
 	 */
 	public static <T> ConfigItem<T, Action> set(T item) {

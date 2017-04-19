@@ -39,6 +39,7 @@ public class IdentityProviderConfig {
 	 * login.
 	 * @param linkRedirectURL the url to which the provider should redirect in the process of
 	 * linking accounts.
+	 * @param customConfig any custom configuration to be provided to the identity provider.
 	 * @throws IdentityProviderConfigurationException if any of the inputs were unacceptable.
 	 */
 	public IdentityProviderConfig(

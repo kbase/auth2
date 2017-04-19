@@ -64,6 +64,7 @@ public interface AuthStorage {
 	
 	/** Get the user's credentials.
 	 * @param userName the name of the user.
+	 * @return the user credentials.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 * @throws NoSuchLocalUserException if the local user does not exist.
@@ -395,6 +396,7 @@ public interface AuthStorage {
 	 * @param authConfigUpdate the configuration update.
 	 * @param overwrite whether the new configuration should overwrite the current configuration.
 	 * If false, only new values are stored.
+	 * @param <T> the type of ExternalConfig included in the update.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
@@ -406,6 +408,7 @@ public interface AuthStorage {
 	/** Get the system configuration.
 	 * @param mapper a mapper to transform a map of the external config into an external config
 	 * class.
+	 * @param <T> the type of ExternalConfig to which the external configuration will be mapped.
 	 * @return the sysetem configuration.
 	 * @throws ExternalConfigMappingException if the mapper failed to transform the external config
 	 * map into the external config class.

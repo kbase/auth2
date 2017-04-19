@@ -80,7 +80,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
 
 /** The main class for the Authentication application.
  * 
- * Handles creating accounts, login & un/linking accounts via OAuth2 flow, creating, deleting, and
+ * Handles creating accounts, login and un/linking accounts via OAuth2 flow, creating, deleting, and
  * validating tokens, handling internal and external configuration, managing user roles and
  * passwords, and searching for users.
  * 
@@ -296,6 +296,7 @@ public class Authentication {
 	 * 
 	 * @param pwd the new password for the root account.
 	 * @throws AuthStorageException if updating the root account fails.
+	 * @throws IllegalPasswordException if the supplied password is illegal.
 	 */
 	public void createRoot(final Password pwd)
 			throws AuthStorageException, IllegalPasswordException {
@@ -1720,8 +1721,7 @@ public class Authentication {
 	public TemporaryToken link(
 			final String provider,
 			final String authcode)
-			throws InvalidTokenException, AuthStorageException,
-			MissingParameterException, IdentityRetrievalException,
+			throws AuthStorageException, MissingParameterException, IdentityRetrievalException,
 			NoSuchIdentityProviderException {
 		final Set<RemoteIdentity> ids = getLinkCandidates(getIdentityProvider(provider), authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
@@ -2116,6 +2116,7 @@ public class Authentication {
 	}
 	
 	/** Update the server configuration.
+	 * @param <T> the type of the the ExternalConfig in the update.
 	 * @param token a token for a user with the administrator role.
 	 * @param update the new server configuration.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -2173,6 +2174,8 @@ public class Authentication {
 	}
 	
 	/** Gets the authentication configuration.
+	 * @param <T> the type of the the ExternalConfig to which the authentication external
+	 * configuration will be mapped.
 	 * @param token a token for a user with the administrator role.
 	 * @param mapper a mapper for the external configuration.
 	 * @return the authentication configuration.
@@ -2209,6 +2212,8 @@ public class Authentication {
 	 * 
 	 * This method should not be exposed in a public API.
 	 * 
+	 * @param <T> the type of the the ExternalConfig to which the authentication external
+	 * configuration will be mapped.
 	 * @param mapper a mapper for the external configuration.
 	 * @return the external configuration.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.

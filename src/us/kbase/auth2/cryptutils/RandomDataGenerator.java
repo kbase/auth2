@@ -2,7 +2,7 @@ package us.kbase.auth2.cryptutils;
 
 import java.util.UUID;
 
-/** Generates salts, tokens and temporary passwords randomly.
+/** Generates UUIDs, salts, tokens and temporary passwords randomly.
  * @author gaprice@lbl.gov
  *
  */
@@ -15,7 +15,7 @@ public interface RandomDataGenerator {
 
 	/** Generate a random password consisting of upper and lower case ascii letters excluding
 	 * lower case l and o and uppercase I and O, digits excluding one and zero, and the symbols
-	 * +, !, @, $, %, &, and *.
+	 * {@literal +, !, @, $, %, &, and *}.
 	 * @param length the length of the password to generate, minimum 8.
 	 * @return a temporary password.
 	 */
