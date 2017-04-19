@@ -176,4 +176,8 @@ public class ServiceCommon {
 		}
 		return ret;
 	}
+	
+	public static boolean nullOrEmpty(final String s) {
+		return s == null || s.trim().isEmpty();
+	}
 }

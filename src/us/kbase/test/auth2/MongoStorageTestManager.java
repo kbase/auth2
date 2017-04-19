@@ -40,6 +40,7 @@ public class MongoStorageTestManager {
 		final String version = bi.getString("version");
 		mongoDBVer = Version.valueOf(version);
 		indexVer = mongoDBVer.greaterThanOrEqualTo(Version.forIntegers(3, 4)) ? 2 : 1;
+		reset();
 	}
 	
 	public void destroy() throws Exception {

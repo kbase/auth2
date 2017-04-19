@@ -238,7 +238,7 @@ public class TestCommon {
 	
 	public static String getTestExpectedData(final Class<?> clazz, final String methodName)
 			throws Exception {
-		final String expectedFile = clazz.getSimpleName() + "_" + methodName;
+		final String expectedFile = clazz.getSimpleName() + "_" + methodName + ".testdata";
 		final InputStream is = clazz.getResourceAsStream(expectedFile);
 		if (is == null) {
 			throw new FileNotFoundException(expectedFile);
