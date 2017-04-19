@@ -254,12 +254,12 @@ public class LoginTest {
 		
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
-				"/login/", null, "session choice", 30 * 60, false);
+				"/login", null, "session choice", 30 * 60, false);
 		assertThat("incorrect session cookie", session, is(expectedsession));
 		
 		final NewCookie redirect = res.getCookies().get("loginredirect");
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
-				"/login/", null, "redirect url", 0, false);
+				"/login", null, "redirect url", 0, false);
 		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
 		
 		//TODO NOW add test with session = false & redirect
