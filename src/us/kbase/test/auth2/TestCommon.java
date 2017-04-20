@@ -256,6 +256,10 @@ public class TestCommon {
 				Math.abs(epochMillis - now) < 10000, is(true));
 	}
 	
+	public static void assertCloseToNow(final Instant creationDate) {
+		assertCloseToNow(creationDate.toEpochMilli());
+	}
+	
 	public static void assertCloseTo(final int seconds, final int target, final int range) {
 		assertThat(String.format("time (%s) not within %s sec of target: %s",
 				seconds, range, target),

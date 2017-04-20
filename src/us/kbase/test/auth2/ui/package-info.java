@@ -1,5 +1,4 @@
-/** Test for the UI portion of the code. These tests run as almost end-to-end tests - only the
- * IdentityProvider interface is mocked.
+/** Test for the UI portion of the code.
  * @author gaprice@lbl.gov
  *
  */

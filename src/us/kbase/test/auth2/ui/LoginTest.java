@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.ui;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
@@ -11,13 +12,14 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
-import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -37,11 +39,13 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -52,6 +56,8 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.common.test.RegexMatcher;
@@ -379,8 +385,7 @@ public class LoginTest {
 	
 	@Test
 	public void loginCompleteMinimalInputImmediateLogin() throws Exception {
-		final IdentityProvider provmock = MockIdentityProviderFactory
-				.mocks.get("prov1");
+		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
 		enableLogin(admintoken);
@@ -423,24 +428,21 @@ public class LoginTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
-		final Map<String, Object> apitoken = getTokenFromUI(token.getValue());
+		final StoredToken st = manager.storage.getToken(
+				new IncomingToken(token.getValue()).getHashedToken());
 		
-		assertThat("incorrect token type", apitoken.get("type"), is("Login"));
-		TestCommon.assertCloseToNow((long) apitoken.get("created"));
-		assertThat("incorrect expires", apitoken.get("expires"),
-				is(((long) apitoken.get("created")) + 14 * 24 * 3600 * 1000));
-		assertThat("incorrect id", (String) apitoken.get("id"),
-				is(RegexMatcher.matches(TestCommon.REGEX_UUID)));
-		assertThat("incorrect name", apitoken.get("name"), is((String) null));
-		assertThat("incorrect user", apitoken.get("user"), is("whee"));
-		assertThat("incorrect custom context", apitoken.get("custom"), is(Collections.emptyMap()));
-		assertThat("incorrect os", apitoken.get("os"), is((String) null));
-		assertThat("incorrect osver", apitoken.get("osver"), is((String) null));
-		assertThat("incorrect agent", apitoken.get("agent"), is("Jersey"));
-		assertThat("incorrect agentver", apitoken.get("agentver"), is("2.23.2"));
-		assertThat("incorrect device", apitoken.get("device"), is((String) null));
-		assertThat("incorrect ip", apitoken.get("ip"), is("127.0.0.1"));
+		final TokenCreationContext expectedContext = TokenCreationContext.getBuilder()
+				.withIpAddress(InetAddress.getByName("127.0.0.1"))
+				.withNullableAgent("Jersey", "2.23.2").build();
 		
+		assertThat("incorrect token context", st.getContext(), is(expectedContext));
+		assertThat("incorrect token type", st.getTokenType(), is(TokenType.LOGIN));
+		TestCommon.assertCloseToNow(st.getCreationDate());
+		assertThat("incorrect expires", st.getExpirationDate(),
+				is(st.getCreationDate().plusSeconds(14 * 24 * 3600)));
+		assertThat("incorrect id", st.getId(), isA(UUID.class));
+		assertThat("incorrect name", st.getTokenName(), is(Optional.absent()));
+		assertThat("incorrect user", st.getUserName(), is(new UserName("whee")));
 	}
 
 	private void assertLoginProcessTokensRemoved(final Response res) {

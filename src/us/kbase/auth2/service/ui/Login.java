@@ -66,6 +66,7 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -247,7 +248,8 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
-			IllegalParameterException, UnauthorizedException, AuthenticationException {
+				IllegalParameterException, UnauthorizedException, NoSuchIdentityProviderException,
+				IdentityRetrievalException, AuthenticationException{
 		
 		Utils.checkString(provider, "provider");
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
