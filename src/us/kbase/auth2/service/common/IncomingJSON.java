@@ -1,6 +1,7 @@
 package us.kbase.auth2.service.common;
 
 import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 
 import java.util.Map;
 import java.util.TreeMap;
@@ -29,7 +30,7 @@ public class IncomingJSON {
 	}
 
 	protected Optional<String> getOptionalString(final String string) {
-		if (string == null || string.trim().isEmpty()) {
+		if (nullOrEmpty(string)) {
 			return Optional.absent();
 		}
 		return Optional.of(string);

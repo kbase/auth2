@@ -162,5 +162,6 @@ public class Fields {
 	public static final String CFG_COMPLETE_LINK_REDIRECT = "completelinkredirect";
 	public static final String CFG_ALLOW_LOGIN = "allowlogin";
 	public static final String CFG_UPDATE_TIME_SEC = "updatetimesec";
+	public static final String CFG_REMOVE = "remove";
 	
 }

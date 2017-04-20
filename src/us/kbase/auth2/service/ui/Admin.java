@@ -11,6 +11,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -25,7 +26,9 @@ import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -38,6 +41,8 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
@@ -78,6 +83,7 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.common.Fields;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.ADMIN_ROOT)
 public class Admin {
@@ -641,11 +647,142 @@ public class Admin {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
 	}
+	
+	private static class SetConfig extends IncomingJSON {
+		
+		//TODO UI CODE include all the config parameters
+		
+		private final Boolean allowLogin;
+		private final Boolean showStack;
+		private final Boolean ignoreIP;
+		
+		private final String allowedLoginURL;
+		private final String completeLoginURL;
+		private final String postLinkURL;
+		private final String completeLinkURL;
+		
+		public final List<String> remove;
+		
+		@JsonCreator
+		public SetConfig(
+				@JsonProperty(Fields.CFG_ALLOW_LOGIN) final Boolean allowLogin,
+				@JsonProperty(Fields.CFG_SHOW_STACK_TRACE) final Boolean showStack,
+				@JsonProperty(Fields.CFG_IGNORE_IP_HEADERS) final Boolean ignoreIP,
+				@JsonProperty(Fields.CFG_ALLOWED_LOGIN_REDIRECT) final String allowedLoginURL,
+				@JsonProperty(Fields.CFG_COMPLETE_LOGIN_REDIRECT) final String completeLoginURL,
+				@JsonProperty(Fields.CFG_POST_LINK_REDIRECT) final String postLinkURL,
+				@JsonProperty(Fields.CFG_COMPLETE_LINK_REDIRECT) final String completeLinkURL,
+				@JsonProperty(Fields.CFG_REMOVE) final List<String> remove) {
+			this.allowLogin = allowLogin;
+			this.showStack = showStack;
+			this.ignoreIP = ignoreIP;
+			this.allowedLoginURL = allowedLoginURL;
+			this.completeLoginURL = completeLoginURL;
+			this.postLinkURL = postLinkURL;
+			this.completeLinkURL = completeLinkURL;
+			this.remove = remove == null ? Collections.emptyList() : remove;
+		}
+		
+		public Boolean getAllowLogin() {
+			return allowLogin;
+		}
+		
+		public ConfigItem<Boolean, Action> getShowStack() {
+			return getBoolean(showStack, Fields.CFG_SHOW_STACK_TRACE);
+		}
+		
+		public ConfigItem<Boolean, Action> getIgnoreIP() {
+			return getBoolean(ignoreIP, Fields.CFG_IGNORE_IP_HEADERS);
+		}
+		
+		public ConfigItem<URL, Action> getAllowedLoginURLPrefix()
+				throws IllegalParameterException {
+			return getURL(allowedLoginURL, Fields.CFG_ALLOWED_LOGIN_REDIRECT);
+		}
+
+		public ConfigItem<URL, Action> getCompleteLoginURL()
+				throws IllegalParameterException {
+			return getURL(completeLoginURL, Fields.CFG_COMPLETE_LOGIN_REDIRECT);
+		}
+		
+		public ConfigItem<URL, Action> getPostLinkURL()
+				throws IllegalParameterException {
+			return getURL(postLinkURL, Fields.CFG_POST_LINK_REDIRECT);
+		}
+		
+		public ConfigItem<URL, Action> getCompleteLinkURL()
+				throws IllegalParameterException {
+			return getURL(completeLinkURL, Fields.CFG_COMPLETE_LINK_REDIRECT);
+		}
+		
+		private ConfigItem<URL, Action> getURL(final String s, final String field)
+				throws IllegalParameterException {
+			final ConfigItem<URL, Action> act = getRemove(field);
+			// may want to throw an error if both remove and set are true in input
+			if (act != null) {
+				return act;
+			}
+			if (nullOrEmpty(s)) {
+				return ConfigItem.noAction();
+			}
+			try {
+				return ConfigItem.set(new URL(s));
+			} catch (MalformedURLException e) {
+				throw new IllegalParameterException("Illegal URL: " + s, e);
+			}
+		}
+
+		private <T> ConfigItem<T, Action> getRemove(final String field) {
+			if (remove.contains(field)) {
+				return ConfigItem.remove();
+			}
+			return null;
+		}
+
+		private ConfigItem<Boolean, Action> getBoolean(final Boolean b, final String field) {
+			final ConfigItem<Boolean, Action> act = getRemove(field);
+			if (act != null) {
+				return act;
+			}
+			if (b == null) {
+				return ConfigItem.noAction();
+			}
+			return ConfigItem.set(b);
+		}
+	}
+	
+	@PUT
+	@Path(UIPaths.ADMIN_CONFIG)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void updateConfig(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
+			final SetConfig config)
+			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
+				UnauthorizedException, NoTokenProvidedException, AuthStorageException {
+		if (config == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		config.exceptOnAdditionalProperties();
+		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
+				config.getAllowedLoginURLPrefix(),
+				config.getCompleteLoginURL(),
+				config.getPostLinkURL(),
+				config.getCompleteLinkURL(),
+				config.getIgnoreIP(),
+				config.getShowStack());
+		try {
+			auth.updateConfig(getToken(token),
+					AuthConfigUpdate.getBuilder().withNullableLoginAllowed(config.getAllowLogin())
+							.withExternalConfig(ext).build());
+		} catch (NoSuchIdentityProviderException e) {
+			throw new RuntimeException("OK, that's not supposed to happen", e);
+		}
+	}
 
 	private ConfigItem<URL, Action> getURL(final String putativeURL)
 			throws IllegalParameterException {
 		final ConfigItem<URL, Action> redirect;
-		if (putativeURL == null || putativeURL.trim().isEmpty()) {
+		if (nullOrEmpty(putativeURL)) {
 			redirect = ConfigItem.remove();
 		} else {
 			try {

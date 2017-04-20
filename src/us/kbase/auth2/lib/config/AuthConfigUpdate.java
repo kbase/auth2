@@ -293,6 +293,15 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 			return this;
 		}
 		
+		/** Set whether non admin logins should be allowed.
+		 * @param nonAdminLoginAllowed true to allow, false to disallow, null for no change.
+		 * @return this builder.
+		 */
+		public Builder<T> withNullableLoginAllowed(final Boolean nonAdminLoginAllowed) {
+			loginAllowed = Optional.fromNullable(nonAdminLoginAllowed);
+			return this;
+		}
+		
 		/** Add a provider update to the configuration update. Adding an update for the same 
 		 * provider twice will overwrite the previous update.
 		 * @param provider the provider to which the update will apply.

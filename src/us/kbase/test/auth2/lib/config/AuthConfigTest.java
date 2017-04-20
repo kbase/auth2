@@ -497,6 +497,21 @@ public class AuthConfigTest {
 	}
 	
 	@Test
+	public void updateConfigWithNullableLoginAllowed() throws Exception {
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withNullableLoginAllowed(null)
+				.build();
+		
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.absent()));
+		
+		final AuthConfigUpdate<ExternalConfig> acu2 = AuthConfigUpdate.getBuilder()
+				.withNullableLoginAllowed(false)
+				.build();
+		
+		assertThat("incorrect login", acu2.getLoginAllowed(), is(Optional.of(false)));
+	}
+	
+	@Test
 	public void updateConfigFail() throws Exception {
 		final TokenLifetimeType tlt = TokenLifetimeType.LOGIN;
 		final long life = 60000;
