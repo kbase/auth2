@@ -466,18 +466,4 @@ public class LoginTest {
 		final NewCookie inprocess = res.getCookies().get("in-process-login-token");
 		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
 	}
-
-	private Map<String, Object> getTokenFromUI(final String token) {
-		final WebTarget wt = CLI.target(host + "/tokens");
-		final Response res = wt.request()
-				.header("authorization", token)
-				.header("Accept", MediaType.APPLICATION_JSON)
-				.get();
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> readEntity = res.readEntity(Map.class);
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> current = (Map<String, Object>) readEntity.get("current");
-		return current;
-	}
-
 }
