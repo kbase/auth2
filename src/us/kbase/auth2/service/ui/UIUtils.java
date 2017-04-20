@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -62,7 +64,7 @@ public class UIUtils {
 			final String cookieSessionState,
 			final String providerSuppliedState)
 			throws MissingParameterException, AuthenticationException {
-		if (cookieSessionState == null || cookieSessionState.trim().isEmpty()) {
+		if (nullOrEmpty(cookieSessionState)) {
 			throw new MissingParameterException("Couldn't retrieve state value from cookie");
 		}
 		if (!cookieSessionState.equals(providerSuppliedState)) {

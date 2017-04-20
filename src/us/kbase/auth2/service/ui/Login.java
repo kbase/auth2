@@ -63,6 +63,7 @@ import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -246,12 +247,17 @@ public class Login {
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
-			IllegalParameterException, AuthenticationException {
-		//TODO INPUT handle error in params (provider, state)
+			IllegalParameterException, UnauthorizedException, AuthenticationException {
+		
+		Utils.checkString(provider, "provider");
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
-		//TODO ERRHANDLE handle returned OAuth error code in queryparams
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
+		final String error = qps.getFirst(Fields.ERROR); //may need to be configurable
+		if (!nullOrEmpty(error)) {
+			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+					"Identity provider " + provider + " returned an error: " + error);
+		}
 		checkState(state, retstate);
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());

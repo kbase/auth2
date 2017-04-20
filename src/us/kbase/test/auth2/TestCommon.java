@@ -43,6 +43,9 @@ public class TestCommon {
 	public static final String TEST_CONFIG_FILE_PROP_NAME = "AUTH2_TEST_CONFIG";
 	public static final String TEST_CONFIG_FILE_SECTION = "auth2test";
 	
+	public static final String REGEX_UUID =
+			"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}";
+	
 	public static final String LONG101;
 	public static final String LONG1001;
 	static {
@@ -251,5 +254,11 @@ public class TestCommon {
 		final long now = Instant.now().toEpochMilli();
 		assertThat(String.format("time (%s) not within 10000ms of now: %s", epochMillis, now),
 				Math.abs(epochMillis - now) < 10000, is(true));
+	}
+	
+	public static void assertCloseTo(final int seconds, final int target, final int range) {
+		assertThat(String.format("time (%s) not within %s sec of target: %s",
+				seconds, range, target),
+				Math.abs(target - seconds) < range, is(true));
 	}
 }

@@ -15,6 +15,8 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
 
 import javax.ws.rs.client.Client;
@@ -25,7 +27,9 @@ import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriBuilder;
 
+import org.glassfish.jersey.client.ClientProperties;
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
 import org.junit.AfterClass;
@@ -37,13 +41,20 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -161,15 +172,13 @@ public class LoginTest {
 	}
 
 	private void enableLogin(final IncomingToken admintoken) {
-		final Form allowloginform = new Form();
-		allowloginform.param("allowlogin", "true");
-		setAdminBasic(admintoken, allowloginform);
+		setAdminBasic(admintoken, ImmutableMap.of("allowlogin", true));
 	}
 
-	private void setAdminBasic(final IncomingToken admintoken, final Form form) {
-		final Response r = CLI.target(host + "/admin/config/basic").request()
-				.cookie(COOKIE_NAME, admintoken.getToken())
-				.post(Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
+	private void setAdminBasic(final IncomingToken admintoken, final Map<String, Object> json) {
+		final Response r = CLI.target(host + "/admin/config").request()
+				.header("authorization", admintoken.getToken())
+				.put(Entity.json(json));
 		assertThat("failed to set config", r.getStatus(), is(204));
 	}
 
@@ -185,9 +194,7 @@ public class LoginTest {
 	}
 	
 	private void enableRedirect(final IncomingToken adminToken, final String redirectURLPrefix) {
-		final Form redirectform = new Form();
-		redirectform.param("allowedloginredirect", redirectURLPrefix);
-		setAdminBasic(adminToken, redirectform);
+		setAdminBasic(adminToken, ImmutableMap.of("allowedloginredirect", redirectURLPrefix));
 	}
 
 	@Test
@@ -204,7 +211,6 @@ public class LoginTest {
 	public void startDisplayWithOneProvider() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
 		enableProvider(admintoken, "prov1");
 		
 		final WebTarget wt = CLI.target(host + "/login/");
@@ -218,7 +224,6 @@ public class LoginTest {
 	public void startDisplayWithTwoProviders() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
 		enableProvider(admintoken, "prov1");
 		enableProvider(admintoken, "prov2");
 		
@@ -288,7 +293,6 @@ public class LoginTest {
 				.mocks.get("prov1");
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
 		enableProvider(admintoken, "prov1");
 		enableRedirect(admintoken, "https://foobar.com/thingy");
 		
@@ -327,7 +331,6 @@ public class LoginTest {
 		form2.param("provider", "   \t  \n   ");
 		failLoginStart(form2, 400, "Bad Request", new MissingParameterException("provider"));
 	}
-	
 	
 	@Test
 	public void loginStartFailNoSuchProvider() throws Exception {
@@ -372,6 +375,107 @@ public class LoginTest {
 		final Map<String, Object> error = res.readEntity(Map.class);
 		
 		UITestUtils.assertErrorCorrect(expectedHTTPCode, expectedHTTPError, e, error);
+	}
+	
+	@Test
+	public void loginCompleteMinimalInputImmediateLogin() throws Exception {
+		final IdentityProvider provmock = MockIdentityProviderFactory
+				.mocks.get("prov1");
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		final RemoteIdentity remoteIdentity = new RemoteIdentity(
+				new RemoteIdentityID("prov1", "prov1id"),
+				new RemoteIdentityDetails("user", "full", "email@email.com"));
+		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
+					remoteIdentity)
+				.build());
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", authcode)
+				.queryParam("state", state)
+				.build();
+		
+		final WebTarget wt = CLI.target(target)
+				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", -1, false);
+		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
+		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		
+		final Map<String, Object> apitoken = getTokenFromUI(token.getValue());
+		
+		assertThat("incorrect token type", apitoken.get("type"), is("Login"));
+		TestCommon.assertCloseToNow((long) apitoken.get("created"));
+		assertThat("incorrect expires", apitoken.get("expires"),
+				is(((long) apitoken.get("created")) + 14 * 24 * 3600 * 1000));
+		assertThat("incorrect id", (String) apitoken.get("id"),
+				is(RegexMatcher.matches(TestCommon.REGEX_UUID)));
+		assertThat("incorrect name", apitoken.get("name"), is((String) null));
+		assertThat("incorrect user", apitoken.get("user"), is("whee"));
+		assertThat("incorrect custom context", apitoken.get("custom"), is(Collections.emptyMap()));
+		assertThat("incorrect os", apitoken.get("os"), is((String) null));
+		assertThat("incorrect osver", apitoken.get("osver"), is((String) null));
+		assertThat("incorrect agent", apitoken.get("agent"), is("Jersey"));
+		assertThat("incorrect agentver", apitoken.get("agentver"), is("2.23.2"));
+		assertThat("incorrect device", apitoken.get("device"), is((String) null));
+		assertThat("incorrect ip", apitoken.get("ip"), is("127.0.0.1"));
+		
+	}
+
+	private void assertLoginProcessTokensRemoved(final Response res) {
+		final NewCookie expectedstate = new NewCookie("loginstatevar", "no state",
+				"/login/complete", null, "loginstate", 0, false);
+		final NewCookie statecookie = res.getCookies().get("loginstatevar");
+		assertThat("incorrect state cookie", statecookie, is(expectedstate));
+		
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "no session",
+				"/login", null, "session choice", 0, false);
+		final NewCookie session = res.getCookies().get("issessiontoken");
+		assertThat("incorrect session cookie", session, is(expectedsession));
+		
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+		final NewCookie redirect = res.getCookies().get("loginredirect");
+		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
+		
+		final NewCookie expectedinprocess = new NewCookie("in-process-login-token", "no token",
+				"/login", null, "logintoken", 0, false);
+		final NewCookie inprocess = res.getCookies().get("in-process-login-token");
+		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
+	}
+
+	private Map<String, Object> getTokenFromUI(final String token) {
+		final WebTarget wt = CLI.target(host + "/tokens");
+		final Response res = wt.request()
+				.header("authorization", token)
+				.header("Accept", MediaType.APPLICATION_JSON)
+				.get();
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> readEntity = res.readEntity(Map.class);
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> current = (Map<String, Object>) readEntity.get("current");
+		return current;
 	}
 
 }
