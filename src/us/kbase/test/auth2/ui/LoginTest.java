@@ -45,9 +45,11 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
@@ -178,10 +180,10 @@ public class LoginTest {
 	}
 
 	private void enableLogin(final IncomingToken admintoken) {
-		setAdminBasic(admintoken, ImmutableMap.of("allowlogin", true));
+		setAdmin(admintoken, ImmutableMap.of("allowlogin", true));
 	}
 
-	private void setAdminBasic(final IncomingToken admintoken, final Map<String, Object> json) {
+	private void setAdmin(final IncomingToken admintoken, final Map<String, Object> json) {
 		final Response r = CLI.target(host + "/admin/config").request()
 				.header("authorization", admintoken.getToken())
 				.put(Entity.json(json));
@@ -200,7 +202,14 @@ public class LoginTest {
 	}
 	
 	private void enableRedirect(final IncomingToken adminToken, final String redirectURLPrefix) {
-		setAdminBasic(adminToken, ImmutableMap.of("allowedloginredirect", redirectURLPrefix));
+		setAdmin(adminToken, ImmutableMap.of("allowedloginredirect", redirectURLPrefix));
+	}
+	
+	private void setLoginCompleteRedirect(
+			final IncomingToken adminToken,
+			final String loginCompleteRedirectURL) {
+		setAdmin(adminToken, ImmutableMap.of("completeloginredirect", loginCompleteRedirectURL));
+		
 	}
 
 	@Test
@@ -397,14 +406,7 @@ public class LoginTest {
 		
 		loginCompleteImmediateLoginStoreUser(authcode);
 		
-		final URI target = UriBuilder.fromUri(host)
-				.path("/login/complete/prov1")
-				.queryParam("code", authcode)
-				.queryParam("state", state)
-				.build();
-		
-		final WebTarget wt = CLI.target(target)
-				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
 				.cookie("loginstatevar", state)
 				.get();
@@ -438,14 +440,7 @@ public class LoginTest {
 		
 		loginCompleteImmediateLoginStoreUser(authcode);
 		
-		final URI target = UriBuilder.fromUri(host)
-				.path("/login/complete/prov1")
-				.queryParam("code", authcode)
-				.queryParam("state", state)
-				.build();
-		
-		final WebTarget wt = CLI.target(target)
-				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
 				.cookie("loginstatevar", state)
 				.cookie("loginredirect", "   \t   ")
@@ -480,14 +475,7 @@ public class LoginTest {
 		
 		loginCompleteImmediateLoginStoreUser(authcode);
 		
-		final URI target = UriBuilder.fromUri(host)
-				.path("/login/complete/prov1")
-				.queryParam("code", authcode)
-				.queryParam("state", state)
-				.build();
-		
-		final WebTarget wt = CLI.target(target)
-				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
 				.cookie("loginstatevar", state)
 				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
@@ -523,14 +511,7 @@ public class LoginTest {
 		
 		loginCompleteImmediateLoginStoreUser(authcode);
 		
-		final URI target = UriBuilder.fromUri(host)
-				.path("/login/complete/prov1")
-				.queryParam("code", authcode)
-				.queryParam("state", state)
-				.build();
-		
-		final WebTarget wt = CLI.target(target)
-				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
 				.cookie("loginstatevar", state)
 				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
@@ -554,11 +535,7 @@ public class LoginTest {
 	}
 
 	private void loginCompleteImmediateLoginStoreUser(final String authcode) throws Exception {
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		final RemoteIdentity remoteIdentity = new RemoteIdentity(
-				new RemoteIdentityID("prov1", "prov1id"),
-				new RemoteIdentityDetails("user", "full", "email@email.com"));
-		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
@@ -604,5 +581,207 @@ public class LoginTest {
 				"/login", null, "logintoken", 0, false);
 		final NewCookie inprocess = res.getCookies().get("in-process-login-token");
 		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
+	}
+	
+	@Test
+	public void loginCompleteDelayedMinimalInput() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/login/choice")));
+		
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+		final NewCookie redirect = res.getCookies().get("loginredirect");
+		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
+		
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "no session",
+				"/login", null, "session choice", 0, false);
+		final NewCookie session = res.getCookies().get("issessiontoken");
+		assertThat("incorrect session cookie", session, is(expectedsession));
+		
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+	}
+	
+	@Test
+	public void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "   \t   ")
+				.cookie("issessiontoken", "    \t   ")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://whee.com/bleah")));
+		
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+		final NewCookie redirect = res.getCookies().get("loginredirect");
+		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
+		
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "no session",
+				"/login", null, "session choice", 0, false);
+		final NewCookie session = res.getCookies().get("issessiontoken");
+		assertThat("incorrect session cookie", session, is(expectedsession));
+		
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+	}
+	
+	@Test
+	public void loginCompleteDelayedLoginRedirectAndTrueSession() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
+				.cookie("issessiontoken", "true")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://whee.com/bleah")));
+		
+		final NewCookie redirect = res.getCookies().get("loginredirect");
+		final NewCookie expectedredirect = new NewCookie(
+				"loginredirect", "https://foobar.com/thingy/stuff",
+				"/login", null, "redirect url", redirect.getMaxAge(), false);
+		assertThat("incorrect redirect cookie less max age", redirect, is(expectedredirect));
+		TestCommon.assertCloseTo(redirect.getMaxAge(), 30 * 60, 10);
+		
+		final NewCookie session = res.getCookies().get("issessiontoken");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
+				"/login", null, "session choice", session.getMaxAge(), false);
+		assertThat("incorrect session cookie less max age", session, is(expectedsession));
+		TestCommon.assertCloseTo(session.getMaxAge(), 30 * 60, 10);
+		
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+	}
+	
+	@Test
+	public void loginCompleteDelayedLoginRedirectAndFalseSession() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		
+		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
+				.cookie("issessiontoken", "false")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://whee.com/bleah")));
+		
+		final NewCookie redirect = res.getCookies().get("loginredirect");
+		final NewCookie expectedredirect = new NewCookie(
+				"loginredirect", "https://foobar.com/thingy/stuff",
+				"/login", null, "redirect url", redirect.getMaxAge(), false);
+		assertThat("incorrect redirect cookie less max age", redirect, is(expectedredirect));
+		TestCommon.assertCloseTo(redirect.getMaxAge(), 30 * 60, 10);
+		
+		final NewCookie session = res.getCookies().get("issessiontoken");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "false",
+				"/login", null, "session choice", session.getMaxAge(), false);
+		assertThat("incorrect session cookie less max age", session, is(expectedsession));
+		TestCommon.assertCloseTo(session.getMaxAge(), 30 * 60, 10);
+		
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+	}
+
+	private void loginCompleteDelayedCheckTempAndStateCookies(
+			final RemoteIdentity remoteIdentity,
+			final Response res)
+			throws Exception {
+		
+		final NewCookie expectedstate = new NewCookie("loginstatevar", "no state",
+				"/login/complete", null, "loginstate", 0, false);
+		final NewCookie statecookie = res.getCookies().get("loginstatevar");
+		assertThat("incorrect state cookie", statecookie, is(expectedstate));
+		
+		final NewCookie tempCookie = res.getCookies().get("in-process-login-token");
+		final NewCookie expectedtemp = new NewCookie("in-process-login-token",
+				tempCookie.getValue(),
+				"/login", null, "logintoken", tempCookie.getMaxAge(), false);
+		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
+		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
+		
+		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+				new IncomingToken(tempCookie.getValue()).getHashedToken());
+		
+		assertThat("incorrect stored ids", tis.getIdentities().get(), is(set(remoteIdentity)));
+	}
+
+	private WebTarget loginCompleteSetUpWebTarget(final String authcode, final String state) {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", authcode)
+				.queryParam("state", state)
+				.build();
+		
+		return CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+	}
+
+	private RemoteIdentity loginCompleteSetUpProviderMock(final String authcode)
+			throws IdentityRetrievalException {
+		
+		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
+		final RemoteIdentity remoteIdentity = new RemoteIdentity(
+				new RemoteIdentityID("prov1", "prov1id"),
+				new RemoteIdentityDetails("user", "full", "email@email.com"));
+		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		return remoteIdentity;
 	}
 }
