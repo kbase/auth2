@@ -74,8 +74,6 @@ import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 
 public class LoginTest {
 	
-	//TODO NOW configure travis and build.xml so these tests don't run for each mongo version, just once
-	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
