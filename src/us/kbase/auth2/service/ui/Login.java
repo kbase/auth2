@@ -251,7 +251,7 @@ public class Login {
 				IllegalParameterException, UnauthorizedException, NoSuchIdentityProviderException,
 				IdentityRetrievalException, AuthenticationException{
 		
-		Utils.checkString(provider, "provider");
+		// provider cannot be null or empty since it's a path param
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
