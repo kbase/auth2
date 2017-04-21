@@ -63,9 +63,9 @@ import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -256,14 +256,15 @@ public class Login {
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
 		final String error = qps.getFirst(Fields.ERROR); //may need to be configurable
+		final LoginToken lr;
 		if (!nullOrEmpty(error)) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Identity provider " + provider + " returned an error: " + error);
+			lr = auth.loginProviderError(error);
+		} else {
+			checkState(state, retstate);
+			final TokenCreationContext tcc = getTokenContext(
+					userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
+			lr = auth.login(provider, authcode, tcc);
 		}
-		checkState(state, retstate);
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
-		final LoginToken lr = auth.login(provider, authcode, tcc);
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
 		// note nginx will rewrite the redirect appropriately so absolute
@@ -362,7 +363,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException {
+			IllegalParameterException, IdentityProviderErrorException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 
@@ -374,7 +375,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException {
+			IllegalParameterException, IdentityProviderErrorException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 	
@@ -383,7 +384,7 @@ public class Login {
 			final UriInfo uriInfo,
 			final String redirect)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException {
+			IllegalParameterException, IdentityProviderErrorException {
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
 		final Map<String, Object> ret = new HashMap<>();

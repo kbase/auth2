@@ -48,6 +48,7 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -604,6 +605,53 @@ public class AuthenticationLoginTest {
 	}
 	
 	@Test
+	public void loginProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		when(rand.getToken()).thenReturn("mytoken");
+		when(rand.randomUUID()).thenReturn(id);
+		
+		final LoginToken lt = auth.loginProviderError("errthing");
+		
+		final TemporaryToken expected = new TemporaryToken(
+				id, "mytoken", Instant.ofEpochMilli(20000), 30 * 60 * 1000);
+		
+		assertThat("incorrect login token", lt, is(new LoginToken(expected)));
+		
+		verify(storage).storeErrorTemporarily(expected.getHashedToken(),
+				"errthing", ErrorType.ID_PROVIDER_ERROR);
+	}
+	
+	@Test
+	public void loginProviderErrorFail() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failLoginProviderError(auth, null, new IllegalArgumentException(
+				"Missing argument: providerError"));
+		failLoginProviderError(auth, "   \t   ", new IllegalArgumentException(
+				"Missing argument: providerError"));
+	}
+	
+	private void failLoginProviderError(
+			final Authentication auth,
+			final String error,
+			final Exception e) {
+		try {
+			auth.loginProviderError(error);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
 	public void getLoginStateOneUnlinkedID() throws Exception {
 		
 		final TestMocks testauth = initTestMocks();
@@ -868,6 +916,43 @@ public class AuthenticationLoginTest {
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		failGetLoginState(auth, token, new InvalidTokenException("Temporary token"));
+	}
+
+	@Test
+	public void getLoginStateFailProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"err", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+		
+		failGetLoginState(auth, token, new IdentityProviderErrorException("err"));
+	}
+	
+	@Test
+	public void getLoginStateFailUnexpectedError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"err", ErrorType.ID_ALREADY_LINKED))
+				.thenReturn(null);
+		
+		failGetLoginState(auth, token, new RuntimeException(
+				"Unexpected error type ID_ALREADY_LINKED"));
 	}
 	
 	@Test
@@ -1247,6 +1332,68 @@ public class AuthenticationLoginTest {
 		
 		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
 				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void createUserFailProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final IncomingToken t = new IncomingToken("foo");
+
+		when(storage.getTemporaryIdentities(t.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"errthing", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+		
+		final String id = "bar";
+		final UserName u = new UserName("baz");
+		final DisplayName d = new DisplayName("bat");
+		final EmailAddress e = new EmailAddress("e@g.com");
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = true;
+		
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
+				new IdentityProviderErrorException("errthing"));
+	}
+	
+	@Test
+	public void createUserFailUnexpectedError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, null, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final IncomingToken t = new IncomingToken("foo");
+
+		when(storage.getTemporaryIdentities(t.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"errthing", ErrorType.DISABLED))
+				.thenReturn(null);
+		
+		final String id = "bar";
+		final UserName u = new UserName("baz");
+		final DisplayName d = new DisplayName("bat");
+		final EmailAddress e = new EmailAddress("e@g.com");
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = true;
+		
+		failCreateUser(auth, t, id, u, d, e, pids, CTX, l,
+				new RuntimeException("Unexpected error type DISABLED"));
 	}
 	
 	@Test
@@ -1885,6 +2032,46 @@ public class AuthenticationLoginTest {
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l, new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void completeLoginFailProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "whee";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"errthing1", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+		
+		failCompleteLogin(auth, t, id, pids, CTX, l,
+				new IdentityProviderErrorException("errthing1"));
+	}
+	
+	@Test
+	public void completeLoginFailUnexpectedError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		final String id = "whee";
+		final Set<PolicyID> pids = Collections.emptySet();
+		final boolean l = false;
+		
+		when(storage.getTemporaryIdentities(t.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+						"errthing", ErrorType.ILLEGAL_EMAIL_ADDRESS))
+				.thenReturn(null);
+		
+		failCompleteLogin(auth, t, id, pids, CTX, l,
+				new RuntimeException("Unexpected error type ILLEGAL_EMAIL_ADDRESS"));
 	}
 	
 	@Test

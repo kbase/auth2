@@ -51,9 +51,9 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -145,32 +145,32 @@ public class Link {
 			@PathParam(Fields.PROVIDER) final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo)
-			throws MissingParameterException, AuthenticationException,
-			NoSuchProviderException, AuthStorageException,
-			NoTokenProvidedException, LinkFailedException, UnauthorizedException {
+			throws MissingParameterException, AuthenticationException, NoSuchProviderException,
+				AuthStorageException, NoTokenProvidedException, LinkFailedException,
+				UnauthorizedException {
 		
 		Utils.checkString(provider, "provider");
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
 		final String error = qps.getFirst(Fields.ERROR); //may need to be configurable
-		if (!nullOrEmpty(error)) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					provider + " returned an error: " + error);
-		}
-		checkState(state, retstate);
-		final Optional<IncomingToken> token =
-				getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
 		final Optional<TemporaryToken> tt;
-		if (token.isPresent()) {
-			final LinkToken lt = auth.link(token.get(), provider, authcode);
-			if (lt.isLinked()) {
-				tt = Optional.absent();
-			} else {
-				tt = Optional.of(lt.getTemporaryToken().get());
-			}
+		if (!nullOrEmpty(error)) {
+			tt = Optional.of(auth.linkProviderError(error));
 		} else {
-			tt = Optional.of(auth.link(provider, authcode));
+			checkState(state, retstate);
+			final Optional<IncomingToken> token =
+					getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
+			if (token.isPresent()) {
+				final LinkToken lt = auth.link(token.get(), provider, authcode);
+				if (lt.isLinked()) {
+					tt = Optional.absent();
+				} else {
+					tt = Optional.of(lt.getTemporaryToken().get());
+				}
+			} else {
+				tt = Optional.of(auth.link(provider, authcode));
+			}
 		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
@@ -240,8 +240,8 @@ public class Link {
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException, UnauthorizedException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+				LinkFailedException, UnauthorizedException, IdentityProviderErrorException {
 		return linkChoice(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				linktoken, uriInfo);
 	}
@@ -253,8 +253,8 @@ public class Link {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
 			@Context final UriInfo uriInfo)
-			throws NoTokenProvidedException, AuthStorageException,
-			InvalidTokenException, LinkFailedException, UnauthorizedException {
+			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
+				LinkFailedException, UnauthorizedException, IdentityProviderErrorException {
 		return linkChoice(getToken(token), linktoken, uriInfo);
 	}
 
@@ -263,7 +263,7 @@ public class Link {
 			final String linktoken,
 			final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			LinkFailedException, UnauthorizedException {
+			LinkFailedException, UnauthorizedException, IdentityProviderErrorException {
 		final LinkIdentities ids = auth.getLinkState(incomingToken,
 				getLinkInProcessToken(linktoken));
 		/* there's a possibility here that between the redirects the number
@@ -331,7 +331,7 @@ public class Link {
 			@FormParam(Fields.ID) String identityID)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
-				MissingParameterException {
+				MissingParameterException, IdentityProviderErrorException {
 		if (identityID == null || identityID.trim().isEmpty()) {
 			identityID = null;
 		}
@@ -367,7 +367,8 @@ public class Link {
 			final LinkPick linkpick)
 			throws NoTokenProvidedException, AuthStorageException,
 				LinkFailedException, IllegalParameterException, MissingParameterException,
-				IdentityLinkedException, UnauthorizedException, InvalidTokenException {
+				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
+				IdentityProviderErrorException {
 		if (linkpick == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
@@ -382,7 +383,7 @@ public class Link {
 			final Optional<String> id)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
-				MissingParameterException {
+				MissingParameterException, IdentityProviderErrorException {
 		final IncomingToken linkInProcessToken = getLinkInProcessToken(linktoken);
 		if (id.isPresent()) {
 			auth.link(token, linkInProcessToken, id.get());

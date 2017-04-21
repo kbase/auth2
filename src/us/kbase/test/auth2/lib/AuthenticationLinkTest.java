@@ -41,6 +41,7 @@ import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConf
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
@@ -818,6 +819,54 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
+	public void linkProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		
+		final UUID id = UUID.randomUUID();
+		
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		when(rand.getToken()).thenReturn("mytoken");
+		when(rand.randomUUID()).thenReturn(id);
+		
+		final TemporaryToken tt = auth.linkProviderError("errthing");
+		
+		final TemporaryToken expected = new TemporaryToken(
+				id, "mytoken", Instant.ofEpochMilli(20000), 10 * 60 * 1000);
+		
+		assertThat("incorrect login token", tt, is(expected));
+		
+		
+		verify(storage).storeErrorTemporarily(expected.getHashedToken(),
+				"errthing", ErrorType.ID_PROVIDER_ERROR);
+	}
+	
+	@Test
+	public void linkProviderErrorFail() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failLinkProviderError(auth, null, new IllegalArgumentException(
+				"Missing argument: providerError"));
+		failLinkProviderError(auth, "   \t   ", new IllegalArgumentException(
+				"Missing argument: providerError"));
+	}
+	
+	private void failLinkProviderError(
+			final Authentication auth,
+			final String error,
+			final Exception e) {
+		try {
+			auth.linkProviderError(error);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
 	public void linkWithoutToken() throws Exception {
 		/* tests filtering */
 		final IdentityProvider idp = mock(IdentityProvider.class);
@@ -1220,6 +1269,60 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
+	public void getLinkStateFailProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
+						"errthing", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+		
+		failGetLinkState(auth, userToken, tempToken,
+				new IdentityProviderErrorException("errthing"));
+	}
+	
+	@Test
+	public void getLinkStateFailUnknownError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
+						"errthing", ErrorType.UNSUPPORTED_OP))
+				.thenReturn(null);
+		
+		failGetLinkState(auth, userToken, tempToken,
+				new RuntimeException("Unexpected error type UNSUPPORTED_OP"));
+	}
+	
+	@Test
 	public void getLinkStateFailNoIDs() throws Exception {
 		/* tests id filtering */
 		final TestMocks testauth = initTestMocks();
@@ -1461,6 +1564,60 @@ public class AuthenticationLinkTest {
 		
 		failLinkIdentity(auth, userToken, tempToken, "foo",
 				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkIdentityFailProviderError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, 
+						"errthing1", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+		
+		failLinkIdentity(auth, userToken, tempToken, "fakeid",
+				new IdentityProviderErrorException("errthing1"));
+	}
+	
+	@Test
+	public void linkIdentityFailUnexpectedError() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, 
+						"errthing1", ErrorType.LINK_FAILED))
+				.thenReturn(null);
+		
+		failLinkIdentity(auth, userToken, tempToken, "fakeid",
+				new RuntimeException("Unexpected error type LINK_FAILED"));
 	}
 	
 	@Test
@@ -1849,6 +2006,61 @@ public class AuthenticationLinkTest {
 		
 		failLinkAll(auth, userToken, tempToken,
 				new AuthStorageException("User magically disappeared from database: baz"));
+	}
+	
+	@Test
+	public void linkAllFailLinkFailProviderError() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, 
+						"errthing3", ErrorType.ID_PROVIDER_ERROR))
+				.thenReturn(null);
+
+		failLinkAll(auth, userToken, tempToken, new IdentityProviderErrorException("errthing3"));
+	}
+	
+	@Test
+	public void linkAllFailLinkFailUnexpectedError() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, 
+						"errthing3", ErrorType.NO_TOKEN))
+				.thenReturn(null);
+
+		failLinkAll(auth, userToken, tempToken,
+				new RuntimeException("Unexpected error type NO_TOKEN"));
 	}
 	
 	@Test

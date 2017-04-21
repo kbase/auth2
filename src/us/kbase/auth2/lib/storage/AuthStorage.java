@@ -20,6 +20,7 @@ import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -331,6 +332,16 @@ public interface AuthStorage {
 	void updateCustomRoles(UserName userName, Set<String> addRoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
+	/** Store an error string associated with a temporary token.
+	 * @param token the temporary token.
+	 * @param error the error.
+	 * @param errorType the type of the error.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void storeErrorTemporarily(TemporaryHashedToken token, String error, ErrorType errorType) 
+			throws AuthStorageException;
+	
 	/** Store a temporary token with a set of remote identities.
 	 * Storing an empty set is allowed.
 	 * No checking is done on the validity of the token - passing in tokens with bad data is a

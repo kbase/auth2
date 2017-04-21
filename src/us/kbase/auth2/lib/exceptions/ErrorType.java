@@ -1,21 +1,29 @@
 package us.kbase.auth2.lib.exceptions;
 
+import java.util.HashMap;
+import java.util.Map;
+
 /** An enum representing the type of a particular error.
  * @author gaprice@lbl.gov
  *
  */
 public enum ErrorType {
 	
+	// be very careful about changing error type ids as they are stored in the DB with
+	// temporary tokens
+	
 	/** Lack of a required identity or other error. */
 	AUTHENTICATION_FAILED	(10000, "Authentication failed"),
 	/** No token was provided when required */
 	NO_TOKEN				(10010, "No authentication token"),
 	/** The token provided is not valid. */
-	INVALID_TOKEN			(10011, "Invalid token"),
+	INVALID_TOKEN			(10020, "Invalid token"),
 	/** Retrieving identities from a 3rd party provider failed. */
-	ID_RETRIEVAL_FAILED		(10020, "Identity retrieval failed"),
+	ID_RETRIEVAL_FAILED		(10030, "Identity retrieval failed"),
+	/** A 3rd party identity provider reported an error at the conclusion of the OAuth2 flow. */
+	ID_PROVIDER_ERROR		(10040, "Identity provider error"),
 	/** The password and username did not match. */
-	PASSWORD_MISMATCH		(10030, "Password / username mismatch"),
+	PASSWORD_MISMATCH		(10050, "Password / username mismatch"),
 	/** The user is not authorized to perform the requested action. */
 	UNAUTHORIZED			(20000, "Unauthorized"),
 	/** The account to be accessed is disabled. */
@@ -52,6 +60,24 @@ public enum ErrorType {
 	UNLINK_FAILED			(60010, "Account unlink failed"),
 	/** The requested operation is not supported. */
 	UNSUPPORTED_OP			(70000, "Unsupported operation");
+	
+	private static final Map<Integer, ErrorType> ERROR_MAP = new HashMap<>();
+	static {
+		for (final ErrorType t: ErrorType.values()) {
+			ERROR_MAP.put(t.getErrorCode(), t);
+		}
+	}
+	
+	/** Get an ErrorType given the error code.
+	 * @param code the error code.
+	 * @return the ErrorType corresponding to the error code.
+	 */
+	public static ErrorType fromErrorCode(final int code) {
+		if (!ERROR_MAP.containsKey(code)) {
+			throw new IllegalArgumentException("Invalid error code: " + code);
+		}
+		return ERROR_MAP.get(code);
+	}
 	
 	private final int errcode;
 	private final String error;

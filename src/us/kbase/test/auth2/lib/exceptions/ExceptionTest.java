@@ -12,6 +12,7 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
@@ -30,6 +31,7 @@ import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
+import us.kbase.test.auth2.TestCommon;
 
 public class ExceptionTest {
 	
@@ -44,6 +46,20 @@ public class ExceptionTest {
 		final ErrorType et = ErrorType.DISABLED;
 		assertThat("incorrect error id", et.getErrorCode(), is(20010));
 		assertThat("incorrect error", et.getError(), is("Account disabled"));
+	}
+	
+	@Test
+	public void errorTypeFromCode() throws Exception {
+		// not testing every code here
+		assertThat("incorrect error type", ErrorType.fromErrorCode(10030),
+				is(ErrorType.ID_RETRIEVAL_FAILED));
+		try {
+			ErrorType.fromErrorCode(3);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(
+					got, new IllegalArgumentException("Invalid error code: 3"));
+		}
 	}
 	
 	@Test
@@ -123,6 +139,15 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ae2.getErr(), is(et));
 		assertThat("incorrect message", ae2.getMessage(), is(format(et, "baz")));
 		assertThat("incorrect cause", ae2.getCause(), is(ie));
+	}
+	
+	@Test
+	public void identityProviderError() throws Exception {
+		final ErrorType et = ErrorType.ID_PROVIDER_ERROR;
+		final IdentityProviderErrorException ae = new IdentityProviderErrorException("foo");
+		assertThat("incorrect error code", ae.getErr(), is(et));
+		assertThat("incorrect message", ae.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
 	}
 	
 	@Test
@@ -280,16 +305,26 @@ public class ExceptionTest {
 	@Test
 	public void unauthorizedException() throws Exception {
 		final ErrorType et = ErrorType.UNAUTHORIZED;
-		final UnauthorizedException ae = new UnauthorizedException(et);
+		final UnauthorizedException ae = new UnauthorizedException();
 		assertThat("incorrect error code", ae.getErr(), is(et));
 		assertThat("incorrect message", ae.getMessage(), is(format(et, null)));
 		assertThat("incorrect cause", ae.getCause(), is((Throwable) null));
 		
-		final ErrorType et2 = ErrorType.UNLINK_FAILED;
-		final UnauthorizedException ae2 = new UnauthorizedException(et2, "foo");
-		assertThat("incorrect error code", ae2.getErr(), is(et2));
-		assertThat("incorrect message", ae2.getMessage(), is(format(et2, "foo")));
+		final UnauthorizedException ae2 = new UnauthorizedException(et);
+		assertThat("incorrect error code", ae2.getErr(), is(et));
+		assertThat("incorrect message", ae2.getMessage(), is(format(et, null)));
 		assertThat("incorrect cause", ae2.getCause(), is((Throwable) null));
+		
+		final UnauthorizedException ae3 = new UnauthorizedException("foo");
+		assertThat("incorrect error code", ae3.getErr(), is(et));
+		assertThat("incorrect message", ae3.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", ae3.getCause(), is((Throwable) null));
+		
+		final ErrorType et2 = ErrorType.UNLINK_FAILED;
+		final UnauthorizedException ae4 = new UnauthorizedException(et2, "foo");
+		assertThat("incorrect error code", ae4.getErr(), is(et2));
+		assertThat("incorrect message", ae4.getMessage(), is(format(et2, "foo")));
+		assertThat("incorrect cause", ae4.getCause(), is((Throwable) null));
 	}
 	
 	@Test
