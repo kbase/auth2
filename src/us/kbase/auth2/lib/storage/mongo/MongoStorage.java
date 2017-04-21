@@ -68,6 +68,7 @@ import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -1270,6 +1271,21 @@ public class MongoStorage implements AuthStorage {
 			return key;
 		}
 	}
+	
+	@Override
+	public void storeErrorTemporarily(
+			final TemporaryHashedToken token,
+			final String error,
+			final ErrorType errorType)
+			throws AuthStorageException {
+		nonNull(token, "token");
+		checkStringNoCheckedException(error, "error");
+		nonNull(errorType, "errorType");
+		final Document td = toDocument(token)
+				.append(Fields.TOKEN_TEMP_ERROR, error)
+				.append(Fields.TOKEN_TEMP_ERROR_TYPE, errorType.getErrorCode());
+		storeTemporaryToken(td);
+	};
 
 	@Override
 	public void storeIdentitiesTemporarily(
@@ -1281,12 +1297,11 @@ public class MongoStorage implements AuthStorage {
 		// ok for the set to be empty
 		noNulls(identitySet, "Null value in identitySet");
 		final Set<Document> ids = toDocument(identitySet);
-		final Document td = new Document(
-				Fields.TOKEN_TEMP_ID, token.getId().toString())
-				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_TEMP_EXPIRY, Date.from(token.getExpirationDate()))
-				.append(Fields.TOKEN_TEMP_CREATION, Date.from(token.getCreationDate()))
-				.append(Fields.TOKEN_TEMP_IDENTITIES, ids);
+		final Document td = toDocument(token).append(Fields.TOKEN_TEMP_IDENTITIES, ids);
+		storeTemporaryToken(td);
+	}
+
+	private void storeTemporaryToken(final Document td) throws AuthStorageException {
 		try {
 			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -1296,17 +1311,25 @@ public class MongoStorage implements AuthStorage {
 				if ((Fields.TOKEN_TEMP_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Temporary token ID %s already exists in the database",
-							token.getId()));
+							td.getString(Fields.TOKEN_TEMP_ID)));
 				} else if ((Fields.TOKEN_TEMP_TOKEN + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token hash for temporary token ID %s already exists in the database",
-							token.getId()));
+							td.getString(Fields.TOKEN_TEMP_ID)));
 				}
 			} // otherwise throw next exception
 			throw new AuthStorageException("Database write failed", mwe);
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
+	}
+	
+	private Document toDocument(final TemporaryHashedToken token) {
+		return new Document(
+				Fields.TOKEN_TEMP_ID, token.getId().toString())
+				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
+				.append(Fields.TOKEN_TEMP_EXPIRY, Date.from(token.getExpirationDate()))
+				.append(Fields.TOKEN_TEMP_CREATION, Date.from(token.getCreationDate()));
 	}
 
 	private Document toDocument(final RemoteIdentity id) {
@@ -1333,18 +1356,30 @@ public class MongoStorage implements AuthStorage {
 		if (Instant.now().isAfter(d.getDate(Fields.TOKEN_TEMP_EXPIRY).toInstant())) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		@SuppressWarnings("unchecked")
-		final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
-		if (ids == null) {
-			final String tid = d.getString(Fields.TOKEN_TEMP_ID);
-			throw new AuthStorageException(String.format(
-					"Temporary token %s has no associated IDs field", tid));
+		final TemporaryIdentities tis;
+		final String error = d.getString(Fields.TOKEN_TEMP_ERROR);
+		if (error != null) {
+			tis = new TemporaryIdentities(
+					UUID.fromString(d.getString(Fields.TOKEN_ID)),
+					d.getDate(Fields.TOKEN_CREATION).toInstant(),
+					d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+					error,
+					ErrorType.fromErrorCode(d.getInteger(Fields.TOKEN_TEMP_ERROR_TYPE)));
+		} else {
+			@SuppressWarnings("unchecked")
+			final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
+			if (ids == null) {
+				final String tid = d.getString(Fields.TOKEN_TEMP_ID);
+				throw new AuthStorageException(String.format(
+						"Temporary token %s has no associated IDs field", tid));
+			}
+			tis = new TemporaryIdentities(
+					UUID.fromString(d.getString(Fields.TOKEN_ID)),
+					d.getDate(Fields.TOKEN_CREATION).toInstant(),
+					d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+					toIdentities(ids));
 		}
-		return new TemporaryIdentities(
-				UUID.fromString(d.getString(Fields.TOKEN_ID)),
-				d.getDate(Fields.TOKEN_CREATION).toInstant(),
-				d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
-				toIdentities(ids));
+		return tis;
 	}
 
 	private Set<RemoteIdentity> toIdentities(final List<Document> ids) {

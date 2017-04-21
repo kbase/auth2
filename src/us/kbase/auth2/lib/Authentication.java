@@ -1,6 +1,7 @@
 package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
@@ -59,6 +60,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
+import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -125,6 +127,7 @@ public class Authentication {
 	//TODO ZLATER SCOPES use token types as scopes for some activities - for example admin actions should require a login token.
 	
 	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
+	private static final int LOGIN_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
 	
@@ -368,8 +371,7 @@ public class Authentication {
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Cannot create ROOT user");
+			throw new UnauthorizedException("Cannot create ROOT user");
 		}
 		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
@@ -452,8 +454,7 @@ public class Authentication {
 				throw new PasswordMismatchException(userName.getName());
 			}
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Non-admin login is disabled");
+				throw new UnauthorizedException("Non-admin login is disabled");
 			}
 			if (u.isDisabled()) {
 				throw new DisabledUserException();
@@ -581,19 +582,18 @@ public class Authentication {
 			return; //ok, duh. It's root.
 		}
 		if (user.isRoot()) { // already know admin isn't root, so bail out.
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Only root can reset root password");
+			throw new UnauthorizedException("Only root can reset root password");
 		}
 		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
 		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+			throw new UnauthorizedException(
 					"Cannot reset password of user with create administrator role");
 		}
 		/* at this point we know user is a standard admin and admin is not root. That means
 		 * that admin has to have CREATE_ADMIN to proceed. 
 		 */
 		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+			throw new UnauthorizedException(
 					"Cannot reset password of user with administrator role");
 		}
 		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
@@ -713,8 +713,7 @@ public class Authentication {
 		try {
 			final StoredToken ht = storage.getToken(token.getHashedToken());
 			if (!allowedTypes.isEmpty() && !allowedTypes.contains(ht.getTokenType())) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						ht.getTokenType().getDescription() +
+				throw new UnauthorizedException(ht.getTokenType().getDescription() +
 						" tokens are not allowed for this operation");
 			}
 			return ht;
@@ -753,7 +752,7 @@ public class Authentication {
 			final Role reqRole = TokenType.SERV.equals(tokenType) ?
 					Role.SERV_TOKEN : Role.DEV_TOKEN;
 			if (!reqRole.isSatisfiedBy(au.getRoles())) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
+				throw new UnauthorizedException(String.format(
 						"User %s is not authorized to create this token type.",
 						au.getUserName().getName()));
 			}
@@ -839,7 +838,7 @@ public class Authentication {
 					.collect(Collectors.toSet());
 			has.retainAll(Arrays.asList(required)); // intersection
 			if (has.isEmpty()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED);
+				throw new UnauthorizedException();
 			}
 		}
 		return u;
@@ -940,21 +939,18 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
 		if (spec.isRegex()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Regex search is currently for internal use only");
+			throw new UnauthorizedException("Regex search is currently for internal use only");
 		}
 		final AuthUser user = getUser(token);
 		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only admins may search on roles");
+				throw new UnauthorizedException("Only admins may search on roles");
 			}
 			if (!spec.getSearchPrefix().isPresent()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only admins may search without a prefix");
+				throw new UnauthorizedException("Only admins may search without a prefix");
 			}
 			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
-				throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				throw new UnauthorizedException(
 						"Only admins may search with root or disabled users included");
 			}
 		}
@@ -1196,8 +1192,7 @@ public class Authentication {
 					String.join(", ", rolesToDescriptions(intersect)));
 		}
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Cannot change ROOT roles");
+			throw new UnauthorizedException("Cannot change ROOT roles");
 		}
 		final AuthUser actinguser = getUser(userToken, set(TokenType.LOGIN));
 		
@@ -1217,7 +1212,7 @@ public class Authentication {
 
 	private void throwUnauthorizedToManageRoles(final String action, final Set<Role> roles)
 			throws UnauthorizedException {
-		throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
+		throw new UnauthorizedException(
 				String.format("Not authorized to %s role(s): %s", action,
 						String.join(", ", rolesToDescriptions(roles))));
 	}
@@ -1382,6 +1377,20 @@ public class Authentication {
 		}
 		return getIdentityProvider(provider).getLoginURL(state, link);
 	}
+	
+	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
+	 * identity provider in the case that the provider returned an error.
+	 * @param providerError the error returned by the provider.
+	 * @return A login token. In this case the token will always be a temporary token so the
+	 * control flow can be returned to the UI before returning an error.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @see #login(String, String, TokenCreationContext)
+	 */
+	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
+		checkStringNoCheckedException(providerError, "providerError");
+		return new LoginToken(storeErrorTemporarily(
+				providerError, ErrorType.ID_PROVIDER_ERROR, LOGIN_TOKEN_LIFETIME_MS));
+	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
 	 * identity provider.
@@ -1391,7 +1400,7 @@ public class Authentication {
 	 * state of the login request. This token can be used to retrieve the login state via
 	 * {@link #getLoginState(IncomingToken)}.
 	 * 
-	 * In some cases, this method will have
+	 * In most cases, this method will have
 	 * been called after a redirect from a 3rd party identity provider, and as such, the login
 	 * flow is not under the control of any UI elements at that point. Hence, if the login cannot
 	 * proceed immediately, the state is stored so the user can be redirected to the appropriate
@@ -1459,7 +1468,7 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		return new LoginToken(storeIdentitiesTemporarily(store, 30 * 60 * 1000));
+		return new LoginToken(storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS));
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -1473,15 +1482,17 @@ public class Authentication {
 	 * @return the state of the login process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public LoginState getLoginState(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException {
+			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
 		final TemporaryIdentities ids = getTemporaryIdentities(token);
-		if (ids.getIdentities().isEmpty()) {
+		if (ids.getIdentities().get().isEmpty()) {
 			throw new RuntimeException(
 					"Programming error: temporary login token stored with no identities");
 		}
-		return getLoginState(ids.getIdentities(), ids.getExpires());
+		return getLoginState(ids.getIdentities().get(), ids.getExpires());
 	}
 
 	private LoginState getLoginState(final Set<RemoteIdentity> ids, final Instant expires)
@@ -1502,10 +1513,19 @@ public class Authentication {
 
 	private TemporaryIdentities getTemporaryIdentities(
 			final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException {
+			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
 		nonNull(token, "Temporary token");
 		try {
-			return storage.getTemporaryIdentities(token.getHashedToken());
+			final TemporaryIdentities tis = storage.getTemporaryIdentities(token.getHashedToken());
+			if (tis.hasError()) {
+				final ErrorType et = tis.getErrorType().get();
+				if (ErrorType.ID_PROVIDER_ERROR.equals(et)) {
+					throw new IdentityProviderErrorException(tis.getError().get());
+				} else {
+					throw new RuntimeException("Unexpected error type " + et);
+				}
+			}
+			return tis;
 		} catch (NoSuchTokenException e) {
 			throw new InvalidTokenException("Temporary token");
 		}
@@ -1534,6 +1554,8 @@ public class Authentication {
 	 * @throws UnauthorizedException if login is disabled or the username is the root user name.
 	 * @throws IdentityLinkedException if the specified identity is already linked to a user.
 	 * @throws MissingParameterException if the identity ID is null or the empty string.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public NewToken createUser(
 			final IncomingToken token,
@@ -1545,7 +1567,8 @@ public class Authentication {
 			final TokenCreationContext tokenCtx,
 			final boolean linkAll)
 			throws AuthStorageException, InvalidTokenException, UserExistsException,
-			UnauthorizedException, IdentityLinkedException, MissingParameterException {
+				UnauthorizedException, IdentityLinkedException, MissingParameterException,
+				IdentityProviderErrorException {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
@@ -1553,17 +1576,16 @@ public class Authentication {
 		noNulls(policyIDs, "null item in policyIDs");
 		nonNull(tokenCtx, "tokenCtx");
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot create ROOT user");
+			throw new UnauthorizedException("Cannot create ROOT user");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Account creation is disabled");
+			throw new UnauthorizedException("Account creation is disabled");
 		}
 		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporaryIdentities(token).getIdentities());
+				getTemporaryIdentities(token).getIdentities().get());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
+			throw new UnauthorizedException(String.format(
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		final Instant now = clock.instant();
@@ -1604,6 +1626,8 @@ public class Authentication {
 	 * @throws UnauthorizedException if the user is not an administrator and non-admin login
 	 * is not allowed or the user account is disabled.
 	 * @throws MissingParameterException  if the identity ID is null or the empty string.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public NewToken login(
 			final IncomingToken token,
@@ -1612,15 +1636,15 @@ public class Authentication {
 			final TokenCreationContext tokenCtx,
 			final boolean linkAll)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
-				MissingParameterException {
+				MissingParameterException, IdentityProviderErrorException {
 		nonNull(policyIDs, "policyIDs");
 		nonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
 		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporaryIdentities(token).getIdentities());
+				getTemporaryIdentities(token).getIdentities().get());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED, String.format(
+			throw new UnauthorizedException(String.format(
 					"Not authorized to login to user with remote identity %s", identityID));
 		}
 		final Optional<AuthUser> u = storage.getUser(ri.get());
@@ -1631,8 +1655,7 @@ public class Authentication {
 					"There is no account linked to the provided identity ID");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.get().getRoles())) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Non-admin login is disabled");
+			throw new UnauthorizedException("Non-admin login is disabled");
 		}
 		if (u.get().isDisabled()) {
 			throw new DisabledUserException();
@@ -1691,6 +1714,20 @@ public class Authentication {
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
+	 * identity provider in the case that the provider returned an error.
+	 * @param providerError the error returned by the provider.
+	 * @return A temporary token.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @see #link(String, String)
+	 */
+	public TemporaryToken linkProviderError(final String providerError)
+			throws AuthStorageException {
+		checkStringNoCheckedException(providerError, "providerError");
+		return storeErrorTemporarily(
+				providerError, ErrorType.ID_PROVIDER_ERROR, LINK_TOKEN_LIFETIME_MS);
+	}
+	
+	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider.
 	 * 
 	 * Unlike {@link #link(IncomingToken, String, String)} this method never links immediately
@@ -1700,7 +1737,7 @@ public class Authentication {
 	 * state of the link request. This token can be used to retrieve the link state via
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
 	 * 
-	 * In some cases, this method will have
+	 * In most cases, this method will have
 	 * been called after a redirect from a 3rd party identity provider, and as such, the link
 	 * flow is not under the control of any UI elements at that point. Hence, the method continues
 	 * if no accounts are available for linking, and an error thrown in later stages of the
@@ -1722,7 +1759,7 @@ public class Authentication {
 			final String provider,
 			final String authcode)
 			throws AuthStorageException, MissingParameterException, IdentityRetrievalException,
-			NoSuchIdentityProviderException {
+				NoSuchIdentityProviderException {
 		final Set<RemoteIdentity> ids = getLinkCandidates(getIdentityProvider(provider), authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
@@ -1730,6 +1767,19 @@ public class Authentication {
 		 * under the control of the primary auth UI.
 		 */
 		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+	}
+	
+	private TemporaryToken storeErrorTemporarily(
+			final String errorMessage,
+			final ErrorType errorType,
+			final int tokenLifeTimeMS)
+			throws AuthStorageException {
+		checkStringNoCheckedException(errorMessage, "errorMessage");
+		nonNull(errorType, "errorType");
+		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
+				randGen.getToken(), clock.instant(), tokenLifeTimeMS);
+		storage.storeErrorTemporarily(tt.getHashedToken(), errorMessage, errorType);
+		return tt;
 	}
 	
 	private TemporaryToken storeIdentitiesTemporarily(
@@ -1864,18 +1914,20 @@ public class Authentication {
 	 * to link.
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws UnauthorizedException if the token is not a login token.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public LinkIdentities getLinkState(
 			final IncomingToken token,
 			final IncomingToken linktoken)
-			throws InvalidTokenException, AuthStorageException,
-			LinkFailedException, DisabledUserException, UnauthorizedException {
+			throws InvalidTokenException, AuthStorageException, LinkFailedException,
+				DisabledUserException, UnauthorizedException, IdentityProviderErrorException {
 		final AuthUser u = getUser(token, set(TokenType.LOGIN));
 		if (u.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
 		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
-		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities());
+		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities().get());
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
 			throw new LinkFailedException("All provided identities are already linked");
@@ -1900,6 +1952,8 @@ public class Authentication {
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws InvalidTokenException if either token is invalid.
 	 * @throws MissingParameterException if the identity ID is null or the empty string.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public void link(
 			final IncomingToken token,
@@ -1907,12 +1961,12 @@ public class Authentication {
 			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 				InvalidTokenException, IdentityLinkedException, UnauthorizedException,
-				MissingParameterException {
+				MissingParameterException, IdentityProviderErrorException {
 		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities();
+		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities().get();
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format("Not authorized to link identity %s",
@@ -1934,16 +1988,18 @@ public class Authentication {
 	 * @throws DisabledUserException if the user is disabled.
 	 * @throws UnauthorizedException if the token isn't a login token.
 	 * @throws InvalidTokenException if either token is invalid.
+	 * @throws IdentityProviderErrorException if the provider reported an error when returning
+	 * from the OAuth2 flow.
 	 */
 	public void linkAll(final IncomingToken token, final IncomingToken linkToken)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException,
-			UnauthorizedException, LinkFailedException {
+			UnauthorizedException, LinkFailedException, IdentityProviderErrorException {
 		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
 		if (au.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to local accounts");
 		}
 		final Set<RemoteIdentity> identities = new HashSet<>(
-				getTemporaryIdentities(linkToken).getIdentities());
+				getTemporaryIdentities(linkToken).getIdentities().get());
 		filterLinkCandidates(identities);
 		link(au.getUserName(), identities);
 	}
@@ -2077,8 +2133,7 @@ public class Authentication {
 		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
 				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		if (userName.isRoot() && !admin.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"Only the root user can disable the root account");
+			throw new UnauthorizedException("Only the root user can disable the root account");
 		}
 		storage.deleteTokens(userName); //not really necessary but doesn't hurt
 		storage.disableAccount(userName, admin.getUserName(), reason);
@@ -2109,8 +2164,7 @@ public class Authentication {
 		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
 				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		if (userName.isRoot()) {
-			throw new UnauthorizedException(ErrorType.UNAUTHORIZED,
-					"The root user cannot be enabled via this method");
+			throw new UnauthorizedException("The root user cannot be enabled via this method");
 		}
 		storage.enableAccount(userName, admin.getUserName());
 	}

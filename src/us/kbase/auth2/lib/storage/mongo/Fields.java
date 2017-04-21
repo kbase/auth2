@@ -145,6 +145,10 @@ public class Fields {
 	public static final String TOKEN_TEMP_CREATION = "create";
 	/** The remote identities associated with the temporary token. */
 	public static final String TOKEN_TEMP_IDENTITIES = "idents";
+	/** The error associated with the temporary token. */
+	public static final String TOKEN_TEMP_ERROR = "err";
+	/** The type of the error associated with the temporary token. */
+	public static final String TOKEN_TEMP_ERROR_TYPE = "errtype";
 	
 	/* ********************
 	 * custom roles fields
