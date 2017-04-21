@@ -9,30 +9,17 @@ jdk:
     - oraclejdk8
 
 env:
-  global:
-    - MONGODB_VER_26=mongodb-linux-x86_64-2.6.12
-    - MONGODB_VER_30=mongodb-linux-x86_64-3.0.14
-    - MONGODB_VER_32=mongodb-linux-x86_64-3.2.12
-    - MONGODB_VER_34=mongodb-linux-x86_64-3.4.2
+  - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test_no_mongo_storage
+  - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test_mongo_storage
+  - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage
+  - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage
+  - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage
 
 before_install:
-    # get and install various mongodb versions
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_26.tgz
-    - tar xfz $MONGODB_VER_26.tgz
-    - export MONGOD26=`pwd`/$MONGODB_VER_26/bin/mongod
-
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_30.tgz
-    - tar xfz $MONGODB_VER_30.tgz
-    - export MONGOD30=`pwd`/$MONGODB_VER_30/bin/mongod
-
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_32.tgz
-    - tar xfz $MONGODB_VER_32.tgz
-    - export MONGOD32=`pwd`/$MONGODB_VER_32/bin/mongod
-
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER_34.tgz
-    - tar xfz $MONGODB_VER_34.tgz
-    - export MONGOD34=`pwd`/$MONGODB_VER_34/bin/mongod
-
+    # get and install mongodb
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
+    - tar xfz $MONGODB_VER.tgz
+    - export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
 
 install:
     - cd ..
@@ -47,23 +34,7 @@ script:
     # If there are # in the mongod path, this will fail.
     - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
 
-    # Test against MONGO 2.6
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD26#" test.cfg
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
     - cat test.cfg
-    - ant test
-
-    # Test against MONGO 3.0
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD30#" test.cfg
-    - cat test.cfg
-    - ant test
-    
-    # Test against MONGO 3.2
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD32#" test.cfg
-    - cat test.cfg
-    - ant test
-    
-    # Test against MONGO 3.4
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD34#" test.cfg
-    - cat test.cfg
-    - ant test
+    - ant $ANT_TEST
 
