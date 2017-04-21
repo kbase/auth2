@@ -384,8 +384,8 @@ public class LoginTest {
 	}
 	
 	@Test
-	public void loginCompleteMinimalInputImmediateLogin() throws Exception {
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
+	public void loginCompleteImmediateLoginMinimalInput() throws Exception {
+		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
 		enableLogin(admintoken);
@@ -395,15 +395,7 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final RemoteIdentity remoteIdentity = new RemoteIdentity(
-				new RemoteIdentityID("prov1", "prov1id"),
-				new RemoteIdentityDetails("user", "full", "email@email.com"));
-		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
-		
-		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
-					remoteIdentity)
-				.build());
+		loginCompleteImmediateLoginStoreUser(authcode);
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/complete/prov1")
@@ -428,6 +420,153 @@ public class LoginTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
+		loginCompleteImmediateLoginCheckToken(token);
+	}
+	
+	// tried putting these tests into a similar framework but was too messy, C&P was less gross
+	@Test
+	public void loginCompleteImmediateLoginEmptyStringInput() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		loginCompleteImmediateLoginStoreUser(authcode);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", authcode)
+				.queryParam("state", state)
+				.build();
+		
+		final WebTarget wt = CLI.target(target)
+				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "   \t   ")
+				.cookie("issessiontoken", "    \t   ")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", -1, false);
+		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
+		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		
+		loginCompleteImmediateLoginCheckToken(token);
+	}
+	
+	@Test
+	public void loginCompleteImmediateLoginRedirectAndTrueSession() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		loginCompleteImmediateLoginStoreUser(authcode);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", authcode)
+				.queryParam("state", state)
+				.build();
+		
+		final WebTarget wt = CLI.target(target)
+				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
+				.cookie("issessiontoken", "true")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://foobar.com/thingy/stuff")));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", -1, false);
+		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
+		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		
+		loginCompleteImmediateLoginCheckToken(token);
+	}
+	
+	@Test
+	public void loginCompleteImmediateLoginRedirectAndFalseSession() throws Exception {
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov1");
+		enableRedirect(admintoken, "https://foobar.com/thingy");
+		
+		final String authcode = "foobarcode";
+		final String state = "foobarstate";
+		
+		loginCompleteImmediateLoginStoreUser(authcode);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", authcode)
+				.queryParam("state", state)
+				.build();
+		
+		final WebTarget wt = CLI.target(target)
+				.property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final Response res = wt.request()
+				.cookie("loginstatevar", state)
+				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
+				.cookie("issessiontoken", "false")
+				.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://foobar.com/thingy/stuff")));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", token.getMaxAge(), false);
+		assertThat("incorrect auth cookie less token and max age", token, is(expectedtoken));
+		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		TestCommon.assertCloseTo(token.getMaxAge(), 14 * 24 * 3600, 10);
+		
+		loginCompleteImmediateLoginCheckToken(token);
+	}
+
+	private void loginCompleteImmediateLoginStoreUser(final String authcode) throws Exception {
+		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
+		final RemoteIdentity remoteIdentity = new RemoteIdentity(
+				new RemoteIdentityID("prov1", "prov1id"),
+				new RemoteIdentityDetails("user", "full", "email@email.com"));
+		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
+					remoteIdentity)
+				.build());
+	}
+
+	private void loginCompleteImmediateLoginCheckToken(final NewCookie token) throws Exception {
 		final StoredToken st = manager.storage.getToken(
 				new IncomingToken(token.getValue()).getHashedToken());
 		
