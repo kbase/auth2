@@ -252,6 +252,7 @@ public class Login {
 				IdentityRetrievalException, AuthenticationException{
 		
 		// provider cannot be null or empty since it's a path param
+		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
@@ -270,7 +271,7 @@ public class Login {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (lr.isLoggedIn()) {
-			r = createLoginResponse(redirect, lr.getToken().get(), !FALSE.equals(session));
+			r = createLoginResponse(redirectURI, lr.getToken().get(), !FALSE.equals(session));
 		} else {
 			final int age = getMaxCookieAge(lr.getTemporaryToken().get());
 			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
@@ -284,13 +285,12 @@ public class Login {
 	}
 	
 	private Response createLoginResponse(
-			final String redirect,
+			final URI redirectURI,
 			final NewToken newtoken,
 			final boolean session)
 			throws IllegalParameterException, AuthStorageException {
 		
-		return setLoginCookies(Response.seeOther(
-				getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT)), newtoken, session).build();
+		return setLoginCookies(Response.seeOther(redirectURI), newtoken, session).build();
 	}
 	
 	private ResponseBuilder setLoginCookies(
@@ -489,12 +489,13 @@ public class Login {
 			AuthStorageException, UnauthorizedException, IllegalParameterException,
 			LinkFailedException, MissingParameterException {
 		
+		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				PickChoice.getString(identityID, Fields.ID),
 				PickChoice.getPolicyIDs(policyIDs), tcc, linkAll != null);
-		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
+		return createLoginResponse(redirectURI, newtoken, !FALSE.equals(session));
 	}
 
 	private static class PickChoice extends IncomingJSON {
@@ -607,6 +608,7 @@ public class Login {
 		if (identityID == null) {
 			throw new MissingParameterException("identityID");
 		}
+		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 
@@ -619,7 +621,7 @@ public class Login {
 				CreateChoice.getPolicyIDs(policyIDs),
 				tcc,
 				linkAll != null);
-		return createLoginResponse(redirect, newtoken, !FALSE.equals(session));
+		return createLoginResponse(redirectURI, newtoken, !FALSE.equals(session));
 	}
 	
 	private static class CreateChoice extends PickChoice {

@@ -24,6 +24,7 @@ import java.util.UUID;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
@@ -49,6 +50,8 @@ import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.AuthenticationException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -841,5 +844,126 @@ public class LoginTest {
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect error", tis.getError(), is(Optional.of("errorwhee")));
+	}
+	
+	@Test
+	public void loginCompleteFailNoStateCookie() throws Exception {
+		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("issessiontoken", "false");
+		
+		final MissingParameterException e = new MissingParameterException(
+				"Couldn't retrieve state value from cookie");
+
+		failLoginComplete(request, 400, "Bad Request", e);
+
+		request.cookie("loginstatevar", "   \t   ");
+		
+		failLoginComplete(request, 400, "Bad Request", e);
+	}
+	
+	@Test
+	public void loginCompleteFailStateMismatch() throws Exception {
+		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("issessiontoken", "false")
+				.cookie("loginstatevar", "this doesn't match");
+		
+		failLoginComplete(request, 401, "Unauthorized",
+				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"State values do not match, this may be a CXRF attack"));
+	}
+	
+	@Test
+	public void loginCompleteFailNoProviderState() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("code", "foocode")
+				.build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("issessiontoken", "false")
+				.cookie("loginstatevar", "somestate");
+		
+		failLoginComplete(request, 401, "Unauthorized",
+				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+						"State values do not match, this may be a CXRF attack"));
+	}
+	
+	@Test
+	public void loginCompleteFailNoAuthcode() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("state", "somestate")
+				.build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("issessiontoken", "false")
+				.cookie("loginstatevar", "somestate");
+		
+		failLoginComplete(request, 400, "Bad Request",
+				new MissingParameterException("authorization code"));
+	}
+	
+	@Test
+	public void loginCompleteFailNoSuchProvider() throws Exception {
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableProvider(admintoken, "prov2");
+		
+		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginstatevar", "foobarstate");
+		
+		failLoginComplete(request, 401, "Unauthorized",
+				new NoSuchIdentityProviderException("prov1"));
+	}
+	
+	@Test
+	public void loginCompleteFailBadRedirect() throws Exception {
+		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginstatevar", "foobarstate")
+				.cookie("loginredirect", "not a url no sir");
+		
+		failLoginComplete(request, 400, "Bad Request",
+				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
+		
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
+		
+		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled"));
+		
+		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+	}
+
+	private void failLoginComplete(
+			final Builder request,
+			final int httpCode,
+			final String httpStatus,
+			final AuthException e) throws Exception {
+		
+		final Response res = request.get();
+		
+		assertThat("incorrect status code", res.getStatus(), is(httpCode));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> error = res.readEntity(Map.class);
+		
+		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, error);
 	}
 }
