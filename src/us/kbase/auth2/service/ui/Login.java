@@ -408,10 +408,19 @@ public class Login {
 			final String suggestedUserName = id.getDetails().getUsername().split("@")[0];
 			final Optional<UserName> availName = auth.getAvailableUserName(suggestedUserName);
 			c.put(Fields.AVAILABLE_NAME, availName.isPresent() ? availName.get().getName() : null);
-			//TODO UI return null for full name & email if they're not valid by our rules
 			c.put(Fields.PROV_USER, id.getDetails().getUsername());
-			c.put(Fields.PROV_FULL, id.getDetails().getFullname());
-			c.put(Fields.PROV_EMAIL, id.getDetails().getEmail());
+			try {
+				new DisplayName(id.getDetails().getFullname()); //TODO ZLATER CODE isvalid() method
+				c.put(Fields.PROV_FULL, id.getDetails().getFullname());
+			} catch (MissingParameterException | IllegalParameterException e) {
+				c.put(Fields.PROV_FULL, null);
+			}
+			try {
+				new EmailAddress(id.getDetails().getEmail()); //TODO ZLATER CODE isvalid() method
+				c.put(Fields.PROV_EMAIL, id.getDetails().getEmail());
+			} catch (MissingParameterException | IllegalParameterException e) {
+				c.put(Fields.PROV_EMAIL, null);
+			}
 			create.add(c);
 		}
 		final boolean adminOnly = !loginState.isNonAdminLoginAllowed();
