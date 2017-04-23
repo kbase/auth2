@@ -153,6 +153,7 @@ The two repos above need to be in the same parent folder.
 To start server
 ---------------
 start mongodb  
+if using mongo auth, create a mongo user
 cd into the auth2 repo  
 `ant build`  
 copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
@@ -163,7 +164,13 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 Import Globus users
 ------------
 Use the `manage_auth` script to import Globus users - run with the `--help`
-option for instructions. 
+option for instructions. You can use https://github.com/kbase/metrics/blob/master/scripts/list_kbase_users.py
+to generate a list of current users (parse the output to only usernames).  Get
+a Nexus token using nexus.api.globusonline.org, and get a Globus API token from
+https://tokens.globus.org.
+
+After importing a provider's users, you can enable nonadmin logins and whichever providers you select
+(Globus and Google currently supported), and create or grant administrator access (below).
 
 Administer the server
 ---------------------
