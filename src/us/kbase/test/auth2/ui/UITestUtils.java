@@ -12,6 +12,10 @@ import java.util.Map;
 
 import com.google.common.collect.ImmutableMap;
 
+import de.danielbechler.diff.ObjectDifferBuilder;
+import de.danielbechler.diff.node.DiffNode;
+import de.danielbechler.diff.node.ToMapPrintingVisitor;
+import de.danielbechler.diff.path.NodePath;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -87,9 +91,20 @@ public class UITestUtils {
 		inner.remove("callid");
 		inner.remove("time");
 		
+		
 		assertThat("incorrect error structure less callid and time", error, is(expected));
-		assertThat("incorrect call id", callid, RegexMatcher.matches("\\d{1,20}"));
+		assertThat("incorrect call id", callid, RegexMatcher.matches("\\d{20}"));
 		TestCommon.assertCloseToNow(time);
+	}
+	
+	// note ObjectDiffer does NOT check sorted lists are sorted
+	public static void assertObjectsEqual(final Object got, final Object expected) {
+		final DiffNode diff = ObjectDifferBuilder.buildDefault().compare(got, expected);
+		final ToMapPrintingVisitor visitor = new ToMapPrintingVisitor(got, expected);
+		diff.visit(visitor);
+		
+		assertThat("non empty structure diff", visitor.getMessages(),
+				is(ImmutableMap.of(NodePath.withRoot(), "Property at path '/' has not changed")));
 	}
 
 }

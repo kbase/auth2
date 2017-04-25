@@ -1011,7 +1011,8 @@ public class LoginTest {
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
 				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
-				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000)).build());
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000))
+				.build());
 		manager.storage.link(new UserName("ruser1"),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")));
@@ -1063,10 +1064,10 @@ public class LoginTest {
 						"id", "4a3cd1ac3f1ffd5d2fecabcfc1856485",
 						"provemail", "e4@g.com"),
 				MapBuilder.newHashMap()
-						.with("provusername", "user@at@bleah.com")
+						.with("provusername", "user&at@bleah.com")
 						.with("availablename", "userat2")
 						.with("provfullname", null)
-						.with("id", "78f2c2dbc07bfc9838c45f601a92762")
+						.with("id", "78f2c2dbc07bfc9838c45f601a92762d")
 						.with("provemail", null)
 						.build(),
 				MapBuilder.newHashMap()
@@ -1100,14 +1101,19 @@ public class LoginTest {
 						.put("provusernames", Arrays.asList("user3"))
 						.build()
 				));
-						
 		
-		
-		
-		System.out.println(json);
+		UITestUtils.assertObjectsEqual(json, expectedJson);
 		
 		// TODO NOW with redirect
 		// TODO NOW with login disabled
 		//TODO NOW with failing cases
+		//TODO NOW with only logins and only creates
+	}
+
+	@Test
+	public void loginChoice2LoginWithRedirectAndLoginDisabled() throws Exception {
+		// tests with redirect cookie
+		// tests with login disabled and admin user
+		// tests with trailing slash on target
 	}
 }
