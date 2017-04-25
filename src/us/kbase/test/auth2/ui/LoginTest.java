@@ -53,6 +53,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -1104,10 +1105,8 @@ public class LoginTest {
 		
 		UITestUtils.assertObjectsEqual(json, expectedJson);
 		
-		// TODO NOW with redirect
-		// TODO NOW with login disabled
 		//TODO NOW with failing cases
-		//TODO NOW with only logins and only creates
+		//TODO NOW with only creates
 	}
 
 	@Test
@@ -1115,5 +1114,87 @@ public class LoginTest {
 		// tests with redirect cookie
 		// tests with login disabled and admin user
 		// tests with trailing slash on target
+
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableRedirect(admintoken, "https://foo.com/whee");
+		
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
+				.build());
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")))
+				.build());
+		manager.storage.updateRoles(new UserName("ruser2"), set(Role.ADMIN), set());
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice/")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/bleah")
+				.get()
+				.readEntity(String.class);
+		
+		System.out.println(res);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/bleah")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "../pick");
+		expectedJson.put("createurl", "../create");
+		expectedJson.put("cancelurl", "../cancel");
+		expectedJson.put("suggestnameurl", "../suggestname");
+		expectedJson.put("redirecturl", "https://foo.com/whee/bleah");
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", false);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Collections.emptyList());
+		expectedJson.put("login", Arrays.asList(
+				ImmutableMap.builder()
+						.put("adminonly", true)
+						.put("loginallowed", false)
+						.put("disabled", false)
+						.put("policyids", Collections.emptyList())
+						.put("id", "ef0518c79af70ed979907969c6d0a0f7")
+						.put("user", "ruser1")
+						.put("provusernames", Arrays.asList("user1"))
+						.build(),
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", true)
+						.put("disabled", false)
+						.put("policyids", Collections.emptyList())
+						.put("id", "5fbea2e6ce3d02f7cdbde0bc31be8059")
+						.put("user", "ruser2")
+						.put("provusernames", Arrays.asList("user2"))
+						.build()
+				));
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
 	}
 }

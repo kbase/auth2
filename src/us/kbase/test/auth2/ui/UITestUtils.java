@@ -98,6 +98,8 @@ public class UITestUtils {
 	}
 	
 	// note ObjectDiffer does NOT check sorted lists are sorted
+	// this really kind of sucks, but it's better for large shallow objects
+	// easy enough to do a straight equals if needed
 	public static void assertObjectsEqual(final Object got, final Object expected) {
 		final DiffNode diff = ObjectDifferBuilder.buildDefault().compare(got, expected);
 		final ToMapPrintingVisitor visitor = new ToMapPrintingVisitor(got, expected);
