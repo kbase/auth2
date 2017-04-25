@@ -1029,7 +1029,7 @@ public class LoginTest {
 		enableLogin(admintoken);
 		
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/choice") //TODO NOW test with target with trailing slash
+				.path("/login/choice")
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1106,7 +1106,6 @@ public class LoginTest {
 		UITestUtils.assertObjectsEqual(json, expectedJson);
 		
 		//TODO NOW with failing cases
-		//TODO NOW with only creates
 	}
 
 	@Test
@@ -1151,8 +1150,6 @@ public class LoginTest {
 				.get()
 				.readEntity(String.class);
 		
-		System.out.println(res);
-		
 		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 		
@@ -1194,6 +1191,133 @@ public class LoginTest {
 						.put("provusernames", Arrays.asList("user2"))
 						.build()
 				));
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoice2CreateAndLoginDisabled() throws Exception {
+		// tests with login disabled
+		// tests with trailing slash on target
+
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice/")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "../pick");
+		expectedJson.put("createurl", "../create");
+		expectedJson.put("cancelurl", "../cancel");
+		expectedJson.put("suggestnameurl", "../suggestname");
+		expectedJson.put("redirecturl", null);
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", false);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user1",
+						"availablename", "user1",
+						"provfullname", "full1",
+						"id", "ef0518c79af70ed979907969c6d0a0f7",
+						"provemail", "e1@g.com"),
+				ImmutableMap.of("provusername", "user2",
+						"availablename", "user2",
+						"provfullname", "full2",
+						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059",
+						"provemail", "e2@g.com")
+				));
+		expectedJson.put("login", Collections.emptyList());
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoice2CreateWithRedirectURL() throws Exception {
+		// tests with redirect cookie
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableRedirect(admintoken, "https://foo.com/whee");
+		enableLogin(admintoken);
+
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/baz")
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/baz")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "pick");
+		expectedJson.put("createurl", "create");
+		expectedJson.put("cancelurl", "cancel");
+		expectedJson.put("suggestnameurl", "suggestname");
+		expectedJson.put("redirecturl", "https://foo.com/whee/baz");
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", true);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user1",
+						"availablename", "user1",
+						"provfullname", "full1",
+						"id", "ef0518c79af70ed979907969c6d0a0f7",
+						"provemail", "e1@g.com"),
+				ImmutableMap.of("provusername", "user2",
+						"availablename", "user2",
+						"provfullname", "full2",
+						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059",
+						"provemail", "e2@g.com")
+				));
+		expectedJson.put("login", Collections.emptyList());
 		
 		UITestUtils.assertObjectsEqual(json, expectedJson);
 	}

@@ -1,0 +1,50 @@
+<html>
+<body>
+
+<p>Note that in a proper UI, the provider usernames, the display name, and email address should be HTML-escaped.</p>
+
+Choices expire: 11493000000000<br/>
+
+<form action="cancel" method="post">
+	<input type="submit" value="Cancel login"/>
+</form>
+
+<h2>Provider: prov</h2>
+
+<h3>Login</h3>
+<p>The login information from the provider allows you to access these
+accounts:</p>
+
+<h3>Create account</h3>
+<p>
+User name is public.<br/>
+Display name is public to other system users.<br/>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
+<p>Create an account linked to user2</p>
+
+<form action="create" method="post">
+	User name: <input type="text" name="user" value="user2"/><br/>
+	Display name: <input type="text" name="display" value="full2"/><br/>
+	Email: <input type="text" name="email" value="e2@g.com"/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="hidden" name="id" value="5fbea2e6ce3d02f7cdbde0bc31be8059"/>
+	<input type="submit" value="Create"/>
+</form>
+<p>Create an account linked to user1</p>
+
+<form action="create" method="post">
+	User name: <input type="text" name="user" value="user1"/><br/>
+	Display name: <input type="text" name="display" value="full1"/><br/>
+	Email: <input type="text" name="email" value="e1@g.com"/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="hidden" name="id" value="ef0518c79af70ed979907969c6d0a0f7"/>
+	<input type="submit" value="Create"/>
+</form>
+
+</body>
+</html>
