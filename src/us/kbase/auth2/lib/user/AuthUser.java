@@ -143,7 +143,7 @@ public class AuthUser {
 	/** Get the set of policyIDs associated with this user.
 	 * @return the policy IDs mapped to the time the user agreed to the policy.
 	 */
-	public Map<PolicyID, Instant> getPolicyIDs() { //TODO NOW test sorted
+	public Map<PolicyID, Instant> getPolicyIDs() {
 		return policyIDs;
 	}
 	
