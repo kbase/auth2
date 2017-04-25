@@ -86,7 +86,7 @@ public class LoginState {
 	/** Get the set of identities that are not associated with a user account.
 	 * @return the set of identities that are not associated with a user account.
 	 */
-	public Set<RemoteIdentity> getIdentities() { //TODO NOW Test sorted
+	public Set<RemoteIdentity> getIdentities() {
 		return noUser;
 	}
 	
@@ -94,7 +94,7 @@ public class LoginState {
 	 * identities provided by the identity provider.
 	 * @return the user names.
 	 */
-	public Set<UserName> getUsers() { //TODO NOW test sorted
+	public Set<UserName> getUsers() {
 		return users.keySet();
 	}
 	
@@ -121,7 +121,7 @@ public class LoginState {
 	 * @param name the user name of the user account.
 	 * @return the set of remote identities.
 	 */
-	public Set<RemoteIdentity> getIdentities(final UserName name) { // TODO NOW test sorted
+	public Set<RemoteIdentity> getIdentities(final UserName name) {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}

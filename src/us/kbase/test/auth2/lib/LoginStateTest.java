@@ -7,6 +7,8 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.junit.Test;
 
@@ -155,6 +157,53 @@ public class LoginStateTest {
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo5")), is(true));
 		assertThat("incorrect expires", ls.getExpires(),
 				is(Instant.ofEpochMilli(10000)));
+	}
+	
+	@Test
+	public void sortedUserNames() throws Exception {
+		final DisplayName dn = new DisplayName("d");
+		final Instant now = Instant.now();
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withUser(AuthUser.getBuilder(new UserName("foo"), dn, now)
+						.withIdentity(REMOTE1).build(), REMOTE1)
+				.withUser(AuthUser.getBuilder(new UserName("bar"), dn, now)
+						.withIdentity(REMOTE2).build(), REMOTE2)
+				.withUser(AuthUser.getBuilder(new UserName("baz"), dn, now)
+						.withIdentity(REMOTE3).build(), REMOTE3)
+				.build();
+		
+		assertThat("user names aren't sorted", new LinkedList<>(ls.getUsers()),
+				is(Arrays.asList(new UserName("bar"), new UserName("baz"), new UserName("foo"))));
+	}
+	
+	@Test
+	public void sortedUnlinkedIdentities() throws Exception {
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withIdentity(REMOTE3) // id is b5bc5fbd0e014aedb8541109a6536eca
+				.withIdentity(REMOTE1) // id is 225fa1634408e1c55c984bd8b199587e
+				.withIdentity(REMOTE2) // id is 589bebde3cf9c926f88420769025677b
+				.build();
+		assertThat("idents aren't sorted", new LinkedList<>(ls.getIdentities()),
+				is(Arrays.asList(REMOTE1, REMOTE2, REMOTE3)));
+	}
+	
+	@Test
+	public void sortedLinkedIdentities() throws Exception {
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("dn"), Instant.now())
+				.withIdentity(REMOTE3)
+				.withIdentity(REMOTE1)
+				.withIdentity(REMOTE2)
+				.build();
+		
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withUser(u, REMOTE3) // id is b5bc5fbd0e014aedb8541109a6536eca
+				.withUser(u, REMOTE1) // id is 225fa1634408e1c55c984bd8b199587e
+				.withUser(u, REMOTE2) // id is 589bebde3cf9c926f88420769025677b
+				.build();
+		assertThat("user idents aren't sorted",
+				new LinkedList<>(ls.getIdentities(new UserName("foo"))),
+						is(Arrays.asList(REMOTE1, REMOTE2, REMOTE3)));
 	}
 	
 	@Test
