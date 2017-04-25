@@ -18,7 +18,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
@@ -46,6 +51,8 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
+import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -62,10 +69,13 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.common.test.RegexMatcher;
+import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -963,5 +973,141 @@ public class LoginTest {
 		final Map<String, Object> error = res.readEntity(Map.class);
 		
 		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, error);
+	}
+	
+	@Test
+	public void loginChoice3Create2Login() throws Exception {
+		// this tests a bunch of orthogonal test cases. Doesn't make much sense to split it up
+		// since there has to be *some* output for the test, might as well include independent
+		// cases.
+		// tests a choice with 3 options to create an account, 2 options to login with an account,
+		// one of which has two linked IDs.
+		// tests create accounts having missing email and fullnames and illegal
+		// email and fullnames.
+		// tests one of the suggested usernames containing a @ and existing in the system.
+		// tests one of the users being disabled.
+		// tests policy ids.
+		// tests with no redirect cookie.
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 5; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user&at@bleah.com", null, null)));
+		idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id6"),
+				new RemoteIdentityDetails("whee", "foo\nbar", "not an email")));
+		
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("userat"),
+				new DisplayName("f"), Instant.ofEpochMilli(30000)).build(),
+				new PasswordHashAndSalt("foobarbazbat".getBytes(), "aaa".getBytes()));
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000)).build());
+		manager.storage.link(new UserName("ruser1"),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")));
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3a", "full3a", "e3a@g.com"))).build());
+		when(manager.mockClock.instant()).thenReturn(Instant.ofEpochMilli(40000));
+		manager.storage.disableAccount(new UserName("ruser2"), new UserName("adminwhee"),
+				"Said nasty, but true, things about Steve");
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableLogin(admintoken);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice") //TODO NOW test with target with trailing slash
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "pick");
+		expectedJson.put("createurl", "create");
+		expectedJson.put("cancelurl", "cancel");
+		expectedJson.put("suggestnameurl", "suggestname");
+		expectedJson.put("redirecturl", null);
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", true);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user4",
+						"availablename", "user4",
+						"provfullname", "full4",
+						"id", "4a3cd1ac3f1ffd5d2fecabcfc1856485",
+						"provemail", "e4@g.com"),
+				MapBuilder.newHashMap()
+						.with("provusername", "user@at@bleah.com")
+						.with("availablename", "userat2")
+						.with("provfullname", null)
+						.with("id", "78f2c2dbc07bfc9838c45f601a92762")
+						.with("provemail", null)
+						.build(),
+				MapBuilder.newHashMap()
+						.with("provusername", "whee")
+						.with("availablename", "whee")
+						.with("provfullname", null)
+						.with("id", "ccf1ab20b4b412c515182c16f6176b3f")
+						.with("provemail", null)
+						.build()
+				));
+		expectedJson.put("login", Arrays.asList(
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", true)
+						.put("disabled", false)
+						.put("policyids", Arrays.asList(
+								ImmutableMap.of("id", "bar", "agreedon", 70000),
+								ImmutableMap.of("id", "foo", "agreedon", 60000)
+						))
+						.put("id", "5fbea2e6ce3d02f7cdbde0bc31be8059")
+						.put("user", "ruser1")
+						.put("provusernames", Arrays.asList("user2", "user1"))
+						.build(),
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", false)
+						.put("disabled", true)
+						.put("policyids", Collections.emptyList())
+						.put("id", "de0702aa7927b562e0d6be5b6527cfb2")
+						.put("user", "ruser2")
+						.put("provusernames", Arrays.asList("user3"))
+						.build()
+				));
+						
+		
+		
+		
+		System.out.println(json);
+		
+		// TODO NOW with redirect
+		// TODO NOW with login disabled
+		//TODO NOW with failing cases
 	}
 }

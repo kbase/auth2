@@ -10,7 +10,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  * @author gaprice@lbl.gov
  *
  */
-public class Name {
+public class Name implements Comparable<Name> {
 	
 	private final String name;
 	
@@ -69,6 +69,14 @@ public class Name {
 	 */
 	public String getName() {
 		return name;
+	}
+
+	@Override // TODO NOW test
+	public int compareTo(final Name userName) {
+		if (userName == null) {
+			throw new NullPointerException("userName");
+		}
+		return getName().compareTo(userName.getName());
 	}
 
 	@Override
