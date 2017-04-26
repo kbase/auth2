@@ -4,10 +4,12 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -210,9 +212,18 @@ public class LoginState {
 	 */
 	public static class Builder {
 		
+		private final Comparator<RemoteIdentity> REMOTE_IDENTITY_COMPARATOR =
+				new Comparator<RemoteIdentity>() {
+			
+			@Override
+			public int compare(final RemoteIdentity ri1, final RemoteIdentity ri2) {
+				return ri1.getRemoteID().getID().compareTo(ri2.getRemoteID().getID());
+			}
+		};
+
 		private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
-		private final Map<UserName, AuthUser> users = new HashMap<>();
-		private final Set<RemoteIdentity> noUser = new HashSet<>();
+		private final Map<UserName, AuthUser> users = new TreeMap<>();
+		private final Set<RemoteIdentity> noUser = new TreeSet<>(REMOTE_IDENTITY_COMPARATOR);
 		private final Instant expires;
 		private final String provider;
 		private final boolean nonAdminLoginAllowed;
@@ -267,7 +278,7 @@ public class LoginState {
 			final UserName name = user.getUserName();
 			users.put(name, user);
 			if (!userIDs.containsKey(name)) {
-				userIDs.put(name, new HashSet<>());
+				userIDs.put(name, new TreeSet<>(REMOTE_IDENTITY_COMPARATOR));
 			}
 			userIDs.get(name).add(remoteID);
 			return this;

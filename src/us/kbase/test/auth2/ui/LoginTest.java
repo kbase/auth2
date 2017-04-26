@@ -18,7 +18,12 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
@@ -46,6 +51,9 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
+import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TemporaryIdentities;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -54,18 +62,23 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.common.test.RegexMatcher;
+import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -73,8 +86,6 @@ import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 
 public class LoginTest {
-	
-	//TODO NOW configure travis and build.xml so these tests don't run for each mongo version, just once
 	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
@@ -856,11 +867,11 @@ public class LoginTest {
 		final MissingParameterException e = new MissingParameterException(
 				"Couldn't retrieve state value from cookie");
 
-		failLoginComplete(request, 400, "Bad Request", e);
+		failGet(request, 400, "Bad Request", e);
 
 		request.cookie("loginstatevar", "   \t   ");
 		
-		failLoginComplete(request, 400, "Bad Request", e);
+		failGet(request, 400, "Bad Request", e);
 	}
 	
 	@Test
@@ -871,7 +882,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "this doesn't match");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -890,7 +901,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -909,7 +920,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failLoginComplete(request, 400, "Bad Request",
+		failGet(request, 400, "Bad Request",
 				new MissingParameterException("authorization code"));
 	}
 	
@@ -925,7 +936,7 @@ public class LoginTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("loginstatevar", "foobarstate");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new NoSuchIdentityProviderException("prov1"));
 	}
 	
@@ -937,21 +948,21 @@ public class LoginTest {
 				.cookie("loginstatevar", "foobarstate")
 				.cookie("loginredirect", "not a url no sir");
 		
-		failLoginComplete(request, 400, "Bad Request",
+		failGet(request, 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
-		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(adminToken, "https://foobar.com/stuff2/");
-		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
-	private void failLoginComplete(
+	private void failGet(
 			final Builder request,
 			final int httpCode,
 			final String httpStatus,
@@ -965,5 +976,410 @@ public class LoginTest {
 		final Map<String, Object> error = res.readEntity(Map.class);
 		
 		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, error);
+	}
+	
+	@Test
+	public void loginChoice3Create2Login() throws Exception {
+		// this tests a bunch of orthogonal test cases. Doesn't make much sense to split it up
+		// since there has to be *some* output for the test, might as well include independent
+		// cases.
+		// tests a choice with 3 options to create an account, 2 options to login with an account,
+		// one of which has two linked IDs.
+		// tests create accounts having missing email and fullnames and illegal
+		// email and fullnames.
+		// tests one of the suggested usernames containing a @ and existing in the system.
+		// tests one of the users being disabled.
+		// tests policy ids.
+		// tests with no redirect cookie.
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 5; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user&at@bleah.com", null, null)));
+		idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id6"),
+				new RemoteIdentityDetails("whee", "foo\nbar", "not an email")));
+		
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("userat"),
+				new DisplayName("f"), Instant.ofEpochMilli(30000)).build(),
+				new PasswordHashAndSalt("foobarbazbat".getBytes(), "aaa".getBytes()));
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
+				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
+				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(70000))
+				.build());
+		manager.storage.link(new UserName("ruser1"),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")));
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+						new RemoteIdentityDetails("user3a", "full3a", "e3a@g.com"))).build());
+		when(manager.mockClock.instant()).thenReturn(Instant.ofEpochMilli(40000));
+		manager.storage.disableAccount(new UserName("ruser2"), new UserName("adminwhee"),
+				"Said nasty, but true, things about Steve");
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableLogin(admintoken);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "pick");
+		expectedJson.put("createurl", "create");
+		expectedJson.put("cancelurl", "cancel");
+		expectedJson.put("suggestnameurl", "suggestname");
+		expectedJson.put("redirecturl", null);
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", true);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user4",
+						"availablename", "user4",
+						"provfullname", "full4",
+						"id", "4a3cd1ac3f1ffd5d2fecabcfc1856485",
+						"provemail", "e4@g.com"),
+				MapBuilder.newHashMap()
+						.with("provusername", "user&at@bleah.com")
+						.with("availablename", "userat2")
+						.with("provfullname", null)
+						.with("id", "78f2c2dbc07bfc9838c45f601a92762d")
+						.with("provemail", null)
+						.build(),
+				MapBuilder.newHashMap()
+						.with("provusername", "whee")
+						.with("availablename", "whee")
+						.with("provfullname", null)
+						.with("id", "ccf1ab20b4b412c515182c16f6176b3f")
+						.with("provemail", null)
+						.build()
+				));
+		expectedJson.put("login", Arrays.asList(
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", true)
+						.put("disabled", false)
+						.put("policyids", Arrays.asList(
+								ImmutableMap.of("id", "bar", "agreedon", 70000),
+								ImmutableMap.of("id", "foo", "agreedon", 60000)
+						))
+						.put("id", "5fbea2e6ce3d02f7cdbde0bc31be8059")
+						.put("user", "ruser1")
+						.put("provusernames", Arrays.asList("user2", "user1"))
+						.build(),
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", false)
+						.put("disabled", true)
+						.put("policyids", Collections.emptyList())
+						.put("id", "de0702aa7927b562e0d6be5b6527cfb2")
+						.put("user", "ruser2")
+						.put("provusernames", Arrays.asList("user3"))
+						.build()
+				));
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+
+	@Test
+	public void loginChoice2LoginWithRedirectAndLoginDisabled() throws Exception {
+		// tests with redirect cookie
+		// tests with login disabled and admin user
+		// tests with trailing slash on target
+
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableRedirect(admintoken, "https://foo.com/whee");
+		
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
+				.build());
+		manager.storage.createUser(NewUser.getBuilder(
+				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")))
+				.build());
+		manager.storage.updateRoles(new UserName("ruser2"), set(Role.ADMIN), set());
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice/")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/bleah")
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/bleah")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "../pick");
+		expectedJson.put("createurl", "../create");
+		expectedJson.put("cancelurl", "../cancel");
+		expectedJson.put("suggestnameurl", "../suggestname");
+		expectedJson.put("redirecturl", "https://foo.com/whee/bleah");
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", false);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Collections.emptyList());
+		expectedJson.put("login", Arrays.asList(
+				ImmutableMap.builder()
+						.put("adminonly", true)
+						.put("loginallowed", false)
+						.put("disabled", false)
+						.put("policyids", Collections.emptyList())
+						.put("id", "ef0518c79af70ed979907969c6d0a0f7")
+						.put("user", "ruser1")
+						.put("provusernames", Arrays.asList("user1"))
+						.build(),
+				ImmutableMap.builder()
+						.put("adminonly", false)
+						.put("loginallowed", true)
+						.put("disabled", false)
+						.put("policyids", Collections.emptyList())
+						.put("id", "5fbea2e6ce3d02f7cdbde0bc31be8059")
+						.put("user", "ruser2")
+						.put("provusernames", Arrays.asList("user2"))
+						.build()
+				));
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoice2CreateAndLoginDisabled() throws Exception {
+		// tests with login disabled
+		// tests with trailing slash on target
+		// tests empty string for redirect
+
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice/")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "   \t   ")
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "   \t   ")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "../pick");
+		expectedJson.put("createurl", "../create");
+		expectedJson.put("cancelurl", "../cancel");
+		expectedJson.put("suggestnameurl", "../suggestname");
+		expectedJson.put("redirecturl", null);
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", false);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user1",
+						"availablename", "user1",
+						"provfullname", "full1",
+						"id", "ef0518c79af70ed979907969c6d0a0f7",
+						"provemail", "e1@g.com"),
+				ImmutableMap.of("provusername", "user2",
+						"availablename", "user2",
+						"provfullname", "full2",
+						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059",
+						"provemail", "e2@g.com")
+				));
+		expectedJson.put("login", Collections.emptyList());
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoice2CreateWithRedirectURL() throws Exception {
+		// tests with redirect cookie
+		
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		enableRedirect(admintoken, "https://foo.com/whee");
+		enableLogin(admintoken);
+
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		final Set<RemoteIdentity> idents = new HashSet<>();
+		for (int i = 1; i < 3; i++) {
+			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
+					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
+		}
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final String res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/baz")
+				.get()
+				.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "https://foo.com/whee/baz")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get()
+				.readEntity(Map.class);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", "pick");
+		expectedJson.put("createurl", "create");
+		expectedJson.put("cancelurl", "cancel");
+		expectedJson.put("suggestnameurl", "suggestname");
+		expectedJson.put("redirecturl", "https://foo.com/whee/baz");
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("creationallowed", true);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("create", Arrays.asList(
+				ImmutableMap.of("provusername", "user1",
+						"availablename", "user1",
+						"provfullname", "full1",
+						"id", "ef0518c79af70ed979907969c6d0a0f7",
+						"provemail", "e1@g.com"),
+				ImmutableMap.of("provusername", "user2",
+						"availablename", "user2",
+						"provfullname", "full2",
+						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059",
+						"provemail", "e2@g.com")
+				));
+		expectedJson.put("login", Collections.emptyList());
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoiceFailNoToken() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failGet(res, 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+	}
+	
+	@Test
+	public void loginChoiceFailBadToken() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.cookie("in-process-login-token", "foobarbaz")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failGet(res, 401, "Unauthorized", new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void loginChoiceFailBadRedirect() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobarbaz")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginredirect", "not a url no sir");
+		
+		failGet(request, 400, "Bad Request",
+				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
+		
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
+		
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled"));
+		
+		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 }

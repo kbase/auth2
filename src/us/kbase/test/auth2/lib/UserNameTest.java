@@ -93,7 +93,7 @@ public class UserNameTest {
 			new UserName("foo").compareTo(null);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("userName"));
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("name"));
 		}
 	}
 	

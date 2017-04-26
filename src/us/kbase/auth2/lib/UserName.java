@@ -20,7 +20,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  * @author gaprice@lbl.gov
  *
  */
-public class UserName extends Name implements Comparable<UserName>{
+public class UserName extends Name {
 
 	// this must never be a valid username 
 	private final static String ROOT_NAME = "***ROOT***";
@@ -68,17 +68,7 @@ public class UserName extends Name implements Comparable<UserName>{
 	public boolean isRoot() {
 		return getName().equals(ROOT_NAME);
 	}
-	
 
-	@Override
-	public int compareTo(final UserName userName) {
-		if (userName == null) {
-			throw new NullPointerException("userName");
-		}
-		return getName().compareTo(userName.getName());
-	}
-
-	// returns the null if the name contains no lowercase letters.
 	/** Given a string, returns a new name based on that string that is a legal user name. If
 	 * it is not possible construct a valid user name, absent is returned.
 	 * @param suggestedUserName the user name to mutate into a legal user name.

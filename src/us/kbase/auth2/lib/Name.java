@@ -2,6 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -10,7 +11,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  * @author gaprice@lbl.gov
  *
  */
-public class Name {
+public class Name implements Comparable<Name> {
 	
 	private final String name;
 	
@@ -69,6 +70,12 @@ public class Name {
 	 */
 	public String getName() {
 		return name;
+	}
+
+	@Override
+	public int compareTo(final Name userName) {
+		nonNull(userName, "name");
+		return getName().compareTo(userName.getName());
 	}
 
 	@Override

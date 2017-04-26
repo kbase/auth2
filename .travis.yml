@@ -29,7 +29,6 @@ install:
 script:
     - cp -n test.cfg.example test.cfg
 
-    - mkdir temp_test_dir
     # Note: using # as delimiter instead of / since / is in the mongod path
     # If there are # in the mongod path, this will fail.
     - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg

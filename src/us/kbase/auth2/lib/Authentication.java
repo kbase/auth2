@@ -124,7 +124,7 @@ public class Authentication {
 	//TODO CODE code analysis https://www.codacy.com/
 	//TODO CODE code analysis https://find-sec-bugs.github.io/
 	//TODO ZLATER POLICYIDS maintain admin settable list of required policy IDs, check on login & force choice page if missing. fail login or create if missing. Return missing with choice data
-	//TODO ZLATER SCOPES use token types as scopes for some activities - for example admin actions should require a login token.
+	//TODO TEST test with gzip compression in header
 	
 	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 	private static final int LOGIN_TOKEN_LIFETIME_MS = 30 * 60 * 1000;

@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 
 import org.junit.Test;
 
@@ -448,5 +449,22 @@ public class AuthUserTest {
 		} catch (UnsupportedOperationException e) {
 			// test passed
 		}
+	}
+	
+	@Test
+	public void sortedPolicyIDs() throws Exception {
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+				Instant.ofEpochMilli(10000))
+				.withPolicyID(new PolicyID("zoo"), Instant.ofEpochMilli(10000))
+				.withPolicyID(new PolicyID("mid2"), Instant.ofEpochMilli(15000))
+				.withPolicyID(new PolicyID("aard"), Instant.ofEpochMilli(20000))
+				.withPolicyID(new PolicyID("mid"), Instant.ofEpochMilli(30000))
+				.build();
+		
+		assertThat("policy ids not sorted", new LinkedList<>(u.getPolicyIDs().keySet()),
+				is(Arrays.asList(new PolicyID("aard"), new PolicyID("mid"), new PolicyID("mid2"),
+						new PolicyID("zoo"))));
+		
+				
 	}
 }

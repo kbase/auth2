@@ -1,0 +1,30 @@
+<html>
+<body>
+
+<p>Note that in a proper UI, the provider usernames, the display name, and email address should be HTML-escaped.</p>
+
+Choices expire: 11493000000000<br/>
+
+<form action="../cancel" method="post">
+	<input type="submit" value="Cancel login"/>
+</form>
+
+<h2>Provider: prov</h2>
+
+<h3>Login</h3>
+<p>The login information from the provider allows you to access these
+accounts:</p>
+
+<h3>Create account</h3>
+<p>
+User name is public.<br/>
+Display name is public to other system users.<br/>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
+Provider username: user2<br/>
+Sorry, account creation is currently disabled.<br/>
+Provider username: user1<br/>
+Sorry, account creation is currently disabled.<br/>
+
+</body>
+</html>

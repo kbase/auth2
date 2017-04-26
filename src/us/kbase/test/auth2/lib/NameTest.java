@@ -80,6 +80,24 @@ public class NameTest {
 				new IllegalParameterException("thing contains control characters"));
 	}
 	
+	@Test
+	public void compareTo() throws Exception {
+		assertThat("incorrect compare for < ",
+				new Name("bar", "n", 5).compareTo(new Name("foo", "n", 5)) < 0, is(true));
+		
+		assertThat("incorrect compare for < ",
+				new Name("bar", "n", 5).compareTo(new Name("bar", "n", 5)), is(0));
+		assertThat("incorrect compare for < ",
+				new Name("foo", "n", 5).compareTo(new Name("bar", "n", 5)) > 0, is(true));
+		
+		try {
+			new Name("bar", "n", 5).compareTo(null);
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new NullPointerException("name"));
+		}
+	}
+	
 	private void failConstruct(
 			final String name,
 			final String type,

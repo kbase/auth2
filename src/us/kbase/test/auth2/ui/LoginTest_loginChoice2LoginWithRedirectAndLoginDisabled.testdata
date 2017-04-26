@@ -1,0 +1,41 @@
+<html>
+<body>
+
+<p>Note that in a proper UI, the provider usernames, the display name, and email address should be HTML-escaped.</p>
+
+Choices expire: 11493000000000<br/>
+
+<form action="../cancel" method="post">
+	<input type="submit" value="Cancel login"/>
+</form>
+
+<h2>Provider: prov</h2>
+
+<h3>Login</h3>
+<p>The login information from the provider allows you to access these
+accounts:</p>
+Username: ruser1  ***Currently only admin accounts can log in***<br/>
+Provider usernames: [user1]<br/>
+Policy IDs:<br/>
+<br/>
+Username: ruser2  <br/>
+Provider usernames: [user2]<br/>
+Policy IDs:<br/>
+<form action="../pick" method="post">
+	<input type="hidden" name="id" value="5fbea2e6ce3d02f7cdbde0bc31be8059"/>
+	Add policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="submit" value="Login"/>
+</form>
+<br/>
+
+<h3>Create account</h3>
+<p>
+User name is public.<br/>
+Display name is public to other system users.<br/>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
+
+</body>
+</html>

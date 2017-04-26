@@ -1,0 +1,79 @@
+<html>
+<body>
+
+<p>Note that in a proper UI, the provider usernames, the display name, and email address should be HTML-escaped.</p>
+
+Choices expire: 11493000000000<br/>
+
+<form action="cancel" method="post">
+	<input type="submit" value="Cancel login"/>
+</form>
+
+<h2>Provider: prov</h2>
+
+<h3>Login</h3>
+<p>The login information from the provider allows you to access these
+accounts:</p>
+Username: ruser1  <br/>
+Provider usernames: [user2, user1]<br/>
+Policy IDs:<br/>
+bar: 70000<br/>
+foo: 60000<br/>
+<form action="pick" method="post">
+	<input type="hidden" name="id" value="5fbea2e6ce3d02f7cdbde0bc31be8059"/>
+	Add policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="submit" value="Login"/>
+</form>
+<br/>
+Username: ruser2 DISABLED <br/>
+Provider usernames: [user3]<br/>
+Policy IDs:<br/>
+<br/>
+
+<h3>Create account</h3>
+<p>
+User name is public.<br/>
+Display name is public to other system users.<br/>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
+<p>Create an account linked to user4</p>
+
+<form action="create" method="post">
+	User name: <input type="text" name="user" value="user4"/><br/>
+	Display name: <input type="text" name="display" value="full4"/><br/>
+	Email: <input type="text" name="email" value="e4@g.com"/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="hidden" name="id" value="4a3cd1ac3f1ffd5d2fecabcfc1856485"/>
+	<input type="submit" value="Create"/>
+</form>
+<p>Create an account linked to user&amp;at@bleah.com</p>
+
+<form action="create" method="post">
+	User name: <input type="text" name="user" value="userat2"/><br/>
+	Display name: <input type="text" name="display" value=""/><br/>
+	Email: <input type="text" name="email" value=""/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="hidden" name="id" value="78f2c2dbc07bfc9838c45f601a92762d"/>
+	<input type="submit" value="Create"/>
+</form>
+<p>Create an account linked to whee</p>
+
+<form action="create" method="post">
+	User name: <input type="text" name="user" value="whee"/><br/>
+	Display name: <input type="text" name="display" value=""/><br/>
+	Email: <input type="text" name="email" value=""/><br/>
+	Policy IDs: <input type="text" name="policyids"/><br>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	Link all unlinked identities to this account: <input type="checkbox" name="linkall" value="checked" checked/><br/>
+	<input type="hidden" name="id" value="ccf1ab20b4b412c515182c16f6176b3f"/>
+	<input type="submit" value="Create"/>
+</form>
+
+</body>
+</html>

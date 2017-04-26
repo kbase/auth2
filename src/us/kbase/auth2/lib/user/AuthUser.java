@@ -4,11 +4,11 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
@@ -411,7 +411,7 @@ public class AuthUser {
 		EmailAddress email = EmailAddress.UNKNOWN;
 		final Set<Role> roles = new HashSet<>();
 		final Set<String> customRoles = new HashSet<>();
-		final Map<PolicyID, Instant> policyIDs = new HashMap<>();
+		final Map<PolicyID, Instant> policyIDs = new TreeMap<>();
 		Optional<Instant> lastLogin = Optional.absent();
 		UserDisabledState disabledState = new UserDisabledState();
 		
