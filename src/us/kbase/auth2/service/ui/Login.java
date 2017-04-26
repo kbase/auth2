@@ -385,6 +385,7 @@ public class Login {
 			final String redirect)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
 			IllegalParameterException, IdentityProviderErrorException {
+		final URL redirectURL = getRedirectURL(redirect); // fail early
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
 		final Map<String, Object> ret = new HashMap<>();
@@ -392,7 +393,7 @@ public class Login {
 		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.LOGIN_ROOT_CREATE));
 		ret.put(Fields.URL_PICK, relativize(uriInfo, UIPaths.LOGIN_ROOT_PICK));
 		ret.put(Fields.URL_SUGGESTNAME, relativize(uriInfo, UIPaths.LOGIN_ROOT_SUGGESTNAME));
-		ret.put(Fields.URL_REDIRECT, getRedirectURL(redirect));
+		ret.put(Fields.URL_REDIRECT, redirectURL);
 		ret.put(Fields.PROVIDER, loginState.getProvider());
 		ret.put(Fields.CREATION_ALLOWED, loginState.isNonAdminLoginAllowed());
 		ret.put(Fields.CHOICE_EXPIRES, loginState.getExpires().toEpochMilli());

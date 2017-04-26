@@ -62,8 +62,10 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -865,11 +867,11 @@ public class LoginTest {
 		final MissingParameterException e = new MissingParameterException(
 				"Couldn't retrieve state value from cookie");
 
-		failLoginComplete(request, 400, "Bad Request", e);
+		failGet(request, 400, "Bad Request", e);
 
 		request.cookie("loginstatevar", "   \t   ");
 		
-		failLoginComplete(request, 400, "Bad Request", e);
+		failGet(request, 400, "Bad Request", e);
 	}
 	
 	@Test
@@ -880,7 +882,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "this doesn't match");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -899,7 +901,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -918,7 +920,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failLoginComplete(request, 400, "Bad Request",
+		failGet(request, 400, "Bad Request",
 				new MissingParameterException("authorization code"));
 	}
 	
@@ -934,7 +936,7 @@ public class LoginTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("loginstatevar", "foobarstate");
 		
-		failLoginComplete(request, 401, "Unauthorized",
+		failGet(request, 401, "Unauthorized",
 				new NoSuchIdentityProviderException("prov1"));
 	}
 	
@@ -946,21 +948,21 @@ public class LoginTest {
 				.cookie("loginstatevar", "foobarstate")
 				.cookie("loginredirect", "not a url no sir");
 		
-		failLoginComplete(request, 400, "Bad Request",
+		failGet(request, 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
-		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(adminToken, "https://foobar.com/stuff2/");
-		failLoginComplete(request, 400, "Bad Request", new IllegalParameterException(
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
-	private void failLoginComplete(
+	private void failGet(
 			final Builder request,
 			final int httpCode,
 			final String httpStatus,
@@ -1104,8 +1106,6 @@ public class LoginTest {
 				));
 		
 		UITestUtils.assertObjectsEqual(json, expectedJson);
-		
-		//TODO NOW with failing cases
 	}
 
 	@Test
@@ -1199,6 +1199,7 @@ public class LoginTest {
 	public void loginChoice2CreateAndLoginDisabled() throws Exception {
 		// tests with login disabled
 		// tests with trailing slash on target
+		// tests empty string for redirect
 
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
@@ -1217,6 +1218,7 @@ public class LoginTest {
 		
 		final String res = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "   \t   ")
 				.get()
 				.readEntity(String.class);
 		
@@ -1226,6 +1228,7 @@ public class LoginTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
+				.cookie("loginredirect", "   \t   ")
 				.header("accept", MediaType.APPLICATION_JSON)
 				.get()
 				.readEntity(Map.class);
@@ -1320,5 +1323,63 @@ public class LoginTest {
 		expectedJson.put("login", Collections.emptyList());
 		
 		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void loginChoiceFailNoToken() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failGet(res, 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+	}
+	
+	@Test
+	public void loginChoiceFailBadToken() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.cookie("in-process-login-token", "foobarbaz")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failGet(res, 401, "Unauthorized", new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void loginChoiceFailBadRedirect() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobarbaz")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginredirect", "not a url no sir");
+		
+		failGet(request, 400, "Bad Request",
+				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
+		
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
+		
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled"));
+		
+		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		failGet(request, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 }
