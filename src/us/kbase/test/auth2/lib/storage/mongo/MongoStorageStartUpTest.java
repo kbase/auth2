@@ -16,7 +16,6 @@ import java.util.regex.Pattern;
 import org.bson.Document;
 import org.junit.Test;
 
-import com.github.zafarkhaja.semver.Version;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
@@ -141,7 +140,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				"temptokens",
 				"tokens",
 				"users");
-		if (mongoDBVer.lessThan(Version.forIntegers(3, 2))) {
+		if (includeSystemIndexes) {
 			expected.add("system.indexes");
 		}
 		// this is annoying. MongoIterator has two forEach methods with different signatures
