@@ -3,6 +3,7 @@ package us.kbase.test.auth2.ui;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
@@ -65,6 +66,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -867,11 +869,11 @@ public class LoginTest {
 		final MissingParameterException e = new MissingParameterException(
 				"Couldn't retrieve state value from cookie");
 
-		failGet(request, 400, "Bad Request", e);
+		failGetJSON(request, 400, "Bad Request", e);
 
 		request.cookie("loginstatevar", "   \t   ");
 		
-		failGet(request, 400, "Bad Request", e);
+		failGetJSON(request, 400, "Bad Request", e);
 	}
 	
 	@Test
@@ -882,7 +884,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "this doesn't match");
 		
-		failGet(request, 401, "Unauthorized",
+		failGetJSON(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -901,7 +903,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failGet(request, 401, "Unauthorized",
+		failGetJSON(request, 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -920,7 +922,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failGet(request, 400, "Bad Request",
+		failGetJSON(request, 400, "Bad Request",
 				new MissingParameterException("authorization code"));
 	}
 	
@@ -936,7 +938,7 @@ public class LoginTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("loginstatevar", "foobarstate");
 		
-		failGet(request, 401, "Unauthorized",
+		failGetJSON(request, 401, "Unauthorized",
 				new NoSuchIdentityProviderException("prov1"));
 	}
 	
@@ -948,27 +950,35 @@ public class LoginTest {
 				.cookie("loginstatevar", "foobarstate")
 				.cookie("loginredirect", "not a url no sir");
 		
-		failGet(request, 400, "Bad Request",
+		failGetJSON(request, 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
-		failGet(request, 400, "Bad Request", new IllegalParameterException(
+		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(adminToken, "https://foobar.com/stuff2/");
-		failGet(request, 400, "Bad Request", new IllegalParameterException(
+		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
-	private void failGet(
+	private void failGetJSON(
 			final Builder request,
 			final int httpCode,
 			final String httpStatus,
 			final AuthException e) throws Exception {
 		
 		final Response res = request.get();
+		failRequestJSON(res, httpCode, httpStatus, e);
+	}
+	
+	private void failRequestJSON(
+			final Response res,
+			final int httpCode,
+			final String httpStatus,
+			final AuthException e) throws Exception {
 		
 		assertThat("incorrect status code", res.getStatus(), is(httpCode));
 		
@@ -1337,7 +1347,7 @@ public class LoginTest {
 		final Builder res = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON);
 		
-		failGet(res, 400, "Bad Request",
+		failGetJSON(res, 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-login-token"));
 	}
 	
@@ -1354,7 +1364,7 @@ public class LoginTest {
 				.cookie("in-process-login-token", "foobarbaz")
 				.header("accept", MediaType.APPLICATION_JSON);
 		
-		failGet(res, 401, "Unauthorized", new InvalidTokenException("Temporary token"));
+		failGetJSON(res, 401, "Unauthorized", new InvalidTokenException("Temporary token"));
 	}
 	
 	@Test
@@ -1369,17 +1379,87 @@ public class LoginTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("loginredirect", "not a url no sir");
 		
-		failGet(request, 400, "Bad Request",
+		failGetJSON(request, 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
-		failGet(request, 400, "Bad Request", new IllegalParameterException(
+		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(adminToken, "https://foobar.com/stuff2/");
-		failGet(request, 400, "Bad Request", new IllegalParameterException(
+		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+	}
+	
+	@Test
+	public void loginCancelPOST() throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Response res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.post(null);
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		assertLoginProcessTokensRemoved(res);
+		assertNoTempToken(tt);
+	}
+	
+	@Test
+	public void loginCancelDELETE() throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Response res = wt.request()
+				.cookie("in-process-login-token", tt.getToken())
+				.delete();
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		assertLoginProcessTokensRemoved(res);
+		assertNoTempToken(tt);
+	}
+	
+	private void assertNoTempToken(final TemporaryToken tt) throws Exception {
+		try {
+			manager.storage.getTemporaryIdentities(
+					new IncomingToken(tt.getToken()).getHashedToken());
+			fail("expected exception getting temp token");
+		} catch (NoSuchTokenException e) {
+			System.out.println(e);
+		}
+	}
+	
+	@Test
+	public void loginCancelFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		failRequestJSON(res.post(null), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+		failRequestJSON(res.delete(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
 	}
 }
