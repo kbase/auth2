@@ -93,7 +93,7 @@ public class UITestUtils {
 		
 		
 		assertThat("incorrect error structure less callid and time", error, is(expected));
-		assertThat("incorrect call id", callid, RegexMatcher.matches("\\d{20}"));
+		assertThat("incorrect call id", callid, RegexMatcher.matches("\\d{16}"));
 		TestCommon.assertCloseToNow(time);
 	}
 	
