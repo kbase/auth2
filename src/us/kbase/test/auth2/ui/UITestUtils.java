@@ -91,7 +91,6 @@ public class UITestUtils {
 		inner.remove("callid");
 		inner.remove("time");
 		
-		
 		assertThat("incorrect error structure less callid and time", error, is(expected));
 		assertThat("incorrect call id", callid, RegexMatcher.matches("\\d{16}"));
 		TestCommon.assertCloseToNow(time);
