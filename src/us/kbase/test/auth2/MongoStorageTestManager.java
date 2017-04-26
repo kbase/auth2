@@ -25,12 +25,14 @@ public class MongoStorageTestManager {
 	public Clock mockClock;
 	public Version mongoDBVer;
 	public int indexVer;
+	public boolean wiredTiger;
 	
 	public MongoStorageTestManager(final String dbName) throws Exception {
 		TestCommon.stfuLoggers();
 		mongo = new MongoController(TestCommon.getMongoExe().toString(),
 				TestCommon.getTempDir(),
 				TestCommon.useWiredTigerEngine());
+		wiredTiger = TestCommon.useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				TestCommon.getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());

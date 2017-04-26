@@ -26,6 +26,7 @@ public class MongoStorageTester {
 	static Clock mockClock;
 	static Version mongoDBVer;
 	static int indexVer;
+	static boolean includeSystemIndexes;
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
@@ -37,6 +38,8 @@ public class MongoStorageTester {
 		mockClock = manager.mockClock;
 		mongoDBVer = manager.mongoDBVer;
 		indexVer = manager.indexVer;
+		includeSystemIndexes = mongoDBVer.lessThan(Version.forIntegers(3, 2)) &&
+				!manager.wiredTiger;
 	}
 	
 	@AfterClass

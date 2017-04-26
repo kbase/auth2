@@ -40,11 +40,6 @@ Auth service work
   * https://www.codacy.com/
   * https://find-sec-bugs.github.io/
 * Tests
-  * Add test targets for mongo tests and other tests
-    * Speed up travis tests by only running the mongo tests against different mongo versions
-    * Only run the non-mongo tests once
-      * Test vs. WiredTiger
-    * When integration tests are added, just run against one mongo version
 * Documentation
   * Code documentation
   * User documentation and education (probably need doc team help here)
@@ -52,9 +47,8 @@ Auth service work
   * Try swagger again - go from code -> docs vs. other way around
   * Server manual, incl user and admin coverage
 * General
-  * Lock local account for X m after Y failed logins
-  * Make server root return version, git hash & endpoints
-  * Check user input for obscene or offensive content and reject, find 3rd party code (?)
+  * Lock local account for X m after Y failed logins - use sshguard or something here
+  * Make server root return endpoints
 * Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
@@ -74,6 +68,7 @@ Future work
   * Facebook
   * Orcid (? already supported via Globus)
   * CiLogon (? already supported via Globus)
+* Check user input for obscene or offensive content and reject, find 3rd party code (?)
 
 ### 3rd party developers acting on behalf of users (e.g. JGI, sequencing centers)
 * OAuth2 endpoint
