@@ -39,5 +39,9 @@ script:
     - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
     - sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
     - cat test.cfg
-    - ant $ANT_TEST
+    - ant test-report
+
+after_success:
+    - ls docs/test-reports
+    - bash <(curl -s https://codecov.io/bash) -t d0459879-5330-46e8-af6b-547c06630ea8 -f docs/test-reports/coverage-report.xml
 
