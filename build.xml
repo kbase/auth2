@@ -101,6 +101,7 @@
     <include name="jetty/jetty-all-9.3.11.v20160721-uber.jar"/>
     <include name="diff/java-diff-utils-2.1.1.jar"/>
     <include name="diff/java-object-diff/java-object-diff-0.94.jar"/>
+    <include name="jsoup/jsoup-1.10.2.jar"/>
     <!-- mockito dependencies -->
     <include name="mockito/mockito-core-2.7.10.jar"/>
     <include name="bytebuddy/byte-buddy-1.6.8.jar"/>

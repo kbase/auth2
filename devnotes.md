@@ -15,4 +15,6 @@ AuthenticationException and subclasses - 401
 UnauthorizedException and subclasses - 403  
 NoDataException and subclasses - 404  
 
+JsonMappingException (from Jackson) - 400  
+
 Anything else is mapped to 500.

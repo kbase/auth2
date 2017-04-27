@@ -8,7 +8,12 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.nodes.TextNode;
 
 import com.google.common.collect.ImmutableMap;
 
@@ -96,6 +101,44 @@ public class UITestUtils {
 		TestCommon.assertCloseToNow(time);
 	}
 	
+
+	public static void assertErrorCorrect(
+			final int expectedHttpCode,
+			final String expectedHttpStatus,
+			final AuthException e,
+			final Document doc) {
+		
+		
+		final Element title = doc.getElementsByTag("title").first();
+		assertThat("incorrect title", title.html(),
+				is(expectedHttpCode + " " + expectedHttpStatus));
+		
+		final Element body = doc.getElementsByTag("body").first();
+		final List<TextNode> breaks = body.textNodes();
+		
+		assertThat("incorrect line 1", body.child(0).html(), is(
+				"Note that in a proper UI, the error message and exception should " +
+				"be HTML-escaped."));
+		assertThat("incorrect line 2", body.child(1).html(), is(
+				"Gee whiz, I sure am sorry, but an error occurred. Gosh!"));
+		final String timestamp = breaks.get(2).getWholeText();
+		assertThat("incorrect timestamp prefix", timestamp,
+				RegexMatcher.matches("^\\s*Timestamp: \\d+"));
+		TestCommon.assertCloseToNow(Long.parseLong(timestamp.trim().split("\\s+")[1].trim()));
+		assertThat("incorrect call id", breaks.get(3).getWholeText(),
+				RegexMatcher.matches("^\\s*Call ID: \\d{16}"));
+		assertThat("incorrect http code", breaks.get(4).getWholeText(),
+				RegexMatcher.matches("^\\s*Http code: " + expectedHttpCode));
+		assertThat("incorrect http status", breaks.get(5).getWholeText(),
+				RegexMatcher.matches("^\\s*Http status: " + expectedHttpStatus));
+		assertThat("incorrect application code", breaks.get(6).getWholeText(),
+				RegexMatcher.matches("^\\s*Application code: " + e.getErr().getErrorCode()));
+		assertThat("incorrect application error", breaks.get(7).getWholeText(),
+				RegexMatcher.matches("^\\s*Application error: " + e.getErr().getError()));
+		assertThat("incorrect message", breaks.get(8).getWholeText(),
+				RegexMatcher.matches("^\\s*Message: " + e.getMessage()));
+	}
+	
 	// note ObjectDiffer does NOT check sorted lists are sorted
 	// this really kind of sucks, but it's better for large shallow objects
 	// easy enough to do a straight equals if needed
@@ -107,5 +150,4 @@ public class UITestUtils {
 		assertThat("non empty structure diff", visitor.getMessages(),
 				is(ImmutableMap.of(NodePath.withRoot(), "Property at path '/' has not changed")));
 	}
-
 }
