@@ -14,7 +14,6 @@ import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -539,12 +538,16 @@ public class Login {
 		
 		public static Set<PolicyID> getPolicyIDs(final String policyIDlist)
 				throws MissingParameterException, IllegalParameterException {
-			final Set<PolicyID> ids = new HashSet<>();
 			if (policyIDlist == null || policyIDlist.trim().isEmpty()) {
-				return ids;
+				return Collections.emptySet();
 			}
-			return getPolicyIDs(Arrays.asList(policyIDlist.split(",")));
-			
+			final List<String> ids = new LinkedList<>();
+			for (final String id: policyIDlist.split(",")) {
+				if (!id.trim().isEmpty()) {
+					ids.add(id);
+				}
+			}
+			return getPolicyIDs(ids);
 		}
 		
 		private static Set<PolicyID> getPolicyIDs(final List<String> policyIDs)
@@ -554,9 +557,7 @@ public class Login {
 				return ret;
 			}
 			for (final String id: policyIDs) {
-				if (!id.trim().isEmpty()) {
-					ret.add(new PolicyID(id));
-				}
+				ret.add(new PolicyID(id));
 			}
 			return ret;
 		}
@@ -618,9 +619,6 @@ public class Login {
 				MissingParameterException, IllegalParameterException,
 				UnauthorizedException, IdentityLinkedException, LinkFailedException {
 	
-		if (identityID == null) {
-			throw new MissingParameterException("identityID");
-		}
 		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
@@ -676,7 +674,6 @@ public class Login {
 		if (create == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
-		
 		create.exceptOnAdditionalProperties();
 		
 		final URL redirectURI = getRedirectURL(redirect); // fail early

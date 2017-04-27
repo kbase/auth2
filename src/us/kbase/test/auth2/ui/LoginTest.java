@@ -55,6 +55,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
@@ -1561,7 +1562,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
 		
 		final Form form = new Form();
 		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
@@ -1571,7 +1572,7 @@ public class LoginTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1586,7 +1587,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
 		
 		final Response res = req.post(Entity.json(
 				ImmutableMap.of("id", "ef0518c79af70ed979907969c6d0a0f7")));
@@ -1617,7 +1618,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
 				.cookie("loginredirect", "https://foo.com/baz/bat")
 				.cookie("issessiontoken", "false");
 		
@@ -1634,7 +1635,7 @@ public class LoginTest {
 		assertThat("incorrect target uri", res.getLocation(),
 				is(new URI("https://foo.com/baz/bat")));
 		
-		loginPickCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
+		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1652,7 +1653,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
 				.cookie("loginredirect", "https://foo.com/baz/bat")
 				.cookie("issessiontoken", "false");
 		
@@ -1692,7 +1693,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
 				.cookie("loginredirect", "   \t    ")
 				.cookie("issessiontoken", "true");
 		
@@ -1707,7 +1708,7 @@ public class LoginTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1722,14 +1723,14 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
 				.cookie("loginredirect", "    \t    ")
 				.cookie("issessiontoken", "false");
 		
 		final Response res = req.post(Entity.json(
 				ImmutableMap.of("id", "    ef0518c79af70ed979907969c6d0a0f7    ",
 						"linkall", false,
-						"policyids", Arrays.asList("   \t   "),
+						"policyids", Collections.emptyList(),
 						"customcontext", Collections.emptyMap())));
 		
 		assertThat("incorrect response code", res.getStatus(), is(200));
@@ -1753,8 +1754,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailBadRedirect() throws Exception {
+		loginPickOrCreateFailBadRedirect("/login/pick");
+	}
+
+	private void loginPickOrCreateFailBadRedirect(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1790,8 +1795,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailBadCustomContextString() throws Exception {
+		loginPickOrCreateFailBadCustomContextString("/login/pick");
+	}
+
+	private void loginPickOrCreateFailBadCustomContextString(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1807,8 +1816,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailNoToken() throws Exception {
+		loginPickOrCreateFailNoToken("/login/pick");
+	}
+
+	private void loginPickOrCreateFailNoToken(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1825,8 +1838,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailNoID() throws Exception {
+		loginPickOrCreateFailNoID("/login/pick");
+	}
+
+	private void loginPickOrCreateFailNoID(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1844,8 +1861,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailEmptyID() throws Exception {
+		loginPickOrCreateFailEmptyID("/login/pick");
+	}
+
+	private void loginPickOrCreateFailEmptyID(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1888,8 +1909,12 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailNoJSON() throws Exception {
+		loginPickOrCreateFailNoJSON("/login/pick");
+	}
+
+	private void loginPickOrCreateFailNoJSON(final String path) throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1903,8 +1928,13 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFailJSONWithAdditionalProperties() throws Exception {
+		loginPickOrCreateFailJSONWithAdditionalProperties("/login/pick");
+	}
+
+	private void loginPickOrCreateFailJSONWithAdditionalProperties(final String path)
+			throws Exception {
 		final URI target = UriBuilder.fromUri(host)
-				.path("/login/pick")
+				.path(path)
 				.build();
 		
 		final WebTarget wt = CLI.target(target);
@@ -1934,8 +1964,42 @@ public class LoginTest {
 				400, "Bad Request", new IllegalParameterException(
 						"linkall must be a boolean"));
 	}
+	
+	@Test
+	public void loginPickFailNullPolicyID() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-login-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"policyids", Arrays.asList("foo", null)))),
+				400, "Bad Request", new MissingParameterException("policy id"));
+	}
+	
+	@Test
+	public void loginPickFailEmptyPolicyID() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-login-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"policyids", Arrays.asList("foo", "   \t   ")))),
+				400, "Bad Request", new MissingParameterException("policy id"));
+	}
 
-	private void loginPickCheckExtendedToken(
+	private void loginPickOrCreateCheckExtendedToken(
 			final Response res,
 			final Map<String, String> customContext)
 			throws Exception {
@@ -1950,7 +2014,7 @@ public class LoginTest {
 		checkLoginToken(token.getValue(), customContext, new UserName("u1"));
 	}
 
-	private void loginPickCheckSessionToken(final Response res)
+	private void loginPickOrCreateCheckSessionToken(final Response res)
 			throws Exception, MissingParameterException, IllegalParameterException {
 		assertLoginProcessTokensRemoved(res);
 		
@@ -1962,7 +2026,7 @@ public class LoginTest {
 		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("u1"));
 	}
 
-	private Builder loginPickRequestBuilder(final TemporaryToken tt, final URI target) {
+	private Builder loginPickOrCreateRequestBuilder(final TemporaryToken tt, final URI target) {
 		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
 		final Builder req = wt.request()
 				.cookie("in-process-login-token", tt.getToken());
@@ -1986,6 +2050,482 @@ public class LoginTest {
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("u2"), new DisplayName("d"), Instant.now(), REMOTE2).build());
 
+		return tt;
+	}
+	
+	@Test
+	public void loginCreateFormMinimalInput() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "u1");
+		form.param("display", "disp1");
+		form.param("email", "e1@g.com");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		loginPickOrCreateCheckSessionToken(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	@Test
+	public void loginCreateJSONMinimalInput() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		
+		final Map<String, String> json = ImmutableMap.of(
+				"id", "ef0518c79af70ed979907969c6d0a0f7",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.com");
+		
+		final Response res = req.post(Entity.json(json));
+		
+		assertThat("incorrect response code", res.getStatus(), is(201));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect redirect url", response.get("redirecturl"), is((String) null));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> token = (Map<String, Object>) response.get("token");
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	@Test
+	public void loginCreateFormMaximalInput() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+				.cookie("loginredirect", "https://foo.com/baz/bat")
+				.cookie("issessiontoken", "false");
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "u1");
+		form.param("display", "disp1");
+		form.param("email", "e1@g.com");
+		form.param("linkall", "true");
+		form.param("policyids", "foo, bar,  ");
+		// tests empty item is ignored
+		form.param("customcontext", "   a    , 1   ; b  \t  , 2    ; ;");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI("https://foo.com/baz/bat")));
+		
+		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("expected two identities", u.getIdentities(), is(set(REMOTE1, REMOTE2)));
+		assertThat("incorrect policy ids", u.getPolicyIDs().keySet(),
+				is(set(new PolicyID("foo"), new PolicyID("bar"))));
+		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("foo")));
+		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	
+	@Test
+	public void loginCreateJSONMaximalInput() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+				.cookie("loginredirect", "https://foo.com/baz/bat")
+				.cookie("issessiontoken", "false");
+		
+		final Map<String, Object> json = MapBuilder.<String, Object>newHashMap()
+				.with("id", "ef0518c79af70ed979907969c6d0a0f7")
+				.with("user", "u1")
+				.with("display", "disp1")
+				.with("email", "e1@g.com")
+				.with("linkall", true)
+				.with("policyids", Arrays.asList("foo", "bar"))
+				//tests empty item is ignored
+				.with("customcontext", ImmutableMap.of("a", 1, "b", 2))
+				.build();
+		
+		final Response res = req.post(Entity.json(json));
+		
+		assertThat("incorrect response code", res.getStatus(), is(201));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect redirect url", response.get("redirecturl"),
+				is("https://foo.com/baz/bat"));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> token = (Map<String, Object>) response.get("token");
+		checkLoginToken(token, ImmutableMap.of("a", "1", "b", "2"), new UserName("u1"));
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("expected two identities", u.getIdentities(), is(set(REMOTE1, REMOTE2)));
+		assertThat("incorrect policy ids", u.getPolicyIDs().keySet(),
+				is(set(new PolicyID("foo"), new PolicyID("bar"))));
+		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("foo")));
+		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	@Test
+	public void loginCreateFormEmptyStrings() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+				.cookie("loginredirect", "   \t    ")
+				.cookie("issessiontoken", "true");
+		
+		final Form form = new Form();
+		form.param("id", "              ef0518c79af70ed979907969c6d0a0f7          ");
+		form.param("user", "u1");
+		form.param("display", "    disp1    ");
+		form.param("email", "    e1@g.com    ");
+		form.param("linkall", null);
+		form.param("policyids", "   \t \n   ");
+		form.param("customcontext", "   \t \n   ");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		loginPickOrCreateCheckSessionToken(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	@Test
+	public void loginCreateJSONEmptyInput() throws Exception {
+		
+		final TemporaryToken tt = loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
+		
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+				.cookie("loginredirect", "   \t    ")
+				.cookie("issessiontoken", "true");
+		
+		final Map<String, Object> json = MapBuilder.<String, Object>newHashMap()
+				.with("id", "      ef0518c79af70ed979907969c6d0a0f7       ")
+				.with("user", "u1")
+				.with("display", "      disp1     ")
+				.with("email", "     e1@g.com     ")
+				.with("linkall", false)
+				.with("policyids", Collections.emptyList())
+				//tests empty item is ignored
+				.with("customcontext", Collections.emptyMap())
+				.build();
+		
+		final Response res = req.post(Entity.json(json));
+		
+		assertThat("incorrect response code", res.getStatus(), is(201));
+		
+		assertLoginProcessTokensRemoved(res);
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect redirect url", response.get("redirecturl"),
+				is((String)null));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> token = (Map<String, Object>) response.get("token");
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		TestCommon.assertCloseToNow(u.getLastLogin().get());
+		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
+		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+	}
+	
+	@Test
+	public void loginCreateFailBadRedirect() throws Exception {
+		loginPickOrCreateFailBadRedirect("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailBadCustomContextString() throws Exception {
+		loginPickOrCreateFailBadCustomContextString("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailNoToken() throws Exception {
+		loginPickOrCreateFailNoToken("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailNoID() throws Exception {
+		loginPickOrCreateFailNoID("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailEmptyID() throws Exception {
+		loginPickOrCreateFailEmptyID("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailBadToken() throws Exception {
+		
+		loginChoiceSetup();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobar");
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "u1");
+		form.param("display", "disp1");
+		form.param("email", "e1@g.com");
+		
+		failRequestHTML(request.post(Entity.form(form)), 401, "Unauthorized",
+				new InvalidTokenException("Temporary token"));
+		
+		request.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Map<String, String> json = ImmutableMap.of(
+				"id", "ef0518c79af70ed979907969c6d0a0f7",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.com");
+		
+		failRequestJSON(request.post(Entity.json(json)),
+				401, "Unauthorized", new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void loginCreateFailNoJSON() throws Exception {
+		loginPickOrCreateFailNoJSON("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailJSONWithAdditionalProperties() throws Exception {
+		loginPickOrCreateFailJSONWithAdditionalProperties("/login/create");
+	}
+	
+	@Test
+	public void loginCreateFailBadBoolean() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-login-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.com",
+				"linkall", Collections.emptyList()))),
+				400, "Bad Request", new IllegalParameterException(
+						"linkall must be a boolean"));
+	}
+	
+	@Test
+	public void loginCreateFailNullPolicyID() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-login-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.com",
+				"policyids", Arrays.asList("foo", null)))),
+				400, "Bad Request", new MissingParameterException("policy id"));
+	}
+	
+	@Test
+	public void loginCreateFailEmptyPolicyID() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-login-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.com",
+				"policyids", Arrays.asList("foo", "   \t  ")))),
+				400, "Bad Request", new MissingParameterException("policy id"));
+	}
+	
+	@Test
+	public void loginCreateFailBadUserID() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobar");
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "Au1");
+		form.param("display", "disp1");
+		form.param("email", "e1@g.com");
+		
+		failRequestHTML(request.post(Entity.form(form)), 400, "Bad Request",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal character in user name Au1: A"));
+		
+		request.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "Au1",
+				"display", "disp1",
+				"email", "e1@g.com"))),
+				400, "Bad Request", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal character in user name Au1: A"));
+	}
+	
+	@Test
+	public void loginCreateFailBadDisplayName() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobar");
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "u1");
+		form.param("display", "di\tsp1");
+		form.param("email", "e1@g.com");
+		
+		failRequestHTML(request.post(Entity.form(form)), 400, "Bad Request",
+				new IllegalParameterException(
+						"display name contains control characters"));
+		
+		request.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "u1",
+				"display", "dis\tp1",
+				"email", "e1@g.com"))),
+				400, "Bad Request", new IllegalParameterException(
+						"display name contains control characters"));
+	}
+	
+	@Test
+	public void loginCreateFailBadEmail() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/create")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("in-process-login-token", "foobar");
+		
+		final Form form = new Form();
+		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
+		form.param("user", "u1");
+		form.param("display", "disp1");
+		form.param("email", "e1@g.@com");
+		
+		failRequestHTML(request.post(Entity.form(form)), 400, "Bad Request",
+				new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
+						"e1@g.@com"));
+		
+		request.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of(
+				"id", "whee",
+				"user", "u1",
+				"display", "disp1",
+				"email", "e1@g.@com"))),
+				400, "Bad Request", new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS,
+						"e1@g.@com"));
+	}
+
+	private TemporaryToken loginChoiceSetup() throws Exception {
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		enableLogin(admintoken);
+		enableRedirect(admintoken, "https://foo.com/baz");
+		
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
+				set(REMOTE1, REMOTE2));
+		
 		return tt;
 	}
 }
