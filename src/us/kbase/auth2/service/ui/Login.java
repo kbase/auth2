@@ -310,12 +310,12 @@ public class Login {
 	
 	private Response createLoginResponseJSON(
 			final Response.Status status,
-			final String redirect,
+			final URL redirectURI ,
 			final NewToken newtoken)
 			throws IllegalParameterException, AuthStorageException {
 		
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put(Fields.URL_REDIRECT, getRedirectURL(redirect));
+		ret.put(Fields.URL_REDIRECT, redirectURI == null ? null : redirectURI.toString());
 		ret.put(Fields.TOKEN, new NewUIToken(newtoken));
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
@@ -515,7 +515,7 @@ public class Login {
 		private final Object linkAll;
 		private final Map<String, String> customContext;
 		
-		// don't throw error from constructor, doesn't get picked up by the custom error handler 
+		// don't throw error from constructor, makes for crappy error messages.
 		@JsonCreator
 		public PickChoice(
 				@JsonProperty(Fields.ID) final String id,
@@ -554,7 +554,9 @@ public class Login {
 				return ret;
 			}
 			for (final String id: policyIDs) {
-				ret.add(new PolicyID(id));
+				if (!id.trim().isEmpty()) {
+					ret.add(new PolicyID(id));
+				}
 			}
 			return ret;
 		}
@@ -586,13 +588,14 @@ public class Login {
 		if (pick == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
-		
 		pick.exceptOnAdditionalProperties();
+		
+		final URL redirectURI = getRedirectURL(redirect); // fail early
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), pick.getCustomContext());
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
 				pick.getIdentityID(), pick.getPolicyIDs(), tcc, pick.isLinkAll());
-		return createLoginResponseJSON(Response.Status.OK, redirect, newtoken);
+		return createLoginResponseJSON(Response.Status.OK, redirectURI, newtoken);
 	}
 
 	@POST
@@ -640,7 +643,7 @@ public class Login {
 		public final String displayName;
 		public final String email;
 
-		// don't throw error from constructor, doesn't get picked up by the custom error handler 
+		// don't throw error from constructor, makes for crappy error messages.
 		@JsonCreator
 		public CreateChoice(
 				@JsonProperty(Fields.ID) final String id,
@@ -676,6 +679,7 @@ public class Login {
 		
 		create.exceptOnAdditionalProperties();
 		
+		final URL redirectURI = getRedirectURL(redirect); // fail early
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		
@@ -688,7 +692,7 @@ public class Login {
 				create.getPolicyIDs(),
 				tcc,
 				create.isLinkAll());
-		return createLoginResponseJSON(Response.Status.CREATED, redirect, newtoken);
+		return createLoginResponseJSON(Response.Status.CREATED, redirectURI, newtoken);
 	}
 	
 	//Assumes valid URI in URL form

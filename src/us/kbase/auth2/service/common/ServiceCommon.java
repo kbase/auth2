@@ -171,7 +171,7 @@ public class ServiceCommon {
 					throw new IllegalParameterException("Bad key/value pair in custom context: " +
 							item);
 				}
-				ret.put(keyvalue[0], keyvalue[1]);
+				ret.put(keyvalue[0].trim(), keyvalue[1].trim());
 			}
 		}
 		return ret;

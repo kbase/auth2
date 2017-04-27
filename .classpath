@@ -69,5 +69,10 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="lib" path="/jars/lib/jars/diff/java-object-diff/java-object-diff-0.94.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/jsoup/jsoup-1.10.2.jar" sourcepath="/jars/lib/jars/jsoup/jsoup-1.10.2-sources.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="jar:platform:/resource/jars/lib/jars/jsoup/jsoup-1.10.2-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

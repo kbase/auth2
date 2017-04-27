@@ -20,7 +20,7 @@ public class IncomingJSON {
 
 	private final Map<String, Object> additionalProperties = new TreeMap<>();
 
-	// don't throw error from constructor, doesn't get picked up by the custom error handler 
+	// don't throw error from constructor, makes for crappy error messages.
 	protected IncomingJSON() {}
 	
 	public static String getString(final String string, final String field)
