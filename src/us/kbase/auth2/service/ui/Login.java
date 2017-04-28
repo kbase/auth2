@@ -90,7 +90,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(UIPaths.LOGIN_ROOT)
 public class Login {
 
-	//TODO TEST
 	//TODO JAVADOC
 	
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";

@@ -1,22 +1,24 @@
 package us.kbase.test.auth2.ui;
 
+import static us.kbase.test.auth2.ui.UITestUtils.enableLogin;
+import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
+import static us.kbase.test.auth2.ui.UITestUtils.enableRedirect;
+import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
+import static us.kbase.test.auth2.ui.UITestUtils.setLoginCompleteRedirect;
+
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
@@ -40,8 +42,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import org.glassfish.jersey.client.ClientProperties;
-import org.ini4j.Ini;
-import org.ini4j.Profile.Section;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.junit.AfterClass;
@@ -53,7 +53,6 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
-import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
@@ -83,7 +82,6 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
-import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
@@ -120,7 +118,7 @@ public class LoginTest {
 	public static void beforeClass() throws Exception {
 		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
-		final Path cfgfile = generateTempConfigFile();
+		final Path cfgfile = UITestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		server = new StandaloneAuthServer(KBaseAuthConfig.class.getName());
 		new ServerThread(server).start();
@@ -144,107 +142,9 @@ public class LoginTest {
 	
 	@Before
 	public void beforeTest() throws Exception {
-		manager.reset(); // destroy any admins that already exist
-		//force a config reset
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
-		final Response r = CLI.target(host + "/admin/config/reset").request()
-				.cookie(COOKIE_NAME, admintoken.getToken())
-				.post(Entity.entity(null, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-		assertThat("unable to reset server config", r.getStatus(), is(204));
-		// destroy the users and config again
-		manager.reset();
-		insertStandardConfig();
-		
-		// This is very bad form but it takes too long to start the server up for every test
-		// The alternative is to use concrete IdentityProvider implementations with 
-		// a mock server they talk to, but that seems like an even bigger pita
-		for (final IdentityProvider mock: MockIdentityProviderFactory.mocks.values()) {
-			final String name = mock.getProviderName();
-			reset(mock);
-			when(mock.getProviderName()).thenReturn(name);
-		}
+		UITestUtils.resetServer(manager, host, COOKIE_NAME);
 	}
 	
-	// inserts the config that would result on server startup per the config file below
-	private static void insertStandardConfig() throws Exception {
-		final IdentityProvider prov1 = mock(IdentityProvider.class);
-		final IdentityProvider prov2 = mock(IdentityProvider.class);
-		when(prov1.getProviderName()).thenReturn("prov1");
-		when(prov2.getProviderName()).thenReturn("prov2");
-		new Authentication(manager.storage, set(prov1, prov2), AuthExternalConfig.SET_DEFAULT);
-	}
-	
-	private static Path generateTempConfigFile() throws IOException {
-		final Ini ini = new Ini();
-		final Section sec = ini.add("authserv2");
-		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
-		sec.add("mongo-db", DB_NAME);
-		sec.add("token-cookie-name", COOKIE_NAME);
-		// don't bother with logger name
-		
-		sec.add("identity-providers", "prov1, prov2");
-		
-		sec.add("identity-provider-prov1-factory", MockIdentityProviderFactory.class.getName());
-		sec.add("identity-provider-prov1-login-url", "https://login.prov1.com");
-		sec.add("identity-provider-prov1-api-url", "https://api.prov1.com");
-		sec.add("identity-provider-prov1-client-id", "prov1clientid");
-		sec.add("identity-provider-prov1-client-secret", "prov1secret");
-		sec.add("identity-provider-prov1-login-redirect-url",
-				"https://loginredirectforprov1.kbase.us");
-		sec.add("identity-provider-prov1-link-redirect-url",
-				"https://linkredirectforprov1.kbase.us");
-
-		sec.add("identity-provider-prov2-factory", MockIdentityProviderFactory.class.getName());
-		sec.add("identity-provider-prov2-login-url", "https://login.prov2.com");
-		sec.add("identity-provider-prov2-api-url", "https://api.prov2.com");
-		sec.add("identity-provider-prov2-client-id", "prov2clientid");
-		sec.add("identity-provider-prov2-client-secret", "prov2secret");
-		sec.add("identity-provider-prov2-login-redirect-url",
-				"https://loginredirectforprov2.kbase.us");
-		sec.add("identity-provider-prov2-link-redirect-url",
-				"https://linkredirectforprov2.kbase.us");
-
-		final Path temp = TestCommon.getTempDir();
-		final Path deploy = temp.resolve(Files.createTempFile(temp, "cli_test_deploy", ".cfg"));
-		ini.store(deploy.toFile());
-		deploy.toFile().deleteOnExit();
-		System.out.println("Generated temporary config file " + deploy);
-		return deploy.toAbsolutePath();
-	}
-
-	private void enableLogin(final IncomingToken admintoken) {
-		setAdmin(admintoken, ImmutableMap.of("allowlogin", true));
-	}
-
-	private void setAdmin(final IncomingToken admintoken, final Map<String, Object> json) {
-		final Response r = CLI.target(host + "/admin/config").request()
-				.header("authorization", admintoken.getToken())
-				.put(Entity.json(json));
-		assertThat("failed to set config", r.getStatus(), is(204));
-	}
-
-	private void enableProvider(final IncomingToken admintoken, final String prov) {
-		final Form providerform = new Form();
-		providerform.param("provider", prov);
-		providerform.param("enabled", "true");
-		final Response rprov = CLI.target(host + "/admin/config/provider").request()
-				.cookie(COOKIE_NAME, admintoken.getToken())
-				.post(Entity.entity(providerform,
-						MediaType.APPLICATION_FORM_URLENCODED_TYPE));
-		assertThat("failed to set provider config", rprov.getStatus(), is(204));
-	}
-	
-	private void enableRedirect(final IncomingToken adminToken, final String redirectURLPrefix) {
-		setAdmin(adminToken, ImmutableMap.of("allowedloginredirect", redirectURLPrefix));
-	}
-	
-	private void setLoginCompleteRedirect(
-			final IncomingToken adminToken,
-			final String loginCompleteRedirectURL) {
-		setAdmin(adminToken, ImmutableMap.of("completeloginredirect", loginCompleteRedirectURL));
-		
-	}
-
 	@Test
 	public void startDisplayLoginDisabled() throws Exception {
 		// returns crappy html only
@@ -259,7 +159,7 @@ public class LoginTest {
 	public void startDisplayWithOneProvider() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableProvider(admintoken, "prov1");
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
 		final WebTarget wt = CLI.target(host + "/login/");
 		final String res = wt.request().get().readEntity(String.class);
@@ -272,8 +172,8 @@ public class LoginTest {
 	public void startDisplayWithTwoProviders() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableProvider(admintoken, "prov1");
-		enableProvider(admintoken, "prov2");
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
 		
 		final WebTarget wt = CLI.target(host + "/login/");
 		final String res = wt.request().get().readEntity(String.class);
@@ -341,8 +241,8 @@ public class LoginTest {
 				.mocks.get("prov1");
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String url = "https://foo.com/someurlorother";
 		
@@ -402,7 +302,7 @@ public class LoginTest {
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
-		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		failLoginStart(form2, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
@@ -417,12 +317,7 @@ public class LoginTest {
 		final Response res = wt.request().header("Accept", MediaType.APPLICATION_JSON).post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
-		assertThat("incorrect status code", res.getStatus(), is(expectedHTTPCode));
-
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> error = res.readEntity(Map.class);
-		
-		UITestUtils.assertErrorCorrect(expectedHTTPCode, expectedHTTPError, e, error);
+		failRequestJSON(res, expectedHTTPCode, expectedHTTPError, e);
 	}
 	
 	@Test
@@ -430,9 +325,9 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -464,9 +359,9 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -499,9 +394,9 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -535,9 +430,9 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -659,9 +554,9 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -694,10 +589,10 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
-		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(host, admintoken, "https://whee.com/bleah");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -733,10 +628,10 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
-		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(host, admintoken, "https://whee.com/bleah");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -775,10 +670,10 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov1");
-		enableRedirect(admintoken, "https://foobar.com/thingy");
-		setLoginCompleteRedirect(admintoken, "https://whee.com/bleah");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		enableRedirect(host, admintoken, "https://foobar.com/thingy");
+		setLoginCompleteRedirect(host, admintoken, "https://whee.com/bleah");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
@@ -985,8 +880,8 @@ public class LoginTest {
 	public void loginCompleteFailNoSuchProvider() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableProvider(admintoken, "prov2");
+		enableLogin(host, admintoken);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
@@ -1014,7 +909,7 @@ public class LoginTest {
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
-		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
@@ -1039,21 +934,6 @@ public class LoginTest {
 		final String html = res.readEntity(String.class);
 		final Document doc = Jsoup.parse(html);
 		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
-	}
-	
-	private void failRequestJSON(
-			final Response res,
-			final int httpCode,
-			final String httpStatus,
-			final AuthException e)
-			throws Exception {
-		
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> error = res.readEntity(Map.class);
-		
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, error);
 	}
 	
 	@Test
@@ -1106,7 +986,7 @@ public class LoginTest {
 				"Said nasty, but true, things about Steve");
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
-		enableLogin(admintoken);
+		enableLogin(host, admintoken);
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/choice")
@@ -1193,7 +1073,7 @@ public class LoginTest {
 		// tests with trailing slash on target
 
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
-		enableRedirect(admintoken, "https://foo.com/whee");
+		enableRedirect(host, admintoken, "https://foo.com/whee");
 		
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
@@ -1342,8 +1222,8 @@ public class LoginTest {
 		// tests with redirect cookie
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
-		enableRedirect(admintoken, "https://foo.com/whee");
-		enableLogin(admintoken);
+		enableRedirect(host, admintoken, "https://foo.com/whee");
+		enableLogin(host, admintoken);
 
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
@@ -1475,7 +1355,7 @@ public class LoginTest {
 				new IllegalParameterException("Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
-		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		
 		failRequestHTML(request.get(), 400, "Bad Request",
 				new IllegalParameterException(
@@ -1783,7 +1663,7 @@ public class LoginTest {
 				new IllegalParameterException("Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
-		enableRedirect(adminToken, "https://foobar.com/stuff2/");
+		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		
 		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
 				new IllegalParameterException(
@@ -2037,8 +1917,8 @@ public class LoginTest {
 		
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableRedirect(admintoken, "https://foo.com/baz");
+		enableLogin(host, admintoken);
+		enableRedirect(host, admintoken, "https://foo.com/baz");
 		
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
@@ -2518,8 +2398,8 @@ public class LoginTest {
 	private TemporaryToken loginChoiceSetup() throws Exception {
 		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
 		
-		enableLogin(admintoken);
-		enableRedirect(admintoken, "https://foo.com/baz");
+		enableLogin(host, admintoken);
+		enableRedirect(host, admintoken, "https://foo.com/baz");
 		
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);

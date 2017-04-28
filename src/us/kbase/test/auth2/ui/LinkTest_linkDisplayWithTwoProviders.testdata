@@ -1,0 +1,29 @@
+<html>
+<body>
+<h3>Link account</h3>
+
+
+<p> You can link a new identity provider account to your currently logged-in
+account, <strong>u1</strong>, here. Note that some providers will
+automatically redirect you back
+here if you are already logged in to that provider. If the logged-in
+provider account is not the account you wish to link, you must visit the
+provider and logout <strong>before</strong> starting the linking process.
+
+<p>Identity providers:<p>
+
+<form action="start" method="post">
+	<input type="radio" name="provider" value="prov1"/>prov1<br/>
+	<input type="radio" name="provider" value="prov2"/>prov2<br/>
+	<input type="submit" value="Submit"/>
+</form>
+
+You will be redirected to the identity provider website where you will be asked
+to allow us to view your account information - your account ID, email
+address, and name.<br/>
+You will have 30 minutes to complete the identity provider's login process.
+
+
+
+</body>
+</html>

@@ -279,12 +279,13 @@
       <test name="us.kbase.test.auth2.lib.identity.RemoteIdentityTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenNameTest"/>
       <test name="us.kbase.test.auth2.lib.token.TokenTest"/>
-      <test name="us.kbase.test.auth2.ui.LoginTest"/>
       <test name="us.kbase.test.auth2.lib.user.AuthUserTest"/>
       <test name="us.kbase.test.auth2.lib.user.LocalUserTest"/>
       <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
       <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
       <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
+      <test name="us.kbase.test.auth2.ui.LinkTest"/>
+      <test name="us.kbase.test.auth2.ui.LoginTest"/>
     </junit>
     <fail message="Test failure detected, check test results." if="test.failed" />
   </target>
