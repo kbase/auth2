@@ -20,7 +20,7 @@
   <property name="war.file" value="KBaseAuth2.war"/>
   <property name="war.dir" value="war"/>
   <property name="test.dir" location="${src}/us/kbase/test"/>
-  <property name="test.reports.dir" location="docs/test-reports"/>
+  <property name="test.reports.dir" location="test-reports"/>
 
   <fileset dir="${jardir}" id="lib">
     <include name="apache_commons/commons-codec-1.8.jar"/>
@@ -136,7 +136,7 @@
   <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
 
-  <target name="init" depends="clean" description="make directories">
+  <target name="init" description="make directories">
     <!-- Create the output directory structure-->
     <mkdir dir="${classes}"/>
     <mkdir dir="${dist}"/>
