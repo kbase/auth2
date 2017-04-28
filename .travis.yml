@@ -17,6 +17,7 @@ env:
   - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
   - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
   - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
+  - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_report WIRED_TIGER=false
 
 before_install:
     # get and install mongodb
@@ -39,7 +40,7 @@ script:
     - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
     - sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
     - cat test.cfg
-    - ant test-report
+    - ant $ANT_TEST
 
 after_success:
     - ls docs/test-reports
