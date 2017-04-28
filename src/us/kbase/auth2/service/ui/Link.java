@@ -76,7 +76,6 @@ public class Link {
 
 	//TODO JAVADOC
 	//TODO TEST
-	//TODO CODE can probably share some code with /login
 	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
 	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
@@ -123,7 +122,10 @@ public class Link {
 	@Path(UIPaths.LINK_START)
 	public Response linkStart(
 			@FormParam(Fields.PROVIDER) final String provider)
-			throws NoSuchIdentityProviderException, AuthStorageException {
+			throws NoSuchIdentityProviderException, AuthStorageException,
+				MissingParameterException {
+		
+		Utils.checkString(provider, Fields.PROVIDER);
 		
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
@@ -146,10 +148,9 @@ public class Link {
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException, NoSuchProviderException,
-				AuthStorageException, NoTokenProvidedException, LinkFailedException,
-				UnauthorizedException {
+				AuthStorageException, LinkFailedException, UnauthorizedException {
 		
-		Utils.checkString(provider, "provider");
+		//provider cannot be null or empty here since it's a path param
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
@@ -159,8 +160,12 @@ public class Link {
 			tt = Optional.of(auth.linkProviderError(error));
 		} else {
 			checkState(state, retstate);
-			final Optional<IncomingToken> token =
-					getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
+			final Optional<IncomingToken> token;
+			try {
+				token = getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
+			} catch (NoTokenProvidedException e) {
+				throw new RuntimeException("Got exception when specified no throw", e);
+			}
 			if (token.isPresent()) {
 				final LinkToken lt = auth.link(token.get(), provider, authcode);
 				if (lt.isLinked()) {
