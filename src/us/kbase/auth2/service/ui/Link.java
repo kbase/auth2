@@ -309,6 +309,7 @@ public class Link {
 	
 	@DELETE
 	@Path(UIPaths.LINK_CANCEL)
+	@Produces(MediaType.APPLICATION_JSON)
 	public Response cancelLinkDELETE(@CookieParam(IN_PROCESS_LINK_COOKIE) final String token)
 			throws NoTokenProvidedException, AuthStorageException {
 		return cancelLink(token);
