@@ -303,6 +303,21 @@ public class UITestUtils {
 			final String loginCompleteRedirectURL) {
 		setAdmin(host, adminToken,
 				ImmutableMap.of("completeloginredirect", loginCompleteRedirectURL));
-		
+	}
+	
+	public static void setLinkCompleteRedirect(
+			final String host,
+			final IncomingToken adminToken,
+			final String linkCompleteRedirectURL) {
+		setAdmin(host, adminToken,
+				ImmutableMap.of("completelinkredirect", linkCompleteRedirectURL));
+	}
+	
+	public static void setPostLinkRedirect(
+			final String host,
+			final IncomingToken adminToken,
+			final String postLinkRedirectURL) {
+		setAdmin(host, adminToken,
+				ImmutableMap.of("postlinkredirect", postLinkRedirectURL));
 	}
 }
