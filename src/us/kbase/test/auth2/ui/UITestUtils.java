@@ -87,6 +87,21 @@ public class UITestUtils {
 		return new IncomingToken(admintoken);
 	}
 
+	public static void failRequestJSON(
+			final Response res,
+			final int httpCode,
+			final String httpStatus,
+			final AuthException e)
+			throws Exception {
+		
+		assertThat("incorrect status code", res.getStatus(), is(httpCode));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> error = res.readEntity(Map.class);
+		
+		assertErrorCorrect(httpCode, httpStatus, e, error);
+	}
+	
 	public static void assertErrorCorrect(
 			final int expectedHTTPCode,
 			final String expectedHTTPStatus,

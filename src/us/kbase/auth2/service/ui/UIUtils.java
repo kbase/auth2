@@ -136,15 +136,16 @@ public class UIUtils {
 			}
 			return Optional.absent();
 		}
-		final String val = c.getValue();
-		if (val == null || val.trim().isEmpty()) {
+		// can't be null when headers are actually gen'd by jaxrs
+		final String val = c.getValue().trim();
+		if (val.isEmpty()) {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
 			return Optional.absent();
 		}
 		try {
-			return Optional.of(new IncomingToken(val.trim()));
+			return Optional.of(new IncomingToken(val));
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}

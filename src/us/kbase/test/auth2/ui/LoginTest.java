@@ -3,6 +3,7 @@ package us.kbase.test.auth2.ui;
 import static us.kbase.test.auth2.ui.UITestUtils.enableLogin;
 import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
 import static us.kbase.test.auth2.ui.UITestUtils.enableRedirect;
+import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
 import static us.kbase.test.auth2.ui.UITestUtils.setLoginCompleteRedirect;
 
 import static org.hamcrest.CoreMatchers.is;
@@ -316,12 +317,7 @@ public class LoginTest {
 		final Response res = wt.request().header("Accept", MediaType.APPLICATION_JSON).post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 
-		assertThat("incorrect status code", res.getStatus(), is(expectedHTTPCode));
-
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> error = res.readEntity(Map.class);
-		
-		UITestUtils.assertErrorCorrect(expectedHTTPCode, expectedHTTPError, e, error);
+		failRequestJSON(res, expectedHTTPCode, expectedHTTPError, e);
 	}
 	
 	@Test
@@ -938,21 +934,6 @@ public class LoginTest {
 		final String html = res.readEntity(String.class);
 		final Document doc = Jsoup.parse(html);
 		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
-	}
-	
-	private void failRequestJSON(
-			final Response res,
-			final int httpCode,
-			final String httpStatus,
-			final AuthException e)
-			throws Exception {
-		
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> error = res.readEntity(Map.class);
-		
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, error);
 	}
 	
 	@Test
