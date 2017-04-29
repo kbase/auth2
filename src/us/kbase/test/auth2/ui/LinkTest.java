@@ -2,6 +2,7 @@ package us.kbase.test.auth2.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -52,6 +53,7 @@ import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -606,6 +608,13 @@ public class LinkTest {
 		assertThat("incorrect state cookie", statecookie, is(expectedstate));
 	}
 	
+	private void assertLinkProcessTokenRemoved(final Response res) {
+		final NewCookie expectedinprocess = new NewCookie("in-process-link-token", "no token",
+				"/link", null, "linktoken", 0, false);
+		final NewCookie inprocess = res.getCookies().get("in-process-link-token");
+		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
+	}
+	
 	@Test
 	public void linkChoiceHTML() throws Exception {
 		linkChoiceHTML("/link/choice", TestCommon.getTestExpectedData(getClass(),
@@ -828,6 +837,76 @@ public class LinkTest {
 		
 		failRequestJSON(res2.get(), 401, "Unauthorized",
 				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkCancelPOST() throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Response res = wt.request()
+				.cookie("in-process-link-token", tt.getToken())
+				.post(null);
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		assertLinkProcessTokenRemoved(res);
+		assertNoTempToken(tt);
+	}
+	
+	@Test
+	public void linkCancelDELETE() throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Response res = wt.request()
+				.cookie("in-process-link-token", tt.getToken())
+				.delete();
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		assertLinkProcessTokenRemoved(res);
+		assertNoTempToken(tt);
+	}
+	
+	@Test
+	public void linkCancelFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/cancel")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		failRequestJSON(res.post(null), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+		failRequestJSON(res.delete(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+	}
+	
+	private void assertNoTempToken(final TemporaryToken tt) throws Exception {
+		try {
+			manager.storage.getTemporaryIdentities(
+					new IncomingToken(tt.getToken()).getHashedToken());
+			fail("expected exception getting temp token");
+		} catch (NoSuchTokenException e) {
+			// pass
+		}
 	}
 	
 }
