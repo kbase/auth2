@@ -212,7 +212,7 @@ public class LoginState {
 	 */
 	public static class Builder {
 		
-		private final Comparator<RemoteIdentity> REMOTE_IDENTITY_COMPARATOR =
+		static final Comparator<RemoteIdentity> REMOTE_IDENTITY_COMPARATOR =
 				new Comparator<RemoteIdentity>() {
 			
 			@Override
