@@ -193,7 +193,7 @@ public class Link {
 		return r;
 	}
 	
-	// the two methods below are very similar and there's another similar method in Login
+	// TODO CODE the two methods below are very similar and there's another similar method in Login. pass in interface that gets the right url
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
 		final ConfigItem<URL, State> url;
 		try {
@@ -296,13 +296,11 @@ public class Link {
 
 	private IncomingToken getLinkInProcessToken(final String linktoken)
 			throws NoTokenProvidedException {
-		final IncomingToken incToken;
 		try {
-			incToken = new IncomingToken(linktoken);
+			return new IncomingToken(linktoken);
 		} catch (MissingParameterException e) {
 			throw new NoTokenProvidedException("Missing " + IN_PROCESS_LINK_COOKIE); 
 		}
-		return incToken;
 	}
 	
 	@POST

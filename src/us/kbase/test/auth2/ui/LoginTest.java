@@ -3,6 +3,7 @@ package us.kbase.test.auth2.ui;
 import static us.kbase.test.auth2.ui.UITestUtils.enableLogin;
 import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
 import static us.kbase.test.auth2.ui.UITestUtils.enableRedirect;
+import static us.kbase.test.auth2.ui.UITestUtils.failRequestHTML;
 import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
 import static us.kbase.test.auth2.ui.UITestUtils.setLoginCompleteRedirect;
 
@@ -42,8 +43,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import org.glassfish.jersey.client.ClientProperties;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -914,18 +913,6 @@ public class LoginTest {
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
-	private void failRequestHTML(
-			final Response res,
-			final int httpCode,
-			final String httpStatus,
-			final AuthException e)
-			throws Exception {
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
-		final String html = res.readEntity(String.class);
-		final Document doc = Jsoup.parse(html);
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
-	}
-	
 	@Test
 	public void loginChoice3Create2Login() throws Exception {
 		// this tests a bunch of orthogonal test cases. Doesn't make much sense to split it up
@@ -1282,11 +1269,30 @@ public class LoginTest {
 		
 		final WebTarget wt = CLI.target(target);
 		
+		failRequestHTML(wt.request().get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+
 		final Builder res = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON);
 		
-		failRequestHTML(wt.request().get(), 400, "Bad Request",
+		failRequestJSON(res.get(), 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-login-token"));
+	}
+	
+	@Test
+	public void loginChoiceFailEmptyToken() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final Builder res = CLI.target(target).request()
+				.cookie("in-process-login-token", "   \t   ");
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+
+		res.header("accept", MediaType.APPLICATION_JSON);
 		
 		failRequestJSON(res.get(), 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-login-token"));

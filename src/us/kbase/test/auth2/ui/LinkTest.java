@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
+import static us.kbase.test.auth2.ui.UITestUtils.failRequestHTML;
 import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
 import static us.kbase.test.auth2.ui.UITestUtils.setLinkCompleteRedirect;
 import static us.kbase.test.auth2.ui.UITestUtils.setPostLinkRedirect;
@@ -15,6 +16,9 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
@@ -35,6 +39,7 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.DisplayName;
@@ -44,6 +49,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -54,6 +60,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -597,6 +604,230 @@ public class LinkTest {
 				"/link/complete", null, "linkstate", 0, false);
 		final NewCookie statecookie = res.getCookies().get("linkstatevar");
 		assertThat("incorrect state cookie", statecookie, is(expectedstate));
+	}
+	
+	@Test
+	public void linkChoiceHTML() throws Exception {
+		linkChoiceHTML("/link/choice", TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void linkChoiceHTMLTrailingSlash() throws Exception {
+		linkChoiceHTML("/link/choice/", TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	}
+
+	private void linkChoiceHTML(final String path, final String expected) throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
+				set(REMOTE1, REMOTE2, REMOTE3));
+		
+		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path(path)
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Response res = wt.request()
+				.cookie(COOKIE_NAME, nt.getToken())
+				.cookie("in-process-link-token", tt.getToken())
+				.get();
+		
+		final String html = res.readEntity(String.class);
+		
+		TestCommon.assertNoDiffs(html, expected);
+	}
+	
+	@Test
+	public void linkChoiceJSON() throws Exception {
+		linkChoiceJSON("/link/choice", "");
+	}
+	
+	@Test
+	public void linkChoiceJSONTrailingSlash() throws Exception {
+		linkChoiceJSON("/link/choice/", "../");
+	}
+	
+	private void linkChoiceJSON(final String path, final String urlprefix) throws Exception {
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
+				set(REMOTE1, REMOTE2, REMOTE3));
+		
+		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path(path)
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Response res = wt.request()
+				.header("Authorization", nt.getToken())
+				.cookie("in-process-link-token", tt.getToken())
+				.header("accept", MediaType.APPLICATION_JSON)
+				.get();
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = res.readEntity(Map.class);
+		
+		System.out.println(json);
+		
+		final Map<String, Object> expectedJson = new HashMap<>();
+		expectedJson.put("pickurl", urlprefix + "pick");
+		expectedJson.put("cancelurl", urlprefix + "cancel");
+		expectedJson.put("expires", 11493000000000L);
+		expectedJson.put("provider", "prov");
+		expectedJson.put("user", "u1");
+		expectedJson.put("idents", Arrays.asList(
+				ImmutableMap.of("provusername", "user2",
+						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059"),
+				ImmutableMap.of("provusername", "user3",
+						"id", "de0702aa7927b562e0d6be5b6527cfb2")
+				));
+		
+		UITestUtils.assertObjectsEqual(json, expectedJson);
+	}
+	
+	@Test
+	public void linkChoiceFailNoUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		
+		failRequestJSON(res.header("accept", MediaType.APPLICATION_JSON).get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void linkChoiceFailEmptyUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar")
+				.cookie(COOKIE_NAME, "    \t     ");
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", "    \t   ")
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(res2.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void linkChoiceFailBadUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar")
+				.cookie(COOKIE_NAME, "foobarbaz");
+		
+		failRequestHTML(res.get(), 401, "Unauthorized",
+				new InvalidTokenException());
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", "foobarbaz")
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(res2.get(), 401, "Unauthorized",
+				new InvalidTokenException());
+	}
+	
+	@Test
+	public void linkChoiceFailNoLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+	}
+	
+	@Test
+	public void linkChoiceFailEmptyLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "     \t    ")
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-link-token", "     \t    ")
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+	}
+	
+	@Test
+	public void linkChoiceFailBadLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobarbaz")
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		failRequestHTML(res.get(), 401, "Unauthorized",
+				new InvalidTokenException("Temporary token"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-link-token", "foobarbaz")
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.get(), 401, "Unauthorized",
+				new InvalidTokenException("Temporary token"));
 	}
 	
 }

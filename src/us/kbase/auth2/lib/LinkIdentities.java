@@ -4,8 +4,8 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.Collections;
-import java.util.HashSet;
 import java.util.Set;
+import java.util.TreeSet;
 
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -38,7 +38,10 @@ public class LinkIdentities {
 		}
 		Utils.noNulls(ids, "null item in ids");
 		this.user = user;
-		this.idents = Collections.unmodifiableSet(new HashSet<>(ids));
+		final TreeSet<RemoteIdentity> treeids = new TreeSet<>(
+				LoginState.Builder.REMOTE_IDENTITY_COMPARATOR);
+		treeids.addAll(ids);
+		this.idents = Collections.unmodifiableSet(treeids);
 		this.provider = ids.iterator().next().getRemoteID().getProviderName();
 		this.expires = expires;
 		for (final RemoteIdentity ri: ids) {

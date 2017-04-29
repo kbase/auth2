@@ -25,6 +25,7 @@ import javax.ws.rs.core.Response;
 
 import org.ini4j.Ini;
 import org.ini4j.Profile.Section;
+import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
@@ -134,13 +135,23 @@ public class UITestUtils {
 		TestCommon.assertCloseToNow(time);
 	}
 	
+	public static void failRequestHTML(
+			final Response res,
+			final int httpCode,
+			final String httpStatus,
+			final AuthException e)
+			throws Exception {
+		assertThat("incorrect status code", res.getStatus(), is(httpCode));
+		final String html = res.readEntity(String.class);
+		final Document doc = Jsoup.parse(html);
+		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
+	}
 
 	public static void assertErrorCorrect(
 			final int expectedHttpCode,
 			final String expectedHttpStatus,
 			final AuthException e,
 			final Document doc) {
-		
 		
 		final Element title = doc.getElementsByTag("title").first();
 		assertThat("incorrect title", title.html(),
