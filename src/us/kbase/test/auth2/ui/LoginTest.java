@@ -3,6 +3,7 @@ package us.kbase.test.auth2.ui;
 import static us.kbase.test.auth2.ui.UITestUtils.enableLogin;
 import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
 import static us.kbase.test.auth2.ui.UITestUtils.enableRedirect;
+import static us.kbase.test.auth2.ui.UITestUtils.failRequestHTML;
 import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
 import static us.kbase.test.auth2.ui.UITestUtils.setLoginCompleteRedirect;
 
@@ -42,8 +43,6 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
 import org.glassfish.jersey.client.ClientProperties;
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -819,11 +818,11 @@ public class LoginTest {
 		final MissingParameterException e = new MissingParameterException(
 				"Couldn't retrieve state value from cookie");
 
-		failGetJSON(request, 400, "Bad Request", e);
+		failRequestJSON(request.get(), 400, "Bad Request", e);
 
 		request.cookie("loginstatevar", "   \t   ");
 		
-		failGetJSON(request, 400, "Bad Request", e);
+		failRequestJSON(request.get(), 400, "Bad Request", e);
 	}
 	
 	@Test
@@ -834,7 +833,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "this doesn't match");
 		
-		failGetJSON(request, 401, "Unauthorized",
+		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -853,7 +852,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failGetJSON(request, 401, "Unauthorized",
+		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
 						"State values do not match, this may be a CXRF attack"));
 	}
@@ -872,7 +871,7 @@ public class LoginTest {
 				.cookie("issessiontoken", "false")
 				.cookie("loginstatevar", "somestate");
 		
-		failGetJSON(request, 400, "Bad Request",
+		failRequestJSON(request.get(), 400, "Bad Request",
 				new MissingParameterException("authorization code"));
 	}
 	
@@ -888,7 +887,7 @@ public class LoginTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("loginstatevar", "foobarstate");
 		
-		failGetJSON(request, 401, "Unauthorized",
+		failRequestJSON(request.get(), 401, "Unauthorized",
 				new NoSuchIdentityProviderException("prov1"));
 	}
 	
@@ -900,42 +899,20 @@ public class LoginTest {
 				.cookie("loginstatevar", "foobarstate")
 				.cookie("loginredirect", "not a url no sir");
 		
-		failGetJSON(request, 400, "Bad Request",
+		failRequestJSON(request.get(), 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
-		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
+		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
-		failGetJSON(request, 400, "Bad Request", new IllegalParameterException(
+		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
-	private void failGetJSON(
-			final Builder request,
-			final int httpCode,
-			final String httpStatus,
-			final AuthException e) throws Exception {
-		
-		final Response res = request.get();
-		failRequestJSON(res, httpCode, httpStatus, e);
-	}
-	
-	private void failRequestHTML(
-			final Response res,
-			final int httpCode,
-			final String httpStatus,
-			final AuthException e)
-			throws Exception {
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
-		final String html = res.readEntity(String.class);
-		final Document doc = Jsoup.parse(html);
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
-	}
-	
 	@Test
 	public void loginChoice3Create2Login() throws Exception {
 		// this tests a bunch of orthogonal test cases. Doesn't make much sense to split it up
@@ -1292,13 +1269,32 @@ public class LoginTest {
 		
 		final WebTarget wt = CLI.target(target);
 		
+		failRequestHTML(wt.request().get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+
 		final Builder res = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON);
 		
-		failRequestHTML(wt.request().get(), 400, "Bad Request",
+		failRequestJSON(res.get(), 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-login-token"));
+	}
+	
+	@Test
+	public void loginChoiceFailEmptyToken() throws Exception {
 		
-		failGetJSON(res, 400, "Bad Request",
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final Builder res = CLI.target(target).request()
+				.cookie("in-process-login-token", "   \t   ");
+		
+		failRequestHTML(res.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
+
+		res.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(res.get(), 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-login-token"));
 	}
 	
@@ -1321,7 +1317,7 @@ public class LoginTest {
 		failRequestHTML(res.get(), 401, "Unauthorized",
 				new InvalidTokenException("Temporary token"));
 		
-		failGetJSON(jsonrequest, 401, "Unauthorized",
+		failRequestJSON(jsonrequest.get(), 401, "Unauthorized",
 				new InvalidTokenException("Temporary token"));
 	}
 	

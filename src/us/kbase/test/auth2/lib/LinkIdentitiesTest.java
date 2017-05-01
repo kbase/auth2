@@ -3,10 +3,13 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.junit.Test;
@@ -131,5 +134,22 @@ public class LinkIdentitiesTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
+	}
+	
+	@Test
+	public void sortedIDs() throws Exception {
+		final RemoteIdentity ri1 = new RemoteIdentity( // 7c82320ccb87106b9e7a7aaab6cf0ac4
+				new RemoteIdentityID("foo1", "bar1"),
+				new RemoteIdentityDetails("user1", "full1", "email1"));
+		final RemoteIdentity ri2 = new RemoteIdentity( // 58341bf1fbb4626c29faf54a5fa47370
+				new RemoteIdentityID("foo1", "bar2"),
+				new RemoteIdentityDetails("user1", "full1", "email1"));
+		final RemoteIdentity ri3 = new RemoteIdentity( // 075ee8906acaf44619eb4d36934f6064
+				new RemoteIdentityID("foo1", "bar3"),
+				new RemoteIdentityDetails("user1", "full1", "email1"));
+		
+		final List<RemoteIdentity> linkIdentities = new LinkedList<>(
+				new LinkIdentities(AUTH_USER, set(ri1, ri2, ri3), Instant.now()).getIdentities());
+		assertThat("sort failed", linkIdentities, is(Arrays.asList(ri3, ri2, ri1)));
 	}
 }
