@@ -17,6 +17,7 @@ env:
   - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
   - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
   - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
+  - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test WIRED_TIGER=true
 
 before_install:
     # get and install mongodb
