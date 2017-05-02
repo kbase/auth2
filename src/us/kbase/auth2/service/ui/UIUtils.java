@@ -3,6 +3,8 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 
 import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -17,14 +19,21 @@ import javax.ws.rs.core.UriInfo;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.config.ConfigItem;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 public class UIUtils {
 
@@ -159,5 +168,52 @@ public class UIUtils {
 			}
 		}
 		return roles;
+	}
+	
+	public static interface ExteralConfigURLSelector {
+		
+		ConfigItem<URL, State> getExternalConfigURL(
+				final AuthExternalConfig<State> externalConfig);
+	}
+	
+	public static URI getExternalConfigURI(
+			final Authentication auth,
+			final ExteralConfigURLSelector selector,
+			final String deflt)
+			throws AuthStorageException {
+		final ConfigItem<URL, State> url;
+		try {
+			final AuthExternalConfig<State> externalConfig =
+					auth.getExternalConfig(new AuthExternalConfigMapper());
+			url = selector.getExternalConfigURL(externalConfig);
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		if (!url.hasItem()) {
+			return toURI(deflt);
+		}
+		try {
+			return url.getItem().toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("this should be impossible" , e);
+		}
+	}
+	
+	//Assumes valid URI in URL form
+	public static URI toURI(final URL loginURL) {
+		try {
+			return loginURL.toURI();
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
+	}
+	
+	//Assumes valid URI in String form
+	public static URI toURI(final String uri) {
+		try {
+			return new URI(uri);
+		} catch (URISyntaxException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 }

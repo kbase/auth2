@@ -6,9 +6,11 @@ import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
+import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
 import java.net.MalformedURLException;
 import java.net.URI;
@@ -60,7 +62,6 @@ import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.ConfigAction.State;
-import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
@@ -90,7 +91,7 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(UIPaths.LOGIN_ROOT)
 public class Login {
 
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
@@ -183,7 +184,8 @@ public class Login {
 			final URL url;
 			try {
 				url = new URL(redirect);
-			} catch (MalformedURLException e) {
+				url.toURI();
+			} catch (MalformedURLException | URISyntaxException e) { //TODO NOW test
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
 			if (ext.getAllowedLoginRedirectPrefix().hasItem()) {
@@ -272,7 +274,9 @@ public class Login {
 			r = createLoginResponse(redirectURI, lr.getToken().get(), !FALSE.equals(session));
 		} else {
 			final int age = getMaxCookieAge(lr.getTemporaryToken().get());
-			r = Response.seeOther(getCompleteLoginRedirectURI(UIPaths.LOGIN_ROOT_CHOICE))
+			final URI completeURI = getExternalConfigURI(auth,
+					cfg -> cfg.getCompleteLoginRedirect(), UIPaths.LOGIN_ROOT_CHOICE);
+			r = Response.seeOther(completeURI)
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken().get()))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(redirect, age))
@@ -318,24 +322,6 @@ public class Login {
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	
-	private URI getCompleteLoginRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, State> url;
-		try {
-			url = auth.getExternalConfig(new AuthExternalConfigMapper())
-					.getCompleteLoginRedirect();
-		} catch (ExternalConfigMappingException e) {
-			throw new RuntimeException("Dude, like, what just happened?", e);
-		}
-		if (!url.hasItem()) {
-			return toURI(deflt);
-		}
-		try {
-			return url.getItem().toURI();
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("this should be impossible" , e);
-		}
-	}
-
 	private URI getPostLoginRedirectURI(final String redirect, final String deflt)
 			throws IllegalParameterException, AuthStorageException {
 		final URL redirURL = getRedirectURL(redirect);
@@ -689,23 +675,5 @@ public class Login {
 				tcc,
 				create.isLinkAll());
 		return createLoginResponseJSON(Response.Status.CREATED, redirectURI, newtoken);
-	}
-	
-	//Assumes valid URI in URL form
-	private URI toURI(final URL loginURL) {
-		try {
-			return loginURL.toURI();
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
-	}
-	
-	//Assumes valid URI in String form
-	private URI toURI(final String uri) {
-		try {
-			return new URI(uri);
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
 	}
 }
