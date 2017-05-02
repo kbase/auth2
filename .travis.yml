@@ -43,6 +43,6 @@ script:
     - ant $ANT_TEST
 
 after_success:
-    - ls docs/test-reports
-    - bash <(curl -s https://codecov.io/bash) -t 44a16de2-ce0d-4ca9-afe8-d5396a74b41a -f test-reports/coverage-report.xml
+    - ls test-reports
+    - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml
 
