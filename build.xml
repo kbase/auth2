@@ -232,7 +232,7 @@
   <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="jacoco.classpath"/>
 	
   <target name="test"
-          depends="clean,test_no_mongo_storage,test_mongo_storage"
+          depends="test_no_mongo_storage,test_mongo_storage"
           description="run all tests and generate test report">
     <jacoco:merge destfile="${test.reports.dir}/merged_jacoco.exec">
       <fileset dir="${test.reports.dir}" includes="*.exec"/>
