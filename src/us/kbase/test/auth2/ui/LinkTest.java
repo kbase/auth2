@@ -18,6 +18,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -50,6 +51,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
@@ -907,6 +909,344 @@ public class LinkTest {
 		} catch (NoSuchTokenException e) {
 			// pass
 		}
+	}
+	
+	@Test
+	public void linkPickOneForm() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.cookie(COOKIE_NAME, nt.getToken());
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3)));
+	}
+	
+	@Test
+	public void linkPickOneJSON() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.header("Authorization", nt.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of(
+				"id", "de0702aa7927b562e0d6be5b6527cfb2")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3)));
+	}
+	
+	@Test
+	public void linkPickAllWithAltRedirectForm() throws Exception {
+		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		
+		setPostLinkRedirect(host, admintoken, "https://foo.com/baz");
+		
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.cookie(COOKIE_NAME, nt.getToken());
+		final Form form = new Form();
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI("https://foo.com/baz")));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3, REMOTE2)));
+	}
+	
+	@Test
+	public void linkPickAllJSON() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.header("Authorization", nt.getToken());
+		
+		final Response res = req.post(Entity.json(Collections.emptyMap()));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3, REMOTE2)));
+	}
+	
+	@Test
+	public void linkPickAllEmptyStringForm() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.cookie(COOKIE_NAME, nt.getToken());
+		final Form form = new Form();
+		form.param("id", "   \t     ");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3, REMOTE2)));
+	}
+	
+	@Test
+	public void linkPickOneEmptyStringJSON() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
+		final TemporaryToken tt = linkPickSetup();
+		
+		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
+		final Builder req = linkPickRequestBuilder(nt, tt, target)
+				.header("Authorization", nt.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of(
+				"id", "   \t \n   ")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertLinkProcessTokenRemoved(res);
+		
+		final AuthUser u = manager.storage.getUser(new UserName("u1"));
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1, REMOTE3, REMOTE2)));
+	}
+	
+	@Test
+	public void linkPickFailNoUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar");
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		
+		failRequestJSON(res.header("accept", MediaType.APPLICATION_JSON).post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void linkPickFailEmptyUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar")
+				.cookie(COOKIE_NAME, "    \t     ");
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", "    \t   ")
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(res2.post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void linkPickFailBadUserToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "foobar")
+				.cookie(COOKIE_NAME, "foobarbaz");
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 401, "Unauthorized",
+				new InvalidTokenException());
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", "foobarbaz")
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(res2.post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 401, "Unauthorized",
+				new InvalidTokenException());
+	}
+	
+	@Test
+	public void linkPickFailNoLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+
+		final Builder res2 = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+	}
+	
+	@Test
+	public void linkPickFailEmptyLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "   \t   ")
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+
+		final Builder res2 = wt.request()
+				.cookie("in-process-link-token", "   \t   ")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-link-token"));
+	}
+	
+	@Test
+	public void linkPickFailBadLinkToken() throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder res = wt.request()
+				.cookie("in-process-link-token", "wheee")
+				.cookie(COOKIE_NAME, nt.getToken());
+		
+		final Form form = new Form();
+		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		failRequestHTML(res.post(Entity.form(form)), 401, "Unauthorized",
+				new InvalidTokenException("Temporary token"));
+
+		final Builder res2 = wt.request()
+				.cookie("in-process-link-token", "whee")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("Authorization", nt.getToken());
+		
+		failRequestJSON(res2.post(Entity.json(
+				ImmutableMap.of("id", "de0702aa7927b562e0d6be5b6527cfb2"))), 401, "Unauthorized",
+				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkPickFailNoJSON() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(null)),
+				400, "Bad Request", new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void linkPickFailJSONWithAdditionalProperties() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/link/pick")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("in-process-link-token", "foobar");
+		
+		failRequestJSON(request.post(Entity.json(ImmutableMap.of("foo", "bar"))),
+				400, "Bad Request", new IllegalParameterException(
+						"Unexpected parameters in request: foo"));
+	}
+
+	private Builder linkPickRequestBuilder(
+			final NewToken nt,
+			final TemporaryToken tt,
+			final URI target) {
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		return wt.request()
+				.cookie("in-process-link-token", tt.getToken());
+	}
+	
+	private TemporaryToken linkPickSetup() throws Exception {
+		
+		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
+				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
+				set(REMOTE1, REMOTE2, REMOTE3));
+		return tt;
 	}
 	
 }

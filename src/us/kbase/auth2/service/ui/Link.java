@@ -193,7 +193,7 @@ public class Link {
 		return r;
 	}
 	
-	// TODO CODE the two methods below are very similar and there's another similar method in Login. pass in interface that gets the right url
+	// TODO NOW CODE the two methods below are very similar and there's another similar method in Login. pass in interface that gets the right url
 	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
 		final ConfigItem<URL, State> url;
 		try {
@@ -335,7 +335,7 @@ public class Link {
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
 				MissingParameterException, IdentityProviderErrorException {
-		if (identityID == null || identityID.trim().isEmpty()) {
+		if (nullOrEmpty(identityID)) {
 			identityID = null;
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
