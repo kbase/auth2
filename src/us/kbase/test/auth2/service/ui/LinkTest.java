@@ -7,11 +7,11 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.service.ui.UITestUtils.enableProvider;
-import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestHTML;
-import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestJSON;
-import static us.kbase.test.auth2.service.ui.UITestUtils.setLinkCompleteRedirect;
-import static us.kbase.test.auth2.service.ui.UITestUtils.setPostLinkRedirect;
+import static us.kbase.test.auth2.service.ServiceTestUtils.enableProvider;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.ServiceTestUtils.setLinkCompleteRedirect;
+import static us.kbase.test.auth2.service.ServiceTestUtils.setPostLinkRedirect;
 
 import java.net.URI;
 import java.net.URL;
@@ -74,6 +74,7 @@ import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
+import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LinkTest {
 
@@ -103,7 +104,7 @@ public class LinkTest {
 	public static void beforeClass() throws Exception {
 		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
-		final Path cfgfile = UITestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
+		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		server = new StandaloneAuthServer(KBaseAuthConfig.class.getName());
 		new ServerThread(server).start();
@@ -127,7 +128,7 @@ public class LinkTest {
 	
 	@Before
 	public void beforeTest() throws Exception {
-		UITestUtils.resetServer(manager, host, COOKIE_NAME);
+		ServiceTestUtils.resetServer(manager, host, COOKIE_NAME);
 	}
 	
 	@Test
@@ -145,7 +146,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkDisplayWithOneProvider() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 
@@ -163,7 +164,7 @@ public class LinkTest {
 	@Test
 	public void linkDisplayWithTwoProviders() throws Exception {
 		//also tests trailing slash on url
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
@@ -181,7 +182,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkDisplayWithLocalUser() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
@@ -254,7 +255,7 @@ public class LinkTest {
 
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -311,7 +312,7 @@ public class LinkTest {
 	@Test
 	public void linkCompleteImmediateLinkDefaultRedirect() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -341,7 +342,7 @@ public class LinkTest {
 	@Test
 	public void linkCompleteImmediateLinkCustomRedirect() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		setPostLinkRedirect(host, admintoken, "https://foobar.com/baz");
@@ -372,7 +373,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteDelayedNoTokenAndDefaultRedirect() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -402,7 +403,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteDelayedEmptyTokenAndDefaultRedirect() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -433,7 +434,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteDelayedMultipleIdentsAndCustomRedirect() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		setLinkCompleteRedirect(host, admintoken, "https://foobar.com/baz");
@@ -539,7 +540,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteFailNoAuthcodeNoToken() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -560,7 +561,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteFailNoAuthcodeWithToken() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -701,7 +702,7 @@ public class LinkTest {
 						"id", "de0702aa7927b562e0d6be5b6527cfb2")
 				));
 		
-		UITestUtils.assertObjectsEqual(json, expectedJson);
+		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}
 	
 	@Test
@@ -955,7 +956,7 @@ public class LinkTest {
 	
 	@Test
 	public void linkPickAllWithAltRedirectForm() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		setPostLinkRedirect(host, admintoken, "https://foo.com/baz");
 		

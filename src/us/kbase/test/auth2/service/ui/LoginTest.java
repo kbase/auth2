@@ -9,12 +9,12 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.service.ui.UITestUtils.enableLogin;
-import static us.kbase.test.auth2.service.ui.UITestUtils.enableProvider;
-import static us.kbase.test.auth2.service.ui.UITestUtils.enableRedirect;
-import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestHTML;
-import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestJSON;
-import static us.kbase.test.auth2.service.ui.UITestUtils.setLoginCompleteRedirect;
+import static us.kbase.test.auth2.service.ServiceTestUtils.enableLogin;
+import static us.kbase.test.auth2.service.ServiceTestUtils.enableProvider;
+import static us.kbase.test.auth2.service.ServiceTestUtils.enableRedirect;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.ServiceTestUtils.setLoginCompleteRedirect;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -87,6 +87,7 @@ import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
+import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LoginTest {
 	
@@ -116,7 +117,7 @@ public class LoginTest {
 	public static void beforeClass() throws Exception {
 		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
-		final Path cfgfile = UITestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
+		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		server = new StandaloneAuthServer(KBaseAuthConfig.class.getName());
 		new ServerThread(server).start();
@@ -140,7 +141,7 @@ public class LoginTest {
 	
 	@Before
 	public void beforeTest() throws Exception {
-		UITestUtils.resetServer(manager, host, COOKIE_NAME);
+		ServiceTestUtils.resetServer(manager, host, COOKIE_NAME);
 	}
 	
 	@Test
@@ -155,7 +156,7 @@ public class LoginTest {
 	
 	@Test
 	public void startDisplayWithOneProvider() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		
@@ -168,7 +169,7 @@ public class LoginTest {
 	
 	@Test
 	public void startDisplayWithTwoProviders() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
@@ -237,7 +238,7 @@ public class LoginTest {
 			throws Exception {
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableRedirect(host, admintoken, "https://foobar.com/thingy");
@@ -306,7 +307,7 @@ public class LoginTest {
 		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
-		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
@@ -328,7 +329,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteImmediateLoginMinimalInput() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -362,7 +363,7 @@ public class LoginTest {
 	public void loginCompleteImmediateLoginEmptyStringInput() throws Exception {
 		// also tests that the empty error string is ignored.
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -397,7 +398,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteImmediateLoginRedirectAndTrueSession() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -433,7 +434,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteImmediateLoginRedirectAndFalseSession() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -557,7 +558,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteDelayedMinimalInput() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -592,7 +593,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -631,7 +632,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteDelayedLoginRedirectAndTrueSession() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -673,7 +674,7 @@ public class LoginTest {
 	@Test
 	public void loginCompleteDelayedLoginRedirectAndFalseSession() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -883,7 +884,7 @@ public class LoginTest {
 	
 	@Test
 	public void loginCompleteFailNoSuchProvider() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
@@ -919,7 +920,7 @@ public class LoginTest {
 		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
-		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
@@ -974,7 +975,7 @@ public class LoginTest {
 		manager.storage.disableAccount(new UserName("ruser2"), new UserName("adminwhee"),
 				"Said nasty, but true, things about Steve");
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableLogin(host, admintoken);
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -1052,7 +1053,7 @@ public class LoginTest {
 						.build()
 				));
 		
-		UITestUtils.assertObjectsEqual(json, expectedJson);
+		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}
 
 	@Test
@@ -1061,7 +1062,7 @@ public class LoginTest {
 		// tests with login disabled and admin user
 		// tests with trailing slash on target
 
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, admintoken, "https://foo.com/whee");
 		
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
@@ -1139,7 +1140,7 @@ public class LoginTest {
 						.build()
 				));
 		
-		UITestUtils.assertObjectsEqual(json, expectedJson);
+		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}
 	
 	@Test
@@ -1203,14 +1204,14 @@ public class LoginTest {
 				));
 		expectedJson.put("login", Collections.emptyList());
 		
-		UITestUtils.assertObjectsEqual(json, expectedJson);
+		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}
 	
 	@Test
 	public void loginChoice2CreateWithRedirectURL() throws Exception {
 		// tests with redirect cookie
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, admintoken, "https://foo.com/whee");
 		enableLogin(host, admintoken);
 
@@ -1269,7 +1270,7 @@ public class LoginTest {
 				));
 		expectedJson.put("login", Collections.emptyList());
 		
-		UITestUtils.assertObjectsEqual(json, expectedJson);
+		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}
 	
 	@Test
@@ -1371,7 +1372,7 @@ public class LoginTest {
 		failRequestJSON(jsonrequest.get(), 400, "Bad Request",
 				new IllegalParameterException("Post-login redirects are not enabled"));
 		
-		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		
 		failRequestHTML(request.get(), 400, "Bad Request",
@@ -1690,7 +1691,7 @@ public class LoginTest {
 		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
 				new IllegalParameterException("Post-login redirects are not enabled"));
 		
-		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
+		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		
 		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
@@ -1943,7 +1944,7 @@ public class LoginTest {
 
 	private TemporaryToken loginPickSetup() throws Exception {
 		
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");
@@ -2424,7 +2425,7 @@ public class LoginTest {
 	}
 
 	private TemporaryToken loginChoiceSetup() throws Exception {
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");

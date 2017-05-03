@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.service.ui;
+package us.kbase.test.auth2.service;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -53,7 +53,7 @@ import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.TestCommon;
 
-public class UITestUtils {
+public class ServiceTestUtils {
 	
 	private static final Client CLI = ClientBuilder.newClient();
 	
@@ -145,7 +145,7 @@ public class UITestUtils {
 		assertThat("incorrect status code", res.getStatus(), is(httpCode));
 		final String html = res.readEntity(String.class);
 		final Document doc = Jsoup.parse(html);
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
+		assertErrorCorrect(httpCode, httpStatus, e, doc);
 	}
 
 	public static void assertErrorCorrect(
@@ -203,7 +203,7 @@ public class UITestUtils {
 			throws Exception {
 		manager.reset(); // destroy any admins that already exist
 		//force a config reset
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = getAdminToken(manager);
 		final Response r = CLI.target(host + "/admin/config/reset").request()
 				.cookie(cookieName, admintoken.getToken())
 				.post(Entity.entity(null, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
