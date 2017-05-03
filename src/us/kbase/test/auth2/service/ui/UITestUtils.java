@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.ui;
+package us.kbase.test.auth2.service.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;

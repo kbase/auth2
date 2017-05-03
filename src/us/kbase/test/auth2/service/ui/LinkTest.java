@@ -1,4 +1,4 @@
-package us.kbase.test.auth2.ui;
+package us.kbase.test.auth2.service.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
@@ -7,11 +7,11 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
-import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
-import static us.kbase.test.auth2.ui.UITestUtils.failRequestHTML;
-import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
-import static us.kbase.test.auth2.ui.UITestUtils.setLinkCompleteRedirect;
-import static us.kbase.test.auth2.ui.UITestUtils.setPostLinkRedirect;
+import static us.kbase.test.auth2.service.ui.UITestUtils.enableProvider;
+import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestHTML;
+import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.ui.UITestUtils.setLinkCompleteRedirect;
+import static us.kbase.test.auth2.service.ui.UITestUtils.setPostLinkRedirect;
 
 import java.net.URI;
 import java.net.URL;

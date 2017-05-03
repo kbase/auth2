@@ -185,7 +185,7 @@ public class Login {
 			try {
 				url = new URL(redirect);
 				url.toURI();
-			} catch (MalformedURLException | URISyntaxException e) { //TODO NOW test
+			} catch (MalformedURLException | URISyntaxException e) {
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
 			if (ext.getAllowedLoginRedirectPrefix().hasItem()) {
