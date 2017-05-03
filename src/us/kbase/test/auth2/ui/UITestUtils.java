@@ -15,6 +15,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -180,7 +181,7 @@ public class UITestUtils {
 		assertThat("incorrect application error", breaks.get(7).getWholeText(),
 				RegexMatcher.matches("^\\s*Application error: " + e.getErr().getError()));
 		assertThat("incorrect message", breaks.get(8).getWholeText(),
-				RegexMatcher.matches("^\\s*Message: " + e.getMessage()));
+				RegexMatcher.matches("^\\s*Message: " + Pattern.quote(e.getMessage())));
 	}
 	
 	// note ObjectDiffer does NOT check sorted lists are sorted

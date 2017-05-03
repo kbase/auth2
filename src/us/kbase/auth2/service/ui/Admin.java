@@ -8,6 +8,7 @@ import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -89,7 +90,7 @@ import us.kbase.auth2.service.common.IncomingJSON;
 public class Admin {
 
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private static final String SEP = UIPaths.SEP;
 	
@@ -726,8 +727,10 @@ public class Admin {
 				return ConfigItem.noAction();
 			}
 			try {
-				return ConfigItem.set(new URL(s));
-			} catch (MalformedURLException e) {
+				final ConfigItem<URL, Action> item = ConfigItem.set(new URL(s));
+				item.getItem().toURI(); // check for legal URIs
+				return item;
+			} catch (MalformedURLException | URISyntaxException e) {
 				throw new IllegalParameterException("Illegal URL: " + s, e);
 			}
 		}
@@ -787,7 +790,8 @@ public class Admin {
 		} else {
 			try {
 				redirect = ConfigItem.set(new URL(putativeURL));
-			} catch (MalformedURLException e) {
+				redirect.getItem().toURI(); // check for bad URIs
+			} catch (MalformedURLException | URISyntaxException e) {
 				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
 			}
 		}

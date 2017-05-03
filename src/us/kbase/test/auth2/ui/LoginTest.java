@@ -294,15 +294,22 @@ public class LoginTest {
 		failLoginStart(form, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: this ain't no gotdamned url"));
 		
+		// toURI chokes on ^s
 		final Form form2 = new Form();
 		form2.param("provider", "fake");
-		form2.param("redirecturl", "https://foobar.com/stuff/thingy");
+		form2.param("redirecturl", "https://foobar.com/stuff/thingy?a=^h");
 		failLoginStart(form2, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
+		
+		final Form form3 = new Form();
+		form3.param("provider", "fake");
+		form3.param("redirecturl", "https://foobar.com/stuff/thingy");
+		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
 		final IncomingToken adminToken = UITestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
-		failLoginStart(form2, 400, "Bad Request", new IllegalParameterException(
+		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
@@ -902,6 +909,12 @@ public class LoginTest {
 		failRequestJSON(request.get(), 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
+		// toURI chokes on ^s
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy?a=^h");
+		
+		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
+		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
 		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
@@ -1342,6 +1355,15 @@ public class LoginTest {
 		failRequestJSON(jsonrequest.get(), 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		
+		// toURI chokes on ^s
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy?a=^h");
+		jsonrequest.cookie("loginredirect", "https://foobar.com/stuff/thingy?a=^h");
+		
+		failRequestHTML(request.get(), 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
+		failRequestJSON(jsonrequest.get(), 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
+		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		jsonrequest.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		
@@ -1649,6 +1671,17 @@ public class LoginTest {
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
 		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
 				new IllegalParameterException("Illegal redirect URL: not a url no sir"));
+		
+		// toURI chokes on ^s
+		request.cookie("loginredirect", "https://foobar.com/stuff/thingy?a=^h");
+		jsonrequest.cookie("loginredirect", "https://foobar.com/stuff/thingy?a=^h");
+		
+		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
+		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy?a=^h"));
 		
 		request.cookie("loginredirect", "https://foobar.com/stuff/thingy");
 		jsonrequest.cookie("loginredirect", "https://foobar.com/stuff/thingy");

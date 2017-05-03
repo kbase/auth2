@@ -4,13 +4,13 @@ import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
+import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
 import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.NoSuchProviderException;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -47,11 +47,8 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.Utils;
-import us.kbase.auth2.lib.config.ConfigAction.State;
-import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
-import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -67,15 +64,13 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
-import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.LINK_ROOT)
 public class Link {
 
-	//TODO JAVADOC
-	//TODO TEST
+	//TODO JAVADOC or swagger
 	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
 	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
@@ -182,52 +177,19 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (tt.isPresent()) {
-			r = Response.seeOther(getCompleteLinkRedirectURI(UIPaths.LINK_ROOT_CHOICE)).cookie(
-					getLinkInProcessCookie(tt.get()))
+			final URI completeURL = getExternalConfigURI(auth,
+					cfg -> cfg.getCompleteLinkRedirect(), UIPaths.LINK_ROOT_CHOICE);
+			r = Response.seeOther(completeURL)
+					.cookie(getLinkInProcessCookie(tt.get()))
 					.cookie(getStateCookie(null))
 					.build();
 		} else {
-			r = Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
+			final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+					UIPaths.ME_ROOT);
+			r = Response.seeOther(postLinkURI)
 					.cookie(getStateCookie(null)).build();
 		}
 		return r;
-	}
-	
-	// TODO CODE the two methods below are very similar and there's another similar method in Login. pass in interface that gets the right url
-	private URI getCompleteLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, State> url;
-		try {
-			url = auth.getExternalConfig(new AuthExternalConfigMapper())
-					.getCompleteLinkRedirect();
-		} catch (ExternalConfigMappingException e) {
-			throw new RuntimeException("Dude, like, what just happened?", e);
-		}
-		if (!url.hasItem()) {
-			return toURI(deflt);
-		}
-		try {
-			return url.getItem().toURI();
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("this should be impossible" , e);
-		}
-	}
-	
-	private URI getPostLinkRedirectURI(final String deflt) throws AuthStorageException {
-		final ConfigItem<URL, State> url;
-		try {
-			url = auth.getExternalConfig(new AuthExternalConfigMapper())
-					.getPostLinkRedirect();
-		} catch (ExternalConfigMappingException e) {
-			throw new RuntimeException("Dude, like, what just happened?", e);
-		}
-		if (!url.hasItem()) {
-			return toURI(deflt);
-		}
-		try {
-			return url.getItem().toURI();
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("this should be impossible" , e);
-		}
 	}
 	
 	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
@@ -335,12 +297,14 @@ public class Link {
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
 				MissingParameterException, IdentityProviderErrorException {
-		if (identityID == null || identityID.trim().isEmpty()) {
+		if (nullOrEmpty(identityID)) {
 			identityID = null;
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		pickAccount(token, linktoken, Optional.fromNullable(identityID));
-		return Response.seeOther(getPostLinkRedirectURI(UIPaths.ME_ROOT))
+		final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+				UIPaths.ME_ROOT);
+		return Response.seeOther(postLinkURI)
 				.cookie(getLinkInProcessCookie(null)).build();
 	}
 	
@@ -392,24 +356,6 @@ public class Link {
 			auth.link(token, linkInProcessToken, id.get());
 		} else {
 			auth.linkAll(token, linkInProcessToken);
-		}
-	}
-	
-	//Assumes valid URI in URL form
-	private URI toURI(final URL loginURL) {
-		try {
-			return loginURL.toURI();
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
-	}
-	
-	//Assumes valid URI in String form
-	private URI toURI(final String uri) {
-		try {
-			return new URI(uri);
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
 		}
 	}
 }
