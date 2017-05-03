@@ -482,8 +482,8 @@ public class LoginTest {
 			final UserName userName)
 			throws Exception {
 		
-		ServiceTestUtils.checkReturnedToken(manager, uitoken, customContext, userName, TokenType.LOGIN,
-				null, 14 * 24 * 3600 * 1000);
+		ServiceTestUtils.checkReturnedToken(manager, uitoken, customContext, userName,
+				TokenType.LOGIN, null, 14 * 24 * 3600 * 1000, true);
 	}
 	
 	private void checkLoginToken(

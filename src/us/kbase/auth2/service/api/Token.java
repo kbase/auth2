@@ -39,7 +39,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(APIPaths.API_V2_TOKEN)
 public class Token {
 
-	//TODO TEST
 	//TODO JAVADOC or swagger
 	
 	@Inject
@@ -87,6 +86,10 @@ public class Token {
 			final CreateToken create)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
+		
+		if (create == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		create.exceptOnAdditionalProperties();
 		
 		final TokenCreationContext tcc = getTokenContext(

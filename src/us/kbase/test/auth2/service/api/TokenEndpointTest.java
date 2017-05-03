@@ -7,11 +7,13 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.MediaType;
@@ -26,14 +28,20 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -157,5 +165,135 @@ public class TokenEndpointTest {
 		final Response res = req.get();
 		
 		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void createTokenNoCustomContext() throws Exception {
+		final NewToken nt = setUpUser();
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", nt.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("name", "whee")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		ServiceTestUtils.checkReturnedToken(manager, response, Collections.emptyMap(),
+				new UserName("foo"), TokenType.AGENT, "whee", 7 * 24 * 3600 * 1000, false);
+	}
+	
+	@Test
+	public void createTokenWithCustomContext() throws Exception {
+		final NewToken nt = setUpUser();
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", nt.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of(
+				"name", "whee",
+				"customcontext", ImmutableMap.of("foo", "bar"))));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		ServiceTestUtils.checkReturnedToken(manager, response, ImmutableMap.of("foo", "bar"),
+				new UserName("foo"), TokenType.AGENT, "whee", 7 * 24 * 3600 * 1000, false);
+	}
+	
+	@Test
+	public void createTokenFailNoJSON() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "foo")
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(null));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void createTokenFailExtraParams() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "foo")
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("foo", "bar")));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new IllegalParameterException("Unexpected parameters in request: foo"));
+	}
+	
+	@Test
+	public void createTokenFailNoTokenName() throws Exception {
+		final NewToken nt = setUpUser();
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", nt.getToken())
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("name", "   \t    ")));
+		
+		failRequestJSON(res, 400, "Bad Request", new MissingParameterException("token name"));
+	}
+	
+	@Test
+	public void createTokenFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("name", "whee")));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void createTokenFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "foo")
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("name", "whee")));
+		
+		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	private NewToken setUpUser() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000)).build(),
+				new PasswordHashAndSalt("foobarbazbing".getBytes(), "zz".getBytes()));
+		final NewToken nt = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L))
+				.build(),
+				"foobarbaz");
+		manager.storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
+		return nt;
 	}
 }

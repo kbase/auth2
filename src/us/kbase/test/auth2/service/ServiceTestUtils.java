@@ -211,7 +211,8 @@ public class ServiceTestUtils {
 			final UserName userName,
 			final TokenType type,
 			final String name,
-			final long lifetime)
+			final long lifetime,
+			final boolean checkAgentContext)
 			throws Exception {
 		
 		assertThat("incorrect token context", uitoken.get("custom"), is(customContext));
@@ -223,12 +224,14 @@ public class ServiceTestUtils {
 		final String id = (String) uitoken.get("id");
 		UUID.fromString(id); // ensures id is a valid uuid
 		assertThat("incorrect name", uitoken.get("name"), is(name));
-		assertThat("incorrect user", uitoken.get("os"), is((String) null));
-		assertThat("incorrect user", uitoken.get("osver"), is((String) null));
-		assertThat("incorrect user", uitoken.get("agent"), is("Jersey"));
-		assertThat("incorrect user", uitoken.get("agentver"), is("2.23.2"));
-		assertThat("incorrect user", uitoken.get("device"), is((String) null));
-		assertThat("incorrect user", uitoken.get("ip"), is("127.0.0.1"));
+		if (checkAgentContext) {
+			assertThat("incorrect os", uitoken.get("os"), is((String) null));
+			assertThat("incorrect osver", uitoken.get("osver"), is((String) null));
+			assertThat("incorrect agent", uitoken.get("agent"), is("Jersey"));
+			assertThat("incorrect agentver", uitoken.get("agentver"), is("2.23.2"));
+			assertThat("incorrect device", uitoken.get("device"), is((String) null));
+			assertThat("incorrect ip", uitoken.get("ip"), is("127.0.0.1"));
+		}
 		
 		checkStoredToken(manager, (String) uitoken.get("token"), id, created, customContext,
 				userName, type, name, lifetime);
