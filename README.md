@@ -93,10 +93,9 @@ GET /api/V2/token
 Introspect a token.
 
 POST /api/V2/token  
-Create an agent token. Takes form or JSON encoded data with the key `name`. Use the
-`Content-Type` header to specify input type. JSON input can also specify a `customcontext` key
-that takes a string to string map of user-supplied creation context to be saved with the token,
-and returned when the token is queried.
+Create an agent token. Takes JSON encoded data with the keys `name` for a required token name
+string and `customcontext` for an optional map of user-supplied creation context to be saved
+with the token, and returned when the token is queried.
 
 #### Legacy
 
