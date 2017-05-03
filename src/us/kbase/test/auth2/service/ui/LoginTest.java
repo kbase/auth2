@@ -1,11 +1,4 @@
-package us.kbase.test.auth2.ui;
-
-import static us.kbase.test.auth2.ui.UITestUtils.enableLogin;
-import static us.kbase.test.auth2.ui.UITestUtils.enableProvider;
-import static us.kbase.test.auth2.ui.UITestUtils.enableRedirect;
-import static us.kbase.test.auth2.ui.UITestUtils.failRequestHTML;
-import static us.kbase.test.auth2.ui.UITestUtils.failRequestJSON;
-import static us.kbase.test.auth2.ui.UITestUtils.setLoginCompleteRedirect;
+package us.kbase.test.auth2.service.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.isA;
@@ -16,6 +9,12 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.service.ui.UITestUtils.enableLogin;
+import static us.kbase.test.auth2.service.ui.UITestUtils.enableProvider;
+import static us.kbase.test.auth2.service.ui.UITestUtils.enableRedirect;
+import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestHTML;
+import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.ui.UITestUtils.setLoginCompleteRedirect;
 
 import java.net.InetAddress;
 import java.net.URI;

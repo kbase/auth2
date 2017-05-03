@@ -2,4 +2,4 @@
  * @author gaprice@lbl.gov
  *
  */
-package us.kbase.test.auth2.ui;
+package us.kbase.test.auth2.service.ui;
