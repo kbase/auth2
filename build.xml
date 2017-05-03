@@ -322,6 +322,8 @@
         <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
         <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
+        <!--<test name="us.kbase.test.auth2.service.api.TokenTest"/>-->
+        <test name="us.kbase.test.auth2.service.common.ExternalTokenTest"/>
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
       </junit>
