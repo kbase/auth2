@@ -1,7 +1,6 @@
 package us.kbase.test.auth2.service.ui;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
@@ -16,7 +15,6 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import static us.kbase.test.auth2.service.ServiceTestUtils.setLoginCompleteRedirect;
 
-import java.net.InetAddress;
 import java.net.URI;
 import java.net.URL;
 import java.nio.file.Path;
@@ -26,7 +24,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Set;
 import java.util.UUID;
 
@@ -57,7 +54,6 @@ import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TemporaryIdentities;
-import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -74,7 +70,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
-import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -487,21 +482,8 @@ public class LoginTest {
 			final UserName userName)
 			throws Exception {
 		
-		assertThat("incorrect token context", uitoken.get("custom"), is(customContext));
-		assertThat("incorrect token type", uitoken.get("type"), is("Login"));
-		TestCommon.assertCloseToNow((long) uitoken.get("created"));
-		assertThat("incorrect expires", uitoken.get("expires"),
-				is((long) uitoken.get("created") + 14 * 24 * 3600 * 1000));
-		UUID.fromString((String) uitoken.get("id")); // ensures id is a valid uuid
-		assertThat("incorrect name", uitoken.get("name"), is((String) null));
-		assertThat("incorrect user", uitoken.get("os"), is((String) null));
-		assertThat("incorrect user", uitoken.get("osver"), is((String) null));
-		assertThat("incorrect user", uitoken.get("agent"), is("Jersey"));
-		assertThat("incorrect user", uitoken.get("agentver"), is("2.23.2"));
-		assertThat("incorrect user", uitoken.get("device"), is((String) null));
-		assertThat("incorrect user", uitoken.get("ip"), is("127.0.0.1"));
-		
-		checkLoginToken((String) uitoken.get("token"), customContext, userName);
+		ServiceTestUtils.checkReturnedToken(manager, uitoken, customContext, userName, TokenType.LOGIN,
+				null, 14 * 24 * 3600 * 1000);
 	}
 	
 	private void checkLoginToken(
@@ -509,28 +491,8 @@ public class LoginTest {
 			final Map<String, String> customContext,
 			final UserName userName)
 			throws Exception {
-		
-		assertThat("incorrect token", token, is(RegexMatcher.matches("[A-Z2-7]{32}")));
-		
-		final StoredToken st = manager.storage.getToken(
-				new IncomingToken(token).getHashedToken());
-		
-		final TokenCreationContext.Builder build = TokenCreationContext.getBuilder()
-				.withIpAddress(InetAddress.getByName("127.0.0.1"))
-				.withNullableAgent("Jersey", "2.23.2");
-		
-		for (final Entry<String, String> e: customContext.entrySet()) {
-			build.withCustomContext(e.getKey(), e.getValue());
-		}
-		
-		assertThat("incorrect token context", st.getContext(), is(build.build()));
-		assertThat("incorrect token type", st.getTokenType(), is(TokenType.LOGIN));
-		TestCommon.assertCloseToNow(st.getCreationDate());
-		assertThat("incorrect expires", st.getExpirationDate(),
-				is(st.getCreationDate().plusSeconds(14 * 24 * 3600)));
-		assertThat("incorrect id", st.getId(), isA(UUID.class));
-		assertThat("incorrect name", st.getTokenName(), is(Optional.absent()));
-		assertThat("incorrect user", st.getUserName(), is(userName));
+		ServiceTestUtils.checkStoredToken(manager, token, customContext, userName, TokenType.LOGIN,
+				null, 14 * 24 * 3600 * 1000);
 	}
 
 	private void assertLoginProcessTokensRemoved(final Response res) {

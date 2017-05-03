@@ -2,8 +2,7 @@ package us.kbase.test.auth2.service.api;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
-
-import static us.kbase.test.auth2.service.ui.UITestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -40,7 +39,7 @@ import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
-import us.kbase.test.auth2.service.ui.UITestUtils;
+import us.kbase.test.auth2.service.ServiceTestUtils;
 
 /* Tests the 3 token related endpoints - the standard endpoint and the 2 legacy endpoints.
  * Also covers the API token classes.
@@ -61,7 +60,7 @@ public class TokenEndpointTest {
 	public static void beforeClass() throws Exception {
 		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
-		final Path cfgfile = UITestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
+		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
 		server = new StandaloneAuthServer(KBaseAuthConfig.class.getName());
 		new ServerThread(server).start();
@@ -85,7 +84,7 @@ public class TokenEndpointTest {
 	
 	@Before
 	public void beforeTest() throws Exception {
-		UITestUtils.resetServer(manager, host, COOKIE_NAME);
+		ServiceTestUtils.resetServer(manager, host, COOKIE_NAME);
 	}
 	
 	@Test
