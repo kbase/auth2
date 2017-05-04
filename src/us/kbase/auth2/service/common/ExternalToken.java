@@ -6,8 +6,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 
 public class ExternalToken {
 	
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private final String type;
 	private final String id;

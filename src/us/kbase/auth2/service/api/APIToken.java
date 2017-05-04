@@ -5,8 +5,7 @@ import us.kbase.auth2.service.common.ExternalToken;
 
 public class APIToken extends ExternalToken {
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private final long cachefor;
 	

@@ -1,6 +1,7 @@
-package us.kbase.test.auth2.service.ui;
+package us.kbase.test.auth2.service;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.isA;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
@@ -9,12 +10,15 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.Map.Entry;
 import java.util.regex.Pattern;
 
 import javax.ws.rs.client.Client;
@@ -31,6 +35,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import de.danielbechler.diff.ObjectDifferBuilder;
@@ -47,13 +52,16 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenName;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.TestCommon;
 
-public class UITestUtils {
+public class ServiceTestUtils {
 	
 	private static final Client CLI = ClientBuilder.newClient();
 	
@@ -145,7 +153,7 @@ public class UITestUtils {
 		assertThat("incorrect status code", res.getStatus(), is(httpCode));
 		final String html = res.readEntity(String.class);
 		final Document doc = Jsoup.parse(html);
-		UITestUtils.assertErrorCorrect(httpCode, httpStatus, e, doc);
+		assertErrorCorrect(httpCode, httpStatus, e, doc);
 	}
 
 	public static void assertErrorCorrect(
@@ -196,6 +204,122 @@ public class UITestUtils {
 				is(ImmutableMap.of(NodePath.withRoot(), "Property at path '/' has not changed")));
 	}
 	
+	public static void checkReturnedToken(
+			final MongoStorageTestManager manager,
+			final Map<String, Object> uitoken,
+			final Map<String, String> customContext,
+			final UserName userName,
+			final TokenType type,
+			final String name,
+			final long lifetime,
+			final boolean checkAgentContext)
+			throws Exception {
+		
+		assertThat("incorrect token context", uitoken.get("custom"), is(customContext));
+		assertThat("incorrect token type", uitoken.get("type"), is(type.getID()));
+		final long created = (long) uitoken.get("created");
+		TestCommon.assertCloseToNow(created);
+		assertThat("incorrect expires", uitoken.get("expires"),
+				is((long) uitoken.get("created") + lifetime));
+		final String id = (String) uitoken.get("id");
+		UUID.fromString(id); // ensures id is a valid uuid
+		assertThat("incorrect name", uitoken.get("name"), is(name));
+		if (checkAgentContext) {
+			assertThat("incorrect os", uitoken.get("os"), is((String) null));
+			assertThat("incorrect osver", uitoken.get("osver"), is((String) null));
+			assertThat("incorrect agent", uitoken.get("agent"), is("Jersey"));
+			assertThat("incorrect agentver", uitoken.get("agentver"), is("2.23.2"));
+			assertThat("incorrect device", uitoken.get("device"), is((String) null));
+			assertThat("incorrect ip", uitoken.get("ip"), is("127.0.0.1"));
+		}
+		
+		checkStoredToken(manager, (String) uitoken.get("token"), id, created, customContext,
+				userName, type, name, lifetime);
+	}
+	
+	public static void checkStoredToken(
+			final MongoStorageTestManager manager,
+			final String token,
+			final String id,
+			final long created,
+			final Map<String, String> customContext,
+			final UserName userName,
+			final TokenType type,
+			final String name,
+			final long lifetime)
+			throws Exception {
+		
+		assertThat("incorrect token", token, is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		
+		final StoredToken st = manager.storage.getToken(
+				new IncomingToken(token).getHashedToken());
+		
+		final TokenCreationContext.Builder build = TokenCreationContext.getBuilder()
+				.withIpAddress(InetAddress.getByName("127.0.0.1"))
+				.withNullableAgent("Jersey", "2.23.2");
+		
+		for (final Entry<String, String> e: customContext.entrySet()) {
+			build.withCustomContext(e.getKey(), e.getValue());
+		}
+		
+		final Optional<TokenName> tn;
+		if (name == null) {
+			tn = Optional.absent();
+		} else {
+			tn = Optional.of(new TokenName(name));
+		}
+		
+		assertThat("incorrect token context", st.getContext(), is(build.build()));
+		assertThat("incorrect token type", st.getTokenType(), is(type));
+		assertThat("incorrect created", st.getCreationDate(), is(Instant.ofEpochMilli(created)));
+		assertThat("incorrect expires", st.getExpirationDate(),
+				is(st.getCreationDate().plusMillis(lifetime)));
+		assertThat("incorrect id", st.getId(), is(UUID.fromString(id)));
+		assertThat("incorrect name", st.getTokenName(), is(tn));
+		assertThat("incorrect user", st.getUserName(), is(userName));
+	}
+	
+	// combine with above somehow?
+	public static void checkStoredToken(
+			final MongoStorageTestManager manager,
+			final String token,
+			final Map<String, String> customContext,
+			final UserName userName,
+			final TokenType type,
+			final String name,
+			final long lifetime)
+			throws Exception {
+		
+		assertThat("incorrect token", token, is(RegexMatcher.matches("[A-Z2-7]{32}")));
+		
+		final StoredToken st = manager.storage.getToken(
+				new IncomingToken(token).getHashedToken());
+		
+		final TokenCreationContext.Builder build = TokenCreationContext.getBuilder()
+				.withIpAddress(InetAddress.getByName("127.0.0.1"))
+				.withNullableAgent("Jersey", "2.23.2");
+		
+		for (final Entry<String, String> e: customContext.entrySet()) {
+			build.withCustomContext(e.getKey(), e.getValue());
+		}
+		
+		final Optional<TokenName> tn;
+		if (name == null) {
+			tn = Optional.absent();
+		} else {
+			tn = Optional.of(new TokenName(name));
+		}
+		
+		assertThat("incorrect token context", st.getContext(), is(build.build()));
+		assertThat("incorrect token type", st.getTokenType(), is(type));
+		TestCommon.assertCloseToNow(st.getCreationDate());
+		assertThat("incorrect expires", st.getExpirationDate(),
+				is(st.getCreationDate().plusMillis(lifetime)));
+		assertThat("incorrect id", st.getId(), isA(UUID.class));
+		assertThat("incorrect name", st.getTokenName(), is(tn));
+		assertThat("incorrect user", st.getUserName(), is(userName));
+	}
+	
 	public static void resetServer(
 			final MongoStorageTestManager manager,
 			final String host,
@@ -203,7 +327,7 @@ public class UITestUtils {
 			throws Exception {
 		manager.reset(); // destroy any admins that already exist
 		//force a config reset
-		final IncomingToken admintoken = UITestUtils.getAdminToken(manager);
+		final IncomingToken admintoken = getAdminToken(manager);
 		final Response r = CLI.target(host + "/admin/config/reset").request()
 				.cookie(cookieName, admintoken.getToken())
 				.post(Entity.entity(null, MediaType.APPLICATION_FORM_URLENCODED_TYPE));

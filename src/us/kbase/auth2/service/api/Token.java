@@ -10,7 +10,6 @@ import java.util.Map;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -40,8 +39,7 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(APIPaths.API_V2_TOKEN)
 public class Token {
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	@Inject
 	private Authentication auth;
@@ -56,23 +54,6 @@ public class Token {
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
 		final StoredToken ht = auth.getToken(getToken(token));
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
-	}
-	
-	@POST
-	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-	@Produces(MediaType.APPLICATION_JSON)
-	public NewAPIToken createAgentTokenForm(
-			@Context final HttpServletRequest req,
-			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam(Fields.TOKEN_NAME) final String name)
-			throws InvalidTokenException, MissingParameterException, UnauthorizedException,
-			NoTokenProvidedException, IllegalParameterException, AuthStorageException {
-		
-		final TokenCreationContext tcc = getTokenContext(
-				userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
-		return new NewAPIToken(auth.createToken(
-				getToken(token), new TokenName(name), TokenType.AGENT, tcc),
-				auth.getSuggestedTokenCacheTime());
 	}
 	
 	private static class CreateToken extends IncomingJSON {
@@ -105,6 +86,10 @@ public class Token {
 			final CreateToken create)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
+		
+		if (create == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		create.exceptOnAdditionalProperties();
 		
 		final TokenCreationContext tcc = getTokenContext(

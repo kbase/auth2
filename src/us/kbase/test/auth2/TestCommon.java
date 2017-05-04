@@ -260,9 +260,9 @@ public class TestCommon {
 		assertCloseToNow(creationDate.toEpochMilli());
 	}
 	
-	public static void assertCloseTo(final int seconds, final int target, final int range) {
-		assertThat(String.format("time (%s) not within %s sec of target: %s",
-				seconds, range, target),
-				Math.abs(target - seconds) < range, is(true));
+	public static void assertCloseTo(final long num, final long expected, final int range) {
+		assertThat(String.format("number (%s) not within %s of target: %s",
+				num, range, expected),
+				Math.abs(expected - num) < range, is(true));
 	}
 }

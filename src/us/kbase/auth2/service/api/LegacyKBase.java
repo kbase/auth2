@@ -27,8 +27,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 public class LegacyKBase {
 	
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	@Inject
 	private Authentication auth;
@@ -59,9 +58,7 @@ public class LegacyKBase {
 			@FormParam("fields") String fields)
 			throws AuthStorageException,
 			MissingParameterException, InvalidTokenException, DisabledUserException {
-		if (token == null || token.trim().isEmpty()) {
-			throw new MissingParameterException("token");
-		}
+		final IncomingToken in = new IncomingToken(token);
 		if (fields == null) {
 			fields = "";
 		}
@@ -77,11 +74,10 @@ public class LegacyKBase {
 			} else if ("email".equals(field)) {
 				email = true;
 			} else if ("token".equals(field)) {
-				ret.put("token", token);
+				ret.put("token", in.getToken());
 			}
 		}
 
-		final IncomingToken in = new IncomingToken(token.trim());
 		if (name || email) {
 			final AuthUser u = auth.getUser(in);
 			if (name) {
