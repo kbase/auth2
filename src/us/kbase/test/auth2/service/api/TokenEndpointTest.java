@@ -32,10 +32,13 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -295,5 +298,118 @@ public class TokenEndpointTest {
 				"foobarbaz");
 		manager.storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		return nt;
+	}
+	
+	@Test
+	public void globusTokenXHeader() throws Exception {
+		globusToken("x-globus-goauthtoken");
+	}
+	
+	@Test
+	public void globusTokenStdHeader() throws Exception {
+		globusToken("globus-goauthtoken");
+	}
+
+	private void globusToken(final String header) throws Exception {
+		final UUID id = UUID.randomUUID();
+		final IncomingToken it = new IncomingToken("foobarbaz");
+		
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withTokenName(new TokenName("bar"))
+				.withContext(TokenCreationContext.getBuilder()
+						.withCustomContext("whee", "whoo").build())
+				.build(), it.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/goauth/token")
+				.queryParam("grant_type", "client_credentials")
+				.build();
+
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header(header, it.getToken());
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		final long expiresIn = (long) response.get("expires_in");
+		response.remove("expires_in");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("access_token", it.getToken())
+				.with("client_id", "foo")
+				.with("expiry", 1000000000000L)
+				.with("issued_on", 10)
+				.with("lifetime", 999999999990L)
+				.with("refresh_token", "")
+				.with("scopes", Collections.emptyList())
+				.with("token_id", id.toString())
+				.with("token_type", "Bearer")
+				.with("user_name", "foo")
+				.build();
+		assertThat("incorrect token", response, is(expected));
+		
+		final long expectedExpiresIn = 1000000000000000L - Instant.now().toEpochMilli();
+		TestCommon.assertCloseTo(expiresIn * 1000, expectedExpiresIn, 10000);
+	}
+	
+	@Test
+	public void globusTokenFailGrantType() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/goauth/token")
+				.queryParam("grant_type", "whee")
+				.build();
+
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.get();
+		
+		failRequestJSON(res, 400, "Bad Request", new AuthException(ErrorType.UNSUPPORTED_OP,
+				"Only client_credentials grant_type supported. Got whee"));
+	}
+	
+	@Test
+	public void globusTokenFailNoToken() throws Exception {
+		final UnauthorizedException e = new UnauthorizedException(ErrorType.NO_TOKEN);
+		globusTokenFailToken("x-globus-goauthtoken", null, e);
+		globusTokenFailToken("x-globus-goauthtoken", "  \t    ", e);
+		globusTokenFailToken("globus-goauthtoken", null, e);
+		globusTokenFailToken("globus-goauthtoken", "   \t    ", e);
+	}
+	
+	private void globusTokenFailToken(
+			final String header,
+			final String token,
+			final AuthException exception)
+			throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/goauth/token")
+				.queryParam("grant_type", "client_credentials")
+				.build();
+
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header(header, token)
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.get();
+		
+		failRequestJSON(res, 403, "Forbidden", exception);
+	}
+	
+	@Test
+	public void globusTokenFailBadToken() throws Exception {
+		final UnauthorizedException e = new UnauthorizedException(
+				ErrorType.INVALID_TOKEN, "Authentication failed");
+		globusTokenFailToken("x-globus-goauthtoken", "foobar", e);
+		globusTokenFailToken("globus-goauthtoken", "foobar", e);
 	}
 }

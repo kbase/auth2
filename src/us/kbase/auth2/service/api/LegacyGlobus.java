@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.api;
 
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+
 import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -31,8 +33,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 @Path(APIPaths.LEGACY_GLOBUS)
 public class LegacyGlobus {
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	@Inject
 	private Authentication auth;
@@ -61,7 +62,7 @@ public class LegacyGlobus {
 		} catch (InvalidTokenException e) {
 			// globus throws a 403 instead of a 401
 			throw new UnauthorizedException(
-					e.getErr(), "Authentication failed.");
+					e.getErr(), "Authentication failed");
 		}
 		final long created = dateToSec(ht.getCreationDate());
 		final long expires = dateToSec(ht.getExpirationDate());
@@ -82,20 +83,22 @@ public class LegacyGlobus {
 
 	private String getGlobusToken(final String xtoken, String token)
 			throws UnauthorizedException {
-		if (token == null || token.trim().isEmpty()) {
+		if (nullOrEmpty(token)) {
 			token = xtoken;
-			if (token == null || token.trim().isEmpty()) {
+			if (nullOrEmpty(token)) {
 				// globus throws a 403 instead of a 401
 				throw new UnauthorizedException(ErrorType.NO_TOKEN);
 			}
 		}
-		return token.trim();
+		return token;
 	}
 	
 	
 	private long dateToSec(final Instant date) {
 		return (long) Math.floor(date.toEpochMilli() / 1000.0);
 	}
+	
+	//TODO TEST user part
 	
 	// note does not return identity_id
 	// note error structure is completely different
