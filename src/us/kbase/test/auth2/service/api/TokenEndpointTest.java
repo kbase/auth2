@@ -16,6 +16,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -29,6 +30,7 @@ import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -288,7 +290,8 @@ public class TokenEndpointTest {
 	
 	private NewToken setUpUser() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000)).build(),
+				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "zz".getBytes()));
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
@@ -411,5 +414,156 @@ public class TokenEndpointTest {
 				ErrorType.INVALID_TOKEN, "Authentication failed");
 		globusTokenFailToken("x-globus-goauthtoken", "foobar", e);
 		globusTokenFailToken("globus-goauthtoken", "foobar", e);
+	}
+	
+	@Test
+	public void kbaseDummyGetEndpoint() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path(
+				"/api/legacy/KBase/Sessions/Login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(401));
+		
+		assertThat("incorrect response", res.readEntity(String.class),
+				is("This GET method is just here for compatibility with " +
+				"the old java client and does nothing useful. Here's the compatibility part: " +
+				"\"user_id\": null"));
+	}
+	
+	@Test
+	public void kbaseDummyPostEndpoint() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path(
+				"/api/legacy/KBase/Sessions/Login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		final Response res = req.post(null);
+		
+		failRequestJSON(res, 400, "Bad Request", new MissingParameterException("token"));
+	}
+	
+	@Test
+	public void kbaseTokenNoFields() throws Exception {
+		final NewToken nt = setUpUser();
+		kbaseTokenSuccess(null, nt, ImmutableMap.of("user_id", "foo"));
+	}
+	
+	@Test
+	public void kbaseTokenAllFields() throws Exception {
+		final NewToken nt = setUpUser();
+		kbaseTokenSuccess("token, name   \t   , email  ", nt,
+				ImmutableMap.of(
+						"user_id", "foo",
+						"name", "bar",
+						"email", "f@g.com",
+						"token", nt.getToken()));
+	}
+	
+	@Test
+	public void kbaseTokenTokenField() throws Exception {
+		final NewToken nt = setUpUser();
+		kbaseTokenSuccess("token   \t    ", nt,
+				ImmutableMap.of(
+						"user_id", "foo",
+						"token", nt.getToken()));
+	}
+	
+	@Test
+	public void kbaseTokenNameField() throws Exception {
+		final NewToken nt = setUpUser();
+		kbaseTokenSuccess(" name    ", nt,
+				ImmutableMap.of(
+						"user_id", "foo",
+						"name", "bar"));
+	}
+	
+	@Test
+	public void kbaseTokenEmailField() throws Exception {
+		final NewToken nt = setUpUser();
+		kbaseTokenSuccess("  \t   , email  ", nt,
+				ImmutableMap.of(
+						"user_id", "foo",
+						"email", "f@g.com"));
+	}
+	
+	@Test
+	public void kbaseTokenFailNoToken() throws Exception {
+		kbaseTokenFailNoToken(new Form());
+	}
+	
+	@Test
+	public void kbaseTokenFailEmptyToken() throws Exception {
+		final Form form = new Form();
+		form.param("token", "   \t    ");
+		kbaseTokenFailNoToken(form);
+	}
+
+	private void kbaseTokenFailNoToken(final Form form) throws Exception {
+		final URI target = UriBuilder.fromUri(host).path(
+				"/api/legacy/KBase/Sessions/Login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.form(form));
+		
+		failRequestJSON(res, 400, "Bad Request", new MissingParameterException("token"));
+	}
+	
+	@Test
+	public void kbaseTokenFailBadTokenNoFields() throws Exception {
+		// pulls the token from the db
+		kbaseTokenFailBadToken(null);
+	}
+
+	@Test
+	public void kbaseTokenFailBadTokenAllFields() throws Exception {
+		// pulls the user from the db
+		kbaseTokenFailBadToken("email, token, name");
+	}
+	
+	private void kbaseTokenFailBadToken(final String fields) throws Exception {
+		final URI target = UriBuilder.fromUri(host).path(
+				"/api/legacy/KBase/Sessions/Login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Form form = new Form();
+		form.param("token", "foobar");
+		form.param("fields", fields);
+		
+		final Response res = req.post(Entity.form(form));
+		
+		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
+	}
+
+	private void kbaseTokenSuccess(
+			final String fields,
+			final NewToken nt,
+			final Map<String, Object> expected) throws Exception {
+		final URI target = UriBuilder.fromUri(host).path(
+				"/api/legacy/KBase/Sessions/Login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		final Form form = new Form();
+		form.param("token", nt.getToken() + "    ");
+		form.param("fields", fields);
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect response", response, is(expected));
 	}
 }
