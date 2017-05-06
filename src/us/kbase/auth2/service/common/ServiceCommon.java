@@ -57,10 +57,10 @@ public class ServiceCommon {
 				UnauthorizedException {
 		final UserUpdate.Builder uu = UserUpdate.getBuilder();
 		try {
-			if (displayName != null && !displayName.isEmpty()) {
+			if (displayName != null && !displayName.trim().isEmpty()) {
 				uu.withDisplayName(new DisplayName(displayName));
 			}
-			if (email != null && !email.isEmpty()) {
+			if (email != null && !email.trim().isEmpty()) {
 				uu.withEmail(new EmailAddress(email));
 			}
 		} catch (MissingParameterException mpe) {

@@ -12,7 +12,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PUT;
@@ -40,7 +39,7 @@ import us.kbase.auth2.service.common.Fields;
 public class Me {
 	
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	@Inject
 	private Authentication auth;
@@ -83,17 +82,6 @@ public class Me {
 			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
 			.collect(Collectors.toSet()));
 		return ret;
-	}
-	
-	@PUT
-	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-	public void updateForm(
-			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam(Fields.DISPLAY) final String displayName,
-			@FormParam(Fields.EMAIL) final String email)
-			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException, UnauthorizedException {
-		updateUser(auth, getToken(token), displayName, email);
 	}
 	
 	@PUT

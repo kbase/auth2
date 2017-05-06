@@ -75,8 +75,8 @@ GET /api/V2/me
 See the current user's profile.
 
 PUT /api/V2/me  
-Update the current user's email address and display name. Takes form or JSON encoded data with the
-keys `display` and `email`. Use the `Content-Type` header to specify input type.
+Update the current user's email address and display name. Takes JSON encoded data with the
+keys `display` and `email`.
 
 GET /api/V2/users/?list=&lt;comma separated user names&gt;  
 Validate a set of user names and get the users' display names. Returns a map of username ->
