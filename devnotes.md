@@ -1,10 +1,7 @@
 Developer notes
 ===============
 
-Returned data structures should not include a top level 'error' field. This is
-reserved for returning errors in JSON.
-
-Templates are mustache templates.
+Templates are [mustache](https://mustache.github.io/) templates.
 
 Exception mapping
 -----------------
