@@ -62,13 +62,14 @@ public class LoggingFilter implements ContainerRequestFilter,
 		final String realIP = request.getHeaderString(X_REAL_IP);
 
 		if (!ignoreIPsInHeaders) {
-			if (xFF != null && !xFF.isEmpty()) {
+			if (xFF != null && !xFF.trim().isEmpty()) {
 				return xFF.split(",")[0].trim();
 			}
-			if (realIP != null && !realIP.isEmpty()) {
+			if (realIP != null && !realIP.trim().isEmpty()) {
 				return realIP.trim();
 			}
 		}
+		//TODO LOG always log xff, real ip, and request ip
 		return servletRequest.getRemoteAddr();
 	}
 

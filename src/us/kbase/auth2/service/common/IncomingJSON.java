@@ -33,18 +33,18 @@ public class IncomingJSON {
 		if (nullOrEmpty(string)) {
 			return Optional.absent();
 		}
-		return Optional.of(string);
+		return Optional.of(string.trim());
 	}
 
 	protected boolean getBoolean(final Object b, final String fieldName)
 			throws IllegalParameterException {
+		// may need to configure response for null
 		if (b == null) {
 			return false;
 		}
 		if (!(b instanceof Boolean)) {
 			throw new IllegalParameterException(fieldName + " must be a boolean");
 		}
-		// may need to configure response for null
 		return Boolean.TRUE.equals(b) ? true : false;
 	}
 
