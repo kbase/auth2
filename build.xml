@@ -1,4 +1,5 @@
-<project name="KBase Authentication Service MKII" default="test" basedir="." xmlns:jacoco="antlib:org.jacoco.ant">
+<project name="KBase Authentication Service MKII" default="test" basedir="."
+  xmlns:jacoco="antlib:org.jacoco.ant">
 
   <description>
       Build file for the second KBase Authentication Service 
@@ -229,7 +230,8 @@
     </fileset>
   </path>
 
-  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml" classpathref="jacoco.classpath"/>
+  <taskdef uri="antlib:org.jacoco.ant" resource="org/jacoco/ant/antlib.xml"
+    classpathref="jacoco.classpath"/>
 	
   <target name="test"
           depends="test_no_mongo_storage,test_mongo_storage"
@@ -263,7 +265,8 @@
           depends="compile"
           description="run tests without the MongoStorage* tests">
     <echo message="starting ${package} tests"/>
-    <jacoco:coverage destfile="${test.reports.dir}/no_mongo_storage_jacoco.exec" excludes="org/*:junit/*">
+    <jacoco:coverage destfile="${test.reports.dir}/no_mongo_storage_jacoco.exec"
+        excludes="org/*:junit/*">
       <junit printsummary="yes" failureproperty="test.failed" fork="yes">
         <classpath refid="test.classpath"/>
         <formatter type="plain" usefile="false" />
@@ -326,6 +329,7 @@
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
         <test name="us.kbase.test.auth2.service.common.ExternalTokenTest"/>
         <test name="us.kbase.test.auth2.service.common.IncomingJSONTest"/>
+        <test name="us.kbase.test.auth2.service.common.ServiceCommonTest"/>
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
       </junit>
@@ -337,7 +341,8 @@
           depends="compile"
           description="run only the MongoStorage* tests">
     <echo message="starting ${package} tests"/>
-    <jacoco:coverage destfile="${test.reports.dir}/mongo_storage_jacoco.exec" excludes="org/*:junit/*">
+    <jacoco:coverage destfile="${test.reports.dir}/mongo_storage_jacoco.exec"
+        excludes="org/*:junit/*">
       <junit failureproperty="test.failed" fork="yes">
         <classpath refid="test.classpath"/>
         <formatter type="plain" usefile="false" />

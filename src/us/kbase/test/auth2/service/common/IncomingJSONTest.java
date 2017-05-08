@@ -94,6 +94,7 @@ public class IncomingJSONTest {
 	public void getBooleanFail() {
 		try {
 			new IncomingJSONSub().getBoolean("s", "foo");
+			fail("expected exception");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e,
 					new IllegalParameterException("foo must be a boolean"));
@@ -116,6 +117,7 @@ public class IncomingJSONTest {
 		ij.setAdditionalProperties("foo", "bar");
 		try {
 			ij.exceptOnAdditionalProperties();
+			fail("expected exception");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e,
 					new IllegalParameterException("Unexpected parameters in request: foo"));

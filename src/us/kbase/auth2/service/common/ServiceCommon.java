@@ -29,16 +29,22 @@ import us.kbase.auth2.service.UserAgentParser;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 
-/* methods that are useful for the UI and API */
+/** Helper methods that are useful for both the UI and API.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class ServiceCommon {
 	
 	private static final String HEADER_USER_AGENT = "user-agent";
 	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 	private static final String X_REAL_IP = "X-Real-IP";
 
-	//TODO JAVADOC
-	//TODO TEST
-	
+	/** Create an incoming token from a string, throwing an appropriate exception if the token is
+	 * null or empty.
+	 * @param token the token.
+	 * @return an incoming token object.
+	 * @throws NoTokenProvidedException if the token is null or empty.
+	 */
 	public static IncomingToken getToken(final String token)
 			throws NoTokenProvidedException {
 		try {
@@ -48,6 +54,17 @@ public class ServiceCommon {
 		}
 	}
 
+	/** Update a user's name and or email.
+	 * @param auth the authentication instance upon which to perform the update.
+	 * @param token the user's token.
+	 * @param displayName the new display name for the user.
+	 * @param email the new email address for the user.
+	 * @throws IllegalParameterException if the display name or email address are illegal.
+	 * @throws InvalidTokenException if the user's token is invalid.
+	 * @throws AuthStorageException if an error occurs contacting the authentication storage
+	 * system.
+	 * @throws UnauthorizedException if the token is not a login token.
+	 */
 	public static void updateUser(
 			final Authentication auth,
 			final IncomingToken token,
@@ -55,6 +72,8 @@ public class ServiceCommon {
 			final String email)
 			throws IllegalParameterException, InvalidTokenException, AuthStorageException,
 				UnauthorizedException {
+		nonNull(auth, "auth");
+		nonNull(token, "token");
 		final UserUpdate.Builder uu = UserUpdate.getBuilder();
 		try {
 			if (displayName != null && !displayName.trim().isEmpty()) {
@@ -97,11 +116,23 @@ public class ServiceCommon {
 			return inter.newInstance();
 		} catch (IllegalAccessException | InstantiationException e) {
 			throw new AuthConfigurationException(String.format(
-					"Module %s could not be instantiated: %s",
-					className, e.getMessage()), e);
+					"Module %s could not be instantiated: %s", className, e.getMessage()), e);
 		}
 	}
 
+	/** Creates a context object for the creation of a token.
+	 * @param userAgentParser a parser to parse a user agent string.
+	 * @param request the servlet request from which the user agent and ip address will be
+	 * retrieved.
+	 * @param ignoreIPsInHeaders whether the x-forwarded-for and x-real-ip headers should be
+	 * ignored.
+	 * @param customContext and user-provided context to be included with the context object.
+	 * @return a token creation context object.
+	 * @throws MissingParameterException if any of the keys or values of the custom context are
+	 * null or missing.
+	 * @throws IllegalParameterException if any of the keys or values of the custom context are too
+	 * large or too many keys are in the context.
+	 */
 	public static TokenCreationContext getTokenContext(
 			final UserAgentParser userAgentParser,
 			final HttpServletRequest request,
@@ -120,7 +151,6 @@ public class ServiceCommon {
 		return tcc.build();
 	}
 	
-	//TODO TEST xff and realip headers
 	private static void addIPAddress(
 			final TokenCreationContext.Builder builder,
 			final HttpServletRequest request,
@@ -129,9 +159,9 @@ public class ServiceCommon {
 		final String realIP = request.getHeader(X_REAL_IP);
 		final String ip;
 		if (!ignoreIPsInHeaders) {
-			if (xFF != null && !xFF.isEmpty()) {
+			if (xFF != null && !xFF.trim().isEmpty()) {
 				ip = xFF.split(",")[0].trim();
-			} else if (realIP != null && !realIP.isEmpty()) {
+			} else if (realIP != null && !realIP.trim().isEmpty()) {
 				ip = realIP.trim();
 			} else {
 				ip = request.getRemoteAddr();
@@ -139,13 +169,23 @@ public class ServiceCommon {
 		} else {
 			ip = request.getRemoteAddr();
 		}
-		try {
-			builder.withIpAddress(InetAddress.getByName(ip));
-		} catch (Exception e) {
-			// do nothing
+		// empty string is translated to loopback which is an error
+		if (!ip.trim().isEmpty()) { // if null there's a bug in HttpServletRequest
+			try {
+				builder.withIpAddress(InetAddress.getByName(ip.trim()));
+			} catch (Exception e) {
+				// do nothing
+			}
 		}
 	}
 	
+	/** A helper method to determine whether to ignore the x-forwarded-for and x-real-ip
+	 * headers based on the authentication configuration.
+	 * @param auth the authentication instance to query.
+	 * @return whether to ignore the headers.
+	 * @throws AuthStorageException if an error occurs contacting the authentication storage
+	 * system.
+	 */
 	public static boolean isIgnoreIPsInHeaders(final Authentication auth)
 			throws AuthStorageException {
 		try {
@@ -156,17 +196,22 @@ public class ServiceCommon {
 		}
 	}
 	
+	/** Translate a comma and semicolon delimited string to a key-value map.
+	 * @param customContext the string to translate.
+	 * @return the key value context map.
+	 * @throws IllegalParameterException if the string is not formatted correctly.
+	 */
 	public static Map<String, String> getCustomContextFromString(final String customContext)
 			throws IllegalParameterException {
 		final Map<String, String> ret = new HashMap<>();
-		if (customContext == null || customContext.trim().isEmpty()) {
+		if (nullOrEmpty(customContext)) {
 			return ret;
 		}
 		final String[] items = customContext.trim().split(";");
 		for (String item: items) {
 			item = item.trim();
 			if (!item.isEmpty()) {
-				final String[] keyvalue = item.trim().split(",");
+				final String[] keyvalue = item.split(",");
 				if (keyvalue.length != 2) {
 					throw new IllegalParameterException("Bad key/value pair in custom context: " +
 							item);
@@ -177,6 +222,10 @@ public class ServiceCommon {
 		return ret;
 	}
 	
+	/** Check if a string is null or whitespace only.
+	 * @param s the string to check.
+	 * @return true if the string is null or consists only of whitespace, false otherwise.
+	 */
 	public static boolean nullOrEmpty(final String s) {
 		return s == null || s.trim().isEmpty();
 	}
