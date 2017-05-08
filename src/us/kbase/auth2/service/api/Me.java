@@ -80,7 +80,7 @@ public class Me {
 		ret.put(Fields.POLICY_IDS, u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
 			Fields.ID, id.getName(),
 			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
-			.collect(Collectors.toSet()));
+			.collect(Collectors.toList()));
 		return ret;
 	}
 	

@@ -327,6 +327,7 @@
         <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
+        <test name="us.kbase.test.auth2.service.api.UserLookupTest"/>
         <test name="us.kbase.test.auth2.service.common.ExternalTokenTest"/>
         <test name="us.kbase.test.auth2.service.common.IncomingJSONTest"/>
         <test name="us.kbase.test.auth2.service.common.ServiceCommonTest"/>

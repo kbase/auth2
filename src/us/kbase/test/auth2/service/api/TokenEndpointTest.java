@@ -59,7 +59,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
  */
 public class TokenEndpointTest {
 
-	private static final String DB_NAME = "test_link_ui";
+	private static final String DB_NAME = "test_token_api";
 	private static final String COOKIE_NAME = "login-cookie";
 	
 	private static final Client CLI = ClientBuilder.newClient();

@@ -452,6 +452,34 @@ public class AuthUserTest {
 	}
 	
 	@Test
+	public void sortedCustomRoles() throws Exception {
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+				Instant.ofEpochMilli(10000))
+				.withCustomRole("zoo")
+				.withCustomRole("foo")
+				.withCustomRole("goo")
+				.withCustomRole("moo")
+				.build();
+		
+		assertThat("custom roles not sorted", new LinkedList<>(u.getCustomRoles()),
+				is(Arrays.asList("foo", "goo", "moo", "zoo")));
+	}
+	
+	@Test
+	public void sortedRoles() throws Exception {
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+				Instant.ofEpochMilli(10000))
+				.withRole(Role.SERV_TOKEN)
+				.withRole(Role.ADMIN)
+				.withRole(Role.CREATE_ADMIN)
+				.withRole(Role.DEV_TOKEN)
+				.build();
+		
+		assertThat("roles not sorted", new LinkedList<>(u.getRoles()),
+				is(Arrays.asList(Role.ADMIN, Role.CREATE_ADMIN, Role.DEV_TOKEN, Role.SERV_TOKEN)));
+	}
+	
+	@Test
 	public void sortedPolicyIDs() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
 				Instant.ofEpochMilli(10000))
