@@ -63,7 +63,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 /* tests the various user lookup methods, including legacy globus, the /me endpoint, and the
  * /users endpoints
  */
-public class UserLookupTest {
+public class UserEndpointTest {
 
 	private static final String DB_NAME = "test_user_api";
 	private static final String COOKIE_NAME = "login-cookie";
