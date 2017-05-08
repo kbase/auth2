@@ -98,8 +98,6 @@ public class LegacyGlobus {
 		return (long) Math.floor(date.toEpochMilli() / 1000.0);
 	}
 	
-	//TODO TEST user part
-	
 	// note does not return identity_id
 	// note error structure is completely different
 	@GET

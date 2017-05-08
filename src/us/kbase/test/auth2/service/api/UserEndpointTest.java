@@ -11,6 +11,8 @@ import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
 
@@ -40,10 +42,13 @@ import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -369,5 +374,144 @@ public class UserEndpointTest {
 		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
 	}
 	
+	@Test
+	public void getGlobusUserSelfWithGlobusHeader() throws Exception {
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/users/foobar")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("x-globus-goauthtoken", token.getToken());
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("username", "foobar")
+				.with("email_validated", false)
+				.with("ssh_pubkeys", new LinkedList<String>())
+				.with("resource_type", "users")
+				.with("full_name", "bleah")
+				.with("organization", null)
+				.with("fullname", "bleah")
+				.with("user_name", "foobar")
+				.with("email", "f@g.com")
+				.with("custom_fields", new HashMap<String,String>())
+				.build();
+		
+		assertThat("incorrect user structure", response, is(expected));
+	}
+	
+	@Test
+	public void getGlobusUserOtherWithAuthHeader() throws Exception {
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobaz"),
+				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
+				creds);
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/users/foobaz")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "OAuth  \t " + token.getToken() + "   \t   ");
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("username", "foobaz")
+				.with("email_validated", false)
+				.with("ssh_pubkeys", new LinkedList<String>())
+				.with("resource_type", "users")
+				.with("full_name", "bleah2")
+				.with("organization", null)
+				.with("fullname", "bleah2")
+				.with("user_name", "foobaz")
+				.with("email", null)
+				.with("custom_fields", new HashMap<String,String>())
+				.build();
+		
+		assertThat("incorrect user structure", response, is(expected));
+	}
+	
+	@Test
+	public void getGlobusUserFailNoToken() throws Exception {
+		final UnauthorizedException e = new UnauthorizedException(ErrorType.NO_TOKEN);
+		globusUserFailNoToken("x-globus-goauthtoken", null, e);
+		globusUserFailNoToken("x-globus-goauthtoken", "  \t    ", e);
+		globusUserFailNoToken("authorization", null, e);
+		globusUserFailNoToken("authorization", "OAuth       \t   ",
+				new UnauthorizedException(ErrorType.NO_TOKEN, "Invalid authorization header"));
+	}
+	
+	private void globusUserFailNoToken(
+			final String header,
+			final String token,
+			final AuthException exception)
+			throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/users/foo")
+				.build();
+
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header(header, token)
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.get();
+		
+		failRequestJSON(res, 403, "Forbidden", exception);
+	}
+	
+	@Test
+	public void getGlobusUserFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/legacy/globus/users/foo")
+				.build();
+
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "OAuth foobar")
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.get();
+		
+		failRequestJSON(res, 403, "Forbidden",
+				new UnauthorizedException(ErrorType.INVALID_TOKEN, "Authentication failed."));
+	}
 	
 }
