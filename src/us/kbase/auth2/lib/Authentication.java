@@ -2096,10 +2096,11 @@ public class Authentication {
 			final UserUpdate update)
 			throws InvalidTokenException, AuthStorageException, UnauthorizedException {
 		nonNull(update, "update");
+		// should check the token before returning even if there's no update
+		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
 		try {
 			storage.updateUser(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {

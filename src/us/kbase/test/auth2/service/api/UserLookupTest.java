@@ -4,7 +4,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
+import java.net.HttpURLConnection;
 import java.net.URI;
+import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
@@ -14,17 +16,20 @@ import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
+import org.apache.commons.io.IOUtils;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
@@ -35,7 +40,9 @@ import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -43,6 +50,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.MapBuilder;
@@ -236,5 +244,130 @@ public class UserLookupTest {
 		
 		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
 	}
+	
+	@Test
+	public void putMeNoUpdate() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/me").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+
+		final Response res = req.put(Entity.json(Collections.emptyMap()));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
+				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
+						Instant.ofEpochMilli(20000))
+						.withEmailAddress(new EmailAddress("f@g.com"))
+						.build()));
+	}
+	
+	@Test
+	public void putMeFullUpdate() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/me").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+
+		final Response res = req.put(Entity.json(ImmutableMap.of(
+				"display", "whee", "email", "x@g.com")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")),
+				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("whee"),
+						Instant.ofEpochMilli(20000))
+						.withEmailAddress(new EmailAddress("x@g.com"))
+						.build()));
+	}
+	
+	@Test
+	public void putMeFailNoJSON() throws Exception {
+		// jersey won't allow PUTing null json, bastards
+		final URL target = new URL(host + "/api/V2/me");
+		final HttpURLConnection conn = (HttpURLConnection) target.openConnection();
+		conn.setRequestMethod("PUT");
+		conn.setRequestProperty("accept", MediaType.APPLICATION_JSON);
+
+		final int responseCode = conn.getResponseCode();
+		final String err = IOUtils.toString(conn.getErrorStream());
+		
+		assertThat("incorrect error code", responseCode, is(400));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> errjson = new ObjectMapper().readValue(err, Map.class);
+		
+		ServiceTestUtils.assertErrorCorrect(400, "Bad Request",
+				new MissingParameterException("JSON body missing"), errjson);
+	}
+	
+	@Test
+	public void putMeFailAdditionalProps() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/me").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		final Response res = req.put(Entity.json(ImmutableMap.of("foo", "bar")));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new IllegalParameterException("Unexpected parameters in request: foo"));
+	}
+	
+	@Test
+	public void putMeFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/me").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		final Response res = req.put(Entity.json(Collections.emptyMap()));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void putMeFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/me").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "foobarbaz")
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		final Response res = req.put(Entity.json(Collections.emptyMap()));
+		
+		failRequestJSON(res, 401, "Unauthorized", new InvalidTokenException());
+	}
+	
 	
 }

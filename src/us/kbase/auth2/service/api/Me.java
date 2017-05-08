@@ -19,6 +19,8 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
@@ -28,12 +30,14 @@ import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.common.Fields;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(APIPaths.API_V2_ME)
 public class Me {
@@ -84,13 +88,31 @@ public class Me {
 		return ret;
 	}
 	
+	private static class UpdateUser extends IncomingJSON {
+		
+		public final String displayName;
+		public final String email;
+
+		@JsonCreator
+		public UpdateUser(
+				@JsonProperty(Fields.DISPLAY) final String displayName,
+				@JsonProperty(Fields.EMAIL) final String email) {
+			this.displayName = displayName;
+			this.email = email;
+		}
+	}
+	
 	@PUT
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void updateJSON(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			final Map<String, String> params)
+			final UpdateUser update)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException, UnauthorizedException {
-		updateUser(auth, getToken(token), params.get(Fields.DISPLAY), params.get(Fields.EMAIL));
+				IllegalParameterException, UnauthorizedException, MissingParameterException {
+		if (update == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		update.exceptOnAdditionalProperties();
+		updateUser(auth, getToken(token), update.displayName, update.email);
 	}
 }
