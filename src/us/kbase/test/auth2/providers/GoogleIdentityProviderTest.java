@@ -66,12 +66,20 @@ public class GoogleIdentityProviderTest {
 	
 	@BeforeClass
 	public static void setUpClass() {
-		//TODO TEST shut off logging. this doesn't work.
+		// comment out these lines to see mockserver logs.
 		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
 				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
 				.getLogger("org.mockserver"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		// the next two instructions will be unnecessary soon. see
+		// https://github.com/jamesdbloom/mockserver/issues/318
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("org.mockserver.mockserver"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("org.mockserver.proxy"))
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 		mockClientAndServer = ClientAndServer.startClientAndServer(TestCommon.findFreePort());
 	}
