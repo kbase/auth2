@@ -66,7 +66,17 @@ public class AuthenticationUserUpdateTest {
 	
 	@Test
 	public void updateUserNoop() throws Exception {
-		final Authentication auth = initTestMocks().auth;
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+			.withLifeTime(Instant.now(), 10000).build();
+
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		auth.updateUser(new IncomingToken("foobar"), UserUpdate.getBuilder().build()); //noop
 	}

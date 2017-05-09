@@ -9,6 +9,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.stream.Collectors;
 
 import com.google.common.base.Optional;
@@ -409,8 +410,8 @@ public class AuthUser {
 		final DisplayName displayName;
 		final Instant created;
 		EmailAddress email = EmailAddress.UNKNOWN;
-		final Set<Role> roles = new HashSet<>();
-		final Set<String> customRoles = new HashSet<>();
+		final Set<Role> roles = new TreeSet<>();
+		final Set<String> customRoles = new TreeSet<>();
 		final Map<PolicyID, Instant> policyIDs = new TreeMap<>();
 		Optional<Instant> lastLogin = Optional.absent();
 		UserDisabledState disabledState = new UserDisabledState();
