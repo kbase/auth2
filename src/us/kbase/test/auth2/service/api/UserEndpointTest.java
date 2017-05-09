@@ -516,7 +516,7 @@ public class UserEndpointTest {
 	
 	@Test
 	public void getUserList() throws Exception {
-		getUserList("  u2,  u4  ", ImmutableMap.of("u2", "d2", "u4", "d4"));
+		getUserList("  baz,  mua  ", ImmutableMap.of("baz", "fuz", "mua", "paz"));
 	}
 	
 	@Test
@@ -556,20 +556,32 @@ public class UserEndpointTest {
 	private IncomingToken setUpUsersForTesting() throws Exception {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
-		for (int i = 1; i < 5; i++) {
-			manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("u" + i),
-					new DisplayName("d" + i), Instant.ofEpochMilli(20000))
-					.withEmailAddress(new EmailAddress("f@g.com")).build(),
-					creds);
-		}
+
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foo"),
+				new DisplayName("bar"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("baz"),
+				new DisplayName("fuz"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("puz"),
+				new DisplayName("mup"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("mua"),
+				new DisplayName("paz"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				creds);
 		
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+		
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("toobar"),
 				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
-				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+				new UserName("toobar")).withLifeTime(Instant.ofEpochMilli(10000),
 						Instant.ofEpochMilli(1000000000000000L)).build(),
 				token.getHashedToken().getTokenHash());
 		return token;
@@ -617,7 +629,78 @@ public class UserEndpointTest {
 		final Response res = req.get();
 		
 		failRequestJSON(res, code, error, e);
+	}
+	
+	@Test
+	public void searchUsersBlankFields() throws Exception {
+		searchUsers("f", "   \t ,   ", ImmutableMap.of("foo", "bar", "baz", "fuz"));
+	}
+	
+	@Test
+	public void searchUsersUserName() throws Exception {
+		searchUsers("f", " username  ,  \t  ", ImmutableMap.of("foo", "bar"));
+	}
+	
+	@Test
+	public void searchUsersDisplayName() throws Exception {
+		searchUsers("f", "   \t, \t displayname  ", ImmutableMap.of("baz", "fuz"));
+	}
+	
+	@Test
+	public void searchUsersBothFields() throws Exception {
+		searchUsers("f", " displayname   \t ,   \t username   ",
+				ImmutableMap.of("foo", "bar", "baz", "fuz"));
+	}
+	
+	private void searchUsers(
+			final String prefix,
+			final String fields,
+			final Map<String, String> expected)
+			throws Exception {
+		final IncomingToken token = setUpUsersForTesting();
+
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/users/search/" + prefix)
+				.queryParam("fields", fields)
+				.build();
 		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect users", response, is(expected));
+	}
+	
+	@Test
+	public void searchUsersFailBadToken() throws Exception {
+		failSearchUsers(null, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		failSearchUsers("foobar", 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	private void failSearchUsers(
+			final String token,
+			final int code,
+			final String error,
+			final AuthException e) throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/users/search/f").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token)
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		final Response res = req.get();
+		
+		failRequestJSON(res, code, error, e);
 	}
 	
 }

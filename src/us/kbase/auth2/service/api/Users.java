@@ -34,7 +34,6 @@ import us.kbase.auth2.service.common.Fields;
 @Path(APIPaths.API_V2_USERS)
 public class Users {
 	
-	//TODO TEST
 	//TODO JAVADOC or swagger
 
 	@Inject

@@ -42,7 +42,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(APIPaths.API_V2_ME)
 public class Me {
 	
-	//TODO TEST
 	//TODO JAVADOC or swagger
 	
 	@Inject
