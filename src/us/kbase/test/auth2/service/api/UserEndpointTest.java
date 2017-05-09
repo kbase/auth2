@@ -514,4 +514,110 @@ public class UserEndpointTest {
 				new UnauthorizedException(ErrorType.INVALID_TOKEN, "Authentication failed."));
 	}
 	
+	@Test
+	public void getUserList() throws Exception {
+		getUserList("  u2,  u4  ", ImmutableMap.of("u2", "d2", "u4", "d4"));
+	}
+	
+	@Test
+	public void getUserListEmptyList() throws Exception {
+		getUserList("", Collections.emptyMap());
+	}
+	
+	@Test
+	public void getUserListWhitespaceList() throws Exception {
+		getUserList("    \t    \n   ", Collections.emptyMap());
+	}
+
+	private void getUserList(
+			final String list,
+			final Map<String, String> expected)
+			throws Exception {
+		final IncomingToken token = setUpUsersForTesting();
+
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/users")
+				.queryParam("list", list)
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect users", response, is(expected));
+	}
+	
+	private IncomingToken setUpUsersForTesting() throws Exception {
+		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+		for (int i = 1; i < 5; i++) {
+			manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("u" + i),
+					new DisplayName("d" + i), Instant.ofEpochMilli(20000))
+					.withEmailAddress(new EmailAddress("f@g.com")).build(),
+					creds);
+		}
+		
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
+				creds);
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		return token;
+	}
+	
+	@Test
+	public void getUserListFailMissingUser() throws Exception {
+		failGetUserList(" u1  ,   , u3", "foobar", 400, "Bad Request",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal user name [   ]: 30000 Missing input parameter: user name"));
+	}
+	
+	@Test
+	public void getUserListFailIllegalUser() throws Exception {
+		failGetUserList(" u1  , aA  , u3", "foobar", 400, "Bad Request",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal user name [ aA  ]: 30010 Illegal user name: " +
+						"Illegal character in user name aA: A"));
+	}
+	
+	@Test
+	public void getUserListFailBadToken() throws Exception {
+		failGetUserList("u1", null, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		failGetUserList("u1", "boobar", 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	private void failGetUserList(
+			final String list,
+			final String token,
+			final int code,
+			final String error,
+			final AuthException e) throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/users")
+				.queryParam("list", list)
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token)
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+
+		final Response res = req.get();
+		
+		failRequestJSON(res, code, error, e);
+		
+	}
+	
 }

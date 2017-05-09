@@ -52,7 +52,7 @@ public class Me {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> me(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			DisabledUserException {
+				DisabledUserException {
 		// this code is almost identical to ui.Me but I don't want to couple the API and UI outputs
 		final AuthUser u = auth.getUser(getToken(token));
 		final Map<String, Object> ret = new HashMap<String, Object>();
