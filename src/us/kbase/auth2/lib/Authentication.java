@@ -1004,6 +1004,8 @@ public class Authentication {
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
 		final boolean match = users.containsKey(suggestedUserName);
 		final boolean hasNumSuffix = sugStrip.length() != sugName.length();
+		// based on the only method that calls this method, if forceNumericSuffix is true,
+		// the suggestedUserName will not hasNumSuffix
 		if (!match && (!forceNumericSuffix || hasNumSuffix)) {
 			return Optional.of(suggestedUserName);
 		}
