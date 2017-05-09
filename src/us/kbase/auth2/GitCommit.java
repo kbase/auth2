@@ -3,12 +3,18 @@ package us.kbase.auth2;
 import java.io.InputStream;
 import java.util.Scanner;
 
+/** The Git commit from which the service was built. Expects a file called "gitcommit" in the same
+ * directory as the class file which contains the commit hash.
+ * 
+ * If the file is missing, the Git commit will be replaced with an error message.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class GitCommit {
-	
-	//TODO JAVADOC
 	
 	// can't really test this since the file should be baked into the jar or war
 
+	/** The Git commit from which the service was built. */
 	public static final String COMMIT;
 	
 	private static final String COMMIT_FILE_NAME = "gitcommit";

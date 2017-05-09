@@ -1,9 +1,12 @@
 package us.kbase.auth2.service.api;
 
+/** Constants used in the API.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class APIConstants {
 
-	//TODO JAVADOC
-	
+	/** The header key for an authorization token. */
 	public static final String HEADER_TOKEN = "authorization";
 
 }
