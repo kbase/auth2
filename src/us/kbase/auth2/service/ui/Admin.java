@@ -113,7 +113,7 @@ public class Admin {
 			AuthStorageException {
 		final Map<String, Object> ret = new HashMap<>();
 		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
-		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
 		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
 		ret.put(Fields.URL_POLICY, relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
 		ret.put(Fields.URL_SEARCH, relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
@@ -610,7 +610,7 @@ public class Admin {
 
 		ret.put(Fields.CFG_UPDATE_TIME_SEC, cfgset.getUpdateTimeInMillis() / 1000);
 		
-		ret.put(Fields.URL_BASIC, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
+		ret.put(Fields.URL_CFG_BASIC, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
 		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
 		ret.put(Fields.URL_PROVIDER, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
 		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_RESET));

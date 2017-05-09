@@ -15,8 +15,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 public class IncomingJSON {
 
-	// TODO JAVADOC
-	// TODO TEST
+	// TODO JAVADOC or swagger
 
 	private final Map<String, Object> additionalProperties = new TreeMap<>();
 
