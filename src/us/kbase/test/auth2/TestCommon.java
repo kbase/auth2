@@ -71,8 +71,24 @@ public class TestCommon {
 		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
 				.getLogger(org.slf4j.Logger.ROOT_LOGGER_NAME))
 				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("org.eclipse.jetty"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("us.kbase"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
 		System.setProperty("org.eclipse.jetty.LEVEL", "OFF");
 		System.setProperty("us.kbase.LEVEL", "OFF");
+		// these do work
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("us.kbase.auth2.service.exceptions.ExceptionHandler"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("us.kbase.auth2.service.LoggingFilter"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("nl.basjes.parse.useragent.UserAgentAnalyzer"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
 	}
 	
 	public static void assertExceptionCorrect(
