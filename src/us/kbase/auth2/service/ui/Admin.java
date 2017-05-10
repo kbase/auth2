@@ -2,10 +2,10 @@ package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
-import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -136,7 +136,7 @@ public class Admin {
 			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
 		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
+		return Response.ok().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
 	
 	@POST

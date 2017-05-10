@@ -2,6 +2,7 @@ package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -34,6 +35,7 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
@@ -88,16 +90,12 @@ public class UIUtils {
 		}
 	}
 
-	/** Create a login cookie from a token. The equivalent of
-	 * {@link #getLoginCookie(String, NewToken, boolean)}
-	 * with session set to false.
+	/** Create a login cookie from a token that immediately expires.
 	 * @param cookieName the name to give the cookie.
-	 * @param token the source to use as the state of the cookie, or null to create a cookie that
-	 * immediately expires.
-	 * @return a new cookie.
+	 * @return a new cookie that immediately expires and contains a nonsense token.
 	 */
-	public static NewCookie getLoginCookie(final String cookieName, final NewToken token) {
-		return getLoginCookie(cookieName, token, false);
+	public static NewCookie removeLoginCookie(final String cookieName) {
+		return getLoginCookie(cookieName, null, false);
 	}
 
 	/** Create a login cookie from a token.
@@ -112,6 +110,10 @@ public class UIUtils {
 			final String cookieName,
 			final NewToken token,
 			final boolean session) {
+		checkStringNoCheckedException(cookieName, "cookieName");
+		if (token != null && !token.getStoredToken().getTokenType().equals(TokenType.LOGIN)) {
+			throw new IllegalArgumentException("token must be a login token");
+		}
 		return new NewCookie(
 				new Cookie(cookieName, token == null ? "no token" : token.getToken(), "/", null),
 				"authtoken",
@@ -125,6 +127,7 @@ public class UIUtils {
 	 * @return the maximum cookie age in seconds.
 	 */
 	public static int getMaxCookieAge(final TemporaryToken token) {
+		nonNull(token, "token");
 		return getMaxCookieAge(token.getExpirationDate(), false);
 	}
 

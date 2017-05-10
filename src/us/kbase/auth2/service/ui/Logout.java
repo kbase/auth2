@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
@@ -60,7 +60,7 @@ public class Logout {
 		return Response.ok(
 				new Viewable("/logoutresult", ImmutableMap.of(Fields.USER, ht.isPresent() ?
 						ht.get().getUserName().getName() : null)))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), null))
+				.cookie(removeLoginCookie(cfg.getTokenCookieName()))
 				.build();
 	}
 }

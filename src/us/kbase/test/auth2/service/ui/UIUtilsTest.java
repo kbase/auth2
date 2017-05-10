@@ -7,14 +7,22 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.nio.file.InvalidPathException;
+import java.time.Instant;
+import java.util.UUID;
 
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
 
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TemporaryToken;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.ui.UIUtils;
 import us.kbase.test.auth2.TestCommon;
 
@@ -134,5 +142,168 @@ public class UIUtilsTest {
 		}
 	}
 	
+	@Test
+	public void removeLoginCookie() throws Exception {
+		final NewCookie c = UIUtils.removeLoginCookie("name");
+		
+		final NewCookie expected = new NewCookie(
+				"name", "no token", "/", null, "authtoken", 0, false);
+		assertThat("incorrect cookie", c, is(expected));
+	}
+	
+	@Test
+	public void removeLoginCookieFailNullAndEmpty() {
+		failRemoveLoginCookie(null, new IllegalArgumentException("Missing argument: cookieName"));
+		failRemoveLoginCookie("  \t  \n   ",
+				new IllegalArgumentException("Missing argument: cookieName"));
+	}
+	
+	private void failRemoveLoginCookie(final String name, final Exception e) {
+		try {
+			UIUtils.removeLoginCookie(name);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getLoginCookie() throws Exception {
+		final NewToken t = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.now().plusSeconds(1000))
+				.build(),
+				"foobar");
+		
+		final NewCookie c = UIUtils.getLoginCookie("name", t, false);
+		
+		final NewCookie expected = new NewCookie(
+				"name", "foobar", "/", null, "authtoken", c.getMaxAge(), false);
+		assertThat("incorrect cookie less max age", c, is(expected));
+		TestCommon.assertCloseTo(c.getMaxAge(), 1000, 10);
+	}
+	
+	@Test
+	public void getLoginCookieSession() throws Exception {
+		final NewToken t = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.now().plusSeconds(1000))
+				.build(),
+				"foobar");
+		
+		final NewCookie c = UIUtils.getLoginCookie("name", t, true);
+		
+		final NewCookie expected = new NewCookie(
+				"name", "foobar", "/", null, "authtoken", -1, false);
+		assertThat("incorrect cookie", c, is(expected));
+	}
+	
+	@Test
+	public void getLoginCookieMaxInt() throws Exception {
+		final NewToken t = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.now().plusSeconds(2L * Integer.MAX_VALUE))
+				.build(),
+				"foobar");
+		
+		final NewCookie c = UIUtils.getLoginCookie("name", t, false);
+		
+		final NewCookie expected = new NewCookie(
+				"name", "foobar", "/", null, "authtoken", Integer.MAX_VALUE, false);
+		assertThat("incorrect cookie", c, is(expected));
+	}
+	
+	@Test
+	public void getLoginCookieAlreadyExpired() throws Exception {
+		final NewToken t = new NewToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+				.build(),
+				"foobar");
+		
+		final NewCookie c = UIUtils.getLoginCookie("name", t, false);
+		
+		final NewCookie expected = new NewCookie(
+				"name", "foobar", "/", null, "authtoken", 0, false);
+		assertThat("incorrect cookie", c, is(expected));
+	}
+	
+	@Test
+	public void getLoginCookieRemove() throws Exception {
+		final NewCookie c = UIUtils.getLoginCookie("name", null, false);
+		
+		final NewCookie expected = new NewCookie(
+				"name", "no token", "/", null, "authtoken", 0, false);
+		assertThat("incorrect cookie", c, is(expected));
+	}
+	
+	@Test
+	public void getLoginCookieFailNoName() {
+		failGetLoginCookie(null, null,
+				new IllegalArgumentException("Missing argument: cookieName"));
+		failGetLoginCookie("  \t  \n   ", null,
+				new IllegalArgumentException("Missing argument: cookieName"));
+	}
+	
+	@Test
+	public void getLoginCookieFailNotLoginToken() throws Exception {
+		final NewToken t = new NewToken(StoredToken.getBuilder(
+				TokenType.AGENT, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+				.build(),
+				"foobar");
+		
+		failGetLoginCookie("foo", t, new IllegalArgumentException("token must be a login token"));
+	}
+	
+	private void failGetLoginCookie(
+			final String cookieName,
+			final NewToken token,
+			final Exception e) {
+		try {
+			UIUtils.getLoginCookie(cookieName, token, false);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+			
+		}
+	}
+	
+	@Test
+	public void getMaxCookieAge() {
+		final TemporaryToken tt = new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(1000).toEpochMilli() - 10000);
+		
+		TestCommon.assertCloseTo(UIUtils.getMaxCookieAge(tt), 1000, 10);
+	}
+	
+	@Test
+	public void getMaxCookieAgeMaxInt() {
+		final TemporaryToken tt = new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(2L * Integer.MAX_VALUE).toEpochMilli());
+		
+		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(Integer.MAX_VALUE));
+	}
+	
+	@Test
+	public void getMaxCookieAgeAlreadyExpired() {
+		final TemporaryToken tt = new TemporaryToken(
+				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000), 30000);
+		
+		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(0));
+	}
+	
+	@Test
+	public void getMaxCookieAgeFailNull() {
+		try {
+			UIUtils.getMaxCookieAge(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
 	
 }

@@ -78,7 +78,7 @@ public class Me {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, InvalidTokenException,
-			AuthStorageException, DisabledUserException {
+				AuthStorageException, DisabledUserException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		return me(token, uriInfo);
 	}
@@ -89,7 +89,7 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, DisabledUserException, NoTokenProvidedException,
-			AuthStorageException {
+				AuthStorageException {
 		return me(getToken(token), uriInfo);
 	}
 

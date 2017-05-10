@@ -5,6 +5,7 @@ import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -140,7 +141,7 @@ public class LocalAccounts {
 		pwdnew = null;
 		auth.localPasswordChange(new UserName(userName), cpwdold, cpwdnew);
 		return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_LOGIN))
-				.cookie(getLoginCookie(cfg.getTokenCookieName(), null))
+				.cookie(removeLoginCookie(cfg.getTokenCookieName()))
 				.build();
 	}
 	
