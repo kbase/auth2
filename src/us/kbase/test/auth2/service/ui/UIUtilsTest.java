@@ -3,10 +3,13 @@ package us.kbase.test.auth2.service.ui;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.net.URI;
+import java.net.URL;
 import java.nio.file.InvalidPathException;
 import java.time.Instant;
 import java.util.Collections;
@@ -25,10 +28,13 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -36,6 +42,7 @@ import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.ui.UIUtils;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
@@ -519,6 +526,106 @@ public class UIUtilsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("form"));
+		}
+	}
+	
+	@Test
+	public void getExternalURI() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+				.thenReturn(new AuthExternalConfig<>(ConfigItem.state(new URL("http://whee/whoo")),
+						ConfigItem.emptyState(), ConfigItem.emptyState(), ConfigItem.emptyState(),
+						ConfigItem.state(false), ConfigItem.state(false)));
+		
+		final URI ret = UIUtils.getExternalConfigURI(auth, e -> e.getAllowedLoginRedirectPrefix(),
+				"/foo");
+		
+		assertThat("incorrect uri", ret, is(new URI("http://whee/whoo")));
+	}
+	
+	@Test
+	public void getExternalURIDefault() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+				.thenReturn(new AuthExternalConfig<>(ConfigItem.emptyState(),
+						ConfigItem.state(new URL("http://whee/whoo")),
+						ConfigItem.emptyState(), ConfigItem.emptyState(),
+						ConfigItem.state(false), ConfigItem.state(false)));
+		
+		final URI ret = UIUtils.getExternalConfigURI(auth, e -> e.getAllowedLoginRedirectPrefix(),
+				"https://foo");
+		
+		assertThat("incorrect uri", ret, is(new URI("https://foo")));
+	}
+	
+	@Test
+	public void getExternalURIFailBadMap() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+				.thenThrow(new ExternalConfigMappingException("foo"));
+		failGetExternalURIDefault(auth, e -> e.getAllowedLoginRedirectPrefix(), "/foo",
+				new RuntimeException("Dude, like, what just happened?"));
+	}
+	
+	@Test
+	public void getExternalURIFailBadArgs() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final UIUtils.ExteralConfigURLSelector selector = e -> e.getAllowedLoginRedirectPrefix();
+		final String deflt = "https://foo";
+		
+		failGetExternalURIDefault(null, selector, deflt, new NullPointerException("auth"));
+		failGetExternalURIDefault(auth, null, deflt, new NullPointerException("selector"));
+		failGetExternalURIDefault(auth, selector, null,
+				new IllegalArgumentException("Missing argument: deflt"));
+		failGetExternalURIDefault(auth, selector, "  \t   \n   ",
+				new IllegalArgumentException("Missing argument: deflt"));
+	}
+	
+	private void failGetExternalURIDefault(
+			final Authentication auth,
+			final UIUtils.ExteralConfigURLSelector selector,
+			final String deflt,
+			final Exception e) {
+		try {
+			UIUtils.getExternalConfigURI(auth, selector, deflt);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	private static final String ERR = "The javadoc explicitly said you can't pass " +
+			"an invalid URI into this function, and you did it anyway. Good job.";
+	
+	@Test
+	public void toURIFromURL() throws Exception {
+		assertThat("incorrect uri", UIUtils.toURI(new URL("https://foo")),
+				is(new URI("https://foo")));
+	}
+	
+	@Test
+	public void toURIfromURLFail() throws Exception {
+		try {
+			UIUtils.toURI(new URL("https://foo?b^r=baz"));
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new RuntimeException(ERR));
+		}
+	}
+	
+	@Test
+	public void toURIFromString() throws Exception {
+		assertThat("incorrect uri", UIUtils.toURI("https://foo"),
+				is(new URI("https://foo")));
+	}
+	
+	@Test
+	public void toURIfromStringFail() throws Exception {
+		try {
+			UIUtils.toURI("https://foo?b^r=baz");
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new RuntimeException(ERR));
 		}
 	}
 }

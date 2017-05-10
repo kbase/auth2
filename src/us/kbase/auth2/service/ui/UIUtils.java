@@ -41,8 +41,6 @@ import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
 public class UIUtils {
 
-	//TODO TEST
-	
 	// attempts to deal with the mess of returning a relative path to the
 	// target from the current location that makes Jersey happy.
 	/** Generates a string URL to a target relative to the current url.
@@ -229,7 +227,8 @@ public class UIUtils {
 	/** Get an externally configured URI from an Authentication instance.
 	 * @param auth the Authentication instance.
 	 * @param selector a selector for the URL to convert to a URI.
-	 * @param deflt the default URL if no URL is configured.
+	 * @param deflt the default URL if no URL is configured. This is expected to be a valid URI;
+	 * if not a runtime exception will be thrown.
 	 * @return the requested URI.
 	 * @throws AuthStorageException if an error occurred contacting the auth storage system.
 	 */
@@ -238,6 +237,9 @@ public class UIUtils {
 			final ExteralConfigURLSelector selector,
 			final String deflt)
 			throws AuthStorageException {
+		nonNull(auth, "auth");
+		nonNull(selector, "selector");
+		checkStringNoCheckedException(deflt, "deflt");
 		final ConfigItem<URL, State> url;
 		try {
 			final AuthExternalConfig<State> externalConfig =
@@ -256,7 +258,10 @@ public class UIUtils {
 		}
 	}
 	
-	/** Converts a valid URL to a URI, throwing a RuntimeException if the URL is invalid.
+	private static final String OBNOXIOUS_ERROR = "The javadoc explicitly said you can't pass " +
+			"an invalid URI into this function, and you did it anyway. Good job.";
+	
+	/** Converts a valid URL to a URI, throwing a RuntimeException if the URL is an invalid URI.
 	 * @param loginURL the URL to convert.
 	 * @return the URI equivalent of the URL.
 	 */
@@ -264,7 +269,7 @@ public class UIUtils {
 		try {
 			return loginURL.toURI();
 		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
+			throw new RuntimeException(OBNOXIOUS_ERROR, e);
 		}
 	}
 	
@@ -276,7 +281,7 @@ public class UIUtils {
 		try {
 			return new URI(uri);
 		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
+			throw new RuntimeException(OBNOXIOUS_ERROR, e);
 		}
 	}
 }
