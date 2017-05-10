@@ -169,7 +169,7 @@ public class Me {
 				IllegalParameterException, MissingParameterException, UnauthorizedException {
 		
 		if (update == null) {
-			throw new MissingParameterException("Missing JSON body");
+			throw new MissingParameterException("JSON body missing");
 		}
 		update.exceptOnAdditionalProperties();
 		updateUser(auth, getToken(token), update.display, update.email);
