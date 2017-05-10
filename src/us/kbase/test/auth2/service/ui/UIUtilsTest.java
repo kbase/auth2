@@ -12,6 +12,9 @@ import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
 
+import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.service.ui.UIUtils;
 import us.kbase.test.auth2.TestCommon;
 
@@ -102,5 +105,34 @@ public class UIUtilsTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
+	
+	@Test
+	public void checkState() throws Exception {
+		UIUtils.checkState("foo", "foo"); // expect nothing to happen
+	}
+	
+	@Test
+	public void checkStateFailNulls() {
+		failCheckState(null, "foo",
+				new MissingParameterException("Couldn't retrieve state value from cookie"));
+		failCheckState("foo", null, new AuthException(ErrorType.AUTHENTICATION_FAILED,
+				"State values do not match, this may be a CXRF attack"));
+	}
+	
+	@Test
+	public void checkStateFailNoMatch() {
+		failCheckState("foo", "bar", new AuthException(ErrorType.AUTHENTICATION_FAILED,
+				"State values do not match, this may be a CXRF attack"));
+	}
+	
+	private void failCheckState(final String cookie, final String state, final Exception e) {
+		try {
+			UIUtils.checkState(cookie, state);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
 	
 }
