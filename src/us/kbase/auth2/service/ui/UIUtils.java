@@ -1,10 +1,12 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
@@ -45,19 +47,21 @@ public class UIUtils {
 	 * @param current the current url.
 	 * @param target the target url, absolute from the root of the application.
 	 * @return the target url, relativized to the current url.
+	 * @throws InvalidPathException if the target is not a valid path.
 	 */
-	public static String relativize(
-			final UriInfo current,
-			final String target) {
+	public static String relativize(final UriInfo current, final String target) {
+		nonNull(current, "current");
+		nonNull(target, "target");
+		final Path t = Paths.get(target);
+		if (!t.isAbsolute()) {
+			throw new IllegalArgumentException("target must be absolute: " + target);
+		}
 		// jfc what a mess
 		Path c = Paths.get("/" + current.getPath()).normalize();
 		if (!current.getPath().endsWith("/")) {
 			c = c.getParent();
 		}
-		if (c == null) {
-			c = Paths.get("");
-		}
-		final Path t = Paths.get(target);
+		// a UriInfo will always return at least /, so c can never be null here
 		String rel = c.relativize(t).toString();
 		if (target.endsWith("/") && !rel.isEmpty()) { // Path strips trailing slashes
 			rel = rel + "/";

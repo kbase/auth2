@@ -333,6 +333,7 @@
         <test name="us.kbase.test.auth2.service.common.ServiceCommonTest"/>
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
+        <test name="us.kbase.test.auth2.service.ui.UIUtilsTest"/>
       </junit>
     </jacoco:coverage>
     <fail message="Test failure detected, check test results." if="test.failed" />
