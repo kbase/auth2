@@ -141,7 +141,7 @@ public class Me {
 			@FormParam(Fields.DISPLAY) final String displayName,
 			@FormParam(Fields.EMAIL) final String email)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException, UnauthorizedException {
+				IllegalParameterException, UnauthorizedException {
 		updateUser(auth, getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				displayName, email);
 	}
@@ -166,7 +166,7 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
 			final Update update)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException, MissingParameterException, UnauthorizedException {
+				IllegalParameterException, MissingParameterException, UnauthorizedException {
 		
 		if (update == null) {
 			throw new MissingParameterException("Missing JSON body");
