@@ -38,18 +38,14 @@ import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 public class UIUtils {
 
 	//TODO TEST
-	//TODO JAVADOC
-	
-	//target should be path from root of application
-	//target should not be absolute
-	public static String relativize(
-			final UriInfo current,
-			final URI target) {
-		return relativize(current, target.toString());
-	}
 	
 	// attempts to deal with the mess of returning a relative path to the
 	// target from the current location that makes Jersey happy.
+	/** Generates a string URL to a target relative to the current url.
+	 * @param current the current url.
+	 * @param target the target url, absolute from the root of the application.
+	 * @return the target url, relativized to the current url.
+	 */
 	public static String relativize(
 			final UriInfo current,
 			final String target) {
@@ -69,6 +65,12 @@ public class UIUtils {
 		return rel;
 	}
 	
+	/** Check that the OAuth2 state returned from an identity provider matches the expected state.
+	 * @param cookieSessionState the state as stored in a cookie.
+	 * @param providerSuppliedState the state returned from the provider.
+	 * @throws MissingParameterException if the state from the cookie is missing.
+	 * @throws AuthenticationException if the state values don't match.
+	 */
 	public static void checkState(
 			final String cookieSessionState,
 			final String providerSuppliedState)
@@ -82,10 +84,26 @@ public class UIUtils {
 		}
 	}
 
+	/** Create a login cookie from a token. The equivalent of
+	 * {@link #getLoginCookie(String, NewToken, boolean)}
+	 * with session set to false.
+	 * @param cookieName the name to give the cookie.
+	 * @param token the source to use as the state of the cookie, or null to create a cookie that
+	 * immediately expires.
+	 * @return a new cookie.
+	 */
 	public static NewCookie getLoginCookie(final String cookieName, final NewToken token) {
 		return getLoginCookie(cookieName, token, false);
 	}
 
+	/** Create a login cookie from a token.
+	 * @param cookieName the name to give the cookie.
+	 * @param token the source to use as the state of the cookie, or null to create a cookie that
+	 * immediately expires.
+	 * @param session true to create the cookie as a session cookie that expires when the browser
+	 * is closed.
+	 * @return a new cookie.
+	 */
 	public static NewCookie getLoginCookie(
 			final String cookieName,
 			final NewToken token,
@@ -93,16 +111,15 @@ public class UIUtils {
 		return new NewCookie(
 				new Cookie(cookieName, token == null ? "no token" : token.getToken(), "/", null),
 				"authtoken",
-				token == null ? 0 : getMaxCookieAge(token, session),
+				token == null ? 0 : getMaxCookieAge(
+						token.getStoredToken().getExpirationDate(), session),
 				UIConstants.SECURE_COOKIES);
 	}
 
-	public static int getMaxCookieAge(
-			final NewToken token,
-			final boolean session) {
-		return getMaxCookieAge(token.getStoredToken().getExpirationDate(), session);
-	}
-
+	/** Get the maximum age for a cookie given a temporaray token.
+	 * @param token the token.
+	 * @return the maximum cookie age in seconds.
+	 */
 	public static int getMaxCookieAge(final TemporaryToken token) {
 		return getMaxCookieAge(token.getExpirationDate(), false);
 	}
@@ -125,6 +142,12 @@ public class UIUtils {
 		return (int) exp;
 	}
 	
+	/** Get a token from a cookie.
+	 * @param headers the request headers.
+	 * @param tokenCookieName the name of the cookie.
+	 * @return the incoming token.
+	 * @throws NoTokenProvidedException if there is no cookie or the cookie contains no token.
+	 */
 	public static IncomingToken getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName)
@@ -132,6 +155,13 @@ public class UIUtils {
 		return getTokenFromCookie(headers, tokenCookieName, true).get();
 	}
 	
+	/** Get a token from a cookie.
+	 * @param headers the request headers.
+	 * @param tokenCookieName the name of the cookie.
+	 * @param throwException throw an exception if the cookie is missing.
+	 * @return the incoming token. Absent if the cookie is missing and throwException is false.
+	 * @throws NoTokenProvidedException if there is no cookie or the cookie contains no token.
+	 */
 	public static Optional<IncomingToken> getTokenFromCookie(
 			final HttpHeaders headers,
 			final String tokenCookieName,
@@ -160,6 +190,11 @@ public class UIUtils {
 		}
 	}
 	
+	/** Given a multivalued map as form input, return the set of roles that are contained as keys
+	 * in the form and have non-null values.
+	 * @param form the form to process.
+	 * @return the roles.
+	 */
 	public static Set<Role> getRolesFromForm(final MultivaluedMap<String, String> form) {
 		final Set<Role> roles = new HashSet<>();
 		for (final Role r: Role.values()) {
@@ -170,12 +205,27 @@ public class UIUtils {
 		return roles;
 	}
 	
+	/** A selector for a configured URL from an Authentication instance.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static interface ExteralConfigURLSelector {
 		
+		/** Get a URL from an Authentication external configuration.
+		 * @param externalConfig the external configuration.
+		 * @return the requested URL.
+		 */
 		ConfigItem<URL, State> getExternalConfigURL(
 				final AuthExternalConfig<State> externalConfig);
 	}
 	
+	/** Get an externally configured URI from an Authentication instance.
+	 * @param auth the Authentication instance.
+	 * @param selector a selector for the URL to convert to a URI.
+	 * @param deflt the default URL if no URL is configured.
+	 * @return the requested URI.
+	 * @throws AuthStorageException if an error occurred contacting the auth storage system.
+	 */
 	public static URI getExternalConfigURI(
 			final Authentication auth,
 			final ExteralConfigURLSelector selector,
@@ -199,7 +249,10 @@ public class UIUtils {
 		}
 	}
 	
-	//Assumes valid URI in URL form
+	/** Converts a valid URL to a URI, throwing a RuntimeException if the URL is invalid.
+	 * @param loginURL the URL to convert.
+	 * @return the URI equivalent of the URL.
+	 */
 	public static URI toURI(final URL loginURL) {
 		try {
 			return loginURL.toURI();
@@ -208,7 +261,10 @@ public class UIUtils {
 		}
 	}
 	
-	//Assumes valid URI in String form
+	/** Converts a valid string URI to a URI, throwing a RuntimeException if the URI is invalid.
+	 * @param uri the string URI to convert.
+	 * @return the URI equivalent of the URL.
+	 */
 	public static URI toURI(final String uri) {
 		try {
 			return new URI(uri);
