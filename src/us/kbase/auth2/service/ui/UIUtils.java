@@ -174,7 +174,8 @@ public class UIUtils {
 			final String tokenCookieName,
 			final boolean throwException)
 			throws NoTokenProvidedException {
-		
+		nonNull(headers, "headers");
+		checkStringNoCheckedException(tokenCookieName, "tokenCookieName");
 		final Cookie c = headers.getCookies().get(tokenCookieName);
 		if (c == null) {
 			if (throwException) {
@@ -182,16 +183,14 @@ public class UIUtils {
 			}
 			return Optional.absent();
 		}
-		// can't be null when headers are actually gen'd by jaxrs
-		final String val = c.getValue().trim();
-		if (val.isEmpty()) {
+		if (nullOrEmpty(c.getValue())) {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
 			return Optional.absent();
 		}
 		try {
-			return Optional.of(new IncomingToken(val));
+			return Optional.of(new IncomingToken(c.getValue()));
 		} catch (MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}

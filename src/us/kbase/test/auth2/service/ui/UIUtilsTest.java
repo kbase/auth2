@@ -10,20 +10,28 @@ import java.nio.file.InvalidPathException;
 import java.time.Instant;
 import java.util.UUID;
 
+import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.ui.UIUtils;
+import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
 public class UIUtilsTest {
@@ -306,4 +314,162 @@ public class UIUtilsTest {
 		}
 	}
 	
+	@Test
+	public void getTokenFromCookie() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(ImmutableMap.of(
+				"cookiename", new Cookie("cookiename", "  \t whee   ")));
+		
+		final IncomingToken t = UIUtils.getTokenFromCookie(h, "cookiename");
+		assertThat("incorrect token", t, is(new IncomingToken("whee")));
+	}
+	
+	@Test
+	public void getTokenFromCookieFailBadInput() {
+		failGetTokenFromCookie(null, "foo", new NullPointerException("headers"));
+		failGetTokenFromCookie(mock(HttpHeaders.class), null,
+				new IllegalArgumentException("Missing argument: tokenCookieName"));
+		failGetTokenFromCookie(mock(HttpHeaders.class), "   \t    \n  ",
+				new IllegalArgumentException("Missing argument: tokenCookieName"));
+	}
+	
+	@Test
+	public void getTokenFromCookieFailNoCookie() {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with("cookiename", null).build());
+		
+		failGetTokenFromCookie(h, "cookiename",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getTokenFromCookieFailNullCookieValue() {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(ImmutableMap.of("cookiename",
+				new Cookie("cookiename", null)));
+		
+		failGetTokenFromCookie(h, "cookiename",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getTokenFromCookieFailEmptyCookieValue() {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(ImmutableMap.of("cookiename",
+				new Cookie("cookiename", "   \t    \n  ")));
+		
+		failGetTokenFromCookie(h, "cookiename",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	public void failGetTokenFromCookie(
+			final HttpHeaders headers,
+			final String cookieName,
+			final Exception e) {
+		try {
+			UIUtils.getTokenFromCookie(headers, cookieName);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getTokenFromCookie3Arg() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(ImmutableMap.of(
+				"cookiename", new Cookie("cookiename", "  \t whee   ")));
+		
+		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", true);
+		assertThat("incorrect token", t, is(Optional.of(new IncomingToken("whee"))));
+		final Optional<IncomingToken> t2 = UIUtils.getTokenFromCookie(h, "cookiename", false);
+		assertThat("incorrect token", t2, is(Optional.of(new IncomingToken("whee"))));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgFailBadInput() {
+		failGetTokenFromCookie(null, "foo", false, new NullPointerException("headers"));
+		failGetTokenFromCookie(mock(HttpHeaders.class), null, false, 
+				new IllegalArgumentException("Missing argument: tokenCookieName"));
+		failGetTokenFromCookie(mock(HttpHeaders.class), "   \t    \n  ", false,
+				new IllegalArgumentException("Missing argument: tokenCookieName"));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgNoCookie() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with("cookiename", null).build());
+		
+		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
+		assertThat("incorrect token", t, is(Optional.absent()));
+	}
+	
+	@Test
+	public void getTokenFromCookieFail3ArgNoCookie() {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with("cookiename", null).build());
+		
+		failGetTokenFromCookie(h, "cookiename", true,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgNullCookieValue() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with(
+						"cookiename", new Cookie("cookiename", null)).build());
+		
+		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
+		assertThat("incorrect token", t, is(Optional.absent()));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgFailNullCookieValue() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with(
+						"cookiename", new Cookie("cookiename", null)).build());
+		
+		failGetTokenFromCookie(h, "cookiename", true,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgEmptyCookieValue() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with(
+						"cookiename", new Cookie("cookiename", "   \n  \t   ")).build());
+		
+		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
+		assertThat("incorrect token", t, is(Optional.absent()));
+	}
+	
+	@Test
+	public void getTokenFromCookie3ArgFailEmptyCookieValue() throws Exception {
+		final HttpHeaders h = mock(HttpHeaders.class);
+		when(h.getCookies()).thenReturn(
+				MapBuilder.<String, Cookie>newHashMap().with(
+						"cookiename", new Cookie("cookiename", "   \n  \t   ")).build());
+		
+		failGetTokenFromCookie(h, "cookiename", true,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	public void failGetTokenFromCookie(
+			final HttpHeaders headers,
+			final String cookieName,
+			final boolean throwException,
+			final Exception e) {
+		try {
+			UIUtils.getTokenFromCookie(headers, cookieName, throwException);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
 }
