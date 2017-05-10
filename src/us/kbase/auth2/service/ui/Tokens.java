@@ -4,7 +4,7 @@ import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromSt
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
-import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
@@ -183,7 +183,7 @@ public class Tokens {
 			throws AuthStorageException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
+		return Response.ok().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
 	
 	@DELETE
