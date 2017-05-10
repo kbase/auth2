@@ -5,13 +5,18 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.nio.file.InvalidPathException;
 import java.time.Instant;
+import java.util.Collections;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
@@ -20,6 +25,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
@@ -470,6 +476,49 @@ public class UIUtilsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+	
+	@Test
+	public void getRolesFromFormAllRoles() {
+		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
+		form.put("Admin", Collections.emptyList());
+		form.put("CreateAdmin", Collections.emptyList());
+		form.put("DevToken", Collections.emptyList());
+		form.put("ServToken", Collections.emptyList());
+		form.put("Root", Collections.emptyList());
+		
+		final Set<Role> got = UIUtils.getRolesFromForm(form);
+		assertThat("incorrect roles", got, is(set(Role.ADMIN, Role.CREATE_ADMIN, Role.DEV_TOKEN,
+				Role.SERV_TOKEN, Role.ROOT)));
+	}
+	
+	@Test
+	public void getRolesFromFormSomeRoles() {
+		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
+		form.put("Admin", Collections.emptyList());
+		form.put("DevToken", Collections.emptyList());
+		form.put("Root", Collections.emptyList());
+		
+		final Set<Role> got = UIUtils.getRolesFromForm(form);
+		assertThat("incorrect roles", got, is(set(Role.ADMIN, Role.DEV_TOKEN, Role.ROOT)));
+	}
+	
+	@Test
+	public void getRolesFromFormNoRoles() {
+		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
+		
+		final Set<Role> got = UIUtils.getRolesFromForm(form);
+		assertThat("incorrect roles", got, is(set()));
+	}
+	
+	@Test
+	public void getRolesFromFormFail() {
+		try {
+			UIUtils.getRolesFromForm(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("form"));
 		}
 	}
 }

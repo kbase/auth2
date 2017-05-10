@@ -197,11 +197,12 @@ public class UIUtils {
 	}
 	
 	/** Given a multivalued map as form input, return the set of roles that are contained as keys
-	 * in the form and have non-null values.
+	 * in the form and have non-null values (e.g. the form contains a list for that value).
 	 * @param form the form to process.
 	 * @return the roles.
 	 */
 	public static Set<Role> getRolesFromForm(final MultivaluedMap<String, String> form) {
+		nonNull(form, "form");
 		final Set<Role> roles = new HashSet<>();
 		for (final Role r: Role.values()) {
 			if (form.get(r.getID()) != null) {
