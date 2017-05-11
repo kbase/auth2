@@ -100,6 +100,26 @@ public class ServiceCommonTest {
 				new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS, "notanemail"));
 	}
 	
+	@Test
+	public void updateUserFailBadDisplayName() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final IncomingToken token = new IncomingToken("foo");
+		final String displayName = "foo\nbar";
+		final String email = "f@g.com";
+		failUpdateUser(auth, token, displayName, email,
+				new IllegalParameterException("display name contains control characters"));
+	}
+	
+	@Test
+	public void updateUserFailBadEmail() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final IncomingToken token = new IncomingToken("foo");
+		final String displayName = "foobar";
+		final String email = "not an email";
+		failUpdateUser(auth, token, displayName, email,
+				new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS, "not an email"));
+	}
+	
 	private void failUpdateUser(
 			final Authentication auth,
 			final IncomingToken token,

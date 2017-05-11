@@ -61,7 +61,7 @@ import us.kbase.auth2.service.common.IncomingJSON;
 public class Tokens {
 	
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 
 	@Inject
 	private Authentication auth;
