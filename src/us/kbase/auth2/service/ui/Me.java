@@ -7,6 +7,7 @@ import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
 import java.time.Instant;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -17,7 +18,6 @@ import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
@@ -62,7 +62,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(UIPaths.ME_ROOT)
 public class Me {
 
-	//TODO TEST
 	//TODO JAVADOC or swagger
 	
 	@Inject
@@ -182,8 +181,8 @@ public class Me {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			@PathParam(Fields.ID) final String id)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			UnLinkFailedException, NoSuchIdentityException, UnauthorizedException,
-			MissingParameterException {
+				UnLinkFailedException, NoSuchIdentityException, UnauthorizedException,
+				MissingParameterException {
 		// id can't be null
 		final Optional<IncomingToken> token = getTokenFromCookie(
 				headers, cfg.getTokenCookieName(), false);
@@ -197,7 +196,7 @@ public class Me {
 			@Context final HttpHeaders headers,
 			final MultivaluedMap<String, String> form)
 			throws NoSuchUserException, AuthStorageException, UnauthorizedException,
-			InvalidTokenException, NoTokenProvidedException {
+				InvalidTokenException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		auth.removeRoles(token, getRolesFromForm(form));
 	}
@@ -211,10 +210,9 @@ public class Me {
 			this.roles = roles;
 		}
 		
-		public Set<Role> getRoles() throws MissingParameterException, IllegalParameterException,
-				NoSuchRoleException {
+		public Set<Role> getRoles() throws NoSuchRoleException {
 			if (roles == null || roles.isEmpty()) {
-				throw new MissingParameterException("No roles provided");
+				return Collections.emptySet();
 			}
 			final Set<Role> newRoles = new HashSet<>();
 			for (final String role: roles) {
@@ -227,17 +225,16 @@ public class Me {
 		}
 	}
 	
-	@DELETE
+	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Path(UIPaths.ME_ROLES)
 	public void removeRoles(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final RolesToRemove roles)
-			throws NoSuchUserException, AuthStorageException, UnauthorizedException,
-			InvalidTokenException, NoTokenProvidedException, MissingParameterException,
-			IllegalParameterException, NoSuchRoleException {
+			throws AuthStorageException, UnauthorizedException, InvalidTokenException,
+				NoTokenProvidedException, MissingParameterException, NoSuchRoleException {
 		if (roles == null) {
-			throw new MissingParameterException("Missing JSON body");
+			throw new MissingParameterException("JSON body missing");
 		}
 		final IncomingToken token = getToken(headerToken);
 		auth.removeRoles(token, roles.getRoles());

@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.HttpURLConnection;
 import java.net.URI;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
@@ -45,6 +47,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -165,29 +168,7 @@ public class MeTest {
 	
 	@Test
 	public void getMeMaximalInput() throws Exception {
-		manager.storage.setCustomRole(new CustomRole("whoo", "a"));
-		manager.storage.setCustomRole(new CustomRole("whee", "b"));
-		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
-				.withCustomRole("whoo")
-				.withCustomRole("whee")
-				.withEmailAddress(new EmailAddress("a@g.com"))
-				.withLastLogin(Instant.ofEpochMilli(30000))
-				.withRole(Role.ADMIN)
-				.withRole(Role.DEV_TOKEN)
-				.withPolicyID(new PolicyID("wugga"), Instant.ofEpochMilli(40000))
-				.withPolicyID(new PolicyID("wubba"), Instant.ofEpochMilli(50000))
-				.build());
-		manager.storage.link(new UserName("foobar"), new RemoteIdentity(
-				new RemoteIdentityID("prov2", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com")));
-		final IncomingToken token = new IncomingToken("whee");
-		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
-				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
-						Instant.ofEpochMilli(1000000000000000L)).build(),
-				token.getHashedToken().getTokenHash());
+		final IncomingToken token = createNonLocalUserForTests();
 		
 		final URI target = UriBuilder.fromUri(host).path("/me/").build();
 		
@@ -247,6 +228,33 @@ public class MeTest {
 		
 		TestCommon.assertNoDiffs(html, expectedhtml);
 	}
+
+	private IncomingToken createNonLocalUserForTests() throws Exception {
+		manager.storage.setCustomRole(new CustomRole("whoo", "a"));
+		manager.storage.setCustomRole(new CustomRole("whee", "b"));
+		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
+				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+				.withCustomRole("whoo")
+				.withCustomRole("whee")
+				.withEmailAddress(new EmailAddress("a@g.com"))
+				.withLastLogin(Instant.ofEpochMilli(30000))
+				.withRole(Role.ADMIN)
+				.withRole(Role.DEV_TOKEN)
+				.withPolicyID(new PolicyID("wugga"), Instant.ofEpochMilli(40000))
+				.withPolicyID(new PolicyID("wubba"), Instant.ofEpochMilli(50000))
+				.build());
+		manager.storage.link(new UserName("foobar"), new RemoteIdentity(
+				new RemoteIdentityID("prov2", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com")));
+		final IncomingToken token = new IncomingToken("whee");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("foobar")).withLifeTime(Instant.ofEpochMilli(10000),
+						Instant.ofEpochMilli(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		return token;
+	}
 	
 	@Test
 	public void getMeFailNoToken() throws Exception {
@@ -283,7 +291,7 @@ public class MeTest {
 	
 	@Test
 	public void putMeNoUpdateJSON() throws Exception {
-		final IncomingToken token = createLocalUserForUpdateTest();
+		final IncomingToken token = createLocalUserForTests();
 		
 		final URI target = UriBuilder.fromUri(host).path("/me").build();
 		
@@ -304,7 +312,7 @@ public class MeTest {
 	
 	@Test
 	public void postMeNoUpdateHTML() throws Exception {
-		final IncomingToken token = createLocalUserForUpdateTest();
+		final IncomingToken token = createLocalUserForTests();
 		
 		final URI target = UriBuilder.fromUri(host).path("/me").build();
 		
@@ -325,7 +333,7 @@ public class MeTest {
 	
 	@Test
 	public void putMeFullUpdateJson() throws Exception {
-		final IncomingToken token = createLocalUserForUpdateTest();
+		final IncomingToken token = createLocalUserForTests();
 		
 		final URI target = UriBuilder.fromUri(host).path("/me").build();
 		
@@ -347,7 +355,7 @@ public class MeTest {
 	
 	@Test
 	public void postMeFullUpdateHTML() throws Exception {
-		final IncomingToken token = createLocalUserForUpdateTest();
+		final IncomingToken token = createLocalUserForTests();
 		
 		final URI target = UriBuilder.fromUri(host).path("/me").build();
 		
@@ -457,10 +465,19 @@ public class MeTest {
 				new IllegalParameterException("Unexpected parameters in request: foo"));
 	}
 
-	private IncomingToken createLocalUserForUpdateTest() throws Exception {
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
+	private IncomingToken createLocalUserForTests() throws Exception {
+		return createLocalUserForTests(Collections.emptySet());
+	}
+	
+	private IncomingToken createLocalUserForTests(final Set<Role> roles) throws Exception {
+		final us.kbase.auth2.lib.user.LocalUser.Builder builder =
+				LocalUser.getLocalUserBuilder(new UserName("foobar"),
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
-				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				.withEmailAddress(new EmailAddress("f@g.com"));
+		for (final Role r: roles) {
+			builder.withRole(r);
+		}
+		manager.storage.createLocalUser(builder.build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -470,4 +487,246 @@ public class MeTest {
 		return token;
 	}
 	
+	@Test
+	public void unlinkWithCookie() throws Exception {
+		final IncomingToken token = createNonLocalUserForTests();
+		final URI target = UriBuilder.fromUri(host)
+				.path("/me/unlink/c20a5e632833ab26d99906fc9cb07d6b").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+
+		assertThat("incorrect error code", req.post(null).getStatus(), is(204));
+		
+		assertThat("unlink failed", manager.storage.getUser(new UserName("foobar"))
+						.getIdentities(),
+				is(set(new RemoteIdentity(new RemoteIdentityID("prov2", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com")))));
+	}
+	
+	@Test
+	public void unlinkWithToken() throws Exception {
+		final IncomingToken token = createNonLocalUserForTests();
+		final URI target = UriBuilder.fromUri(host)
+				.path("/me/unlink/c20a5e632833ab26d99906fc9cb07d6b").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+
+		assertThat("incorrect error code", req.post(null).getStatus(), is(204));
+		
+		assertThat("unlink failed", manager.storage.getUser(new UserName("foobar"))
+						.getIdentities(),
+				is(set(new RemoteIdentity(new RemoteIdentityID("prov2", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com")))));
+	}
+	
+	@Test
+	public void unlinkFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/me/unlink/c20a5e632833ab26d99906fc9cb07d6b").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		final Response res = req.post(Entity.form(new Form()));
+		
+		failRequestHTML(res, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void unlinkFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/me/unlink/c20a5e632833ab26d99906fc9cb07d6b").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", "foobar");
+
+		final Response res = req.post(Entity.form(new Form()));
+		
+		failRequestHTML(res, 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void removeRolesJSON() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of("roles", Arrays.asList(
+				"Admin", "ServToken"))));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")).getRoles(),
+				is(set(Role.DEV_TOKEN, Role.CREATE_ADMIN)));
+	}
+	
+	@Test
+	public void removeRolesHTML() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Form form = new Form();
+		form.param("Admin", "");
+		form.param("ServToken", "");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")).getRoles(),
+				is(set(Role.DEV_TOKEN, Role.CREATE_ADMIN)));
+	}
+	
+	@Test
+	public void removeRolesEmptyListJSON() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.post(Entity.json(ImmutableMap.of(
+				"roles", Collections.emptyList())));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user modified unexpectedly",
+				manager.storage.getUser(new UserName("foobar")).getRoles(),
+				is(set(Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN)));
+	}
+	
+	@Test
+	public void removeRolesEmptyJSON() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.post(Entity.json(Collections.emptyMap()));
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		assertThat("user modified unexpectedly",
+				manager.storage.getUser(new UserName("foobar")).getRoles(),
+				is(set(Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN)));
+	}
+	
+	@Test
+	public void removeRolesEmptyHTML() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Response res = req.post(Entity.form(new Form()));
+		
+		assertThat("user modified unexpectedly", res.getStatus(), is(204));
+		
+		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")).getRoles(),
+				is(set(Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN)));
+	}
+	
+	@Test
+	public void removeRolesFailNullJSON() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken());
+		
+		final Response res = req.post(Entity.json(null));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void removeRolesFailJSONBadRole() throws Exception {
+		final IncomingToken token = createLocalUserForTests(set(
+				Role.ADMIN, Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.SERV_TOKEN));
+		
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken());
+		
+		final Response res = req.post(Entity.json(
+				ImmutableMap.of("roles", Arrays.asList("Admin", "foo"))));
+		
+		failRequestJSON(res, 400, "Bad Request", new NoSuchRoleException("foo"));
+	}
+	
+	@Test
+	public void removeRolesFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		final Response res = req.post(Entity.form(new Form()));
+		
+		failRequestHTML(res, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		
+		final Response res2 = req
+				.header("accept", MediaType.APPLICATION_JSON)
+				.post(Entity.json(Collections.emptyMap()));
+		
+		failRequestJSON(res2, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void removeRolesFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/me/roles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		final Response res = req.post(Entity.form(new Form()));
+		
+		failRequestHTML(res, 401, "Unauthorized", new InvalidTokenException());
+		
+		final Response res2 = CLI.target(target).request()
+				.header("authorization", "foobar")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.post(Entity.json(Collections.emptyMap()));
+		
+		failRequestJSON(res2, 401, "Unauthorized", new InvalidTokenException());
+	}
 }
