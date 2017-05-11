@@ -79,7 +79,7 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, UnauthorizedException {
+				NoTokenProvidedException, UnauthorizedException {
 		final Map<String, Object> t = getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()), uriInfo);
 		return t;
@@ -91,7 +91,7 @@ public class Tokens {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, UnauthorizedException {
+				NoTokenProvidedException, UnauthorizedException {
 		return getTokens(getToken(headerToken), uriInfo);
 	}
 	
@@ -107,8 +107,8 @@ public class Tokens {
 			@FormParam(Fields.TOKEN_TYPE) final String tokenType,
 			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext)
 			throws AuthStorageException, MissingParameterException,
-			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException, IllegalParameterException {
+				NoTokenProvidedException, InvalidTokenException,
+				UnauthorizedException, IllegalParameterException {
 		return createtoken(req, tokenName, tokenType,
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				getCustomContextFromString(customContext));
@@ -148,8 +148,8 @@ public class Tokens {
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
-			InvalidTokenException, NoTokenProvidedException,
-			UnauthorizedException, IllegalParameterException {
+				InvalidTokenException, NoTokenProvidedException,
+				UnauthorizedException, IllegalParameterException {
 		input.exceptOnAdditionalProperties();
 		return createtoken(req, input.name, input.type, getToken(headerToken),
 				input.getCustomContext());
@@ -161,8 +161,8 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId)
 			throws AuthStorageException,
-			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException, UnauthorizedException {
+				NoSuchTokenException, NoTokenProvidedException,
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getTokenFromCookie(headers, cfg.getTokenCookieName()), tokenId);
 	}
 	
@@ -172,8 +172,8 @@ public class Tokens {
 			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
-			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException, UnauthorizedException {
+				NoSuchTokenException, NoTokenProvidedException,
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getToken(headerToken), tokenId);
 	}
 	
@@ -181,7 +181,7 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public Response revokeAllAndLogout(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException, UnauthorizedException {
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return Response.ok().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
@@ -191,7 +191,7 @@ public class Tokens {
 	public void revokeAll(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException, UnauthorizedException {
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getToken(headerToken));
 	}
 
@@ -202,8 +202,8 @@ public class Tokens {
 			final IncomingToken userToken,
 			final Map<String, String> customContext)
 			throws AuthStorageException, MissingParameterException,
-			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException, IllegalParameterException {
+				NoTokenProvidedException, InvalidTokenException,
+				UnauthorizedException, IllegalParameterException {
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
 		return new NewUIToken(auth.createToken(userToken, new TokenName(tokenName),

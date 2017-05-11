@@ -5,7 +5,7 @@ import us.kbase.auth2.lib.token.NewToken;
 public class NewUIToken extends UIToken {
 
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private final String token;
 	

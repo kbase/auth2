@@ -7,7 +7,7 @@ import us.kbase.auth2.service.common.ExternalToken;
 public class UIToken extends ExternalToken {
 	
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private final String os;
 	private final String osver;

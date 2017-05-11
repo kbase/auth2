@@ -31,6 +31,9 @@ import us.kbase.auth2.service.common.Fields;
 
 @Path(UIPaths.LOGOUT_ROOT)
 public class Logout {
+	
+	//TODO TEST
+	//TODO JAVADOC or swagger
 
 	@Inject
 	private Authentication auth;
