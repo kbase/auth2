@@ -80,9 +80,7 @@ public class Tokens {
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
 				NoTokenProvidedException, UnauthorizedException {
-		final Map<String, Object> t = getTokens(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()), uriInfo);
-		return t;
+		return getTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()), uriInfo);
 	}
 	
 	@GET
@@ -212,7 +210,7 @@ public class Tokens {
 
 	private Map<String, Object> getTokens(final IncomingToken token, final UriInfo uriInfo)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException, UnauthorizedException {
+				InvalidTokenException, UnauthorizedException {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();

@@ -1,0 +1,24 @@
+<html>
+<body>
+<p>Note that in a proper UI, the token names should be HTML-escaped.</p>
+
+<h2>User: whoo</h2>
+Expiration and creation dates are in milliseconds from the epoch.
+</p>
+<form action="tokens/revokeall" method="post">
+	<input type="submit" value="Revoke all tokens and logout"/>
+</form>
+<h3>Current token:</h3>
+ID: edc1dcbb-d370-4660-a639-01a72f0d578a<br/>
+Type: Login<br/>
+Created: 10000<br/>
+Expires: 1000000000010000<br/>
+OS:  <br/>
+Agent:  <br/>
+Device: <br/>
+IP: <br/>
+Custom: {}<br/>
+<br/>
+<h3>Tokens:</h3>
+</body>
+</html>

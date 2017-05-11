@@ -8,6 +8,8 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
@@ -393,6 +395,37 @@ public class TokenTest {
 		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, null, ht3)),
 				new NullPointerException("One of the tokens in the incoming set is null"));
 		
+	}
+	
+	@Test
+	public void tokenSetIsStored() throws Exception {
+		final UUID id1 = UUID.fromString("edc1dcbb-d370-4660-a639-01a72f0d578a");
+		final UUID id2 = UUID.fromString("8351a73a-d4c7-4c00-9a7d-012ace5d9519");
+		final UUID id3 = UUID.fromString("653cc5ce-37e6-4e61-ac25-48831657f257");
+		final UUID id4 = UUID.fromString("cb5e637c-cfbb-44eb-b179-843f3279f775");
+		final UUID id5 = UUID.fromString("354c4f2d-a472-43aa-a4bd-84392b2d3407");
+		
+		final StoredToken ht1 = StoredToken.getBuilder(TokenType.LOGIN, id1, new UserName("u"))
+				.withLifeTime(Instant.ofEpochMilli(1000), 1000).build();
+		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("u"))
+				.withLifeTime(Instant.ofEpochMilli(3000), 1000)
+				.withTokenName(new TokenName("n2")).build();
+		final StoredToken ht3 = StoredToken.getBuilder(TokenType.AGENT, id3, new UserName("u"))
+				.withLifeTime(Instant.ofEpochMilli(5000), 1000)
+				.withTokenName(new TokenName("n3")).build();
+		final StoredToken ht4 = StoredToken.getBuilder(TokenType.SERV, id4, new UserName("u"))
+				.withLifeTime(Instant.ofEpochMilli(7000), 1000)
+				.withTokenName(new TokenName("n4")).build();
+		final StoredToken ht5 = StoredToken.getBuilder(TokenType.SERV, id5, new UserName("u"))
+				.withLifeTime(Instant.ofEpochMilli(8000), 1000)
+				.withTokenName(new TokenName("n5")).build();
+
+		// test that unmodifiable sets don't break anything
+		final Set<StoredToken> tokens = Collections.unmodifiableSet(
+						new HashSet<>(Arrays.asList(ht2, ht3, ht4, ht5)));
+		final TokenSet ts = new TokenSet(ht1, tokens);
+		final List<StoredToken> sorted = new LinkedList<>(ts.getTokens());
+		assertThat("tokens not sorted", sorted, is(Arrays.asList(ht5, ht3, ht2, ht4)));
 	}
 	
 	private void failCreateTokenSet(
