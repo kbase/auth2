@@ -236,6 +236,7 @@
   <target name="test"
           depends="test_no_mongo_storage,test_mongo_storage"
           description="run all tests and generate test report">
+    <delete file="${test.reports.dir}/merged_jacoco.exec"/>
     <jacoco:merge destfile="${test.reports.dir}/merged_jacoco.exec">
       <fileset dir="${test.reports.dir}" includes="*.exec"/>
     </jacoco:merge>
