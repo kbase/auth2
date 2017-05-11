@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.common;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -16,6 +17,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.ExternalToken;
+import us.kbase.test.auth2.TestCommon;
 
 public class ExternalTokenTest {
 	
@@ -58,6 +60,16 @@ public class ExternalTokenTest {
 		assertThat("incorrect name", et.getName(), is((String) null));
 		assertThat("incorrect custom context", et.getCustom(),
 				is(ImmutableMap.of("whee", "whoo")));
+	}
+	
+	@Test
+	public void constructFail() throws Exception {
+		try {
+			new ExternalToken(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("storedToken"));
+		}
 	}
 
 }
