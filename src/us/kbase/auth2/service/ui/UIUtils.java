@@ -12,6 +12,9 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.ws.rs.core.Cookie;
@@ -21,8 +24,10 @@ import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ConfigAction.State;
@@ -38,6 +43,7 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
 
 /** Utility functions for the UI endpoints.
  * @author gaprice@lbl.gov
@@ -212,6 +218,22 @@ public class UIUtils {
 			}
 		}
 		return roles;
+	}
+	
+	/** Converts a set of custom roles into a list of maps.
+	 * @param roles the roles to convert.
+	 * @return a list of maps.
+	 */
+	public static List<Map<String, String>> customRolesToList(final Set<CustomRole> roles) {
+		nonNull(roles, "roles");
+		final List<Map<String, String>> ret = new LinkedList<>();
+		for (final CustomRole cr: roles) {
+			nonNull(cr, "null role in set");
+			ret.add(ImmutableMap.of(
+					Fields.DESCRIPTION, cr.getDesc(),
+					Fields.ID, cr.getID()));
+		}
+		return ret;
 	}
 	
 	/** A selector for a configured URL from an Authentication instance.

@@ -1,11 +1,9 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.ui.UIUtils.customRolesToList;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -18,7 +16,6 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -54,14 +51,6 @@ public class CustomRoles {
 				customRolesToList(auth.getCustomRoles(token, false)));
 	}
 	
-	public static List<Map<String, String>> customRolesToList(final Set<CustomRole> roles) {
-		final List<Map<String, String>> ret = new LinkedList<>();
-		for (final CustomRole cr: roles) {
-			ret.add(ImmutableMap.of(
-					Fields.DESCRIPTION, cr.getDesc(),
-					Fields.ID, cr.getID()));
-		}
-		return ret;
-	}
+
 
 }

@@ -82,7 +82,7 @@ public class SimpleEndpointsTest {
 	}
 	
 	/* for next two tests, the value of the git commit from the root endpoint could either be
-	 * and error message or a git commit hash depending on the test environment, so both are
+	 * an error message or a git commit hash depending on the test environment, so both are
 	 * allowed
 	 */
 	private static final String SERVER_VER = "0.1.0-prerelease";
