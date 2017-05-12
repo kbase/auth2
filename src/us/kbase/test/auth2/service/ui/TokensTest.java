@@ -26,6 +26,7 @@ import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
@@ -547,10 +548,6 @@ public class TokensTest {
 		final String id3 = "653cc5ce-37e6-4e61-ac25-48831657f257";
 		final String id4 = "d1cf14b5-b1b8-4412-8456-db0c4c1525f3";
 
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
-				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
-		
 		final IncomingToken token = new IncomingToken("whoop");
 		final StoredToken st1 = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
@@ -653,10 +650,6 @@ public class TokensTest {
 		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
 		final String id2 = "8351a73a-d4c7-4c00-9a7d-012ace5d9519";
 
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
-				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
-		
 		final IncomingToken token = new IncomingToken("whoop");
 		final StoredToken st1 = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
@@ -682,6 +675,142 @@ public class TokensTest {
 				String.format("No token %s for user whoo exists", id2)));
 	}
 	
+	@Test
+	public void revokeAllPOST() throws Exception {
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final String id2 = "8351a73a-d4c7-4c00-9a7d-012ace5d9519";
+		final String id3 = "653cc5ce-37e6-4e61-ac25-48831657f257";
+		final String id4 = "d1cf14b5-b1b8-4412-8456-db0c4c1525f3";
+
+		final IncomingToken token = new IncomingToken("whoop");
+		final StoredToken st1 = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.withTokenName(new TokenName("primary"))
+				.build();
+		manager.storage.storeToken(st1, token.getHashedToken().getTokenHash());
+		
+		final StoredToken st2 = StoredToken.getBuilder(
+				TokenType.AGENT, UUID.fromString(id2), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 2000000000000000L)
+				.withTokenName(new TokenName("2"))
+				.build();
+		manager.storage.storeToken(st2, "somehash");
+		
+		final StoredToken st3 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id3), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(30000), 3000000000000000L)
+				.withTokenName(new TokenName("3"))
+				.build();
+		manager.storage.storeToken(st3, "somehash2");
+		
+		final StoredToken st4 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id4), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(40000), 4000000000000000L)
+				.withTokenName(new TokenName("4"))
+				.build();
+		manager.storage.storeToken(st4, "somehash3");
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revokeall/").build();
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Response res = req.post(null);
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		final NewCookie c = res.getCookies().get(COOKIE_NAME);
+		final NewCookie exp = new NewCookie(
+				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
+		assertThat("login cookie not removed", c, is(exp));
+		
+		final Set<StoredToken> tokens = manager.storage.getTokens(new UserName("whoo"));
+		assertThat("incorrect extant tokens", tokens, is(set()));
+	}
+	
+	@Test
+	public void revokeAllDELETE() throws Exception {
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final String id2 = "8351a73a-d4c7-4c00-9a7d-012ace5d9519";
+		final String id3 = "653cc5ce-37e6-4e61-ac25-48831657f257";
+		final String id4 = "d1cf14b5-b1b8-4412-8456-db0c4c1525f3";
+
+		final IncomingToken token = new IncomingToken("whoop");
+		final StoredToken st1 = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.withTokenName(new TokenName("primary"))
+				.build();
+		manager.storage.storeToken(st1, token.getHashedToken().getTokenHash());
+		
+		final StoredToken st2 = StoredToken.getBuilder(
+				TokenType.AGENT, UUID.fromString(id2), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 2000000000000000L)
+				.withTokenName(new TokenName("2"))
+				.build();
+		manager.storage.storeToken(st2, "somehash");
+		
+		final StoredToken st3 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id3), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(30000), 3000000000000000L)
+				.withTokenName(new TokenName("3"))
+				.build();
+		manager.storage.storeToken(st3, "somehash2");
+		
+		final StoredToken st4 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id4), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(40000), 4000000000000000L)
+				.withTokenName(new TokenName("4"))
+				.build();
+		manager.storage.storeToken(st4, "somehash3");
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revokeall/").build();
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.header("authorization", token.getToken());
+		
+		final Response res = req.delete();
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		final Set<StoredToken> tokens = manager.storage.getTokens(new UserName("whoo"));
+		assertThat("incorrect extant tokens", tokens, is(set()));
+	}
+	
+	@Test
+	public void revokeAllTokensFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revokeall/").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.post(null), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		
+		req.accept(MediaType.APPLICATION_JSON);
+
+		failRequestJSON(req.delete(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void revokeAllTokensFailInvalidToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revokeall/").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		failRequestHTML(req.post(null), 401, "Unauthorized", new InvalidTokenException());
+		
+		final Builder req2 = wt.request()
+				.header("authorization", "foobar")
+				.accept(MediaType.APPLICATION_JSON);
+
+		failRequestJSON(req2.delete(), 401, "Unauthorized", new InvalidTokenException());
+	}
 	
 
 }

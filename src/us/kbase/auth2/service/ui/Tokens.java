@@ -60,7 +60,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
 	
-	//TODO TEST
 	//TODO JAVADOC or swagger
 
 	@Inject
@@ -182,7 +181,7 @@ public class Tokens {
 			throws AuthStorageException, NoTokenProvidedException,
 				InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return Response.ok().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
+		return Response.noContent().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
 	
 	@DELETE
