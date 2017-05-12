@@ -6,7 +6,7 @@
 Expiration and creation dates are in milliseconds from the epoch.
 </p>
 <h3>Create a token:</h3>
-<form action="create" method="post">
+<form action="" method="post">
 	Token name: <input type="text" name="name"/><br/>
 	Custom token creation context: <input type="text" name="customcontext"/><br/>
 	<input type="checkbox" name="type" value="service"/>Server token<br/>

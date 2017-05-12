@@ -301,10 +301,6 @@ public class UIPaths {
 	/** The token endpoint root location. */
 	public static final String TOKENS_ROOT = SEP + TOKENS;
 	
-	/** A portion of a path designating the creation of a token. */
-	public static final String TOKENS_CREATE = CREATE;
-	/** The token creation endpoint location. */
-	public static final String TOKENS_ROOT_CREATE = TOKENS_ROOT + SEP + TOKENS_CREATE;
 	/** A portion of a path designating the revocation of a token. */
 	public static final String TOKENS_REVOKE = REVOKE;
 	/** The token revocation endpoint location. */

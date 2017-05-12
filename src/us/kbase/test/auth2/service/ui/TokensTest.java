@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.ui;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
@@ -13,11 +14,15 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -35,7 +40,9 @@ import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -152,7 +159,7 @@ public class TokensTest {
 						.build())
 				.with("tokens", Collections.emptyList())
 				.with("revokeurl", "tokens/revoke/")
-				.with("createurl", "tokens/create")
+				.with("createurl", "tokens")
 				.with("revokeallurl", "tokens/revokeall")
 				.build();
 		
@@ -167,7 +174,6 @@ public class TokensTest {
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
-				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.SERV_TOKEN)
 				.build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
@@ -284,7 +290,7 @@ public class TokensTest {
 								.with("ip", null)
 								.build()))
 				.with("revokeurl", "revoke/")
-				.with("createurl", "create")
+				.with("createurl", "")
 				.with("revokeallurl", "revokeall")
 				.build();
 		
@@ -322,6 +328,203 @@ public class TokensTest {
 				.header("accept", MediaType.APPLICATION_JSON);
 		
 		failRequestJSON(req2.get(), 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void createTokenMinimalInput() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.withRole(Role.SERV_TOKEN)
+				.build(),
+				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+		
+		final IncomingToken token = new IncomingToken("whoop");
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(),
+						new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Form form = new Form();
+		form.param("name", "foo");
+		
+		final Response res = req.post(Entity.form(form));
+		final String html = res.readEntity(String.class);
+		
+		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()), "whoo", "foo");
+		
+		final Pattern p = Pattern.compile(regex);
+		
+		final Matcher m = p.matcher(html);
+		if (!m.matches()) {
+			fail("pattern did not match token page");
+		}
+		final String id = m.group(1);
+		final String newtoken = m.group(2);
+		final long created = Long.parseLong(m.group(3));
+		final long expires = Long.parseLong(m.group(4));
+
+		UUID.fromString(id); // ensures the id is a valid uuid
+		TestCommon.assertCloseToNow(created);
+		assertThat("incorrect expires", expires, is(created + 90 * 24 * 3600 * 1000L));
+		
+		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created, Collections.emptyMap(),
+				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L);
+			
+		
+		final Builder req2 = wt.request()
+				.header("authorization", token.getToken())
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response jsonresp = req2.post(Entity.json(ImmutableMap.of("name", "foo")));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = jsonresp.readEntity(Map.class);
+		
+		ServiceTestUtils.checkReturnedToken(manager, json, Collections.emptyMap(),
+				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L, true);
+	}
+	
+	@Test
+	public void createTokenMaximalInput() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.withRole(Role.SERV_TOKEN)
+				.build(),
+				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+		
+		final IncomingToken token = new IncomingToken("whoop");
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(),
+						new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.build(),
+				token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Form form = new Form();
+		form.param("name", "foo");
+		form.param("type", "service");
+		form.param("customcontext", "foo, bar ; baz, bat");
+		
+		final Response res = req.post(Entity.form(form));
+		final String html = res.readEntity(String.class);
+		
+		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()), "whoo", "foo");
+		
+		final Pattern p = Pattern.compile(regex);
+		
+		final Matcher m = p.matcher(html);
+		if (!m.matches()) {
+			fail("pattern did not match token page");
+		}
+		final String id = m.group(1);
+		final String newtoken = m.group(2);
+		final long created = Long.parseLong(m.group(3));
+		final long expires = Long.parseLong(m.group(4));
+
+		UUID.fromString(id); // ensures the id is a valid uuid
+		TestCommon.assertCloseToNow(created);
+		assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
+		
+		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
+				ImmutableMap.of("foo", "bar", "baz", "bat"),
+				new UserName("whoo"), TokenType.SERV, "foo", 100_000_000L * 24 * 3600 * 1000L);
+			
+		
+		final Builder req2 = wt.request()
+				.header("authorization", token.getToken())
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response jsonresp = req2.post(Entity.json(ImmutableMap.of(
+				"name", "foo",
+				"type", "service",
+				"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = jsonresp.readEntity(Map.class);
+		
+		ServiceTestUtils.checkReturnedToken(manager, json,
+				ImmutableMap.of("foo", "bar", "baz", "bat"),
+				new UserName("whoo"), TokenType.SERV, "foo",
+				100_000_000L * 24 * 3600 * 1000L, true);
+	}
+	
+	@Test
+	public void createTokensFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.post(Entity.form(new Form())), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+
+		req.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(req.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void createTokensFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		final Form form = new Form();
+		form.param("name", "foo");
+		failRequestHTML(req.post(Entity.form(form)), 401, "Unauthorized",
+				new InvalidTokenException());
+
+		final Builder req2 = wt.request()
+				.header("authorization", "foobar")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(req2.post(Entity.json(ImmutableMap.of("name", "foo"))),
+				401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void createTokensFailNullJSON() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.header("authorization", "foobar")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(req.post(Entity.json(null)), 400, "Bad Request", 
+				new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void createTokensFailNullJSONAddlProps() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+		
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.header("authorization", "foobar")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(req.post(Entity.json(ImmutableMap.of("foo", "bar"))), 400, "Bad Request", 
+				new IllegalParameterException("Unexpected parameters in request: foo"));
 	}
 
 }

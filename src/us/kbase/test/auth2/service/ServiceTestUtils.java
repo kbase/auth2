@@ -216,7 +216,7 @@ public class ServiceTestUtils {
 			throws Exception {
 		
 		assertThat("incorrect token context", uitoken.get("custom"), is(customContext));
-		assertThat("incorrect token type", uitoken.get("type"), is(type.getID()));
+		assertThat("incorrect token type", uitoken.get("type"), is(type.getDescription()));
 		final long created = (long) uitoken.get("created");
 		TestCommon.assertCloseToNow(created);
 		assertThat("incorrect expires", uitoken.get("expires"),

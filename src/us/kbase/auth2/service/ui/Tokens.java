@@ -94,7 +94,6 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
@@ -138,7 +137,6 @@ public class Tokens {
 	}
 	
 	@POST
-	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public NewUIToken createTokenJSON(
@@ -148,6 +146,9 @@ public class Tokens {
 			throws AuthStorageException, MissingParameterException,
 				InvalidTokenException, NoTokenProvidedException,
 				UnauthorizedException, IllegalParameterException {
+		if (input == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		input.exceptOnAdditionalProperties();
 		return createtoken(req, input.name, input.type, getToken(headerToken),
 				input.getCustomContext());
@@ -222,7 +223,7 @@ public class Tokens {
 		ret.put(Fields.TOKEN_DEV, Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
 		ret.put(Fields.TOKEN_SERVICE, Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
 		ret.put(Fields.USER, au.getUserName().getName());
-		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
+		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT));
 		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
 				UIPaths.SEP));
 		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
