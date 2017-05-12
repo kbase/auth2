@@ -1,0 +1,10 @@
+<html>
+<body>
+
+Auth Server<br/>
+Version: ([\w\.-]+)<br/>
+Server time: (\d+)<br/>
+Git commit hash: (.+)<br/>
+
+</body>
+</html>\s*

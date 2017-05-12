@@ -12,7 +12,8 @@ import java.util.Scanner;
  */
 public class GitCommit {
 	
-	// can't really test this since the file should be baked into the jar or war
+	// can't really test this easily since the file must be baked into the jar or war,
+	// just test manually
 
 	/** The Git commit from which the service was built. */
 	public static final String COMMIT;
@@ -31,7 +32,7 @@ public class GitCommit {
 			commit = s.hasNext() ? s.next() : "";
 			s.close();
 		}
-		COMMIT = commit;
+		COMMIT = commit.trim();
 	}
 	
 }

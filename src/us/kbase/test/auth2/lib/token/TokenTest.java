@@ -398,7 +398,7 @@ public class TokenTest {
 	}
 	
 	@Test
-	public void tokenSetIsStored() throws Exception {
+	public void tokenSetIsSorted() throws Exception {
 		final UUID id1 = UUID.fromString("edc1dcbb-d370-4660-a639-01a72f0d578a");
 		final UUID id2 = UUID.fromString("8351a73a-d4c7-4c00-9a7d-012ace5d9519");
 		final UUID id3 = UUID.fromString("653cc5ce-37e6-4e61-ac25-48831657f257");
