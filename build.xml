@@ -336,6 +336,7 @@
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
         <test name="us.kbase.test.auth2.service.ui.MeTest"/>
+        <test name="us.kbase.test.auth2.service.ui.SimpleEndpointsTest"/>
         <test name="us.kbase.test.auth2.service.ui.TokensTest"/>
         <test name="us.kbase.test.auth2.service.ui.UITokensTest"/>
         <test name="us.kbase.test.auth2.service.ui.UIUtilsTest"/>

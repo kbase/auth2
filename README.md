@@ -20,6 +20,9 @@ testing. In many cases a manual refresh of the page will be required to see
 changes. Further, once a checkbox is manually checked or unchecked that state
 will not change, even with a refresh - to see changes reset the form.
 
+/  
+General server information including git commit, version, and server time.
+
 /admin  
 Global admin tasks - force reset all passwords, revoke all tokens, view a token, search for users.
 
