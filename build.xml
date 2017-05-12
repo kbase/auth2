@@ -266,6 +266,7 @@
           depends="compile"
           description="run tests without the MongoStorage* tests">
     <echo message="starting ${package} tests"/>
+    <delete file="${test.reports.dir}/no_mongo_storage_jacoco.exec"/>
     <jacoco:coverage destfile="${test.reports.dir}/no_mongo_storage_jacoco.exec"
         excludes="org/*:junit/*">
       <junit printsummary="yes" failureproperty="test.failed" fork="yes">
@@ -347,6 +348,7 @@
           depends="compile"
           description="run only the MongoStorage* tests">
     <echo message="starting ${package} tests"/>
+    <delete file="${test.reports.dir}/mongo_storage_jacoco.exec"/>
     <jacoco:coverage destfile="${test.reports.dir}/mongo_storage_jacoco.exec"
         excludes="org/*:junit/*">
       <junit failureproperty="test.failed" fork="yes">
