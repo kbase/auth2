@@ -3,22 +3,33 @@ package us.kbase.auth2.lib.token;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.TreeSet;
 
 /** A set of tokens, including one current token for a user.
  * @author gaprice@lbl.gov
  *
  */
 public class TokenSet {
+	
+	private static class TokenComparator implements Comparator<StoredToken> {
+
+		@Override
+		public int compare(final StoredToken t1, final StoredToken t2) {
+			return t1.getId().toString().compareTo(t2.getId().toString());
+		}
+		
+	}
 
 	private final StoredToken currentToken;
 	private final Set<StoredToken> tokens;
 	
 	/** Create a new token set.
 	 * @param current the current token for the user associated with this token set.
-	 * @param tokens other tokens. If the current token matches on of the tokens in this set,
+	 * @param tokens other tokens. If the current token matches one of the tokens in this set,
 	 * the token is removed from the set.
 	 */
 	public TokenSet(
@@ -27,8 +38,9 @@ public class TokenSet {
 		nonNull(current, "current");
 		nonNull(tokens, "tokens");
 		this.currentToken = current;
-		final Set<StoredToken> nt = new HashSet<>(tokens);
-		final Iterator<StoredToken> i = nt.iterator();
+		// in case incoming set is unmodifiable
+		final Set<StoredToken> putative = new HashSet<>(tokens);
+		final Iterator<StoredToken> i = putative.iterator();
 		while (i.hasNext()) {
 			final StoredToken ht = i.next();
 			nonNull(ht, "One of the tokens in the incoming set is null");
@@ -40,6 +52,8 @@ public class TokenSet {
 				i.remove();
 			}
 		}
+		final Set<StoredToken> nt = new TreeSet<>(new TokenComparator());
+		nt.addAll(putative);
 		this.tokens = Collections.unmodifiableSet(nt);
 	}
 

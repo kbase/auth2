@@ -1,0 +1,59 @@
+<html>
+<body>
+<p>Note that in a proper UI, the token names should be HTML-escaped.</p>
+
+<h2>User: whoo</h2>
+Expiration and creation dates are in milliseconds from the epoch.
+</p>
+<h3>Create a token:</h3>
+<form action="" method="post">
+	Token name: <input type="text" name="name"/><br/>
+	Custom token creation context: <input type="text" name="customcontext"/><br/>
+	<input type="checkbox" name="type" value="service"/>Server token<br/>
+	<input type="submit" value="Submit"/>
+</form>
+<form action="revokeall" method="post">
+	<input type="submit" value="Revoke all tokens and logout"/>
+</form>
+<h3>Current token:</h3>
+Name: wugga<br/>
+ID: edc1dcbb-d370-4660-a639-01a72f0d578a<br/>
+Type: Login<br/>
+Created: 10000<br/>
+Expires: 1000000000010000<br/>
+OS: o osv<br/>
+Agent: ag agv<br/>
+Device: dev<br/>
+IP: 127.0.0.3<br/>
+Custom: {foo&#61;bar}<br/>
+<br/>
+<h3>Tokens:</h3>
+Name: whee<br/>
+ID: 653cc5ce-37e6-4e61-ac25-48831657f257<br/>
+Type: Developer<br/>
+Created: 30000<br/>
+Expires: 3000000000030000<br/>
+OS:  <br/>
+Agent:  <br/>
+Device: dev3<br/>
+IP: 127.0.0.42<br/>
+Custom: {}<br/>
+<form action="revoke/653cc5ce-37e6-4e61-ac25-48831657f257" method="post">
+	<input type="submit" value="Revoke"/>
+</form>
+<br/>
+ID: 8351a73a-d4c7-4c00-9a7d-012ace5d9519<br/>
+Type: Agent<br/>
+Created: 20000<br/>
+Expires: 2000000000020000<br/>
+OS:  <br/>
+Agent: ag2 agv2<br/>
+Device: dev2<br/>
+IP: <br/>
+Custom: {baz&#61;bat}<br/>
+<form action="revoke/8351a73a-d4c7-4c00-9a7d-012ace5d9519" method="post">
+	<input type="submit" value="Revoke"/>
+</form>
+<br/>
+</body>
+</html>

@@ -39,6 +39,10 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
+/** Utility functions for the UI endpoints.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class UIUtils {
 
 	// attempts to deal with the mess of returning a relative path to the
@@ -120,7 +124,7 @@ public class UIUtils {
 				UIConstants.SECURE_COOKIES);
 	}
 
-	/** Get the maximum age for a cookie given a temporaray token.
+	/** Get the maximum age for a cookie given a temporary token.
 	 * @param token the token.
 	 * @return the maximum cookie age in seconds.
 	 */

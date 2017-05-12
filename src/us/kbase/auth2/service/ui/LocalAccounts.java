@@ -48,7 +48,7 @@ import us.kbase.auth2.service.common.Fields;
 public class LocalAccounts {
 	
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 
 	@Inject
 	private Authentication auth;

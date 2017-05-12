@@ -31,7 +31,7 @@ import us.kbase.auth2.service.common.Fields;
 public class CustomRoles {
 
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	/* May need to make a ViewRoles role in the future so that viewing roles can be restricted to
 	 * a subset of users, but a larger subset than just Admins.

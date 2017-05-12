@@ -23,6 +23,9 @@ public class Root {
 	//TODO ZLATER ROOT add configurable contact email or link
 	//TODO ZLATER ROOT move version to file?
 	
+	//TODO JAVADOC or swagger
+	//TODO TEST
+	
 	private static final String VERSION = "0.1.0-prerelease";
 	
 	@GET
