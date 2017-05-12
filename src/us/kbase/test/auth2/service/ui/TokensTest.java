@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.InetAddress;
 import java.net.URI;
@@ -13,6 +14,7 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,6 +45,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -70,7 +73,6 @@ public class TokensTest {
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
-		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
 		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(
 				manager, DB_NAME, COOKIE_NAME);
@@ -105,14 +107,12 @@ public class TokensTest {
 		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
-				.build(),
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
 		
 		final IncomingToken token = new IncomingToken("whoop");
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.fromString(id),
-						new UserName("whoo"))
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
 				.build(),
 				token.getHashedToken().getTokenHash());
@@ -127,6 +127,8 @@ public class TokensTest {
 		final Response res = req.get();
 		final String html = res.readEntity(String.class);
 		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
 		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 		
@@ -137,6 +139,8 @@ public class TokensTest {
 		final Response resjson = reqjson.get();
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = resjson.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "whoo")
@@ -180,8 +184,7 @@ public class TokensTest {
 		
 		final IncomingToken token = new IncomingToken("whoop");
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.fromString(id),
-						new UserName("whoo"))
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
 				.withTokenName(new TokenName("wugga"))
 				.withContext(TokenCreationContext.getBuilder()
@@ -195,8 +198,7 @@ public class TokensTest {
 				token.getHashedToken().getTokenHash());
 		
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, UUID.fromString(id2),
-						new UserName("whoo"))
+				TokenType.AGENT, UUID.fromString(id2), new UserName("whoo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 2000000000000000L)
 				.withContext(TokenCreationContext.getBuilder()
 						.withCustomContext("baz", "bat")
@@ -207,8 +209,7 @@ public class TokensTest {
 				"somehash");
 		
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.DEV, UUID.fromString(id3),
-						new UserName("whoo"))
+				TokenType.DEV, UUID.fromString(id3), new UserName("whoo"))
 				.withLifeTime(Instant.ofEpochMilli(30000), 3000000000000000L)
 				.withTokenName(new TokenName("whee"))
 				.withContext(TokenCreationContext.getBuilder()
@@ -228,6 +229,8 @@ public class TokensTest {
 		final Response res = req.get();
 		final String html = res.readEntity(String.class);
 		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
 		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 		
@@ -238,6 +241,8 @@ public class TokensTest {
 		final Response resjson = reqjson.get();
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = resjson.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "whoo")
@@ -358,6 +363,8 @@ public class TokensTest {
 		final Response res = req.post(Entity.form(form));
 		final String html = res.readEntity(String.class);
 		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
 		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()), "whoo", "foo");
 		
@@ -387,6 +394,8 @@ public class TokensTest {
 		final Response jsonresp = req2.post(Entity.json(ImmutableMap.of("name", "foo")));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = jsonresp.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		ServiceTestUtils.checkReturnedToken(manager, json, Collections.emptyMap(),
 				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L, true);
@@ -422,6 +431,8 @@ public class TokensTest {
 		final Response res = req.post(Entity.form(form));
 		final String html = res.readEntity(String.class);
 		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
 		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()), "whoo", "foo");
 		
@@ -455,6 +466,8 @@ public class TokensTest {
 				"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = jsonresp.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		ServiceTestUtils.checkReturnedToken(manager, json,
 				ImmutableMap.of("foo", "bar", "baz", "bat"),
@@ -526,5 +539,149 @@ public class TokensTest {
 		failRequestJSON(req.post(Entity.json(ImmutableMap.of("foo", "bar"))), 400, "Bad Request", 
 				new IllegalParameterException("Unexpected parameters in request: foo"));
 	}
+	
+	@Test
+	public void revokeToken() throws Exception {
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final String id2 = "8351a73a-d4c7-4c00-9a7d-012ace5d9519";
+		final String id3 = "653cc5ce-37e6-4e61-ac25-48831657f257";
+		final String id4 = "d1cf14b5-b1b8-4412-8456-db0c4c1525f3";
+
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
+				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+		
+		final IncomingToken token = new IncomingToken("whoop");
+		final StoredToken st1 = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.withTokenName(new TokenName("primary"))
+				.build();
+		manager.storage.storeToken(st1, token.getHashedToken().getTokenHash());
+		
+		final StoredToken st2 = StoredToken.getBuilder(
+				TokenType.AGENT, UUID.fromString(id2), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(20000), 2000000000000000L)
+				.withTokenName(new TokenName("2"))
+				.build();
+		manager.storage.storeToken(st2, "somehash");
+		
+		final StoredToken st3 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id3), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(30000), 3000000000000000L)
+				.withTokenName(new TokenName("3"))
+				.build();
+		manager.storage.storeToken(st3, "somehash2");
+		
+		final StoredToken st4 = StoredToken.getBuilder(
+				TokenType.DEV, UUID.fromString(id4), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(40000), 4000000000000000L)
+				.withTokenName(new TokenName("4"))
+				.build();
+		manager.storage.storeToken(st4, "somehash3");
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revoke/" + id2).build();
+		final WebTarget wt = CLI.target(target);
+
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+		
+		final Response res = req.post(null);
+		
+		assertThat("incorrect response code", res.getStatus(), is(204));
+		
+		final Set<StoredToken> expected = set(st1, st3, st4);
+		
+		final Set<StoredToken> tokens = manager.storage.getTokens(new UserName("whoo"));
+		assertThat("incorrect extant tokens", tokens, is(expected));
+		
+		final URI target2 = UriBuilder.fromUri(host).path("/tokens/revoke/" + id4).build();
+		final WebTarget wt2 = CLI.target(target2);
+
+		final Builder req2 = wt2.request()
+				.header("authorization", token.getToken());
+		
+		final Response res2 = req2.delete();
+		
+		assertThat("incorrect response code", res2.getStatus(), is(204));
+		
+		final Set<StoredToken> expected2 = set(st1, st3);
+		
+		final Set<StoredToken> tokens2 = manager.storage.getTokens(new UserName("whoo"));
+		assertThat("incorrect extant tokens", tokens2, is(expected2));
+		
+	}
+	
+	@Test
+	public void revokeTokenFailNoToken() throws Exception {
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revoke/" + id).build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.post(null), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		
+		req.accept(MediaType.APPLICATION_JSON);
+
+		failRequestJSON(req.delete(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void revokeTokenFailInvalidToken() throws Exception {
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revoke/" + id).build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		failRequestHTML(req.post(null), 401, "Unauthorized", new InvalidTokenException());
+		
+		final Builder req2 = wt.request()
+				.header("authorization", "foobar")
+				.accept(MediaType.APPLICATION_JSON);
+
+		failRequestJSON(req2.delete(), 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void revokeTokenFailNoSuchTokenID() throws Exception {
+		
+		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
+		final String id2 = "8351a73a-d4c7-4c00-9a7d-012ace5d9519";
+
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
+				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+		
+		final IncomingToken token = new IncomingToken("whoop");
+		final StoredToken st1 = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.fromString(id), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.withTokenName(new TokenName("primary"))
+				.build();
+		manager.storage.storeToken(st1, token.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/tokens/revoke/" + id2).build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+
+		failRequestHTML(req.post(null), 404, "Not Found", new NoSuchTokenException(
+				String.format("No token %s for user whoo exists", id2)));
+		
+		final Builder req2 = wt.request()
+				.header("authorization", token.getToken())
+				.accept(MediaType.APPLICATION_JSON);
+
+		failRequestJSON(req2.delete(), 404, "Not Found", new NoSuchTokenException(
+				String.format("No token %s for user whoo exists", id2)));
+	}
+	
+	
 
 }
