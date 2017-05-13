@@ -3,10 +3,13 @@ package us.kbase.test.auth2.service.ui;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.time.Instant;
 import java.util.Map;
+import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -26,6 +29,16 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
+import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.PasswordHashAndSalt;
+import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
@@ -160,4 +173,79 @@ public class SimpleEndpointsTest {
 		assertThat("root json incorrect", json, is(expected));
 	}
 	
+	@Test
+	public void customRolesEmpty() throws Exception {
+		final IncomingToken token = setUpUserForTests();
+		assertCustomRoleHTMLCorrect(token, TestCommon.getCurrentMethodName());
+	}
+	
+	@Test
+	public void customRolesFull() throws Exception {
+		final IncomingToken token = setUpUserForTests();
+		
+		manager.storage.setCustomRole(new CustomRole("boo", "bar"));
+		manager.storage.setCustomRole(new CustomRole("coo", "bar"));
+		manager.storage.setCustomRole(new CustomRole("foo", "bar"));
+		manager.storage.setCustomRole(new CustomRole("moo", "bar"));
+		manager.storage.setCustomRole(new CustomRole("zoo", "bar"));
+		
+		final String currentMethodName = TestCommon.getCurrentMethodName();
+		assertCustomRoleHTMLCorrect(token, currentMethodName);
+	}
+	
+	@Test
+	public void customRolesFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/customroles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void customRolesFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/customroles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		failRequestHTML(req.get(), 401, "Unauthorized", new InvalidTokenException());
+	}
+
+	private void assertCustomRoleHTMLCorrect(
+			final IncomingToken token,
+			final String currentMethodName)
+			throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/customroles").build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+
+		final Response res = req.get();
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), currentMethodName));
+	}
+	
+	private IncomingToken setUpUserForTests() throws Exception {
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
+				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+		
+		final IncomingToken token = new IncomingToken("whoop");
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("whoo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.build(),
+				token.getHashedToken().getTokenHash());
+		return token;
+	}
 }
