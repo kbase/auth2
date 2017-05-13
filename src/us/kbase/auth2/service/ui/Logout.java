@@ -4,6 +4,7 @@ import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -32,7 +33,6 @@ import us.kbase.auth2.service.common.Fields;
 @Path(UIPaths.LOGOUT_ROOT)
 public class Logout {
 	
-	//TODO TEST
 	//TODO JAVADOC or swagger
 
 	@Inject
@@ -46,23 +46,22 @@ public class Logout {
 	public Map<String, String> logout(
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
-			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+			throws AuthStorageException, NoTokenProvidedException, InvalidTokenException {
 		final StoredToken ht = auth.getToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
 		return ImmutableMap.of(Fields.USER, ht.getUserName().getName(),
-				Fields.URL_LOGOUT, relativize(uriInfo, UIPaths.LOGOUT_ROOT_RESULT));
+				Fields.URL_LOGOUT, relativize(uriInfo, UIPaths.LOGOUT_ROOT));
 	}
 	
 	@POST
-	@Path(UIPaths.LOGOUT_RESULT)
 	public Response logoutResult(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException {
 		final Optional<StoredToken> ht = auth.revokeToken(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()));
+		final Map<String, String> ret = new HashMap<>();
+		ret.put(Fields.USER, ht.isPresent() ? ht.get().getUserName().getName() : null);
 		return Response.ok(
-				new Viewable("/logoutresult", ImmutableMap.of(Fields.USER, ht.isPresent() ?
-						ht.get().getUserName().getName() : null)))
+				new Viewable("/logoutresult", ret))
 				.cookie(removeLoginCookie(cfg.getTokenCookieName()))
 				.build();
 	}

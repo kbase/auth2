@@ -6,9 +6,8 @@ import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.Map;
 
 import javax.inject.Inject;
@@ -143,14 +142,5 @@ public class LocalAccounts {
 		return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_LOGIN))
 				.cookie(removeLoginCookie(cfg.getTokenCookieName()))
 				.build();
-	}
-	
-	//Assumes valid URI in String form
-	private URI toURI(final String uri) {
-		try {
-			return new URI(uri);
-		} catch (URISyntaxException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
 	}
 }

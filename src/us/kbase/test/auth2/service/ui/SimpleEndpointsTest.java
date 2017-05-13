@@ -18,6 +18,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
@@ -247,5 +248,105 @@ public class SimpleEndpointsTest {
 				.build(),
 				token.getHashedToken().getTokenHash());
 		return token;
+	}
+	
+	@Test
+	public void logoutDisplay() throws Exception {
+		final IncomingToken token = setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+
+		final Response res = req.get();
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void logoutDisplayFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void logoutDisplayFailBadToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		failRequestHTML(req.get(), 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void logoutWithGoodToken() throws Exception {
+		final IncomingToken token = setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, token.getToken());
+
+		final Response res = req.post(null);
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		final NewCookie c = res.getCookies().get(COOKIE_NAME);
+		final NewCookie exp = new NewCookie(
+				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
+		assertThat("login cookie not removed", c, is(exp));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void logoutWithBadToken() throws Exception {
+		setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, "foobar");
+
+		final Response res = req.post(null);
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		final NewCookie c = res.getCookies().get(COOKIE_NAME);
+		final NewCookie exp = new NewCookie(
+				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
+		assertThat("login cookie not removed", c, is(exp));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void logoutFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+
+		failRequestHTML(req.get(), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
 	}
 }
