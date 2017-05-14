@@ -16,7 +16,6 @@ public class UIPaths {
 	private static final String CANCEL = "cancel";
 	private static final String PICK = "pick";
 	private static final String CREATE = "create";
-	private static final String RESULT = "result";
 	private static final String REVOKE = "revoke";
 	private static final String REVOKE_ALL = "revokeall";
 	private static final String SUGGESTNAME = "suggestname";
@@ -183,20 +182,11 @@ public class UIPaths {
 	public static final String LOCAL_LOGIN = LOGIN;
 	/** The local account login endpoint location. */
 	public static final String LOCAL_ROOT_LOGIN = LOCAL_ROOT + SEP + LOGIN;
-	/** A portion of a path designating the results of a local login. */
-	public static final String LOCAL_LOGIN_RESULT = LOCAL_LOGIN + SEP + RESULT;
-	/** The local account login result endpoint location. */
-	public static final String LOCAL_ROOT_LOGIN_RESULT = LOCAL_ROOT + SEP + LOCAL_LOGIN + SEP +
-			RESULT;
 	
 	/** A portion of a path designating the resetting of a local account's password. */
 	public static final String LOCAL_RESET = RESET;
 	/** The local account password reset endpoint location. */
 	public static final String LOCAL_ROOT_RESET = LOCAL_ROOT + SEP + LOCAL_RESET;
-	/** A portion of a path designating the results of a password reset. */
-	public static final String LOCAL_RESET_RESULT = LOCAL_RESET + SEP + RESULT;
-	/** The local account password reset result endpoint location. */
-	public static final String LOCAL_ROOT_RESET_RESULT = LOCAL_ROOT + SEP + LOCAL_RESET_RESULT;
 	
 	/* login endpoint */
 	

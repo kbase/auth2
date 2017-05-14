@@ -64,12 +64,12 @@ public class LocalAccounts {
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, String> login(@Context final UriInfo uriInfo) {
 		return ImmutableMap.of(Fields.URL_LOGIN,
-				relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN_RESULT));
+				relativize(uriInfo, UIPaths.LOCAL_ROOT_LOGIN));
 	}
 	
 	//TODO UI will need ajax version or at least something in the body that says a reset is required
 	@POST
-	@Path(UIPaths.LOCAL_LOGIN_RESULT)
+	@Path(UIPaths.LOCAL_LOGIN)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public Response loginResult(
 			@Context final HttpServletRequest req,
@@ -111,13 +111,13 @@ public class LocalAccounts {
 			@QueryParam(Fields.USER) final String user,
 			@Context final UriInfo uriInfo) {
 		return ImmutableMap.of(Fields.URL_RESET,
-					relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET_RESULT),
+					relativize(uriInfo, UIPaths.LOCAL_ROOT_RESET),
 				Fields.USER, user == null ? "" : user);
 	}
 	
 	//TODO UI will need an ajax version
 	@POST
-	@Path(UIPaths.LOCAL_RESET_RESULT)
+	@Path(UIPaths.LOCAL_RESET)
 	public Response resetPassword(
 			@FormParam(Fields.USER) final String userName,
 			@FormParam(Fields.PASSWORD_OLD) String pwdold,
