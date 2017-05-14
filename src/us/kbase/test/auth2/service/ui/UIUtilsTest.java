@@ -12,8 +12,12 @@ import java.net.URI;
 import java.net.URL;
 import java.nio.file.InvalidPathException;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import javax.ws.rs.core.Cookie;
@@ -29,6 +33,7 @@ import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -526,6 +531,37 @@ public class UIUtilsTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("form"));
+		}
+	}
+	
+	@Test
+	public void customRolesToListEmpty() {
+		final List<Map<String, String>> res = UIUtils.customRolesToList(Collections.emptySet());
+		assertThat("incorrect custom roles", res, is(Collections.emptyList()));
+	}
+	
+	@Test
+	public void customRolesToList() throws Exception {
+		final List<Map<String, String>> res = UIUtils.customRolesToList(
+				new TreeSet<>(set(new CustomRole("foo", "bar"), new CustomRole("whee", "whoo"))));
+		assertThat("incorrect custom roles", res, is(Arrays.asList(
+				ImmutableMap.of("id", "foo", "desc", "bar"),
+				ImmutableMap.of("id", "whee", "desc", "whoo"))));
+	}
+	
+	@Test
+	public void customRolesToListFailNulls() throws Exception {
+		failCustomRolesToList(null, new NullPointerException("roles"));
+		failCustomRolesToList(set(new CustomRole("foo", "bar"), null),
+				new NullPointerException("null role in set"));
+	}
+	
+	private void failCustomRolesToList(final Set<CustomRole> crs, final Exception e) {
+		try {
+			UIUtils.customRolesToList(crs);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	

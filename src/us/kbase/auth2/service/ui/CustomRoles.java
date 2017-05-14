@@ -1,11 +1,10 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.ui.UIUtils.customRolesToList;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 
-import java.util.LinkedList;
-import java.util.List;
 import java.util.Map;
-import java.util.Set;
+import java.util.TreeSet;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -18,7 +17,6 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -30,7 +28,6 @@ import us.kbase.auth2.service.common.Fields;
 @Path(UIPaths.CUSTOM_ROLES_ROOT)
 public class CustomRoles {
 
-	//TODO TEST
 	//TODO JAVADOC or swagger
 	
 	/* May need to make a ViewRoles role in the future so that viewing roles can be restricted to
@@ -48,20 +45,12 @@ public class CustomRoles {
 	public Map<String, Object> customRoles(
 			@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException { // can't actually be thrown
+				UnauthorizedException { // can't actually be thrown
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		return ImmutableMap.of(Fields.CUSTOM_ROLES,
-				customRolesToList(auth.getCustomRoles(token, false)));
+				customRolesToList(new TreeSet<>(auth.getCustomRoles(token, false))));
 	}
 	
-	public static List<Map<String, String>> customRolesToList(final Set<CustomRole> roles) {
-		final List<Map<String, String>> ret = new LinkedList<>();
-		for (final CustomRole cr: roles) {
-			ret.add(ImmutableMap.of(
-					Fields.DESCRIPTION, cr.getDesc(),
-					Fields.ID, cr.getID()));
-		}
-		return ret;
-	}
+
 
 }

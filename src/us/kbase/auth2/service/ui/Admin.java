@@ -117,7 +117,7 @@ public class Admin {
 		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
 		ret.put(Fields.URL_POLICY, relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
 		ret.put(Fields.URL_SEARCH, relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
-		ret.put(Fields.CUSTOM_ROLES, CustomRoles.customRolesToList(
+		ret.put(Fields.CUSTOM_ROLES, UIUtils.customRolesToList(
 				auth.getCustomRoles(getTokenFromCookie(headers, cfg.getTokenCookieName()), true)));
 		return ret;
 	}
@@ -505,7 +505,7 @@ public class Admin {
 			throws AuthStorageException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		final List<Map<String, String>> roles = CustomRoles.customRolesToList(
+		final List<Map<String, String>> roles = UIUtils.customRolesToList(
 				auth.getCustomRoles(token, true));
 		return ImmutableMap.of(
 				Fields.URL_CUSTOM_ROLE, relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET),

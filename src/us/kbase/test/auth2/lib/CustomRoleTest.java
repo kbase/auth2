@@ -51,6 +51,41 @@ public class CustomRoleTest {
 	}
 	
 	@Test
+	public void compareToEquals() throws Exception {
+		final CustomRole cr1 = new CustomRole("foo", "bar");
+		assertThat("incorrect compare to result", cr1.compareTo(new CustomRole("foo", "bar")),
+				is(0));
+	}
+	
+	@Test
+	public void compareToLessThan() throws Exception {
+		final CustomRole cr1 = new CustomRole("foo", "bar");
+		assertThat("incorrect compare to result", cr1.compareTo(new CustomRole("goo", "bar")),
+				is(-1));
+		assertThat("incorrect compare to result", cr1.compareTo(new CustomRole("foo", "car")),
+				is(-1));
+	}
+	
+	@Test
+	public void compareToGreaterThan() throws Exception {
+		final CustomRole cr1 = new CustomRole("foo", "bar");
+		assertThat("incorrect compare to result", cr1.compareTo(new CustomRole("eoo", "bar")),
+				is(1));
+		assertThat("incorrect compare to result", cr1.compareTo(new CustomRole("foo", "aar")),
+				is(1));
+	}
+	
+	@Test
+	public void failCompareTo() throws Exception {
+		try {
+			new CustomRole("foo", "bar").compareTo(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("customRole"));
+		}
+	}
+	
+	@Test
 	public void idCheckFail() throws Exception {
 		failIDCheck(null,  new MissingParameterException("custom role id"));
 		failIDCheck("   \n  ", new MissingParameterException("custom role id"));

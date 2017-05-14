@@ -273,11 +273,6 @@ public class UIPaths {
 	/** The logout endpoint root location. */
 	public static final String LOGOUT_ROOT = SEP + "logout";
 	
-	/** A portion of a path designating the result of a logout. */
-	public static final String LOGOUT_RESULT = RESULT;
-	/** The logout result endpoint location. */
-	public static final String LOGOUT_ROOT_RESULT = LOGOUT_ROOT + SEP + RESULT;
-	
 	/* me endpoint */
 	
 	/** The me endpoint root location. */
