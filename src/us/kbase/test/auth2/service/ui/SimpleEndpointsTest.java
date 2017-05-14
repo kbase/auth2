@@ -346,7 +346,7 @@ public class SimpleEndpointsTest {
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request();
 
-		failRequestHTML(req.get(), 400, "Bad Request",
+		failRequestHTML(req.post(null), 400, "Bad Request",
 				new NoTokenProvidedException("No user token provided"));
 	}
 }
