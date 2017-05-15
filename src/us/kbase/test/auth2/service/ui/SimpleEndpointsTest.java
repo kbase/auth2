@@ -8,6 +8,8 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.Base64;
+import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -15,13 +17,16 @@ import java.util.regex.Pattern;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
+import org.glassfish.jersey.client.ClientProperties;
 import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -35,7 +40,9 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -236,10 +243,17 @@ public class SimpleEndpointsTest {
 				getClass(), currentMethodName));
 	}
 	
+	private final String TEST_USER_PWD = "fobarbazbing";
+	
 	private IncomingToken setUpUserForTests() throws Exception {
+		
+		String salt = "whee";
+		// for TEST_USER_PWD
+		String pwdhashb64 = "yfzvxxMCbKQgoa0e38AmGNZxPJ+lT8PNXPgiR8QkFM0=";
+		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
-				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
+				new PasswordHashAndSalt(Base64.getDecoder().decode(pwdhashb64), salt.getBytes()));
 		
 		final IncomingToken token = new IncomingToken("whoop");
 		manager.storage.storeToken(StoredToken.getBuilder(
@@ -349,4 +363,170 @@ public class SimpleEndpointsTest {
 		failRequestHTML(req.post(null), 400, "Bad Request",
 				new NoTokenProvidedException("No user token provided"));
 	}
+	
+	@Test
+	public void localLoginDisplay() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.get();
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void localLoginWithReset() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		ServiceTestUtils.enableLogin(host, admintoken);
+		
+		setUpUserForTests();
+		manager.storage.forcePasswordReset(new UserName("whoo"));
+		
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo");
+		form.param("pwd", TEST_USER_PWD);
+
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI(host + "/localaccount/reset?user=whoo")));
+		assertThat("incorrect response code", res.getStatus(), is(303));
+	}
+	
+	@Test
+	public void localLoginSuccessMinimalInput() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		ServiceTestUtils.enableLogin(host, admintoken);
+		
+		setUpUserForTests();
+		
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo");
+		form.param("pwd", TEST_USER_PWD);
+
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		assertThat("incorrect response code", res.getStatus(), is(303));
+
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", -1, false);
+		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
+		
+		ServiceTestUtils.checkStoredToken(manager, token.getValue(), Collections.emptyMap(),
+				new UserName("whoo"), TokenType.LOGIN, null, 14 * 24 * 3600 * 1000);
+	}
+	
+	@Test
+	public void localLoginSuccessMaximalInput() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		ServiceTestUtils.enableLogin(host, admintoken);
+		
+		setUpUserForTests();
+		
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo");
+		form.param("pwd", TEST_USER_PWD);
+		form.param("stayloggedin", "a");
+		form.param("customcontext", " foo,  bar;   baz, bat");
+
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
+		assertThat("incorrect response code", res.getStatus(), is(303));
+
+		final NewCookie token = res.getCookies().get(COOKIE_NAME);
+		final NewCookie expectedtoken = new NewCookie(COOKIE_NAME, token.getValue(),
+				"/", null, "authtoken", token.getMaxAge(), false);
+		assertThat("incorrect auth cookie less token and max age", token, is(expectedtoken));
+		TestCommon.assertCloseTo(token.getMaxAge(), 14 * 24 * 3600, 10);
+		
+		ServiceTestUtils.checkStoredToken(manager, token.getValue(), 
+				ImmutableMap.of("foo", "bar", "baz", "bat"),
+				new UserName("whoo"), TokenType.LOGIN, null, 14 * 24 * 3600 * 1000);
+	}
+	
+	@Test
+	public void localLoginFailNulls() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", null);
+		form.param("pwd", TEST_USER_PWD);
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 400, "Bad Request", new MissingParameterException("user"));
+		
+		final Form form2 = new Form();
+		form2.param("user", "whee");
+		form2.param("pwd", null);
+		
+		final Response res2 = req.post(Entity.form(form2));
+		failRequestHTML(res2, 400, "Bad Request", new MissingParameterException("pwd"));
+	}
+	
+	@Test
+	public void localLoginFailEmptyString() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "   \t ");
+		form.param("pwd", TEST_USER_PWD);
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 400, "Bad Request", new MissingParameterException("user"));
+		
+		final Form form2 = new Form();
+		form2.param("user", "whee");
+		form2.param("pwd", "   \t ");
+		
+		final Response res2 = req.post(Entity.form(form2));
+		failRequestHTML(res2, 400, "Bad Request", new MissingParameterException("pwd"));
+	}
+	
+	@Test
+	public void localLoginFailPwdMismatch() throws Exception {
+		setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/login").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo2");
+		form.param("pwd", TEST_USER_PWD);
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 401, "Unauthorized", new PasswordMismatchException("whoo2"));
+	}
+
+	
 }
