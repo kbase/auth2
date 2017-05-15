@@ -35,7 +35,6 @@ Auth service work
 * Code review
   * Mike Sneddon
   * Steve Chan
-* Code coverage report in travis build
 * Code analysis:
   * https://www.codacy.com/
   * https://find-sec-bugs.github.io/
