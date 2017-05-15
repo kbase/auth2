@@ -132,15 +132,6 @@ Admin notes
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
 
-UI developer notes
-------------------
-* Some fields are arbitrary text entered by a user. These fields should be HTML-escaped prior to
-  display. The fields are noted where they occur in the test UI. Currently the fields include:
-  * Custom role descriptions
-  * The reason for why a user account was enabled and disabled.
-  * User display names and email addresses.
-  * Token names
-
 Requirements
 ------------
 Java 8 (OpenJDK OK)  
@@ -184,11 +175,44 @@ Start & stop server w/o a pid
 
 Omit the stop key to have jetty generate one for you.
 
-Running tests
--------------
+Developer notes
+---------------
+
+### Running tests
+
 * Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
   * If it works as is start buying lottery tickets immediately.
 * `ant test`
+
+### UI
+
+* Some fields are arbitrary text entered by a user. These fields should be HTML-escaped prior to
+  display. Currently the fields include:
+  * Custom role descriptions
+  * The reason for why a user account was enabled and disabled.
+  * User display names and email addresses.
+  * Token names
+  * Token custom context
+  
+Use common sense when displaying a field from the server regarding whether the field should be
+html escaped or not.
+  
+### Templates
+
+All the HTML templates for the test UI are in the /templates directory and are
+[mustache](https://mustache.github.io/) templates.
+
+### Exception mapping
+
+In `us.kbase.auth2.lib.exceptions`:  
+`AuthException` and subclasses other than the below - 400  
+`AuthenticationException` and subclasses - 401  
+`UnauthorizedException` and subclasses - 403  
+`NoDataException` and subclasses - 404  
+
+`JsonMappingException` (from [Jackson](https://github.com/FasterXML/jackson)) - 400  
+
+Anything else is mapped to 500.
 
 Ancient history
 ---------------

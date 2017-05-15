@@ -1,0 +1,11 @@
+<html>
+<body>
+<p>Reset a password for a local account.</p>
+<form action="reset" method="post">
+	User name: <input type="text" name="user" value="foobar"/><br/>
+	Old password: <input type="password" name="pwdold"/><br/>
+	New password: <input type="password" name="pwdnew"/><br/>
+	<input type="submit" value="Submit"/>
+</form>
+</body>
+</html>
