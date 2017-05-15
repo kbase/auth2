@@ -18,11 +18,16 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 
+/** The logger for the auth service. Sets up the logging info (e.g. the method, a random call ID,
+ * and the IP address) for each request and logs the method, path, status code, and user agent on
+ * a response.
+ * @author gaprice@lbl.gov
+ *
+ */
 public class LoggingFilter implements ContainerRequestFilter,
 		ContainerResponseFilter {
 	
 	//TODO TEST unit tests
-	//TODO JAVADOC
 	
 	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 	private static final String X_REAL_IP = "X-Real-IP";
@@ -49,13 +54,13 @@ public class LoggingFilter implements ContainerRequestFilter,
 					"An error occurred in the logger when attempting " +
 					"to get the server configuration", e); 
 		}
-		logger.setCallInfo(reqcon.getMethod(), (String.format("%.16f", Math.random()))
-				.substring(2),
+		logger.setCallInfo(reqcon.getMethod(),
+				(String.format("%.16f", Math.random())).substring(2),
 				getIpAddress(reqcon, ignoreIPheaders));
 	}
 	
 	//TODO TEST xff and realip headers
-	public String getIpAddress(
+	private String getIpAddress(
 			final ContainerRequestContext request,
 			final boolean ignoreIPsInHeaders) {
 		final String xFF = request.getHeaderString(X_FORWARDED_FOR);

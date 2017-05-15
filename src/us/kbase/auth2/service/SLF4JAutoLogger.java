@@ -19,6 +19,8 @@ public interface SLF4JAutoLogger {
 			final String id,
 			final String ipAddress);
 	
+	//TODO NOW CODE get rid of this method and instead make own call ID handler to decouple logger and exception handler.
+	
 	/** Get the call ID for the call being handled in this thread.
 	 * @return the call ID.
 	 */
