@@ -34,11 +34,13 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -559,6 +561,120 @@ public class SimpleEndpointsTest {
 		
 		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
 				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void localLoginReset() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		ServiceTestUtils.enableLogin(host, admintoken);
+		
+		setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset")
+				.queryParam("user", "foobar").build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo");
+		form.param("pwdold", TEST_USER_PWD);
+		form.param("pwdnew", "wubbawheewhoo");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect target uri", res.getLocation(),
+				is(new URI(host + "/localaccount/login")));
+		assertThat("incorrect response code", res.getStatus(), is(303));
+		
+		final NewCookie c = res.getCookies().get(COOKIE_NAME);
+		final NewCookie exp = new NewCookie(
+				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
+		assertThat("login cookie not removed", c, is(exp));
+		
+		final PasswordHashAndSalt phs = manager.storage.getPasswordHashAndSalt(
+				new UserName("whoo"));
+		
+		assertThat("password not changed as expected", phs.getPasswordHash(),
+				is(new PasswordCrypt().getEncryptedPassword(
+						"wubbawheewhoo".toCharArray(), phs.getSalt())));
+	}
+	
+	@Test
+	public void localLoginResetFailNulls() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", null);
+		form.param("pwdold", TEST_USER_PWD);
+		form.param("pwdnew", "foobarbazbat");
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 400, "Bad Request", new MissingParameterException("user"));
+		
+		final Form form2 = new Form();
+		form2.param("user", "whee");
+		form2.param("pwdold", null);
+		form2.param("pwdnew", "foobarbazbat");
+		
+		final Response res2 = req.post(Entity.form(form2));
+		failRequestHTML(res2, 400, "Bad Request", new MissingParameterException("pwdold"));
+		
+		final Form form3 = new Form();
+		form3.param("user", "whee");
+		form3.param("pwdold", TEST_USER_PWD);
+		form3.param("pwdnew", null);
+		
+		final Response res3 = req.post(Entity.form(form3));
+		failRequestHTML(res3, 400, "Bad Request", new MissingParameterException("pwdnew"));
+	}
+	
+	@Test
+	public void localLoginResetFailEmptyStrings() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "    \t    ");
+		form.param("pwdold", TEST_USER_PWD);
+		form.param("pwdnew", "foobarbazbat");
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 400, "Bad Request", new MissingParameterException("user"));
+		
+		final Form form2 = new Form();
+		form2.param("user", "whee");
+		form2.param("pwdold", "    \t    ");
+		form2.param("pwdnew", "foobarbazbat");
+		
+		final Response res2 = req.post(Entity.form(form2));
+		failRequestHTML(res2, 400, "Bad Request", new MissingParameterException("pwdold"));
+		
+		final Form form3 = new Form();
+		form3.param("user", "whee");
+		form3.param("pwdold", TEST_USER_PWD);
+		form3.param("pwdnew", "    \t    ");
+		
+		final Response res3 = req.post(Entity.form(form3));
+		failRequestHTML(res3, 400, "Bad Request", new MissingParameterException("pwdnew"));
+	}
+	
+	@Test
+	public void localLoginResetFailBadNewPwd() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("user", "whoo");
+		form.param("pwdold", TEST_USER_PWD);
+		form.param("pwdnew", "short");
+		
+		final Response res = req.post(Entity.form(form));
+		failRequestHTML(res, 400, "Bad Request", new IllegalPasswordException(
+				"Password is not strong enough. A word by itself is easy to guess."));
 	}
 	
 }

@@ -46,7 +46,6 @@ import us.kbase.auth2.service.common.Fields;
 @Path(UIPaths.LOCAL_ROOT)
 public class LocalAccounts {
 	
-	//TODO TEST
 	//TODO JAVADOC or swagger
 
 	@Inject
