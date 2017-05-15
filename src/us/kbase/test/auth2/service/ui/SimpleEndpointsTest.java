@@ -528,5 +528,37 @@ public class SimpleEndpointsTest {
 		failRequestHTML(res, 401, "Unauthorized", new PasswordMismatchException("whoo2"));
 	}
 
+	@Test
+	public void localLoginResetDisplayNoUser() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.get();
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void localLoginResetDisplayWithUser() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/localaccount/reset")
+				.queryParam("user", "foobar").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.get();
+		final String html = res.readEntity(String.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
+				getClass(), TestCommon.getCurrentMethodName()));
+	}
 	
 }
