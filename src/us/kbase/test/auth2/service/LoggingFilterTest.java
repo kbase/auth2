@@ -9,6 +9,7 @@ import static org.mockito.Mockito.reset;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URI;
+import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,7 @@ import ch.qos.logback.classic.Logger;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import ch.qos.logback.core.AppenderBase;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.SLF4JAutoLogger;
@@ -182,7 +184,106 @@ public class LoggingFilterTest {
 		final SetCallInfoAnswer ans = new SetCallInfoAnswer();
 		doAnswer(ans).when(autologgermock).setCallInfo(
 				any(String.class), any(String.class), any(String.class));
+		
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		ServiceTestUtils.ignoreIpHeaders(host, admintoken);
 
+		final URI target = UriBuilder.fromUri(host).path("/").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("x-forwarded-for", "127.0.0.2, 127.0.0.3")
+				.header("x-real-ip", "127.0.0.4");
+		final Response res = req.get();
+
+		assertThat("incorrect status code", res.getStatus(), is(200));
+		ans.check("GET", "127.0.0.1");
+		
+		checkInfoEvents(String.format(
+				"POST %s/admin/config 204 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host),
+				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+	}
+	
+	private void checkInfoEvents(final String... messages) {
+		assertThat("incorrect number of log events: " + logEvents, logEvents.size(),
+				is(messages.length));
+		final Iterator<ILoggingEvent> i = logEvents.iterator();
+		for (final String msg: messages) {
+			final ILoggingEvent got = i.next();
+			assertThat("incorrect log level", got.getLevel(), is(Level.INFO));
+			assertThat("incorrect caller", got.getLoggerName(), is(LoggingFilter.class.getName()));
+			assertThat("incorrect message", got.getFormattedMessage(), is(msg));
+		}
+	}
+	
+	@Test
+	public void withXForwardedFor() throws Exception {
+		
+		final SetCallInfoAnswer ans = new SetCallInfoAnswer();
+		doAnswer(ans).when(autologgermock).setCallInfo(
+				any(String.class), any(String.class), any(String.class));
+		
+		final URI target = UriBuilder.fromUri(host).path("/").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("x-forwarded-for", "127.0.0.2, 127.0.0.3");
+		final Response res = req.get();
+
+		assertThat("incorrect status code", res.getStatus(), is(200));
+		ans.check("GET", "127.0.0.2");
+		
+		checkInfoEvents("X-Forwarded-For: 127.0.0.2, 127.0.0.3, Remote IP: 127.0.0.1",
+				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+	}
+	
+	@Test
+	public void withXRealIP() throws Exception {
+		
+		final SetCallInfoAnswer ans = new SetCallInfoAnswer();
+		doAnswer(ans).when(autologgermock).setCallInfo(
+				any(String.class), any(String.class), any(String.class));
+		
+		final URI target = UriBuilder.fromUri(host).path("/").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("x-real-ip", "127.0.0.4");
+		final Response res = req.get();
+
+		assertThat("incorrect status code", res.getStatus(), is(200));
+		ans.check("GET", "127.0.0.4");
+		
+		checkInfoEvents("X-Real-IP: 127.0.0.4, Remote IP: 127.0.0.1",
+				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+	}
+
+	@Test
+	public void withBothIPHeaders() throws Exception {
+		
+		final SetCallInfoAnswer ans = new SetCallInfoAnswer();
+		doAnswer(ans).when(autologgermock).setCallInfo(
+				any(String.class), any(String.class), any(String.class));
+		
+		final URI target = UriBuilder.fromUri(host).path("/").build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("x-forwarded-for", "    127.0.0.2,     127.0.0.3    ")
+				.header("x-real-ip", "   127.0.0.4    ");
+		final Response res = req.get();
+
+		assertThat("incorrect status code", res.getStatus(), is(200));
+		ans.check("GET", "127.0.0.2");
+		
+		checkInfoEvents("X-Forwarded-For: 127.0.0.2,     127.0.0.3, " +
+				"X-Real-IP: 127.0.0.4, Remote IP: 127.0.0.1",
+				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+	}
+	
+	@Test
+	public void withNeitherIPHeader() throws Exception {
+		
+		final SetCallInfoAnswer ans = new SetCallInfoAnswer();
+		doAnswer(ans).when(autologgermock).setCallInfo(
+				any(String.class), any(String.class), any(String.class));
+		
 		final URI target = UriBuilder.fromUri(host).path("/").build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request();
@@ -191,12 +292,7 @@ public class LoggingFilterTest {
 		assertThat("incorrect status code", res.getStatus(), is(200));
 		ans.check("GET", "127.0.0.1");
 		
-		assertThat("incorrect number of log events", logEvents.size(), is(1));
-		final ILoggingEvent event = logEvents.get(0);
-		assertThat("incorrect log level", event.getLevel(), is(Level.INFO));
-		assertThat("incorrect caller", event.getLoggerName(), is(LoggingFilter.class.getName()));
-		assertThat("incorrect message", event.getFormattedMessage(), is(String.format(
-				"GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host)));
+		checkInfoEvents(
+				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
 	}
-
 }
