@@ -25,6 +25,8 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
+import org.slf4j.LoggerFactory;
+
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
@@ -110,7 +112,6 @@ public class Authentication {
 
 	//TODO TEST test unicode for inputs and outputs
 	//TODO TEST LOG test logging on startup
-	//TODO TEST LOG test logging on calls
 	//TODO LOG modify unauthorized exceptions to include username
 	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
@@ -289,6 +290,10 @@ public class Authentication {
 			nextConfigUpdate = Instant.now().plusMillis(cfgUpdateIntervalMillis);
 		}
 	}
+	
+	private void logInfo(final String format, final Object... params) {
+		LoggerFactory.getLogger(getClass()).info(format, params);
+	}
 
 	/** Create a root account, or update the root account password if one does not already exist.
 	 * If the root account exists and is disabled, it will be enabled.
@@ -328,12 +333,15 @@ public class Authentication {
 				storage.createLocalUser(root, new PasswordHashAndSalt(passwordHash, salt));
 				// only way to avoid a race condition. Checking existence before creating user
 				// means if user is added between check and update update will fail
+				logInfo("created root user");
 			} catch (UserExistsException uee) {
 				try {
 					storage.changePassword(
 							UserName.ROOT, new PasswordHashAndSalt(passwordHash, salt), false);
+					logInfo("changed root user password");
 					if (storage.getUser(UserName.ROOT).isDisabled()) {
 						storage.enableAccount(UserName.ROOT, UserName.ROOT);
+						logInfo("enabled root user");
 					}
 				} catch (NoSuchUserException nsue) {
 					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
@@ -373,7 +381,8 @@ public class Authentication {
 		if (userName.isRoot()) {
 			throw new UnauthorizedException("Cannot create ROOT user");
 		}
-		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		final AuthUser admin = getUser(adminToken, set(TokenType.LOGIN),
+				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
 		char[] pwd_copy = null;
 		byte[] salt = null;
@@ -387,6 +396,8 @@ public class Authentication {
 					userName, displayName, clock.instant())
 					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu, new PasswordHashAndSalt(passwordHash, salt));
+			logInfo("Local user {} created by admin {}",
+					userName.getName(), admin.getUserName().getName());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		} catch (Throwable t) {

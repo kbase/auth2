@@ -15,14 +15,22 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.AppenderBase;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -184,6 +192,51 @@ public class AuthenticationTester {
 	
 	public static byte[] fromBase64(final String base64) {
 		return Base64.getDecoder().decode(base64);
+	}
+	
+	public static class LogEvent {
+		
+		public final Level level;
+		public final String message;
+		public final Class<?> clazz;
+		
+		public LogEvent(Level level, String message, Class<?> clazz) {
+			this.level = level;
+			this.message = message;
+			this.clazz = clazz;
+		}
+	}
+	
+	public static List<ILoggingEvent> setUpSLF4JTestLoggerAppender() {
+		final Logger authRootLogger = (Logger) LoggerFactory.getLogger("us.kbase.auth2");
+		authRootLogger.setAdditive(false);
+		authRootLogger.setLevel(Level.ALL);
+		final List<ILoggingEvent> logEvents = new LinkedList<>();
+		final AppenderBase<ILoggingEvent> appender =
+				new AppenderBase<ILoggingEvent>() {
+			@Override
+			protected void append(final ILoggingEvent event) {
+				logEvents.add(event);
+			}
+		};
+		appender.start();
+		authRootLogger.addAppender(appender);
+		return logEvents;
+	}
+	
+	public static void assertLogEventsCorrect(
+			final List<ILoggingEvent> logEvents,
+			final LogEvent... expectedlogEvents) {
+		
+		assertThat("incorrect log event count for list: " + logEvents, logEvents.size(),
+				is(expectedlogEvents.length));
+		final Iterator<ILoggingEvent> iter = logEvents.iterator();
+		for (final LogEvent le: expectedlogEvents) {
+			final ILoggingEvent e = iter.next();
+			assertThat("incorrect log level", e.getLevel(), is(le.level));
+			assertThat("incorrect originating class", e.getLoggerName(), is(le.clazz.getName()));
+			assertThat("incorrect message", e.getFormattedMessage(), is(le.message));
+		}
 	}
 	
 	public interface AuthOperation {
