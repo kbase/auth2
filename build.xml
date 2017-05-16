@@ -327,6 +327,7 @@
         <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
         <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
+        <test name="us.kbase.test.auth2.service.LoggingFilterTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
         <test name="us.kbase.test.auth2.service.api.UserEndpointTest"/>

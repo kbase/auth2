@@ -37,7 +37,7 @@ import us.kbase.auth2.service.template.TemplateProcessor;
 
 public class ExceptionHandler implements ExceptionMapper<Throwable> {
 
-	//TODO TEST unit tests
+	//TODO TEST unit tests, probably makes sense to do logging & exceptions in the same test file
 	//TODO JAVADOC
 	
 	@Context
@@ -68,6 +68,7 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 					"An error occurred in the error handler when attempting " +
 					"to get the server configuration", e); 
 		}
+		//TODO CODE get rid of the logger.getCallID() method and instead make own call ID handler to decouple logger and exception handler.
 		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(), includeStack);
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {

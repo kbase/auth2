@@ -400,6 +400,10 @@ public class ServiceTestUtils {
 	public static void enableLogin(final String host, final IncomingToken admintoken) {
 		setAdmin(host, admintoken, ImmutableMap.of("allowlogin", true));
 	}
+	
+	public static void ignoreIpHeaders(final String host, final IncomingToken admintoken) {
+		setAdmin(host, admintoken, ImmutableMap.of("ignoreip", true));
+	}
 
 	private static void setAdmin(
 			final String host,
@@ -407,7 +411,7 @@ public class ServiceTestUtils {
 			final Map<String, Object> json) {
 		final Response r = CLI.target(host + "/admin/config").request()
 				.header("authorization", admintoken.getToken())
-				.put(Entity.json(json));
+				.post(Entity.json(json));
 		assertThat("failed to set config", r.getStatus(), is(204));
 	}
 
