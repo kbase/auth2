@@ -187,10 +187,14 @@ public class LoggingFilterTest {
 		
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		ServiceTestUtils.ignoreIpHeaders(host, admintoken);
+		
+		logEvents.clear();
 
-		final URI target = UriBuilder.fromUri(host).path("/").build();
+		final URI target = UriBuilder.fromUri(host).path("/customroles").build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request()
+				.cookie(COOKIE_NAME, admintoken.getToken())
+				.header("user-agent", "a user agent")
 				.header("x-forwarded-for", "127.0.0.2, 127.0.0.3")
 				.header("x-real-ip", "127.0.0.4");
 		final Response res = req.get();
@@ -198,9 +202,7 @@ public class LoggingFilterTest {
 		assertThat("incorrect status code", res.getStatus(), is(200));
 		ans.check("GET", "127.0.0.1");
 		
-		checkInfoEvents(String.format(
-				"POST %s/admin/config 204 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host),
-				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+		checkInfoEvents(String.format("GET %s/customroles 200 a user agent", host));
 	}
 	
 	private void checkInfoEvents(final String... messages) {
@@ -225,6 +227,7 @@ public class LoggingFilterTest {
 		final URI target = UriBuilder.fromUri(host).path("/").build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request()
+				.header("user-agent", "an user agent")
 				.header("x-forwarded-for", "127.0.0.2, 127.0.0.3");
 		final Response res = req.get();
 
@@ -232,7 +235,7 @@ public class LoggingFilterTest {
 		ans.check("GET", "127.0.0.2");
 		
 		checkInfoEvents("X-Forwarded-For: 127.0.0.2, 127.0.0.3, Remote IP: 127.0.0.1",
-				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+				String.format("GET %s/ 200 an user agent", host));
 	}
 	
 	@Test
@@ -245,6 +248,7 @@ public class LoggingFilterTest {
 		final URI target = UriBuilder.fromUri(host).path("/").build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request()
+				.header("user-agent", "the user specific agent")
 				.header("x-real-ip", "127.0.0.4");
 		final Response res = req.get();
 
@@ -252,7 +256,7 @@ public class LoggingFilterTest {
 		ans.check("GET", "127.0.0.4");
 		
 		checkInfoEvents("X-Real-IP: 127.0.0.4, Remote IP: 127.0.0.1",
-				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+				String.format("GET %s/ 200 the user specific agent", host));
 	}
 
 	@Test
@@ -265,6 +269,7 @@ public class LoggingFilterTest {
 		final URI target = UriBuilder.fromUri(host).path("/").build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request()
+				.header("user-agent", "the user agent")
 				.header("x-forwarded-for", "    127.0.0.2,     127.0.0.3    ")
 				.header("x-real-ip", "   127.0.0.4    ");
 		final Response res = req.get();
@@ -274,7 +279,7 @@ public class LoggingFilterTest {
 		
 		checkInfoEvents("X-Forwarded-For: 127.0.0.2,     127.0.0.3, " +
 				"X-Real-IP: 127.0.0.4, Remote IP: 127.0.0.1",
-				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+				String.format("GET %s/ 200 the user agent", host));
 	}
 	
 	@Test
@@ -286,13 +291,14 @@ public class LoggingFilterTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/").build();
 		final WebTarget wt = CLI.target(target);
-		final Builder req = wt.request();
+		final Builder req = wt.request()
+				.header("user-agent", "always a user agent, never your user agent");
 		final Response res = req.get();
 
 		assertThat("incorrect status code", res.getStatus(), is(200));
 		ans.check("GET", "127.0.0.1");
 		
 		checkInfoEvents(
-				String.format("GET %s/ 200 Jersey/2.23.2 (HttpUrlConnection 1.8.0_91)", host));
+				String.format("GET %s/ 200 always a user agent, never your user agent", host));
 	}
 }
