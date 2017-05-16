@@ -141,7 +141,7 @@ public class AuthenticationPolicyIDTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
-		failRemovePolicyID(auth, token, new PolicyID("fOO"), new DisabledUserException());
+		failRemovePolicyID(auth, token, new PolicyID("fOO"), new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}

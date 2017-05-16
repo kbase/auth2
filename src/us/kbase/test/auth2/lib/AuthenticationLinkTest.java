@@ -631,7 +631,7 @@ public class AuthenticationLinkTest {
 				new UserName("foo"), new DisplayName("f"), Instant.now())
 				.withIdentity(REMOTE).withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		failLinkWithToken(auth, token, "prov", "foo", new DisabledUserException());
+		failLinkWithToken(auth, token, "prov", "foo", new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
@@ -1218,7 +1218,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failGetLinkState(auth, token, new IncomingToken("bar"), new DisabledUserException());
+		failGetLinkState(auth, token, new IncomingToken("bar"), new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
@@ -1516,7 +1516,7 @@ public class AuthenticationLinkTest {
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
 		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
-				new DisabledUserException());
+				new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
@@ -1921,7 +1921,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failLinkAll(auth, token, new IncomingToken("bar"), new DisabledUserException());
+		failLinkAll(auth, token, new IncomingToken("bar"), new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
@@ -2223,7 +2223,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failUnlink(auth, token, "foo", new DisabledUserException());
+		failUnlink(auth, token, "foo", new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}

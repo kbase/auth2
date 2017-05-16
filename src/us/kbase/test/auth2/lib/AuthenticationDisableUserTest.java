@@ -160,7 +160,7 @@ public class AuthenticationDisableUserTest {
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failDisableUser(auth, token, new UserName("foo"), "r", new DisabledUserException());
+		failDisableUser(auth, token, new UserName("foo"), "r", new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
@@ -352,7 +352,7 @@ public class AuthenticationDisableUserTest {
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failEnableUser(auth, token, new UserName("foo"), new DisabledUserException());
+		failEnableUser(auth, token, new UserName("foo"), new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}

@@ -307,7 +307,7 @@ public class AuthenticationCreateLocalUserTest {
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new DisabledUserException());
+				new EmailAddress("f@g.com"), new DisabledUserException("admin"));
 		
 		verify(storage).deleteTokens(new UserName("admin"));
 	}

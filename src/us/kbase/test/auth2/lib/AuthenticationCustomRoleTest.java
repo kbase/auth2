@@ -150,7 +150,7 @@ public class AuthenticationCustomRoleTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
-		failCreateRole(auth, token, new CustomRole("a", "b"), new DisabledUserException());
+		failCreateRole(auth, token, new CustomRole("a", "b"), new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}
@@ -317,7 +317,7 @@ public class AuthenticationCustomRoleTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
-		failDeleteRole(auth, token, "foo", new DisabledUserException());
+		failDeleteRole(auth, token, "foo", new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}
@@ -496,7 +496,7 @@ public class AuthenticationCustomRoleTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
-		failGetCustomRoles(auth, token, true, new DisabledUserException());
+		failGetCustomRoles(auth, token, true, new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}
@@ -679,7 +679,7 @@ public class AuthenticationCustomRoleTest {
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
 		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new DisabledUserException());
+				new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}

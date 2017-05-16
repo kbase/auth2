@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
@@ -20,13 +21,18 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -64,6 +70,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationPasswordLoginTest {
@@ -75,6 +82,18 @@ public class AuthenticationPasswordLoginTest {
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
+
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void loginStdUser() throws Exception {
@@ -149,6 +168,10 @@ public class AuthenticationPasswordLoginTest {
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(false));
 		assertThat("incorrect username", t.getUserName(), is(Optional.absent()));
 		assertThat("incorrect token", t.getToken(), is(Optional.of(expectedToken)));
+		
+//		assertLogEventsCorrect(logEvents,
+//				new LogEvent(Level.INFO, "Logged in user foo with token " + id,
+//						Authentication.class));
 	}
 	
 	@Test
@@ -187,6 +210,10 @@ public class AuthenticationPasswordLoginTest {
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(true));
 		assertThat("incorrect username", t.getUserName(), is(Optional.of(new UserName("foo"))));
 		assertThat("incorrect token", t.getToken(), is(Optional.absent()));
+		
+//		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+//				"Local user foo log in attempt. Password reset is required",
+//				Authentication.class));
 	}
 	
 	@Test
@@ -291,7 +318,8 @@ public class AuthenticationPasswordLoginTest {
 						new CollectingExternalConfig(new HashMap<>())));
 		
 		failLogin(auth, new UserName("foo"), p, CTX,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+				new UnauthorizedException(ErrorType.UNAUTHORIZED,
+						"User foo cannot log in because non-admin login is disabled"));
 		assertClear(p);
 		assertClear(hash);
 		assertClear(salt);
@@ -325,7 +353,7 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failLogin(auth, new UserName("foo"), p, CTX, new DisabledUserException());
+		failLogin(auth, new UserName("foo"), p, CTX, new DisabledUserException("foo"));
 		assertClear(p);
 		assertClear(hash);
 		assertClear(salt);
@@ -466,6 +494,10 @@ public class AuthenticationPasswordLoginTest {
 		 */
 		verify(storage).changePassword(
 				eq(new UserName("foo")), any(PasswordHashAndSalt.class), eq(false));
+		
+//		assertLogEventsCorrect(logEvents,
+//				new LogEvent(Level.INFO, "Password change for local user foo",
+//						Authentication.class));
 	}
 	
 	@Test
@@ -614,7 +646,8 @@ public class AuthenticationPasswordLoginTest {
 						new CollectingExternalConfig(new HashMap<>())));
 		
 		failChangePassword(auth, new UserName("foo"), po, pn, new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+				ErrorType.UNAUTHORIZED,
+				"User foo cannot log in because non-admin login is disabled"));
 		assertClear(po);
 		assertClear(pn);
 		assertClear(hash);
@@ -650,7 +683,7 @@ public class AuthenticationPasswordLoginTest {
 				new AuthConfigSet<>(new AuthConfig(true, null, null),
 						new CollectingExternalConfig(new HashMap<>())));
 		
-		failChangePassword(auth, new UserName("foo"), po, pn, new DisabledUserException());
+		failChangePassword(auth, new UserName("foo"), po, pn, new DisabledUserException("foo"));
 		assertClear(po);
 		assertClear(pn);
 		assertClear(hash);
@@ -805,6 +838,10 @@ public class AuthenticationPasswordLoginTest {
 		
 		failResetPassword(admin, user, new NoSuchUserException(
 				"foo is not a local user and has no password"));
+		
+//		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+//				"Admin admin tried to get standard user foo as a local user",
+//				Authentication.class));
 	}
 	
 	@Test
@@ -886,7 +923,7 @@ public class AuthenticationPasswordLoginTest {
 				.withEmailAddress(new EmailAddress("f@goo.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
-		failResetPassword(admin, user, new DisabledUserException());
+		failResetPassword(admin, user, new DisabledUserException("foo"));
 	}
 	
 	@Test
@@ -1130,6 +1167,12 @@ public class AuthenticationPasswordLoginTest {
 			 */
 			verify(storage).changePassword(
 					eq(user.getUserName()), any(PasswordHashAndSalt.class), eq(true));
+			
+//			assertLogEventsCorrect(logEvents,
+//					new LogEvent(Level.INFO, String.format("Admin %s changed user %s's password",
+//							admin.getUserName().getName(), user.getUserName().getName()),
+//							Authentication.class));
+			
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());
@@ -1308,7 +1351,7 @@ public class AuthenticationPasswordLoginTest {
 				.withEmailAddress(new EmailAddress("f@goo.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
-		failForceResetPassword(admin, user, new DisabledUserException());
+		failForceResetPassword(admin, user, new DisabledUserException("foo"));
 	}
 	
 	@Test
@@ -1495,7 +1538,7 @@ public class AuthenticationPasswordLoginTest {
 				.withRole(Role.CREATE_ADMIN)
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		failForceResetAllPasswords(admin, new DisabledUserException());
+		failForceResetAllPasswords(admin, new DisabledUserException("admin"));
 	}
 	
 	@Test

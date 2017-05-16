@@ -153,7 +153,7 @@ public class AuthenticationRoleTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 			
-		failRemoveRoles(auth, token, set(Role.ADMIN), new DisabledUserException());
+		failRemoveRoles(auth, token, set(Role.ADMIN), new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}
@@ -400,7 +400,7 @@ public class AuthenticationRoleTest {
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 		
 		failUpdateRoles(auth, token, new UserName("foo"), set(Role.DEV_TOKEN),
-				set(Role.SERV_TOKEN), new DisabledUserException());
+				set(Role.SERV_TOKEN), new DisabledUserException("baz"));
 			
 		verify(storage).deleteTokens(new UserName("baz"));
 	}

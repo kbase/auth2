@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -294,6 +295,10 @@ public class Authentication {
 	private void logInfo(final String format, final Object... params) {
 		LoggerFactory.getLogger(getClass()).info(format, params);
 	}
+	
+	private void logErr(final String format, final Object... params) {
+		LoggerFactory.getLogger(getClass()).error(format, params);
+	}
 
 	/** Create a root account, or update the root account password if one does not already exist.
 	 * If the root account exists and is disabled, it will be enabled.
@@ -438,6 +443,8 @@ public class Authentication {
 		nonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
+//			logInfo("Local user {} log in attempt. Password reset is required",
+//					userName.getName());
 			return new LocalLoginResult(u.getUserName());
 		}
 		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
@@ -465,10 +472,11 @@ public class Authentication {
 				throw new PasswordMismatchException(userName.getName());
 			}
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-				throw new UnauthorizedException("Non-admin login is disabled");
+				throw new UnauthorizedException("User " + userName.getName() +
+						" cannot log in because non-admin login is disabled");
 			}
 			if (u.isDisabled()) {
-				throw new DisabledUserException();
+				throw new DisabledUserException(userName.getName());
 			}
 		} finally {
 			Password.clearPasswordArray(pwd_copy);
@@ -504,6 +512,7 @@ public class Authentication {
 		try {
 			nonNull(pwdnew, "pwdnew");
 			if (pwdnew.equals(password)) {
+				// note username is not verified at this point
 				throw new IllegalPasswordException("Old and new passwords are identical.");
 			}
 			pwdnew.checkValidity();
@@ -514,6 +523,7 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			Password.clearPasswordArray(pwd_copy);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), false);
+//			logInfo("Password change for local user " + userName.getName());
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
@@ -531,6 +541,35 @@ public class Authentication {
 			clear(salt);
 		}
 	}
+	
+	private static class OpReqs {
+		
+		public final String operation;
+		
+		// at least one is required
+		public final Set<Role> requiredRoles = new TreeSet<>();
+		
+		public final Set<TokenType> allowedTokenTypes = new TreeSet<>();
+		
+		public OpReqs(final String operation) {
+			this.operation = operation;
+		}
+		
+		public OpReqs roles(final Role... roles) {
+			for (final Role r: roles) {
+				requiredRoles.add(r);
+			}
+			return this;
+		}
+		
+		public OpReqs types(final TokenType... types) {
+			for (final TokenType t: types) {
+				allowedTokenTypes.add(t);
+			}
+			return this;
+		}
+		
+	}
 
 	/** Reset a local user's password to a random password.
 	 * @param token a token for a user with the administrator role.
@@ -545,7 +584,7 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		checkCanResetPassword(token, userName);
+		final AuthUser admin = checkCanResetPassword(token, userName);
 		Password pwd = null;
 		byte[] salt = null;
 		byte[] passwordHash = null;
@@ -556,6 +595,8 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(temporaryPassword, salt);
 			Password.clearPasswordArray(temporaryPassword);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), true);
+//			logInfo("Admin {} changed user {}'s password", admin.getUserName().getName(),
+//					userName.getName());
 		} catch (Throwable t) {
 			if (pwd != null) {
 				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
@@ -571,32 +612,44 @@ public class Authentication {
 		return pwd;
 	}
 	
-	private void checkCanResetPassword(final IncomingToken token, final UserName userName)
+	private AuthUser checkCanResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			NoSuchUserException {
+				NoSuchUserException {
 		// this method is gross. rethink. ideally based on the grantable roles somehow.
 		nonNull(userName, "userName");
 		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
 				Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
-		final AuthUser user = storage.getUser(userName);
+		final AuthUser user;
+		try {
+			user = storage.getUser(userName);
+		} catch (NoSuchUserException e) {
+//			logErr("Admin {} tried to get non-existant user {}", admin.getUserName().getName(),
+//					userName.getName());
+			throw e;
+		}
 		if (!user.isLocal()) {
+//			logErr("Admin {} tried to get standard user {} as a local user",
+//					admin.getUserName().getName(), userName.getName());
 			throw new NoSuchUserException(String.format(
 					"%s is not a local user and has no password", userName.getName()));
 		}
 		if (!Role.isAdmin(user.getRoles())) {
-			return; //ok, any admin can change a std user's pwd.
+			return admin; //ok, any admin can change a std user's pwd.
 		}
 		if (admin.getUserName().equals(user.getUserName())) {
-			return; //ok, an admin can always change their own pwd.
+			return admin; //ok, an admin can always change their own pwd.
 		}
 		if (admin.isRoot()) {
-			return; //ok, duh. It's root.
+			return admin; //ok, duh. It's root.
 		}
 		if (user.isRoot()) { // already know admin isn't root, so bail out.
+//			logErr("Admin {} tried to reset the root password", admin.getUserName().getName());
 			throw new UnauthorizedException("Only root can reset root password");
 		}
 		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
 		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
+//			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
+//					user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with create administrator role");
 		}
@@ -604,9 +657,12 @@ public class Authentication {
 		 * that admin has to have CREATE_ADMIN to proceed. 
 		 */
 		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
+//			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
+//					user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with administrator role");
 		}
+		return admin;
 		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
 	}
 
@@ -650,6 +706,8 @@ public class Authentication {
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		setLastLogin(userName);
+//		logInfo("Logged in user {} with token {}",
+//				userName.getName(), nt.getStoredToken().getId());
 		return nt;
 	}
 
@@ -724,6 +782,8 @@ public class Authentication {
 		try {
 			final StoredToken ht = storage.getToken(token.getHashedToken());
 			if (!allowedTypes.isEmpty() && !allowedTypes.contains(ht.getTokenType())) {
+//				final AuthUser u = getUserKnownGoodToken(ht);
+//				logDisallowedTokenType(u.getUserName(), ht.getTokenType(), allowedTypes);
 				throw new UnauthorizedException(ht.getTokenType().getDescription() +
 						" tokens are not allowed for this operation");
 			}
@@ -731,6 +791,19 @@ public class Authentication {
 		} catch (NoSuchTokenException e) {
 			throw new InvalidTokenException();
 		}
+	}
+
+	private void logDisallowedTokenType(
+			final UserName name,
+			final TokenType ht,
+			final Set<TokenType> allowedTypes) {
+		
+		final List<String> types = allowedTypes.stream().map(r -> r.getID())
+				.collect(Collectors.toList());
+		Collections.sort(types);
+		final String rolesStr = String.join(", ", types);
+		logErr("User {} with token type {} attempted an operation that requires a " +
+				"token type of {}", name.getName(), ht.getID(), rolesStr);
 	}
 
 	/** Create a new agent, developer or service token.
@@ -830,8 +903,28 @@ public class Authentication {
 	
 	// assumes hashed token is good
 	// requires the user to have at least one of the required roles
-	private AuthUser getUser(final StoredToken ht, final Role ... required)
+	private AuthUser getUser(final StoredToken ht, final Role... required)
 			throws AuthStorageException, UnauthorizedException {
+		final AuthUser u = getUserKnownGoodToken(ht);
+		if (u.isDisabled()) {
+			// apparently this disabled user still has some tokens, so kill 'em all
+			storage.deleteTokens(ht.getUserName());
+			throw new DisabledUserException(u.getUserName().getName());
+		}
+		if (required.length > 0) {
+			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
+					.collect(Collectors.toSet());
+			has.retainAll(Arrays.asList(required)); // intersection
+			if (has.isEmpty()) {
+//				logUnauthorized(u.getUserName(), required);
+				throw new UnauthorizedException();
+			}
+		}
+		return u;
+	}
+	
+	// converts no such user exception into runtime exception
+	private AuthUser getUserKnownGoodToken(final StoredToken ht) throws AuthStorageException {
 		final AuthUser u;
 		try {
 			u = storage.getUser(ht.getUserName());
@@ -839,20 +932,16 @@ public class Authentication {
 			throw new RuntimeException("There seems to be an error in the " +
 					"storage system. Token was valid, but no user", e);
 		}
-		if (u.isDisabled()) {
-			// apparently this disabled user still has some tokens, so kill 'em all
-			storage.deleteTokens(ht.getUserName());
-			throw new DisabledUserException();
-		}
-		if (required.length > 0) {
-			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
-					.collect(Collectors.toSet());
-			has.retainAll(Arrays.asList(required)); // intersection
-			if (has.isEmpty()) {
-				throw new UnauthorizedException();
-			}
-		}
 		return u;
+	}
+	
+	private void logUnauthorized(final UserName name, final Role... required) {
+		final List<String> roles = Arrays.asList(required).stream()
+				.map(r -> r.getID()).collect(Collectors.toList());
+		Collections.sort(roles);
+		final String rolesStr = String.join(", ", roles);
+		logErr("User {} does not have one of the required roles {}", name.getName(), rolesStr);
+		
 	}
 
 	/** Get a restricted view of a user. Typically used for one user viewing another.

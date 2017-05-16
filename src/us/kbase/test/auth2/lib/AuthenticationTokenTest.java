@@ -254,7 +254,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
-		failGetTokensUser(admin, new DisabledUserException());
+		failGetTokensUser(admin, new DisabledUserException("admin"));
 	}
 	
 	@Test
@@ -581,7 +581,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		
-		failRevokeTokenAdmin(admin, new DisabledUserException());
+		failRevokeTokenAdmin(admin, new DisabledUserException("admin"));
 	}
 	
 	@Test
@@ -862,7 +862,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		
-		failRevokeAllTokensAdminAll(admin, new DisabledUserException());
+		failRevokeAllTokensAdminAll(admin, new DisabledUserException("admin"));
 	}
 	
 	@Test
@@ -1027,7 +1027,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		
-		failRevokeAllTokensAdminUser(admin, new DisabledUserException());
+		failRevokeAllTokensAdminUser(admin, new DisabledUserException("admin"));
 	}
 	
 	@Test
@@ -1240,7 +1240,7 @@ public class AuthenticationTokenTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
 		
-		failCreateToken(user, TokenType.AGENT, new DisabledUserException());
+		failCreateToken(user, TokenType.AGENT, new DisabledUserException("foo"));
 	}
 	
 	@Test

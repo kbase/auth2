@@ -56,7 +56,7 @@ public class AuthenticationGetUserTest {
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
 		
-		failGetUser(user, new DisabledUserException());
+		failGetUser(user, new DisabledUserException("admin"));
 	}
 	
 	@Test
@@ -376,7 +376,7 @@ public class AuthenticationGetUserTest {
 				.withEmailAddress(new EmailAddress("f@goo.com"))
 				.build();
 		
-		failGetUserAsAdmin(admin, user, new DisabledUserException());
+		failGetUserAsAdmin(admin, user, new DisabledUserException("admin"));
 	}
 	
 	@Test

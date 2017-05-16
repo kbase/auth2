@@ -336,7 +336,7 @@ public class AuthenticationTester {
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
-		failExecute(ao, auth, "disabled user test", new DisabledUserException());
+		failExecute(ao, auth, "disabled user test", new DisabledUserException("foo"));
 		
 		verify(storage).deleteTokens(new UserName("foo"));
 	}

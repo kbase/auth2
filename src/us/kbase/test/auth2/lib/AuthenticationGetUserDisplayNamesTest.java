@@ -320,7 +320,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
 		
-		failGetDisplayNamesSpec(user, spec, new DisabledUserException());
+		failGetDisplayNamesSpec(user, spec, new DisabledUserException("foo"));
 	}
 	
 	@Test
