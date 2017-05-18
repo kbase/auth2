@@ -14,32 +14,32 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenCreationContext;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.token.TokenSet;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTokenTest {
@@ -72,6 +73,18 @@ public class AuthenticationTokenTest {
 		} catch (Exception e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
+	}
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
 	}
 	
 	@Test
@@ -99,19 +112,32 @@ public class AuthenticationTokenTest {
 		final Authentication auth = initTestMocks().auth;
 		failGetToken(auth, null, new NullPointerException("token"));
 	}
-
 	
 	@Test
-	public void getTokenFailNoSuchToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetToken(auth, t, new InvalidTokenException());
+	public void getTokenExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getToken(token);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get token";
+			}
+		}, set());
 	}
 
 	private void failGetToken(
@@ -154,43 +180,31 @@ public class AuthenticationTokenTest {
 		failGetTokens(auth, null, new NullPointerException("token"));
 	}
 
-	
 	@Test
-	public void getTokensFailNoSuchToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetTokens(auth, t, new InvalidTokenException());
-	}
-	
-	@Test
-	public void getTokensFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failGetTokens(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
+	public void getTokensExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getTokens(token);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get tokens";
+			}
+		});
 	}
 	
 	private void failGetTokens(
@@ -216,45 +230,30 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void getTokensUserFailNonAdmin() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.DEV_TOKEN).build();
-		
-		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void getTokensUserFailCreate() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.CREATE_ADMIN).build();
-		
-		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void getTokensUserFailRoot() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.build();
-		
-		failGetTokensUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void getTokensUserFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.DEV_TOKEN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
-		
-		failGetTokensUser(admin, new DisabledUserException("admin"));
+	public void getTokensUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getTokens(token, new UserName("whee"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get tokens for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -267,63 +266,6 @@ public class AuthenticationTokenTest {
 				new NullPointerException("userName"));
 	}
 	
-	@Test
-	public void getTokensUserFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetTokensUser(auth, t, new UserName("bar"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void getTokensUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failGetTokensUser(auth, token, new UserName("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void forceResetAllPasswordsFailCatastrophicNoUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		final StoredToken token = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
-		
-		failGetTokensUser(auth, t, new UserName("bar"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-
 	private void getTokensUser(final AuthUser admin) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -348,15 +290,6 @@ public class AuthenticationTokenTest {
 				verify(storage).deleteTokens(admin.getUserName());
 			}
 			throw th;
-		}
-	}
-	
-	private void failGetTokensUser(final AuthUser admin, final Exception e) {
-		try {
-			getTokensUser(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	
@@ -454,41 +387,31 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeTokenFailBadIncomingToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failRevokeToken(auth, t, UUID.randomUUID(), new InvalidTokenException());
-	}
-	
-	@Test
-	public void revokeTokenFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failRevokeToken(auth, token, UUID.randomUUID(), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
+	public void revokeTokenExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		final UUID id = UUID.randomUUID();
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.revokeToken(token, id);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "revoke token " + id;
+			}
+		});
 	}
 	
 	@Test
@@ -543,45 +466,31 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeTokenAdminFailStdUser() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN).build();
-		
-		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeTokenAdminFailCreate() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.CREATE_ADMIN).build();
-		
-		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeTokenAdminFailRoot() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.build();
-		
-		failRevokeTokenAdmin(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeTokenAdminFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		
-		failRevokeTokenAdmin(admin, new DisabledUserException("admin"));
+	public void revokeTokenAdminExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		final UUID id = UUID.randomUUID();
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.revokeToken(token, new UserName("whee"), id);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "revoke token " + id + " for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -593,68 +502,6 @@ public class AuthenticationTokenTest {
 				new NullPointerException("userName"));
 		failRevokeTokenAdmin(auth, new IncomingToken("f"), new UserName("foo"), null,
 				new NullPointerException("tokenID"));
-	}
-	
-	@Test
-	public void revokeTokenAdminFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		final UUID target = UUID.randomUUID();
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failRevokeTokenAdmin(auth, t, new UserName("foo"), target, new InvalidTokenException());
-	}
-	
-	@Test
-	public void revokeTokenAdminFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		final UUID target = UUID.randomUUID();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failRevokeTokenAdmin(auth, token, new UserName("foo"), target, new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void revokeTokenAdminFailCatastropic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		final UUID target = UUID.randomUUID();
-		final StoredToken ht = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failRevokeTokenAdmin(auth, t, new UserName("bar"), target, new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
 	}
 	
 	@Test
@@ -715,17 +562,6 @@ public class AuthenticationTokenTest {
 	}
 	
 	private void failRevokeTokenAdmin(
-			final AuthUser admin,
-			final Exception e) {
-		try {
-			revokeTokenAdmin(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	private void failRevokeTokenAdmin(
 			final Authentication auth,
 			final IncomingToken t,
 			final UserName name,
@@ -764,41 +600,30 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeAllTokensUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failRevokeAllTokensUser(auth, t, new InvalidTokenException());
-	}
-	
-	@Test
-	public void revokeAllTokensUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failRevokeAllTokensUser(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
+	public void revokeAllTokensUserExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.revokeTokens(token);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "revoke owned tokens";
+			}
+		});
 	}
 	
 	private void failRevokeAllTokensUser(
@@ -824,109 +649,36 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeAllTokensAdminAllFailStdUser() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN).build();
-		
-		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllFailCreate() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.CREATE_ADMIN).build();
-		
-		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllFailRoot() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.build();
-		
-		failRevokeAllTokensAdminAll(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		
-		failRevokeAllTokensAdminAll(admin, new DisabledUserException("admin"));
+	public void revokeAllTokensAdminAllExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.revokeAllTokens(token);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "revoke all tokens";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
 	public void revokeAllTokensAdminAllFailNull() throws Exception {
 		final Authentication auth = initTestMocks().auth;
 		failRevokeAllTokensAdminAll(auth, null, new NullPointerException("token"));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failRevokeAllTokensAdminAll(auth, t, new InvalidTokenException());
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failRevokeAllTokensAdminAll(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminAllFailCatastropic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		final StoredToken ht = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failRevokeAllTokensAdminAll(auth, t, new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
 	}
 	
 	private void revokeAllTokensAdminAll(final AuthUser admin) throws Exception {
@@ -956,17 +708,6 @@ public class AuthenticationTokenTest {
 	}
 	
 	private void failRevokeAllTokensAdminAll(
-			final AuthUser admin,
-			final Exception e) {
-		try {
-			revokeAllTokensAdminAll(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	private void failRevokeAllTokensAdminAll(
 			final Authentication auth,
 			final IncomingToken t,
 			final Exception e) {
@@ -989,45 +730,30 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void revokeAllTokensAdminUserFailStdUser() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN).build();
-		
-		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminUserFailCreate() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.CREATE_ADMIN).build();
-		
-		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminUserFailRoot() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.build();
-		
-		failRevokeAllTokensAdminUser(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminUserFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		
-		failRevokeAllTokensAdminUser(admin, new DisabledUserException("admin"));
+	public void revokeAllTokensAdminUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.revokeAllTokens(token, new UserName("whee"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "revoke all tokens for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -1039,63 +765,6 @@ public class AuthenticationTokenTest {
 				new NullPointerException("userName"));
 	}
 	
-	@Test
-	public void revokeAllTokensAdminUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failRevokeAllTokensAdminUser(auth, t, new UserName("foo"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void revokeAllTokensAdminUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failRevokeAllTokensAdminUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void revokeAllTokensAdminUserFailCatastropic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		final StoredToken ht = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failRevokeAllTokensAdminUser(auth, t, new UserName("whee"), new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
 	
 	private void revokeAllTokensAdminUser(final AuthUser admin) throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -1120,17 +789,6 @@ public class AuthenticationTokenTest {
 				verify(storage).deleteTokens(admin.getUserName());
 			}
 			throw th;
-		}
-	}
-	
-	private void failRevokeAllTokensAdminUser(
-			final AuthUser admin,
-			final Exception e) {
-		try {
-			revokeAllTokensAdminUser(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	
@@ -1232,15 +890,31 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void createTokenFailDisabledUser() throws Exception {
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
-		
-		failCreateToken(user, TokenType.AGENT, new DisabledUserException("foo"));
+	public void createTokenFailExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.createToken(token, new TokenName("foo"), TokenType.AGENT,
+						TokenCreationContext.getBuilder().build());
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "create Agent token";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -1286,71 +960,6 @@ public class AuthenticationTokenTest {
 		failCreateToken(auth, new IncomingToken("foo"), new TokenName("bar"), TokenType.LOGIN, CTX,
 				new IllegalArgumentException(
 						"Cannot create a login token without logging in"));
-	}
-	
-	@Test
-	public void createTokenFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, CTX,
-				new InvalidTokenException());
-	}
-	
-	@Test
-	public void createTokenFailWithAgentToken() throws Exception {
-		createTokenFailWithNonLoginToken(TokenType.AGENT);
-	}
-
-	@Test
-	public void createTokenFailWithDevToken() throws Exception {
-		createTokenFailWithNonLoginToken(TokenType.DEV);
-	}
-	
-	@Test
-	public void createTokenFailWithServToken() throws Exception {
-		createTokenFailWithNonLoginToken(TokenType.SERV);
-	}
-
-	private void createTokenFailWithNonLoginToken(final TokenType tokenType) throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		final StoredToken ht = StoredToken.getBuilder(
-				tokenType, UUID.randomUUID(), new UserName("foo"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
-		
-		failCreateToken(auth, t, new TokenName("foo"), TokenType.DEV, CTX,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED, tokenType.getDescription() +
-						" tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void createTokenFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobar");
-		final StoredToken ht = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failCreateToken(auth, t, new TokenName("baz"), TokenType.AGENT, CTX, new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
 	}
 	
 	private void createToken(

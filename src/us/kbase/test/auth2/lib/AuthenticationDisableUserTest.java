@@ -5,25 +5,25 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
+import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
-import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -32,10 +32,23 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 
 public class AuthenticationDisableUserTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void disableUser() throws Exception {
@@ -47,10 +60,6 @@ public class AuthenticationDisableUserTest {
 	
 	@Test
 	public void disableUserFailBadRole() throws Exception {
-		failDisableUser(new UserName("baz"), new UserName("foo"), Role.DEV_TOKEN,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		failDisableUser(new UserName("baz"), new UserName("foo"), Role.SERV_TOKEN,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
 		failDisableUser(new UserName("baz"), UserName.ROOT, Role.ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Only the root user can disable the root account"));
@@ -85,84 +94,24 @@ public class AuthenticationDisableUserTest {
 	}
 	
 	@Test
-	public void disableUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("user");
-		
-		when(storage.getToken(token.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failDisableUser(auth, token, new UserName("foo"), "r", new InvalidTokenException());
-	}
-	
-	@Test
-	public void disableUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failDisableUser(auth, token, new UserName("foo"), "r", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failDisableUser(auth, token, new UserName("foo"), "r", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failDisableUser(auth, token, new UserName("foo"), "r", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void disableUserFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failDisableUser(auth, token, new UserName("foo"), "r", new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void disableUserFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failDisableUser(auth, token, new UserName("foo"), "r", new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void disableUserExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.disableAccount(getIncomingToken(), new UserName("whee"), "reason");
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "disable account whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -252,10 +201,6 @@ public class AuthenticationDisableUserTest {
 	
 	@Test
 	public void enableUserFailBadRole() throws Exception {
-		failEnableUser(new UserName("baz"), new UserName("foo"), Role.DEV_TOKEN,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		failEnableUser(new UserName("baz"), new UserName("foo"), Role.SERV_TOKEN,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
 		failEnableUser(new UserName("baz"), UserName.ROOT, Role.ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"The root user cannot be enabled via this method"));
@@ -275,86 +220,25 @@ public class AuthenticationDisableUserTest {
 		failEnableUser(auth, token, null, new NullPointerException("userName"));
 	}
 	
-	
 	@Test
-	public void enableUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("user");
-		
-		when(storage.getToken(token.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failEnableUser(auth, token, new UserName("foo"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void enableUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failEnableUser(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void enableUserFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failEnableUser(auth, token, new UserName("foo"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void enableUserFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failEnableUser(auth, token, new UserName("foo"), new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void enableUserExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.enableAccount(getIncomingToken(), new UserName("whee"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "enable account whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test

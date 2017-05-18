@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Method;
@@ -45,6 +46,7 @@ import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -242,6 +244,27 @@ public class AuthenticationTester {
 	public interface AuthOperation {
 		public void execute(final Authentication auth) throws Exception;
 		public IncomingToken getIncomingToken();
+		public List<ILoggingEvent> getLogAccumulator();
+		public String getOperationString();
+		public TestMocks getTestMocks() throws Exception ;
+	}
+	
+	public static abstract class AbstractAuthOperation implements AuthOperation {
+		
+		@Override
+		public IncomingToken getIncomingToken() {
+			try {
+				return new IncomingToken("foobar");
+			} catch (MissingParameterException e) {
+				throw new RuntimeException("wtf dude", e);
+			}
+		}
+		
+		@Override
+		public TestMocks getTestMocks() throws Exception {
+			return initTestMocks();
+		}
+		
 	}
 
 	private static void failExecute(
@@ -257,13 +280,20 @@ public class AuthenticationTester {
 		}
 	}
 	
+	public static Set<TokenType> DEFAULT_FAILING_TOKEN_TYPES = Collections.unmodifiableSet(
+			set(TokenType.AGENT, TokenType.DEV, TokenType.SERV));
+	
 	public static void executeStandardUserCheckingTests(
 			final AuthOperation ao,
 			final Set<Role> failingRoles) throws Exception {
-		testBadToken(ao);
-		testBadTokenType(ao, TokenType.AGENT, "Agent");
-		testBadTokenType(ao, TokenType.DEV, "Developer");
-		testBadTokenType(ao, TokenType.SERV, "Service");
+		executeStandardUserCheckingTests(ao, failingRoles, DEFAULT_FAILING_TOKEN_TYPES);
+	}
+	
+	public static void executeStandardUserCheckingTests(
+			final AuthOperation ao,
+			final Set<Role> failingRoles,
+			final Set<TokenType> failingTypes) throws Exception {
+		executeStandardTokenCheckingTests(ao, failingTypes);
 		testNoUserForToken(ao);
 		testDisabledUser(ao);
 		for (final Role r: failingRoles) {
@@ -273,9 +303,23 @@ public class AuthenticationTester {
 			testUserWithoutRoles(ao);
 		}
 	}
+	
+	public static void executeStandardTokenCheckingTests(final AuthOperation ao) throws Exception {
+		executeStandardTokenCheckingTests(ao, DEFAULT_FAILING_TOKEN_TYPES);
+	}
+	
+	public static void executeStandardTokenCheckingTests(
+			final AuthOperation ao,
+			final Set<TokenType> failingTypes)
+			throws Exception {
+		testBadToken(ao);
+		for (final TokenType tt: failingTypes) {
+			testBadTokenType(ao, tt);
+		}
+	}
 
 	private static void testBadToken(final AuthOperation ao) throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -287,25 +331,33 @@ public class AuthenticationTester {
 
 	private static void testBadTokenType(
 			final AuthOperation ao,
-			final TokenType type,
-			final String tokenName)
+			final TokenType type)
 			throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
+		
+		ao.getLogAccumulator().clear();
 		
 		when(storage.getToken(ao.getIncomingToken().getHashedToken())).thenReturn(
 				StoredToken.getBuilder(type, UUID.randomUUID(), new UserName("f"))
 						.withLifeTime(Instant.now(), 0).build())
 				.thenReturn(null);
 
+		
+		final String tokenName = type.getDescription();
 		failExecute(ao, auth, "bad token type test: " + tokenName, new UnauthorizedException(
 				ErrorType.UNAUTHORIZED, tokenName +
 				" tokens are not allowed for this operation"));
+		
+		assertLogEventsCorrect(ao.getLogAccumulator(), new LogEvent(Level.ERROR, String.format(
+				"User f with token type %s attempted an operation that requires a " +
+				"token type of one of [Login]: " + ao.getOperationString(), tokenName),
+						Authentication.class));
 	}
 	
 	private static void testNoUserForToken(final AuthOperation ao) throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -322,7 +374,7 @@ public class AuthenticationTester {
 	}
 	
 	private static void testDisabledUser(final AuthOperation ao) throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -343,7 +395,7 @@ public class AuthenticationTester {
 	
 	private static void testUnauthorizedRole(final AuthOperation ao, final Role r)
 			throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -363,12 +415,12 @@ public class AuthenticationTester {
 				un, new DisplayName("f"), Instant.now())
 				.withRole(r).build());
 		
-		failExecute(ao, auth, "unauthorized user test",
+		failExecute(ao, auth, "unauthorized user test for role " + r,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
 	}
 	
 	private static void testUserWithoutRoles(final AuthOperation ao) throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		

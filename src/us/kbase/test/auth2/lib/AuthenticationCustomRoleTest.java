@@ -13,35 +13,46 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
-import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
-import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCustomRoleTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void createRole() throws Exception {
@@ -49,17 +60,30 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
-	public void createRoleFailAdmin() throws Exception {
-		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
-			failCreateRole(new UserName("admin"), r,
-					new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		}
-	}
-	
-	@Test
-	public void createRoleFailRoot() throws Exception {
-		failCreateRole(UserName.ROOT, Role.ROOT,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	public void createRoleExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.setCustomRole(token, new CustomRole("baz", "bar"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "set custom role baz";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -70,91 +94,6 @@ public class AuthenticationCustomRoleTest {
 		failCreateRole(auth, new IncomingToken("foo"), null, new NullPointerException("role"));
 	}
 	
-	@Test
-	public void createRoleFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-			
-		failCreateRole(auth, token, new CustomRole("a", "b"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void createRoleFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failCreateRole(auth, token, new CustomRole("a", "b"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void createRoleFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
-		
-		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
-			
-		failCreateRole(auth, token, new CustomRole("a", "b"), new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void createRoleFailDisabled() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-
-		final AuthUser u = AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foobar"), Instant.now())
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
-				.build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("baz"))).thenReturn(u);
-		
-		failCreateRole(auth, token, new CustomRole("a", "b"), new DisabledUserException("baz"));
-		
-		verify(storage).deleteTokens(new UserName("baz"));
-	}
-
 	private void successCreateRole(final UserName adminName, final Role adminRole)
 			throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -181,19 +120,6 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	private void failCreateRole(
-			final UserName admin,
-			final Role adminRole,
-			final Exception e) {
-		
-		try {
-			successCreateRole(admin, adminRole);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	private void failCreateRole(
 			final Authentication auth,
 			final IncomingToken token,
 			final CustomRole role,
@@ -212,17 +138,30 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
-	public void deleteRoleFailAdmin() throws Exception {
-		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
-			failDeleteRole(new UserName("admin"), r,
-					new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		}
-	}
-	
-	@Test
-	public void deleteRoleFailRoot() throws Exception {
-		failDeleteRole(UserName.ROOT, Role.ROOT,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+	public void deleteRoleExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.deleteCustomRole(token, "baz");
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "delete custom role baz";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -235,91 +174,6 @@ public class AuthenticationCustomRoleTest {
 				new MissingParameterException("roleId cannot be null or empty"));
 		failDeleteRole(auth, new IncomingToken("foo"), "   \t   ",
 				new MissingParameterException("roleId cannot be null or empty"));
-	}
-	
-	@Test
-	public void deleteRoleFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-			
-		failDeleteRole(auth, token, "foo", new InvalidTokenException());
-	}
-	
-	@Test
-	public void deleteRoleFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failDeleteRole(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failDeleteRole(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failDeleteRole(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void deleteRoleFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
-		
-		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
-			
-		failDeleteRole(auth, token, "foo", new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void deleteRoleFailDisabled() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foobar"), Instant.now())
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
-				.build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("baz"))).thenReturn(u);
-		
-		failDeleteRole(auth, token, "foo", new DisabledUserException("baz"));
-		
-		verify(storage).deleteTokens(new UserName("baz"));
 	}
 	
 	private void successDeleteRole(final UserName adminName, final Role adminRole)
@@ -347,18 +201,6 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	private void failDeleteRole(
-			final UserName adminName,
-			final Role adminRole,
-			final Exception e) {
-		try {
-			successDeleteRole(adminName, adminRole);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	private void failDeleteRole(
 			final Authentication auth,
 			final IncomingToken token,
 			final String role,
@@ -380,7 +222,7 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void getCustomRolesStdUser() throws Exception {
-		succeedGetCustomRoles(UserName.ROOT, Role.ROOT, true);
+		succeedGetCustomRoles(UserName.ROOT, Role.ROOT, false);
 		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.ADMIN, Role.SERV_TOKEN,
 				Role.DEV_TOKEN)) {
 			succeedGetCustomRoles(new UserName("foo"), r, false);
@@ -388,12 +230,57 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
-	public void getCustomRolesFailAdmin() throws Exception {
-		failGetCustomRoles(Role.DEV_TOKEN, true,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		failGetCustomRoles(Role.SERV_TOKEN, true,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		
+	public void getCustomRolesExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getCustomRoles(token, false);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get custom roles";
+			}
+		});
+	}
+	
+	@Test
+	public void getCustomRolesAsAdminExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getCustomRoles(token, true);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get custom roles as admin";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -403,104 +290,6 @@ public class AuthenticationCustomRoleTest {
 		failGetCustomRoles(auth, (IncomingToken) null, false, new NullPointerException("token"));
 	}
 	
-	@Test
-	public void getCustomRolesFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-			
-		failGetCustomRoles(auth, token, true, new InvalidTokenException());
-		failGetCustomRoles(auth, token, false, new InvalidTokenException());
-	}
-	
-	@Test
-	public void getCustomRolesFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failGetCustomRoles(auth, token, true, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
-		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failGetCustomRoles(auth, token, false, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void getCustomRolesFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
-		
-		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
-			
-		failGetCustomRoles(auth, token, true, new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void getCustomRolesFailDisabled() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foobar"), Instant.now())
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
-				.build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("baz"))).thenReturn(u);
-		
-		failGetCustomRoles(auth, token, true, new DisabledUserException("baz"));
-		
-		verify(storage).deleteTokens(new UserName("baz"));
-	}
-
 	private void succeedGetCustomRoles(final UserName un, final Role r, final boolean forceAdmin)
 			throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -529,15 +318,6 @@ public class AuthenticationCustomRoleTest {
 				is(set(new CustomRole("c", "d"), new CustomRole("a", "b"))));
 	}
 	
-	private void failGetCustomRoles(final Role r, final boolean forceAdmin, final Exception e) {
-		try {
-			succeedGetCustomRoles(new UserName("wubba"), r, forceAdmin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
 	private void failGetCustomRoles(
 			final Authentication auth,
 			final IncomingToken token,
@@ -557,13 +337,30 @@ public class AuthenticationCustomRoleTest {
 	}
 	
 	@Test
-	public void updateCustomRoleFailRole() throws Exception {
-		failUpdateCustomRole(UserName.ROOT, Role.ROOT,
-				new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		for (final Role r: Arrays.asList(Role.CREATE_ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
-			failUpdateCustomRole(new UserName("admin"), r,
-					new UnauthorizedException(ErrorType.UNAUTHORIZED));
-		}
+	public void updateCustomRolesExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.updateCustomRoles(token, new UserName("whee"), set("a", "b"), set("c"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "update custom roles for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
 	
 	@Test
@@ -592,96 +389,6 @@ public class AuthenticationCustomRoleTest {
 		failUpdateCustomRole(auth, t, un, set("foo", "bar"), set("bar", "baz"),
 				new IllegalParameterException(
 						"One or more roles is to be both removed and added: bar"));
-	}
-	
-	@Test
-	public void updateCustomRoleFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new InvalidTokenException());
-	}
-	
-	@Test
-	public void updateCustomRoleFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Agent tokens are not allowed for this operation"));
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Developer tokens are not allowed for this operation"));
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void updateCustomRolesFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
-		
-		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
-			
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new RuntimeException("There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void updateCustomRolesFailDisabled() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foobar"), Instant.now())
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
-				.build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("baz"))).thenReturn(u);
-		
-		failUpdateCustomRole(auth, token, new UserName("bar"), set("foo"), set("bar"),
-				new DisabledUserException("baz"));
-		
-		verify(storage).deleteTokens(new UserName("baz"));
 	}
 	
 	@Test
@@ -760,18 +467,6 @@ public class AuthenticationCustomRoleTest {
 		
 		verify(storage).updateCustomRoles(new UserName("someuser"), set("foo", "bar"),
 				set("baz", "bat"));
-	}
-	
-	private void failUpdateCustomRole(
-			final UserName admin,
-			final Role withRole,
-			final Exception e) {
-		try {
-			succeedUpdateCustomRole(admin, withRole);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
 	}
 	
 	private void failUpdateCustomRole(

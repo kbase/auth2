@@ -13,11 +13,15 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.setupValidUserRespons
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.util.Collections;
+import java.util.List;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
@@ -41,12 +45,24 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
-import us.kbase.test.auth2.lib.AuthenticationTester.AuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.config.FailConfig.FailingMapper;
 import us.kbase.test.auth2.lib.config.TestExternalConfig;
 import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMapper;
 
 public class AuthenticationConfigTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void getCacheTime() throws Exception {
@@ -174,7 +190,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void updateConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -184,6 +200,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.updateConfig(token, AuthConfigUpdate.getBuilder().build());
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "update configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
@@ -295,7 +321,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void resetConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -305,6 +331,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.resetConfigToDefault(token);
+			}
+			
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "reset configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
@@ -368,7 +404,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void getConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -378,6 +414,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.getConfig(token, new TestExternalConfigMapper());
+			}
+			
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+
+			@Override
+			public String getOperationString() {
+				return "get configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}

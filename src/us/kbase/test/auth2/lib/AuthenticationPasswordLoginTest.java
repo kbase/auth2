@@ -69,6 +69,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
@@ -845,22 +846,6 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void resetPasswordFailNotAdmin() throws Exception {
-		// shouldn't be able to reset own pwd, can use change pwd for that
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.DEV_TOKEN).build();
-		
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@goo.com"))
-				.build();
-		
-		failResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
 	public void resetPasswordFailCreateOnRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
@@ -909,24 +894,6 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void resetPasswordFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("admin2"), Instant.now()))
-				.build();
-		
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@goo.com"))
-				.withRole(Role.DEV_TOKEN).build();
-		
-		failResetPassword(admin, user, new DisabledUserException("foo"));
-	}
-	
-	@Test
 	public void resetPasswordFailNulls() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
@@ -937,60 +904,30 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void resetPasswordFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failResetPassword(auth, t, new UserName("foo"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void resetPasswordFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void resetPasswordFailCatastrophicNoUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		final StoredToken token = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
-		
-		failResetPassword(auth, t, new UserName("foo"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
+	public void resetPasswordExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.resetPassword(token, new UserName("whee"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "reset password for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -1273,22 +1210,6 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void forceResetPasswordFailNotAdmin() throws Exception {
-		// shouldn't be able to reset own pwd, can use change pwd for that
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.DEV_TOKEN).build();
-		
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@goo.com"))
-				.build();
-		
-		failForceResetPassword(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
 	public void forceResetPasswordFailCreateOnRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
@@ -1337,24 +1258,6 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void forceResetPasswordFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("admin2"), Instant.now()))
-				.build();
-		
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@goo.com"))
-				.withRole(Role.DEV_TOKEN).build();
-		
-		failForceResetPassword(admin, user, new DisabledUserException("foo"));
-	}
-	
-	@Test
 	public void forceResetPasswordFailNulls() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
@@ -1365,60 +1268,30 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void forceResetPasswordFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failForceResetPassword(auth, t, new UserName("foo"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void forceResetPasswordFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failForceResetPassword(auth, token, new UserName("foo"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void forceResetPasswordFailCatastrophicNoUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		final StoredToken token = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
-		
-		failForceResetPassword(auth, t, new UserName("foo"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
+	public void forceResetPasswordExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.forceResetPassword(token, new UserName("whee"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "force password reset for user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -1521,24 +1394,30 @@ public class AuthenticationPasswordLoginTest {
 	}
 	
 	@Test
-	public void forceResetAllPasswordsFailStdAdmin() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.ADMIN).build();
-		
-		failForceResetAllPasswords(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void forceResetAllPasswordsFailDisabled() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.CREATE_ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		failForceResetAllPasswords(admin, new DisabledUserException("admin"));
+	public void forceResetAllPasswordsExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.forceResetAllPasswords(token);
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "force password reset for all users";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.ADMIN));
 	}
 	
 	@Test
@@ -1548,64 +1427,6 @@ public class AuthenticationPasswordLoginTest {
 
 		failForceResetAllPasswords(auth, null, new NullPointerException("token"));
 	}
-	
-	@Test
-	public void forceResetAllPasswordsFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failForceResetAllPasswords(auth, t, new InvalidTokenException());
-	}
-	
-	@Test
-	public void forceResetAllPasswordsFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failForceResetAllPasswords(auth, token, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void forceResetAllPasswordsFailCatastrophicNoUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		final StoredToken token = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("admin"));
-		
-		failForceResetAllPasswords(auth, t, new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
 
 	private void forceResetAllPasswords(final AuthUser admin) throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -1628,17 +1449,6 @@ public class AuthenticationPasswordLoginTest {
 				verify(storage).deleteTokens(admin.getUserName());
 			}
 			throw th;
-		}
-	}
-	
-	private void failForceResetAllPasswords(
-			final AuthUser admin,
-			final Exception e) {
-		try {
-			forceResetAllPasswords(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	

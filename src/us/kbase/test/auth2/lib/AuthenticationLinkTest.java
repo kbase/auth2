@@ -17,28 +17,30 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
 import us.kbase.auth2.lib.TemporaryIdentities;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
@@ -51,7 +53,6 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
-import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -64,6 +65,7 @@ import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLinkTest {
@@ -72,6 +74,18 @@ public class AuthenticationLinkTest {
 	
 	private final RemoteIdentity REMOTE = new RemoteIdentity(new RemoteIdentityID("Prov", "id1"),
 			new RemoteIdentityDetails("user1", "full1", "f1@g.com"));
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void linkWithTokenImmediately() throws Exception {
@@ -502,138 +516,46 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void linkWithTokenFailBadToken() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
+	public void linkWithTokenExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public TestMocks getTestMocks() throws Exception {
+				final IdentityProvider idp = mock(IdentityProvider.class);
 
-		when(idp.getProviderName()).thenReturn("Prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+				when(idp.getProviderName()).thenReturn("Prov");
+				
+				final TestMocks testauth = initTestMocks(set(idp));
+				final AuthStorage storage = testauth.storageMock;
+				final Authentication auth = testauth.auth;
+				
+				AuthenticationTester.setConfigUpdateInterval(auth, -1);
 
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"Prov", new ProviderConfig(true, false, false));
+				final Map<String, ProviderConfig> providers = ImmutableMap.of(
+						"Prov", new ProviderConfig(true, false, false));
 
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failLinkWithToken(auth, token, "prov", "foo", new InvalidTokenException());
-	}
-	
-	@Test
-	public void linkWithTokenFailBadTokenType() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
+				when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+						.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+								new AuthConfig(false, providers, null),
+								new CollectingExternalConfig(Collections.emptyMap())));
+				return testauth;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.link(getIncomingToken(), "prov", "foo");
+			}
 
-		when(idp.getProviderName()).thenReturn("Prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"Prov", new ProviderConfig(true, false, false));
-
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failLinkWithToken(auth, token, "prov", "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failLinkWithToken(auth, token, "prov", "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failLinkWithToken(auth, token, "prov", "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void linkWithTokenFailNoUserForToken() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-
-		when(idp.getProviderName()).thenReturn("Prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"Prov", new ProviderConfig(true, false, false));
-
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failLinkWithToken(auth, token, "prov", "foo", new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void linkWithTokenFailDisabledUser() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-
-		when(idp.getProviderName()).thenReturn("Prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"Prov", new ProviderConfig(true, false, false));
-
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withIdentity(REMOTE).withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		failLinkWithToken(auth, token, "prov", "foo", new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "link";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -1142,85 +1064,24 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void getLinkStateFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken userToken = new IncomingToken("user");
-		final IncomingToken tempToken = new IncomingToken("temp");
-		
-		when(storage.getToken(userToken.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetLinkState(auth, userToken, tempToken, new InvalidTokenException());
-	}
-	
-	@Test
-	public void getLinkStateFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failGetLinkState(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failGetLinkState(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failGetLinkState(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void getLinkStateFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failGetLinkState(auth, token, new IncomingToken("bar"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void getLinkStateFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withIdentity(REMOTE).withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failGetLinkState(auth, token, new IncomingToken("bar"), new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void getLinkStateExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getLinkState(getIncomingToken(), new IncomingToken("foobarbaz"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get link state";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -1438,87 +1299,24 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void linkIdentityFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken userToken = new IncomingToken("user");
-		final IncomingToken tempToken = new IncomingToken("temp");
-		
-		when(storage.getToken(userToken.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failLinkIdentity(auth, userToken, tempToken, "foo", new InvalidTokenException());
-	}
-	
-	@Test
-	public void linkIdentityFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	
-	@Test
-	public void linkIdentityFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo", new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void linkIdentityFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withIdentity(REMOTE).withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
-				new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void linkIdentityExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.link(getIncomingToken(), new IncomingToken("foobar"), "whee");
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "link identity whee";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -1845,85 +1643,24 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void linkAllFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken userToken = new IncomingToken("user");
-		final IncomingToken tempToken = new IncomingToken("temp");
-		
-		when(storage.getToken(userToken.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failLinkAll(auth, userToken, tempToken, new InvalidTokenException());
-	}
-	
-	@Test
-	public void linkAllFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failLinkAll(auth, token, new IncomingToken("bar"), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void linkAllFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failLinkAll(auth, token, new IncomingToken("bar"), new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void linkAllFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withIdentity(REMOTE).withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failLinkAll(auth, token, new IncomingToken("bar"), new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void linkAllExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.linkAll(getIncomingToken(), new IncomingToken("foobar"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "link all identities";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -2148,84 +1885,24 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void unlinkFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken userToken = new IncomingToken("user");
-		
-		when(storage.getToken(userToken.getHashedToken()))
-				.thenThrow(new NoSuchTokenException("foo"));
-		
-		failUnlink(auth, userToken, "foo", new InvalidTokenException());
-	}
-	
-	@Test
-	public void unlinkFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("f"))
-						.withLifeTime(Instant.now(), 0).build(),
-				null);
-		
-		failUnlink(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failUnlink(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failUnlink(auth, token, "foo", new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void unlinkFailNoUserForToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failUnlink(auth, token, "bar", new RuntimeException(
-				"There seems to be an error in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void unlinkFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), 0).build())
-				.thenReturn(null);
-		
-		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
-				.withIdentity(REMOTE).withUserDisabledState(
-						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
-		
-		failUnlink(auth, token, "foo", new DisabledUserException("foo"));
-		
-		verify(storage).deleteTokens(new UserName("foo"));
+	public void unlinkExecuteStandardUserCheckingTests() throws Exception {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.unlink(getIncomingToken(), "whee");
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "unlink identity whee";
+			}
+		}, set());
 	}
 	
 	@Test

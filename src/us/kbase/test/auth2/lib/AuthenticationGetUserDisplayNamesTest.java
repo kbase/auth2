@@ -16,25 +16,26 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -42,9 +43,22 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserDisplayNamesTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void getDisplayNamesSet() throws Exception {
@@ -277,50 +291,30 @@ public class AuthenticationGetUserDisplayNamesTest {
 	}
 	
 	@Test
-	public void getDisplayNamesFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
+	public void getUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getUserDisplayNames(token, UserSearchSpec.getBuilder().build());
+			}
 
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetDisplayNamesSpec(auth, token, UserSearchSpec.getBuilder().build(),
-				new InvalidTokenException());
-	}
-	
-	@Test
-	public void getDisplayNamesFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
-						.withLifeTime(Instant.now(), Instant.now()).build());
-				
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failGetDisplayNamesSpec(auth, token, UserSearchSpec.getBuilder().build(),
-				new RuntimeException("There seems to be an error " +
-						"in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void getDisplayNamesSpecFailDisabled() throws Exception {
-		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.DEV_TOKEN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now())).build();
-		
-		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
-		
-		failGetDisplayNamesSpec(user, spec, new DisabledUserException("foo"));
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get display";
+			}
+		}, set(), set());
 	}
 	
 	@Test
