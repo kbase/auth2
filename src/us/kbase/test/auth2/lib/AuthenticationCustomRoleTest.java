@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
@@ -21,6 +22,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
@@ -38,6 +40,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCustomRoleTest {
@@ -56,7 +59,31 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void createRole() throws Exception {
-		successCreateRole(new UserName("admin"), Role.ADMIN);
+		final UserName adminName = new UserName("admin");
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), adminName)
+				.withLifeTime(Instant.now(), Instant.now()).build();
+		
+		final AuthUser u = AuthUser.getBuilder(
+				adminName, new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN).build();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
+		
+		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
+		
+		auth.setCustomRole(token, new CustomRole("id", "desc"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin admin set custom role id", Authentication.class));
+		
+		verify(storage).setCustomRole(new CustomRole("id", "desc"));
 	}
 	
 	@Test
@@ -94,31 +121,6 @@ public class AuthenticationCustomRoleTest {
 		failCreateRole(auth, new IncomingToken("foo"), null, new NullPointerException("role"));
 	}
 	
-	private void successCreateRole(final UserName adminName, final Role adminRole)
-			throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), adminName)
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
-				.withRole(adminRole).build();
-
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
-		
-		auth.setCustomRole(token, new CustomRole("id", "desc"));
-		
-		verify(storage).setCustomRole(new CustomRole("id", "desc"));
-	}
-	
 	private void failCreateRole(
 			final Authentication auth,
 			final IncomingToken token,
@@ -134,7 +136,30 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void deleteRole() throws Exception {
-		successDeleteRole(new UserName("admin"), Role.ADMIN);
+		final UserName adminName = new UserName("admin");
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), adminName)
+				.withLifeTime(Instant.now(), Instant.now()).build();
+		
+		final AuthUser u = AuthUser.getBuilder(
+				adminName, new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN).build();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
+		
+		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
+		
+		auth.deleteCustomRole(token, "someRole");
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin admin deleted custom role someRole", Authentication.class));
+		
+		verify(storage).deleteCustomRole("someRole");
 	}
 	
 	@Test
@@ -174,30 +199,6 @@ public class AuthenticationCustomRoleTest {
 				new MissingParameterException("roleId cannot be null or empty"));
 		failDeleteRole(auth, new IncomingToken("foo"), "   \t   ",
 				new MissingParameterException("roleId cannot be null or empty"));
-	}
-	
-	private void successDeleteRole(final UserName adminName, final Role adminRole)
-			throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), adminName)
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
-				.withRole(adminRole).build();
-
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
-		
-		auth.deleteCustomRole(token, "someRole");
-
-		verify(storage).deleteCustomRole("someRole");
 	}
 	
 	private void failDeleteRole(
@@ -292,6 +293,7 @@ public class AuthenticationCustomRoleTest {
 	
 	private void succeedGetCustomRoles(final UserName un, final Role r, final boolean forceAdmin)
 			throws Exception {
+		logEvents.clear();
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -314,6 +316,9 @@ public class AuthenticationCustomRoleTest {
 		
 		final Set<CustomRole> roles = auth.getCustomRoles(token, forceAdmin);
 		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"User %s accessed all custom roles", un.getName()), Authentication.class));
+		
 		assertThat("incorrect roles", roles,
 				is(set(new CustomRole("c", "d"), new CustomRole("a", "b"))));
 	}
@@ -333,7 +338,38 @@ public class AuthenticationCustomRoleTest {
 	
 	@Test
 	public void updateCustomRole() throws Exception {
-		succeedUpdateCustomRole(new UserName("admin"), Role.ADMIN);
+		succeedUpdateCustomRole(set("foo", "bar"), set("baz", "bat"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin admin added custom roles to user someuser: bar, foo", Authentication.class),
+				new LogEvent(Level.INFO,
+						"Admin admin removed custom roles from user someuser: bat, baz",
+						Authentication.class));
+	}
+	
+	@Test
+	public void updateCustomRoleEmpty() throws Exception {
+		succeedUpdateCustomRole(set(), set());
+		
+		assertThat("No log events generated", logEvents.isEmpty(), is(true));
+	}
+	
+	@Test
+	public void updateCustomRoleAddOnly() throws Exception {
+		succeedUpdateCustomRole(set("foo", "bar"), set());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin admin added custom roles to user someuser: bar, foo",
+				Authentication.class));
+	}
+	
+	@Test
+	public void updateCustomRoleRemoveOnly() throws Exception {
+		succeedUpdateCustomRole(set(), set("baz", "bat"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+						"Admin admin removed custom roles from user someuser: bat, baz",
+						Authentication.class));
 	}
 	
 	@Test
@@ -443,7 +479,9 @@ public class AuthenticationCustomRoleTest {
 				new NoSuchRoleException("bat"));
 	}
 
-	private void succeedUpdateCustomRole(final UserName adminUser, final Role withRole)
+	private void succeedUpdateCustomRole(
+			final Set<String> add,
+			final Set<String> remove)
 			throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -451,22 +489,20 @@ public class AuthenticationCustomRoleTest {
 		
 		final IncomingToken token = new IncomingToken("foobarbaz");
 		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), adminUser)
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				adminUser, new DisplayName("foobar"), Instant.now())
-				.withRole(withRole).build();
+				new UserName("admin"), new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
 		
-		when(storage.getUser(adminUser)).thenReturn(u, (AuthUser) null);
+		when(storage.getUser(new UserName("admin"))).thenReturn(u, (AuthUser) null);
 		
-		auth.updateCustomRoles(token, new UserName("someuser"), set("foo", "bar"),
-				set("baz", "bat"));
+		auth.updateCustomRoles(token, new UserName("someuser"), add, remove);
 		
-		verify(storage).updateCustomRoles(new UserName("someuser"), set("foo", "bar"),
-				set("baz", "bat"));
+		verify(storage).updateCustomRoles(new UserName("someuser"), add, remove);
 	}
 	
 	private void failUpdateCustomRole(

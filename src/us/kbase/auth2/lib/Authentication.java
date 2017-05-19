@@ -1384,7 +1384,7 @@ public class Authentication {
 			final Set<Role> roles,
 			final Function<? super Role, ? extends String> mapper) {
 		return String.join(", ", roles.stream().sorted().map(mapper)
-				.collect(Collectors.toSet()));
+				.collect(Collectors.toList()));
 	}
 
 	/** Create or update a custom role.
@@ -1400,9 +1400,10 @@ public class Authentication {
 			final CustomRole role)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(role, "role");
-		getUser(token, new OpReqs("set custom role {}", role.getID())
+		final AuthUser admin = getUser(token, new OpReqs("set custom role {}", role.getID())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.setCustomRole(role);
+		logInfo("Admin {} set custom role {}", admin.getUserName().getName(), role.getID());
 	}
 	
 	/** Delete a custom role. Deletes the role from all users.
@@ -1424,9 +1425,10 @@ public class Authentication {
 		if (roleId == null || roleId.trim().isEmpty()) {
 			throw new MissingParameterException("roleId cannot be null or empty");
 		}
-		getUser(token, new OpReqs("delete custom role {}", roleId)
+		final AuthUser admin = getUser(token, new OpReqs("delete custom role {}", roleId)
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteCustomRole(roleId);
+		logInfo("Admin {} deleted custom role {}", admin.getUserName().getName(), roleId);
 	}
 
 	/* may need to restrict to a subset of users in the future */
@@ -1441,14 +1443,19 @@ public class Authentication {
 	 */
 	public Set<CustomRole> getCustomRoles(final IncomingToken token, final boolean forceAdmin)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		final UserName name;
 		if (forceAdmin) {
-			getUser(token, new OpReqs("get custom roles as admin")
-					.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
+			name = getUser(token, new OpReqs("get custom roles as admin")
+					.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN))
+					.getUserName();
 		} else {
 			// check for valid token
-			getToken(token, new OpReqs("get custom roles").types(TokenType.LOGIN));
+			name = getToken(token, new OpReqs("get custom roles").types(TokenType.LOGIN))
+					.getUserName();
 		}
-		return storage.getCustomRoles();
+		final Set<CustomRole> customRoles = storage.getCustomRoles();
+		logInfo("User {} accessed all custom roles", name.getName());
+		return customRoles;
 	}
 
 	/** Update a user's custom roles.
@@ -1489,9 +1496,31 @@ public class Authentication {
 		 * to set roles for users that users can't change. However, there's no reason not to allow
 		 * users to remove standard roles, which are privileges, not tags 
 		 */
-		getUser(userToken, new OpReqs("update custom roles for user {}", userName.getName())
+		final AuthUser admin = getUser(userToken,
+				new OpReqs("update custom roles for user {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.updateCustomRoles(userName, addRoles, removeRoles);
+		logCustomRoleUpdate(admin.getUserName(), userName, addRoles, removeRoles);
+	}
+	
+	private void logCustomRoleUpdate(
+			final UserName actingUser,
+			final UserName user,
+			final Set<String> addRoles,
+			final Set<String> removeRoles) {
+		if (!addRoles.isEmpty()) {
+			logInfo("Admin {} added custom roles to user {}: {}", actingUser.getName(),
+					user.getName(), customRolesToString(addRoles));
+		}
+		if (!removeRoles.isEmpty()) {
+			logInfo("Admin {} removed custom roles from user {}: {}", actingUser.getName(),
+					user.getName(), customRolesToString(removeRoles));
+		}
+	}
+	
+	private String customRolesToString(final Set<String> roles) {
+		return String.join(", ", roles.stream().sorted()
+				.collect(Collectors.toList()));
 	}
 
 	/** Get an ordered list of the supported and enabled identity providers.
