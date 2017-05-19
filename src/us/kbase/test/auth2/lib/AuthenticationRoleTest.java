@@ -6,6 +6,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
@@ -19,6 +20,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -37,6 +39,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationRoleTest {
@@ -73,6 +76,10 @@ public class AuthenticationRoleTest {
 		when(storage.getUser(new UserName("baz"))).thenReturn(u, (AuthUser) null);
 		
 		auth.removeRoles(token, set(Role.SERV_TOKEN, Role.ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User baz removed roles from user baz: Admin, ServToken",
+				Authentication.class));
 		
 		verify(storage).updateRoles(
 				new UserName("baz"), Collections.emptySet(), set(Role.ADMIN, Role.SERV_TOKEN));
@@ -240,48 +247,78 @@ public class AuthenticationRoleTest {
 	public void updateRolesAsStdUserRemove() throws Exception {
 		succeedUpdateRoles(new UserName("whee"), new UserName("whee"), Role.DEV_TOKEN,
 				Collections.emptySet(), set(Role.DEV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User whee removed roles from user whee: DevToken", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsAdmin() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.ADMIN,
 				set(Role.DEV_TOKEN), set(Role.SERV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"User admin added roles to user whee: DevToken", Authentication.class),
+				new LogEvent(Level.INFO,
+					"User admin removed roles from user whee: ServToken", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsAdminSelf() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("admin"), Role.ADMIN,
 				set(Role.DEV_TOKEN), set(Role.ADMIN, Role.SERV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin added roles to user admin: DevToken", Authentication.class),
+			new LogEvent(Level.INFO,
+				"User admin removed roles from user admin: Admin, ServToken",
+					Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminAdd() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.CREATE_ADMIN,
 				set(Role.ADMIN), Collections.emptySet());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin added roles to user whee: Admin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminRemove() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.CREATE_ADMIN,
 				Collections.emptySet(), set(Role.ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin removed roles from user whee: Admin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminSelfRemove() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("admin"), Role.CREATE_ADMIN,
 				Collections.emptySet(), set(Role.CREATE_ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin removed roles from user admin: CreateAdmin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsRootAdd() throws Exception {
 		succeedUpdateRoles(UserName.ROOT, new UserName("whee"), Role.ROOT, set(Role.CREATE_ADMIN),
 				Collections.emptySet());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User ***ROOT*** added roles to user whee: CreateAdmin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsRootRemove() throws Exception {
 		succeedUpdateRoles(UserName.ROOT, new UserName("whee"), Role.ROOT, Collections.emptySet(),
 				set(Role.CREATE_ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User ***ROOT*** removed roles from user whee: CreateAdmin",
+				Authentication.class));
 	}
 	
 	@Test
@@ -377,10 +414,12 @@ public class AuthenticationRoleTest {
 		for (final Role r: Arrays.asList(Role.ROOT, Role.ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
 			failUpdateRoles(UserName.ROOT, new UserName("foo"), Role.ROOT, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User ***ROOT*** is not authorized to grant role(s): " +
+					r.getDescription()));
 			failUpdateRoles(UserName.ROOT, new UserName("foo"), Role.ROOT, Collections.emptySet(),
 					set(r), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to remove role(s): " + r.getDescription()));
+							"User ***ROOT*** is not authorized to remove role(s): " +
+									r.getDescription()));
 		}
 	}
 	
@@ -390,11 +429,13 @@ public class AuthenticationRoleTest {
 				Role.DEV_TOKEN)) {
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.CREATE_ADMIN, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User bleah is not authorized to grant role(s): " +
+									r.getDescription()));
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.CREATE_ADMIN,
 					Collections.emptySet(), set(r),
 							new UnauthorizedException(ErrorType.UNAUTHORIZED,
-									"Not authorized to remove role(s): " + r.getDescription()));
+									"User bleah is not authorized to remove role(s): " +
+											r.getDescription()));
 		}
 	}
 	
@@ -403,11 +444,13 @@ public class AuthenticationRoleTest {
 		for (final Role r: Arrays.asList(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN)) {
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.ADMIN, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User bleah is not authorized to grant role(s): " +
+									r.getDescription()));
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.ADMIN,
 					Collections.emptySet(), set(r),
 							new UnauthorizedException(ErrorType.UNAUTHORIZED,
-									"Not authorized to remove role(s): " + r.getDescription()));
+									"User bleah is not authorized to remove role(s): " +
+											r.getDescription()));
 		}
 	}
 	

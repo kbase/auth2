@@ -23,6 +23,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -1330,7 +1331,7 @@ public class Authentication {
 		if (!intersect.isEmpty()) {
 			throw new IllegalParameterException(
 					"One or more roles is to be both removed and added: " +
-					String.join(", ", rolesToDescriptions(intersect)));
+							rolesToString(intersect, r -> r.getDescription()));
 		}
 		if (userName.isRoot()) {
 			throw new UnauthorizedException("Cannot change ROOT roles");
@@ -1344,23 +1345,46 @@ public class Authentication {
 		sub.removeAll(actinguser.getGrantableRoles());
 		
 		if (!add.isEmpty()) {
-			throwUnauthorizedToManageRoles("grant", add);
+			throwUnauthorizedToManageRoles(actinguser, "grant", add);
 		}
 		if (!sub.isEmpty() && !userName.equals(actinguser.getUserName())) {
-			throwUnauthorizedToManageRoles("remove", sub);
+			throwUnauthorizedToManageRoles(actinguser, "remove", sub);
 		}
 		storage.updateRoles(userName, addRoles, removeRoles);
+		logRoleUpdate(actinguser.getUserName(), userName, addRoles, removeRoles);
 	}
 
-	private void throwUnauthorizedToManageRoles(final String action, final Set<Role> roles)
+	private void logRoleUpdate(
+			final UserName actingUser,
+			final UserName user,
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles) {
+		if (!addRoles.isEmpty()) {
+			logInfo("User {} added roles to user {}: {}", actingUser.getName(),
+					user.getName(), rolesToString(addRoles, r -> r.getID()));
+		}
+		if (!removeRoles.isEmpty()) {
+			logInfo("User {} removed roles from user {}: {}", actingUser.getName(),
+					user.getName(), rolesToString(removeRoles, r -> r.getID()));
+		}
+	}
+
+	private void throwUnauthorizedToManageRoles(
+			final AuthUser actingUser,
+			final String action,
+			final Set<Role> roles)
 			throws UnauthorizedException {
 		throw new UnauthorizedException(
-				String.format("Not authorized to %s role(s): %s", action,
-						String.join(", ", rolesToDescriptions(roles))));
+				String.format("User %s is not authorized to %s role(s): %s",
+						actingUser.getUserName().getName(), action,
+						rolesToString(roles, r -> r.getDescription())));
 	}
 
-	private Set<String> rolesToDescriptions(final Set<Role> roles) {
-		return roles.stream().map(r -> r.getDescription()).collect(Collectors.toSet());
+	private String rolesToString(
+			final Set<Role> roles,
+			final Function<? super Role, ? extends String> mapper) {
+		return String.join(", ", roles.stream().sorted().map(mapper)
+				.collect(Collectors.toSet()));
 	}
 
 	/** Create or update a custom role.
