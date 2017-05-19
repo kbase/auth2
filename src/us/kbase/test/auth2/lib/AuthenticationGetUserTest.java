@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 
 import java.time.Instant;
 import java.util.List;
@@ -17,6 +18,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -33,6 +35,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserTest {
@@ -52,7 +55,7 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), Instant.now())
+				new UserName("whee"), new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.build();
 		
@@ -107,6 +110,10 @@ public class AuthenticationGetUserTest {
 		
 		try {
 			final AuthUser got = auth.getUser(token);
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"User %s accessed their user data", user.getUserName().getName()),
+					Authentication.class));
 		
 			assertThat("incorrect user", got, is(user));
 		} catch (Throwable th) {
@@ -135,7 +142,7 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getOtherUserSameUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), Instant.now())
+				new UserName("whee"), new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.build();
 		
@@ -145,7 +152,7 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getOtherUserDiffUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				new UserName("whee"), new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.build();
 		
@@ -252,6 +259,10 @@ public class AuthenticationGetUserTest {
 		when(storage.getUser(target.getUserName())).thenReturn(target);
 		try {
 			final ViewableUser vu = auth.getUser(token, target.getUserName());
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"User %s accessed user %s's user data", user.getUserName().getName(),
+					target.getUserName().getName()), Authentication.class));
 		
 			assertThat("incorrect user", vu, is(new ViewableUser(target, includeEmail)));
 		} catch (Throwable th) {
@@ -431,6 +442,10 @@ public class AuthenticationGetUserTest {
 		
 		try {
 			final AuthUser gotUser = auth.getUserAsAdmin(t, user.getUserName());
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s accessed user %s's user data", admin.getUserName().getName(),
+					user.getUserName().getName()), Authentication.class));
 		
 			assertThat("incorrect user", gotUser, is(user));
 		} catch (Throwable th) {

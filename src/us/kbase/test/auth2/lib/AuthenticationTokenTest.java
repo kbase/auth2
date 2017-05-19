@@ -958,7 +958,7 @@ public class AuthenticationTokenTest {
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		failCreateToken(user, TokenType.DEV, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"User foo is not authorized to create this token type."));
+				"User foo is not authorized to create the Developer token type."));
 	}
 	
 	@Test
@@ -970,7 +970,7 @@ public class AuthenticationTokenTest {
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		failCreateToken(user, TokenType.SERV, new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"User foo is not authorized to create this token type."));
+				"User foo is not authorized to create the Service token type."));
 	}
 	
 	@Test

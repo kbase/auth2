@@ -873,8 +873,8 @@ public class Authentication {
 					Role.SERV_TOKEN : Role.DEV_TOKEN;
 			if (!reqRole.isSatisfiedBy(au.getRoles())) {
 				throw new UnauthorizedException(String.format(
-						"User %s is not authorized to create this token type.",
-						au.getUserName().getName()));
+						"User %s is not authorized to create the %s token type.",
+						au.getUserName().getName(), tokenType.getDescription()));
 			}
 		}
 		final AuthConfig c = cfg.getAppConfig();
@@ -900,7 +900,7 @@ public class Authentication {
 	public AuthUser getUser(final IncomingToken token)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException {
 		final AuthUser u = getUserSuppressUnauthorized(token, "get self user");
-//		logInfo("User {} accessed their user data", u.getUserName().getName());
+		logInfo("User {} accessed their user data", u.getUserName().getName());
 		return u;
 	}
 
@@ -975,7 +975,7 @@ public class Authentication {
 			final IncomingToken token,
 			final UserName user)
 			throws AuthStorageException, InvalidTokenException,
-			NoSuchUserException, DisabledUserException {
+				NoSuchUserException, DisabledUserException {
 		nonNull(user, "userName");
 		final AuthUser requestingUser = getUserSuppressUnauthorized(token, "get viewable user");
 		final AuthUser otherUser = storage.getUser(user);
@@ -984,11 +984,13 @@ public class Authentication {
 			throw new NoSuchUserException(otherUser.getUserName().getName());
 		}
 		final boolean sameUser = requestingUser.getUserName().equals(otherUser.getUserName());
+		logInfo("User {} accessed user {}'s user data", requestingUser.getUserName().getName(),
+				otherUser.getUserName().getName());
 		return new ViewableUser(otherUser, sameUser);
 	}
 
 	/** Get a user as an admin.
-	 * @param adminToken a token for a user with the administator, create administator, or root
+	 * @param adminToken a token for a user with the administrator, create administrator, or root
 	 * role.
 	 * @param userName the name of the user account to get.
 	 * @return the user.
@@ -1004,9 +1006,13 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException,
 			InvalidTokenException, UnauthorizedException {
 		nonNull(userName, "userName");
-		getUser(adminToken, new OpReqs("get user {} as admin", userName.getName())
+		final AuthUser admin = getUser(adminToken,
+				new OpReqs("get user {} as admin", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
-		return storage.getUser(userName);
+		final AuthUser user = storage.getUser(userName);
+		logInfo("Admin {} accessed user {}'s user data", admin.getUserName().getName(),
+				userName.getName());
+		return user;
 	}
 
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
