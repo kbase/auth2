@@ -478,8 +478,8 @@ public class Authentication {
 		nonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
-//			logInfo("Local user {} log in attempt. Password reset is required",
-//					userName.getName());
+			logInfo("Local user {} log in attempt. Password reset is required",
+					userName.getName());
 			return new LocalLoginResult(u.getUserName());
 		}
 		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
@@ -558,7 +558,7 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			Password.clearPasswordArray(pwd_copy);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), false);
-//			logInfo("Password change for local user " + userName.getName());
+			logInfo("Password change for local user " + userName.getName());
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
@@ -603,8 +603,8 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(temporaryPassword, salt);
 			Password.clearPasswordArray(temporaryPassword);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), true);
-//			logInfo("Admin {} changed user {}'s password", admin.getUserName().getName(),
-//					userName.getName());
+			logInfo("Admin {} changed user {}'s password", admin.getUserName().getName(),
+					userName.getName());
 		} catch (Throwable t) {
 			if (pwd != null) {
 				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
@@ -634,13 +634,13 @@ public class Authentication {
 		try {
 			user = storage.getUser(userName);
 		} catch (NoSuchUserException e) {
-//			logErr("Admin {} tried to get non-existant user {}", admin.getUserName().getName(),
-//					userName.getName());
+			logErr("Admin {} tried to get non-existant user {}", admin.getUserName().getName(),
+					userName.getName());
 			throw e;
 		}
 		if (!user.isLocal()) {
-//			logErr("Admin {} tried to get standard user {} as a local user",
-//					admin.getUserName().getName(), userName.getName());
+			logErr("Admin {} tried to get standard user {} as a local user",
+					admin.getUserName().getName(), userName.getName());
 			throw new NoSuchUserException(String.format(
 					"%s is not a local user and has no password", userName.getName()));
 		}
@@ -654,13 +654,13 @@ public class Authentication {
 			return admin; //ok, duh. It's root.
 		}
 		if (user.isRoot()) { // already know admin isn't root, so bail out.
-//			logErr("Admin {} tried to reset the root password", admin.getUserName().getName());
+			logErr("Admin {} tried to reset the ROOT password", admin.getUserName().getName());
 			throw new UnauthorizedException("Only root can reset root password");
 		}
 		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
 		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
-//			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
-//					user.getUserName().getName());
+			logErr("Admin {} tried to reset admin with create power {}'s password",
+					admin.getUserName().getName(), user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with create administrator role");
 		}
@@ -668,8 +668,8 @@ public class Authentication {
 		 * that admin has to have CREATE_ADMIN to proceed. 
 		 */
 		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
-//			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
-//					user.getUserName().getName());
+			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
+					user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with administrator role");
 		}
@@ -690,9 +690,12 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
 		nonNull(userName, "userName");
-		checkCanResetPassword(token, userName,
+		final AuthUser admin = checkCanResetPassword(token, userName,
 				"force password reset for user {}", userName.getName());
 		storage.forcePasswordReset(userName);
+		logInfo("Admin {} required user {} to reset their password on the next login",
+				admin.getUserName().getName(), userName.getName());
+		
 	}
 
 	/** Force all local users to reset their password on their next login.
@@ -704,9 +707,11 @@ public class Authentication {
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, new OpReqs("force password reset for all users")
-				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN)); // force admin
+		final AuthUser admin = getUser(token, new OpReqs("force password reset for all users")
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN));
 		storage.forcePasswordReset();
+		logInfo("Admin {} required all users to reset their password on the next login",
+				admin.getUserName().getName());
 	}
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
@@ -720,8 +725,8 @@ public class Authentication {
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		setLastLogin(userName);
-//		logInfo("Logged in user {} with token {}",
-//				userName.getName(), nt.getStoredToken().getId());
+		logInfo("Logged in user {} with token {}",
+				userName.getName(), nt.getStoredToken().getId());
 		return nt;
 	}
 
