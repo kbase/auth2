@@ -20,7 +20,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -289,6 +291,13 @@ public class AuthenticationTester {
 		executeStandardUserCheckingTests(ao, failingRoles, DEFAULT_FAILING_TOKEN_TYPES);
 	}
 	
+	private static final TreeSet<Role> ALL_ROLES = new TreeSet<>();
+	static {
+		for (final Role r: Role.values()) {
+			ALL_ROLES.add(r);
+		}
+	}
+	
 	public static void executeStandardUserCheckingTests(
 			final AuthOperation ao,
 			final Set<Role> failingRoles,
@@ -296,11 +305,17 @@ public class AuthenticationTester {
 		executeStandardTokenCheckingTests(ao, failingTypes);
 		testNoUserForToken(ao);
 		testDisabledUser(ao);
+		@SuppressWarnings("unchecked")
+		final Set<Role> allRoles = (Set<Role>) ALL_ROLES.clone();
+		allRoles.removeAll(failingRoles);
+		final String roleString = String.join(", ", allRoles.stream().map(r -> r.getID())
+				.collect(Collectors.toList()));
+		
 		for (final Role r: failingRoles) {
-			testUnauthorizedRole(ao, r);
+			testUnauthorizedRole(ao, r, roleString);
 		}
 		if (!failingRoles.isEmpty()) {
-			testUserWithoutRoles(ao);
+			testUserWithoutRoles(ao, roleString);
 		}
 	}
 	
@@ -393,11 +408,16 @@ public class AuthenticationTester {
 		verify(storage).deleteTokens(new UserName("foo"));
 	}
 	
-	private static void testUnauthorizedRole(final AuthOperation ao, final Role r)
+	private static void testUnauthorizedRole(
+			final AuthOperation ao,
+			final Role r,
+			final String roleString)
 			throws Exception {
 		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
+		
+		ao.getLogAccumulator().clear();
 		
 		final UserName un;
 		if (Role.ROOT.equals(r)) {
@@ -417,12 +437,20 @@ public class AuthenticationTester {
 		
 		failExecute(ao, auth, "unauthorized user test for role " + r,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		
+		assertLogEventsCorrect(ao.getLogAccumulator(), new LogEvent(Level.ERROR, String.format(
+				"User %s does not have one of the required roles [%s] for operation " +
+						ao.getOperationString(), un.getName(), roleString),
+						Authentication.class));
 	}
 	
-	private static void testUserWithoutRoles(final AuthOperation ao) throws Exception {
+	private static void testUserWithoutRoles(final AuthOperation ao, final String roleString)
+			throws Exception {
 		final TestMocks testauth = ao.getTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
+		
+		ao.getLogAccumulator().clear();
 		
 		when(storage.getToken(ao.getIncomingToken().getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
@@ -434,6 +462,11 @@ public class AuthenticationTester {
 		
 		failExecute(ao, auth, "unauthorized user test",
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
+		
+		assertLogEventsCorrect(ao.getLogAccumulator(), new LogEvent(Level.ERROR, String.format(
+				"User foo does not have one of the required roles [%s] for operation " +
+						ao.getOperationString(), roleString),
+						Authentication.class));
 	}
 	
 	public static void setupValidUserResponses(

@@ -925,7 +925,7 @@ public class Authentication {
 					.collect(Collectors.toSet());
 			has.retainAll(reqs.requiredRoles); // intersection
 			if (has.isEmpty()) {
-//				logUnauthorized(u.getUserName(), reqs);
+				logUnauthorized(u.getUserName(), reqs);
 				throw new UnauthorizedException();
 			}
 		}
@@ -938,7 +938,7 @@ public class Authentication {
 		final String rolesStr = String.join(", ", roles);
 		final Object[] args = ArrayUtils.addAll(
 				new Object[] {name.getName(), rolesStr}, reqs.args);
-		logErr("User {} does not have one of the required roles {} for operation " + reqs.format,
+		logErr("User {} does not have one of the required roles [{}] for operation " + reqs.format,
 				args);
 		
 	}
