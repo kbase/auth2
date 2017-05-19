@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -25,6 +26,7 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
@@ -51,6 +53,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTokenTest {
@@ -98,13 +101,16 @@ public class AuthenticationTokenTest {
 		final Instant now = Instant.now();
 		final UUID id = UUID.randomUUID();
 		final StoredToken expected = StoredToken.getBuilder(
-				TokenType.LOGIN, id, new UserName("foo")).withLifeTime(now, now).build();
+				TokenType.DEV, id, new UserName("foo")).withLifeTime(now, now).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(expected);
 		
 		final StoredToken ht = auth.getToken(t);
 		assertThat("incorrect token", ht, is(StoredToken.getBuilder(
-				TokenType.LOGIN, id, new UserName("foo")).withLifeTime(now, now).build()));
+				TokenType.DEV, id, new UserName("foo")).withLifeTime(now, now).build()));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, 
+				"User foo accessed DEV token " + id, Authentication.class));
 	}
 	
 	@Test
@@ -172,6 +178,9 @@ public class AuthenticationTokenTest {
 		
 		final TokenSet ts = auth.getTokens(t);
 		assertThat("incorrect token set", ts, is(new TokenSet(expected, set(TOKEN2, TOKEN1))));
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "User foo accessed their tokens", Authentication.class));
 	}
 	
 	@Test
@@ -285,6 +294,9 @@ public class AuthenticationTokenTest {
 		try {
 			final Set<StoredToken> tokens = auth.getTokens(t, new UserName("foo"));
 			assertThat("incorrect tokens", tokens, is(set(TOKEN1, TOKEN2)));
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s accessed user foo's tokens", admin.getUserName().getName()),
+					Authentication.class));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());
@@ -337,6 +349,9 @@ public class AuthenticationTokenTest {
 		
 		verify(storage).deleteToken(new UserName("foo"), id);
 		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User foo revoked token " + id, Authentication.class));
+		
 		assertThat("incorrect token", res, is(Optional.of(ht)));
 	}
 	
@@ -375,8 +390,9 @@ public class AuthenticationTokenTest {
 		final IncomingToken t = new IncomingToken("foobar");
 		
 		final UUID target = UUID.randomUUID();
+		final UUID id = UUID.randomUUID();
 		final StoredToken ht = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				TokenType.LOGIN, id, new UserName("foo"))
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
@@ -384,6 +400,9 @@ public class AuthenticationTokenTest {
 		auth.revokeToken(t, target);
 		
 		verify(storage).deleteToken(new UserName("foo"), target);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User foo revoked token " + id, Authentication.class));
 	}
 	
 	@Test
@@ -553,6 +572,9 @@ public class AuthenticationTokenTest {
 			auth.revokeToken(t, new UserName("whee"), target);
 		
 			verify(storage).deleteToken(new UserName("whee"), target);
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s revoked user whee's token %s",
+					admin.getUserName().getName(), target), Authentication.class));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());
@@ -591,6 +613,9 @@ public class AuthenticationTokenTest {
 		auth.revokeTokens(t);
 		
 		verify(storage).deleteTokens(new UserName("foo"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(
+				Level.INFO, "User foo revoked all their tokens", Authentication.class));
 	}
 	
 	@Test
@@ -699,6 +724,10 @@ public class AuthenticationTokenTest {
 			auth.revokeAllTokens(t);
 		
 			verify(storage).deleteTokens();
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s revoked all tokens system wide", admin.getUserName().getName()),
+					Authentication.class));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());
@@ -784,6 +813,10 @@ public class AuthenticationTokenTest {
 			auth.revokeAllTokens(t, new UserName("whee"));
 		
 			verify(storage).deleteTokens(new UserName("whee"));
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s revoked all tokens for user whee", admin.getUserName().getName()),
+					Authentication.class));
 		} catch (Throwable th) {
 			if (admin.isDisabled()) {
 				verify(storage).deleteTokens(admin.getUserName());
@@ -1007,6 +1040,10 @@ public class AuthenticationTokenTest {
 					.withContext(TokenCreationContext.getBuilder()
 							.withNullableDevice("device").build()).build(),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"User %s created %s token %s", user.getUserName().getName(), tokenType, id),
+					Authentication.class));
 			
 			final NewToken expected = new NewToken(
 					StoredToken.getBuilder(tokenType, id, user.getUserName())

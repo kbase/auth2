@@ -759,7 +759,9 @@ public class Authentication {
 	public TokenSet getTokens(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		final StoredToken ht = getToken(token, new OpReqs("get tokens").types(TokenType.LOGIN));
-		return new TokenSet(ht, storage.getTokens(ht.getUserName()));
+		final TokenSet tokenSet = new TokenSet(ht, storage.getTokens(ht.getUserName()));
+		logInfo("User {} accessed their tokens", ht.getUserName().getName());
+		return tokenSet;
 	}
 
 	/** Get the tokens associated with an arbitrary user account.
@@ -775,12 +777,15 @@ public class Authentication {
 	public Set<StoredToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, new OpReqs("get tokens for user {}", userName.getName())
+		final AuthUser admin = getUser(token,
+				new OpReqs("get tokens for user {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
-		return storage.getTokens(userName);
+		final Set<StoredToken> tokens = storage.getTokens(userName);
+		logInfo("Admin {} accessed user {}'s tokens",
+				admin.getUserName().getName(), userName.getName());
+		return tokens;
 	}
 
-	// converts a no such token exception into an invalid token exception.
 	/** Get details about a token.
 	 * @param token the token in question.
 	 * @return the token's details.
@@ -789,7 +794,10 @@ public class Authentication {
 	 */
 	public StoredToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
-		return getTokenSuppressUnauthorized(token, "get token");
+		final StoredToken st = getTokenSuppressUnauthorized(token, "get token");
+		logInfo("User {} accessed {} token {}", st.getUserName().getName(), st.getTokenType(),
+				st.getId());
+		return st;
 	}
 
 	private StoredToken getTokenSuppressUnauthorized(
@@ -804,6 +812,7 @@ public class Authentication {
 		}
 	}
 	
+	// converts a no such token exception into an invalid token exception.
 	private StoredToken getToken(final IncomingToken token, final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(token, "token");
@@ -870,14 +879,14 @@ public class Authentication {
 		}
 		final AuthConfig c = cfg.getAppConfig();
 		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
-		final Instant now = clock.instant();
-		final NewToken nt = new NewToken(StoredToken.getBuilder(
-					tokenType, randGen.randomUUID(), au.getUserName())
-				.withLifeTime(now, life)
+		final UUID id = randGen.randomUUID();
+		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, au.getUserName())
+				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
 				.withTokenName(tokenName).build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
+		logInfo("User {} created {} token {}", au.getUserName().getName(), tokenType, id);
 		return nt;
 	}
 	
@@ -890,7 +899,9 @@ public class Authentication {
 	 */
 	public AuthUser getUser(final IncomingToken token)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException {
-		return getUserSuppressUnauthorized(token, "get self user");
+		final AuthUser u = getUserSuppressUnauthorized(token, "get self user");
+//		logInfo("User {} accessed their user data", u.getUserName().getName());
+		return u;
 	}
 
 	private AuthUser getUserSuppressUnauthorized(
@@ -1153,6 +1164,7 @@ public class Authentication {
 		final StoredToken ht = getToken(token, new OpReqs("revoke token {}", tokenID)
 				.types(TokenType.LOGIN));
 		storage.deleteToken(ht.getUserName(), tokenID);
+		logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
 	}
 
 	/* maybe combine this with the above method...? The username is a good check that you're
@@ -1174,12 +1186,15 @@ public class Authentication {
 			final UserName userName,
 			final UUID tokenID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			NoSuchTokenException {
+				NoSuchTokenException {
 		nonNull(userName, "userName");
 		nonNull(tokenID, "tokenID");
-		getUser(token, new OpReqs("revoke token {} for user {}", tokenID, userName.getName())
-				.types(TokenType.LOGIN).roles(Role.ADMIN)); // ensure admin
+		final AuthUser admin = getUser(token,
+				new OpReqs("revoke token {} for user {}", tokenID, userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteToken(userName, tokenID);
+		logInfo("Admin {} revoked user {}'s token {}", admin.getUserName().getName(),
+				userName.getName(), tokenID);
 		
 	}
 	
@@ -1196,6 +1211,7 @@ public class Authentication {
 		try {
 			ht = storage.getToken(token.getHashedToken());
 			storage.deleteToken(ht.getUserName(), ht.getId());
+			logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
 			return Optional.of(ht);
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
@@ -1214,6 +1230,7 @@ public class Authentication {
 		final StoredToken ht = getToken(token, new OpReqs("revoke owned tokens")
 				.types(TokenType.LOGIN));
 		storage.deleteTokens(ht.getUserName());
+		logInfo("User {} revoked all their tokens", ht.getUserName().getName());
 	}
 	
 	/** Revokes all tokens across all users, including the current user.
@@ -1225,8 +1242,10 @@ public class Authentication {
 	 */
 	public void revokeAllTokens(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, new OpReqs("revoke all tokens").types(TokenType.LOGIN).roles(Role.ADMIN));
+		final AuthUser admin = getUser(token, new OpReqs("revoke all tokens")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteTokens();
+		logInfo("Admin {} revoked all tokens system wide", admin.getUserName().getName());
 	}
 	
 
@@ -1241,9 +1260,12 @@ public class Authentication {
 	public void revokeAllTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, new OpReqs("revoke all tokens for user {}", userName.getName())
-				.types(TokenType.LOGIN).roles(Role.ADMIN)); // ensure admin
+		final AuthUser admin = getUser(token,
+				new OpReqs("revoke all tokens for user {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteTokens(userName);
+		logInfo("Admin {} revoked all tokens for user {}",
+				admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Remove roles from a user.
