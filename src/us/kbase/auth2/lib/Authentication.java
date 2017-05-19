@@ -415,12 +415,14 @@ public class Authentication {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
-		if (userName.isRoot()) {
-			throw new UnauthorizedException("Cannot create ROOT user");
-		}
 		final AuthUser admin = getUser(adminToken,
 				new OpReqs("create local user {}", userName.getName())
 						.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
+		if (userName.isRoot()) {
+			logErr("User {} attempted to create ROOT user and was thwarted",
+					admin.getUserName().getName());
+			throw new UnauthorizedException("Cannot create ROOT user");
+		}
 		Password pwd = null;
 		char[] pwd_copy = null;
 		byte[] salt = null;

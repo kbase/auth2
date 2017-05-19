@@ -312,12 +312,33 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createRootUserFail() throws Exception {
+		
 		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		failCreateLocalUser(auth, null, UserName.ROOT, new DisplayName("bar"),
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
+
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ROOT).build();
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
+		
+		failCreateLocalUser(auth, token, UserName.ROOT, new DisplayName("bar"),
 				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Cannot create ROOT user"));
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.ERROR,
+						"User ***ROOT*** attempted to create ROOT user and was thwarted",
+						Authentication.class));
 	}
 	
 	public void failCreateLocalUser(
