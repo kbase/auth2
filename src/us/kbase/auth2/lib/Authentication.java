@@ -71,6 +71,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -1588,8 +1589,11 @@ public class Authentication {
 	 */
 	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
-		return new LoginToken(storeErrorTemporarily(
-				providerError, ErrorType.ID_PROVIDER_ERROR, LOGIN_TOKEN_LIFETIME_MS));
+		final TemporaryToken tt = storeErrorTemporarily(
+				providerError, ErrorType.ID_PROVIDER_ERROR, LOGIN_TOKEN_LIFETIME_MS);
+		logErr("Stored temporary token {} with login identity provider error {}",
+				tt.getId(), providerError);
+		return new LoginToken(tt);
 	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1668,7 +1672,9 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		return new LoginToken(storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS));
+		final TemporaryToken tt = storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS);
+		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
+		return new LoginToken(tt);
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -1689,9 +1695,12 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
 		final TemporaryIdentities ids = getTemporaryIdentities(token);
 		if (ids.getIdentities().get().isEmpty()) {
-			throw new RuntimeException(
-					"Programming error: temporary login token stored with no identities");
+			throw new RuntimeException(String.format(
+					"Programming error: temporary login token %s stored with no identities",
+					ids.getId()));
 		}
+		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
+				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
 	}
 
@@ -1800,10 +1809,18 @@ public class Authentication {
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("Didn't supply any roles", e);
 		}
+		final RemoteIdentityID rid = match.get().getRemoteID();
+		logInfo("Created user {} linked to remote identity {} {} {} {}", userName.getName(),
+				rid.getID(), rid.getProviderName(), rid.getProviderIdentityId(),
+				match.get().getDetails().getUsername());
 		if (linkAll) {
 			ids.remove(match.get());
 			filterLinkCandidates(ids);
-			link(userName, ids);
+			final int linked = link(userName, ids);
+			if (linked > 0) {
+				logInfo("Linked all {} remaining identities to user {}",
+						linked, userName.getName());
+			}
 		}
 		return login(userName, tokenCtx);
 	}
@@ -1855,16 +1872,21 @@ public class Authentication {
 					"There is no account linked to the provided identity ID");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.get().getRoles())) {
-			throw new UnauthorizedException("Non-admin login is disabled");
+			throw new UnauthorizedException("User " + u.get().getUserName().getName() +
+					" cannot log in because non-admin login is disabled");
 		}
 		if (u.get().isDisabled()) {
-			throw new DisabledUserException();
+			throw new DisabledUserException(u.get().getUserName().getName());
 		}
 		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
 			ids.remove(ri.get());
 			filterLinkCandidates(ids);
-			link(u.get().getUserName(), ids);
+			final int linked = link(u.get().getUserName(), ids);
+			if (linked > 0) {
+				logInfo("Linked all {} remaining identities to user {}",
+						linked, u.get().getUserName().getName());
+			}
 		}
 		return login(u.get().getUserName(), tokenCtx);
 	}
@@ -2209,31 +2231,32 @@ public class Authentication {
 		link(au.getUserName(), identities);
 	}
 	
-	private void link(final UserName userName, final RemoteIdentity id)
+	private int link(final UserName userName, final RemoteIdentity id)
 			throws AuthStorageException, IdentityLinkedException {
-		link(userName, new HashSet<>(Arrays.asList(id)), true);
+		return link(userName, new HashSet<>(Arrays.asList(id)), true);
 	}
 
-	private void link(final UserName userName, final Set<RemoteIdentity> identities)
+	private int link(final UserName userName, final Set<RemoteIdentity> identities)
 			throws AuthStorageException {
 		try {
-			link(userName, identities, false);
+			return link(userName, identities, false);
 		} catch (IdentityLinkedException e) {
-			// don't care if we miss an identity in this context. This catch block is here simply
-			// to avoid having the checked exception in the throws clause
+			throw new RuntimeException("explicitly said not to throw an exception for this", e);
 		}
 	}
 	
 	// assumes user is not local, and that the user exists
-	private void link(
+	private int link(
 			final UserName userName,
 			final Set<RemoteIdentity> identities,
 			final boolean throwExceptionIfIdentityLinked)
 			throws AuthStorageException, IdentityLinkedException {
+		int linked = 0;
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
 				storage.link(userName, ri);
+				linked++;
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
 						userName.getName(), e);
@@ -2246,6 +2269,7 @@ public class Authentication {
 						"Programming error: this method should not be called on a local user", e);
 			}
 		}
+		return linked;
 	}
 
 	/** Remove a remote identity from a user account.
