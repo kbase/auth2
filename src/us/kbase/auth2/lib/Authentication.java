@@ -1931,9 +1931,11 @@ public class Authentication {
 	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(policyID, "policyID");
-		getUser(token, new OpReqs("remove policy ID {}", policyID.getName())
+		final AuthUser admin = getUser(token, new OpReqs("remove policy ID {}", policyID.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.removePolicyID(policyID);
+		logInfo("Admin {} removed policy ID {} from the system", admin.getUserName().getName(),
+				policyID.getName());
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party

@@ -4,6 +4,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
@@ -14,6 +15,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -27,6 +29,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationPolicyIDTest {
@@ -50,7 +53,30 @@ public class AuthenticationPolicyIDTest {
 	
 	@Test
 	public void removePolicyID() throws Exception {
-		removePolicyID(new UserName("foo"), Role.ADMIN);
+		final UserName adminName = new UserName("addy");
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		final StoredToken htoken = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), adminName)
+				.withLifeTime(Instant.now(), Instant.now()).build();
+		
+		final AuthUser u = AuthUser.getBuilder(
+				adminName, new DisplayName("foobar"), Instant.now())
+				.withRole(Role.ADMIN).build();
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
+		
+		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
+		
+		auth.removePolicyID(token, new PolicyID("foo"));
+		
+		verify(storage).removePolicyID(new PolicyID("foo"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin addy removed policy ID foo from the system", Authentication.class));
 	}
 	
 	@Test
@@ -87,31 +113,7 @@ public class AuthenticationPolicyIDTest {
 		failRemovePolicyID(auth, new IncomingToken("foo"), null,
 				new NullPointerException("policyID"));
 	}
-	
 
-	private void removePolicyID(final UserName adminName, final Role adminRole) throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), adminName)
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
-				.withRole(adminRole).build();
-
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(adminName)).thenReturn(u, (AuthUser) null);
-		
-		auth.removePolicyID(token, new PolicyID("foo"));
-		
-		verify(storage).removePolicyID(new PolicyID("foo"));
-	}
-	
 	private void failRemovePolicyID(
 			final Authentication auth,
 			final IncomingToken token,
