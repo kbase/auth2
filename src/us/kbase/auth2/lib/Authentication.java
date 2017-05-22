@@ -1948,8 +1948,11 @@ public class Authentication {
 	public TemporaryToken linkProviderError(final String providerError)
 			throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
-		return storeErrorTemporarily(
+		final TemporaryToken tt = storeErrorTemporarily(
 				providerError, ErrorType.ID_PROVIDER_ERROR, LINK_TOKEN_LIFETIME_MS);
+		logErr("Stored temporary token {} with link identity provider error {}",
+				tt.getId(), providerError);
+		return tt;
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party

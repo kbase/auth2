@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
@@ -28,6 +29,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
@@ -66,6 +68,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLinkTest {
@@ -761,9 +764,12 @@ public class AuthenticationLinkTest {
 		
 		assertThat("incorrect login token", tt, is(expected));
 		
-		
 		verify(storage).storeErrorTemporarily(expected.getHashedToken(),
 				"errthing", ErrorType.ID_PROVIDER_ERROR);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
+				"Stored temporary token %s with link identity provider error errthing", id),
+				Authentication.class));
 	}
 	
 	@Test
