@@ -858,6 +858,10 @@ public class AuthenticationLinkTest {
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
 				set(storageRemoteID3, storageRemoteID4));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 2 link identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test

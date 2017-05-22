@@ -1994,7 +1994,9 @@ public class Authentication {
 		 * provider. Any controllable error should be thrown when the process flow is back
 		 * under the control of the primary auth UI.
 		 */
-		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+		final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+		logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
+		return tt;
 	}
 	
 	private TemporaryToken storeErrorTemporarily(
