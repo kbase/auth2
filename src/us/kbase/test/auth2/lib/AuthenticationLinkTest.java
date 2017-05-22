@@ -131,12 +131,75 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
 		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+
+		when(storage.link(new UserName("baz"), storageRemoteID)).thenReturn(true);
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken()));
 		
-		verify(storage).link(new UserName("baz"), storageRemoteID);
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Linked identity fda04183ab36b12041695c2f78f07713 Prov id2 user2 to user baz",
+				Authentication.class));
+	}
+	
+	
+	@Test
+	public void linkWithTokenImmediatelyUpdateRemoteIdentity() throws Exception {
+		/* tests the scenario when a link is requested but a race condition means that the
+		 * single returned identity has been added to the user after the set of identities have
+		 *  been filtered
+		 */
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("Prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(idp.getIdentities("authcode", true)).thenReturn(set(new RemoteIdentity(
+				new RemoteIdentityID("Prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+				.thenReturn(null);
+
+		final RemoteIdentity storageRemoteID = new RemoteIdentity(
+				new RemoteIdentityID("Prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
+		
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		// 2nd identity would be added after this point but before the link call below
+
+		when(storage.link(new UserName("baz"), storageRemoteID)).thenReturn(false);
+		
+		final LinkToken lt = auth.link(token, "prov", "authcode");
+		
+		assertThat("incorrect linktoken", lt, is(new LinkToken()));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Identity fda04183ab36b12041695c2f78f07713 Prov id2 user2 is already " +
+				"linked to user baz", Authentication.class));
 	}
 	
 	@Test
@@ -200,6 +263,11 @@ public class AuthenticationLinkTest {
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
 				Collections.emptySet());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"A race condition means that the identity fda04183ab36b12041695c2f78f07713 " +
+				"is already linked to a user other than baz. Stored empty identity set with " +
+				"temporary token %s", tokenID), Authentication.class));
 	}
 	
 	@Test
@@ -262,6 +330,10 @@ public class AuthenticationLinkTest {
 				set(storageRemoteID));
 		
 		verify(storage, never()).link(any(), any());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 1 link identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -326,6 +398,10 @@ public class AuthenticationLinkTest {
 				Collections.emptySet());
 		
 		verify(storage, never()).link(any(), any());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 0 link identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -404,6 +480,10 @@ public class AuthenticationLinkTest {
 				set(storageRemoteID3, storageRemoteID4));
 		
 		verify(storage, never()).link(any(), any());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 2 link identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test

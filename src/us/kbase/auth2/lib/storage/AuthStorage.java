@@ -380,13 +380,14 @@ public interface AuthStorage {
 	 * the details in the database are overwritten by the passed in identity details. 
 	 * @param userName the user to which the remote identity will be linked. 
 	 * @param remoteID the remote identity.
+	 * @return true if a new link was established, false if a link already existed.
 	 * @throws NoSuchUserException if the user does not exist.
 	 * @throws LinkFailedException if the user is a local user.
 	 * @throws IdentityLinkedException if the identity is already linked to another user.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void link(UserName userName, RemoteIdentity remoteID)
+	boolean link(UserName userName, RemoteIdentity remoteID)
 			throws NoSuchUserException, AuthStorageException,
 			LinkFailedException, IdentityLinkedException;
 

@@ -2093,7 +2093,9 @@ public class Authentication {
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			lt = getLinkToken(idp, u.getUserName(), ids.iterator().next());
 		} else { // will store an ID set if said set is empty.
-			lt = new LinkToken(storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS));
+			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+			logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
+			lt = new LinkToken(tt);
 		}
 		return lt;
 	}
@@ -2106,7 +2108,17 @@ public class Authentication {
 			final RemoteIdentity remoteIdentity)
 			throws AuthStorageException, LinkFailedException {
 		try {
-			storage.link(userName, remoteIdentity);
+			final boolean linked = storage.link(userName, remoteIdentity);
+			final RemoteIdentityID id = remoteIdentity.getRemoteID();
+			if (linked) {
+				logInfo("Linked identity {} {} {} {} to user {}", id.getID(), id.getProviderName(),
+						id.getProviderIdentityId(), remoteIdentity.getDetails().getUsername(),
+						userName.getName());
+			} else {
+				logInfo("Identity {} {} {} {} is already linked to user {}", id.getID(),
+						id.getProviderName(), id.getProviderIdentityId(),
+						remoteIdentity.getDetails().getUsername(), userName.getName());
+			}
 			return new LinkToken();
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
@@ -2115,6 +2127,9 @@ public class Authentication {
 			// well, crap. race condition and now there are no link candidates left.
 			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
 					LINK_TOKEN_LIFETIME_MS);
+			logInfo("A race condition means that the identity {} is already linked to a user " +
+					"other than {}. Stored empty identity set with temporary token {}",
+					remoteIdentity.getRemoteID().getID(), userName.getName(), tt.getId());
 			return new LinkToken(tt);
 		}
 	}
@@ -2263,7 +2278,7 @@ public class Authentication {
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
-				storage.link(userName, ri);
+				storage.link(userName, ri); // TODO NOW use returned bool, only add if true
 				linked++;
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +

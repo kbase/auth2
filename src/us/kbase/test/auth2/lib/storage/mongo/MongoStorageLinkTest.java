@@ -53,7 +53,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void link() throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
-		storage.link(new UserName("foo"), REMOTE2);
+		final boolean linked = storage.link(new UserName("foo"), REMOTE2);
+		assertThat("incorrect linked state", linked, is(true));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE2, REMOTE1)));
 	}
@@ -76,9 +77,11 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
-		storage.link(new UserName("foo"), ri); // noop
+		final boolean linked = storage.link(new UserName("foo"), ri); // noop
+		assertThat("incorrect linked state", linked, is(false));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE2, REMOTE1)));
+		
 	}
 	
 	@Test
@@ -89,7 +92,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final RemoteIdentity ri = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
 				new RemoteIdentityDetails("user10", "full10", "email10"));
-		storage.link(new UserName("foo"), ri);
+		final boolean linked = storage.link(new UserName("foo"), ri);
+		assertThat("incorrect linked state", linked, is(false));
 		
 		final RemoteIdentity expected = new RemoteIdentity(
 				new RemoteIdentityID("prov", "bar2"),
@@ -110,8 +114,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
 		final AuthUser au = storage.getUser(new UserName("foo"));
-		final boolean p = (boolean) m.invoke(storage, au, REMOTE2);
-		assertThat("expected successful link", p, is(true));
+		final int p = (int) m.invoke(storage, au, REMOTE2);
+		assertThat("expected successful link", p, is(1));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE1, REMOTE2)));
 	}
@@ -134,8 +138,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final RemoteIdentity ri = new RemoteIdentity(REMOTE2.getRemoteID(),
 				new RemoteIdentityDetails("reflectfail1", "reflectfail2", "fail@fail.com"));
 		
-		final boolean p = (boolean) m.invoke(storage, au, ri);
-		assertThat("expected failed link", p, is(false));
+		final int p = (int) m.invoke(storage, au, ri);
+		assertThat("expected failed link", p, is(-1));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE1, REMOTE2)));
 	}
@@ -155,8 +159,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		storage.link(new UserName("foo"), REMOTE2);
 		
-		final boolean p = (boolean) m.invoke(storage, au, REMOTE3);
-		assertThat("expected failed link", p, is(true));
+		final int p = (int) m.invoke(storage, au, REMOTE3);
+		assertThat("expected successful link", p, is(1));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE1, REMOTE2, REMOTE3)));
 	}
@@ -176,8 +180,8 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 		storage.link(new UserName("foo"), REMOTE2);
 		final AuthUser au = storage.getUser(new UserName("foo"));
 		storage.unlink(new UserName("foo"), REMOTE1.getRemoteID().getID());
-		final boolean p = (boolean) m.invoke(storage, au, REMOTE3);
-		assertThat("expected failed link", p, is(true));
+		final int p = (int) m.invoke(storage, au, REMOTE3);
+		assertThat("expected successful link", p, is(1));
 		assertThat("incorrect identities", storage.getUser(new UserName("foo")).getIdentities(),
 				is(set(REMOTE2, REMOTE3)));
 	}
