@@ -591,7 +591,7 @@ public class AuthenticationLinkTest {
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
 		failLinkWithToken(auth, token, "prov", "foo",
-				new LinkFailedException("Cannot link identities to local accounts"));
+				new LinkFailedException("Cannot link identities to local account foo"));
 	}
 	
 	@Test

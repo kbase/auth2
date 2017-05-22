@@ -2079,7 +2079,8 @@ public class Authentication {
 		final AuthUser u = getUser(token, new OpReqs("link").types(TokenType.LOGIN));
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					u.getUserName().getName());
 		}
 		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
