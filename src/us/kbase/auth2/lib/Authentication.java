@@ -2359,7 +2359,12 @@ public class Authentication {
 	 */
 	public void deleteLinkOrLoginState(final IncomingToken token) throws AuthStorageException {
 		nonNull(token, "token");
-		storage.deleteTemporaryIdentities(token.getHashedToken());
+		final Optional<UUID> id = storage.deleteTemporaryIdentities(token.getHashedToken());
+		if (id.isPresent()) {
+			logInfo("Deleted temporary token {}", id.get());
+		} else {
+			logInfo("Attempted to delete non-existant temporary token");
+		}
 	}
 
 	/** Update a user's details.

@@ -38,6 +38,7 @@ import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.FindOneAndDeleteOptions;
 import com.mongodb.client.model.IndexOptions;
 import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.UpdateOptions;
@@ -1398,12 +1399,19 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void deleteTemporaryIdentities(final IncomingHashedToken token)
+	public Optional<UUID> deleteTemporaryIdentities(final IncomingHashedToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
 		try {
-			db.getCollection(COL_TEMP_TOKEN).deleteOne(
-					new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
+			final Document tempIds = db.getCollection(COL_TEMP_TOKEN).findOneAndDelete(
+					new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()),
+					new FindOneAndDeleteOptions().projection(
+							new Document(Fields.TOKEN_TEMP_ID, 1)));
+			if (tempIds == null) {
+				return Optional.absent();
+			} else {
+				return Optional.of(UUID.fromString(tempIds.getString(Fields.TOKEN_TEMP_ID)));
+			}
 			// if it's not there, fine. Job's done.
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
@@ -1503,7 +1511,7 @@ public class MongoStorage implements AuthStorage {
 			final UserName userName,
 			final String id)
 			throws AuthStorageException, UnLinkFailedException, NoSuchUserException,
-			NoSuchIdentityException {
+				NoSuchIdentityException {
 		checkStringNoCheckedException(id, "id");
 		final AuthUser u = getUser(userName);
 		if (u.isLocal()) {

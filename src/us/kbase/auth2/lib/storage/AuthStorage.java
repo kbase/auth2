@@ -369,9 +369,10 @@ public interface AuthStorage {
 
 	/** Delete the set of identities stored with a token.
 	 * @param token the temporary token.
+	 * @return the id of the deleted token, or absent if there was no token to be deleted.
 	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
 	 */
-	void deleteTemporaryIdentities(IncomingHashedToken token)
+	Optional<UUID> deleteTemporaryIdentities(IncomingHashedToken token)
 			throws AuthStorageException;
 	
 	/** Link an account to a remote identity.

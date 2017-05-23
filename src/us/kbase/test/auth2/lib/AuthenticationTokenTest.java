@@ -1095,11 +1095,33 @@ public class AuthenticationTokenTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
+		final UUID id = UUID.randomUUID();
 		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+				.thenReturn(Optional.of(id));
 		
 		auth.deleteLinkOrLoginState(t);
 		
-		verify(storage).deleteTemporaryIdentities(t.getHashedToken());
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Deleted temporary token " + id, Authentication.class));
+	}
+	
+	@Test
+	public void deleteLoginOrLinkStateNoSuchToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+				.thenReturn(Optional.absent());
+		
+		auth.deleteLinkOrLoginState(t);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Attempted to delete non-existant temporary token", Authentication.class));
 	}
 	
 	@Test
