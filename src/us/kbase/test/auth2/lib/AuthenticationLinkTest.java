@@ -148,7 +148,7 @@ public class AuthenticationLinkTest {
 	public void linkWithTokenImmediatelyUpdateRemoteIdentity() throws Exception {
 		/* tests the scenario when a link is requested but a race condition means that the
 		 * single returned identity has been added to the user after the set of identities have
-		 *  been filtered
+		 * been filtered
 		 */
 		final IdentityProvider idp = mock(IdentityProvider.class);
 
@@ -1356,12 +1356,62 @@ public class AuthenticationLinkTest {
 							new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
 									new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
+
+		when(storage.link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com")))).thenReturn(true);
 		
 		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
 		
-		verify(storage).link(new UserName("baz"), new RemoteIdentity(
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Linked identity de0702aa7927b562e0d6be5b6527cfb2 prov id3 user3 to user baz",
+				Authentication.class));
+	}
+	
+	@Test
+	public void linkIdentityUpdateRemoteIdentity() throws Exception {
+		/* tests the scenario when a link is requested but a race condition means that the
+		 * single returned identity has been added to the user after the set of identities have
+		 * been filtered
+		 */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+									new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+							new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+									new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+							new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+									new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
+				.thenReturn(null);
+		
+		// 2nd identity would be added after this point but before the link call below
+
+		when(storage.link(new UserName("baz"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id3"),
-				new RemoteIdentityDetails("user3", "full3", "f3@g.com")));
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com")))).thenReturn(false);
+		
+		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Identity de0702aa7927b562e0d6be5b6527cfb2 prov id3 user3 is already " +
+				"linked to user baz",
+				Authentication.class));
 	}
 	
 	@Test

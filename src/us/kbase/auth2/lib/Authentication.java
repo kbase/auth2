@@ -2109,16 +2109,7 @@ public class Authentication {
 			throws AuthStorageException, LinkFailedException {
 		try {
 			final boolean linked = storage.link(userName, remoteIdentity);
-			final RemoteIdentityID id = remoteIdentity.getRemoteID();
-			if (linked) {
-				logInfo("Linked identity {} {} {} {} to user {}", id.getID(), id.getProviderName(),
-						id.getProviderIdentityId(), remoteIdentity.getDetails().getUsername(),
-						userName.getName());
-			} else {
-				logInfo("Identity {} {} {} {} is already linked to user {}", id.getID(),
-						id.getProviderName(), id.getProviderIdentityId(),
-						remoteIdentity.getDetails().getUsername(), userName.getName());
-			}
+			logSingleLinkResult(userName, remoteIdentity, linked);
 			return new LinkToken();
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
@@ -2131,6 +2122,22 @@ public class Authentication {
 					"other than {}. Stored empty identity set with temporary token {}",
 					remoteIdentity.getRemoteID().getID(), userName.getName(), tt.getId());
 			return new LinkToken(tt);
+		}
+	}
+
+	private void logSingleLinkResult(
+			final UserName userName,
+			final RemoteIdentity remoteIdentity,
+			final boolean linked) {
+		final RemoteIdentityID id = remoteIdentity.getRemoteID();
+		if (linked) {
+			logInfo("Linked identity {} {} {} {} to user {}", id.getID(), id.getProviderName(),
+					id.getProviderIdentityId(), remoteIdentity.getDetails().getUsername(),
+					userName.getName());
+		} else {
+			logInfo("Identity {} {} {} {} is already linked to user {}", id.getID(),
+					id.getProviderName(), id.getProviderIdentityId(),
+					remoteIdentity.getDetails().getUsername(), userName.getName());
 		}
 	}
 
@@ -2227,7 +2234,8 @@ public class Authentication {
 					"User %s is not authorized to link identity %s", au.getUserName().getName(),
 					identityID));
 		}
-		link(au.getUserName(), ri.get());
+		final boolean linked = link(au.getUserName(), ri.get());
+		logSingleLinkResult(au.getUserName(), ri.get(), linked);
 	}
 	
 	/** Complete the OAuth2 account linking process by linking all available identities to the
@@ -2262,9 +2270,9 @@ public class Authentication {
 		link(au.getUserName(), identities);
 	}
 	
-	private int link(final UserName userName, final RemoteIdentity id)
+	private boolean link(final UserName userName, final RemoteIdentity id)
 			throws AuthStorageException, IdentityLinkedException {
-		return link(userName, new HashSet<>(Arrays.asList(id)), true);
+		return link(userName, new HashSet<>(Arrays.asList(id)), true) == 1;
 	}
 
 	private int link(final UserName userName, final Set<RemoteIdentity> identities)
@@ -2286,8 +2294,7 @@ public class Authentication {
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
-				storage.link(userName, ri); // TODO NOW use returned bool, only add if true
-				linked++;
+				linked += storage.link(userName, ri) ? 1 : 0;
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
 						userName.getName(), e);

@@ -1253,9 +1253,20 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
-		doThrow(new IdentityLinkedException("foo")).when(storage).link(
+		when(storage.link(
 				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-				new RemoteIdentityDetails("user3", "full3", "d@g.com")));
+				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+				.thenThrow(new IdentityLinkedException("foo"));
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+		.thenReturn(true);
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
+		.thenReturn(true);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
@@ -1276,14 +1287,6 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "e@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id4"),
-				new RemoteIdentityDetails("user4", "full4", "c@g.com")));
 		
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
@@ -1984,6 +1987,10 @@ public class AuthenticationLoginTest {
 	public void completeLoginAndLinkAll() throws Exception {
 		/* also tests no policy ids case
 		 * this is also friggin huge
+		 * 
+		 * also tests linking all remaining identities when there's a race condition such that
+		 * an identity is linked to the user after the identities are filtered, so the identity
+		 * is updated rather than linked
 		 */
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -2037,14 +2044,28 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
-		doThrow(new IdentityLinkedException("foo")).when(storage).link(
+		when(storage.link(
 				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-				new RemoteIdentityDetails("user3", "full3", "d@g.com")));
+				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+				.thenThrow(new IdentityLinkedException("foo"));
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+		.thenReturn(true);
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
+		.thenReturn(false);
+		/* above means that the identity was linked to the user after the identities were filtered
+		 * out, and so the identity was just updated rather than linked.
+		 */
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), null);
@@ -2060,14 +2081,6 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "e@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id4"),
-				new RemoteIdentityDetails("user4", "full4", "c@g.com")));
 		
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
@@ -2090,7 +2103,7 @@ public class AuthenticationLoginTest {
 				"mfingtoken")));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-					"Linked all 2 remaining identities to user foo", Authentication.class),
+					"Linked all 1 remaining identities to user foo", Authentication.class),
 				new LogEvent(Level.INFO,
 						"Logged in user foo with token " + tokenID, Authentication.class));
 	}
