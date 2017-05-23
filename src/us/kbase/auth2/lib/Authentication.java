@@ -2507,8 +2507,8 @@ public class Authentication {
 			}
 		}
 		storage.updateConfig(update, true);
-		logConfigurationUpdate(admin.getUserName(), update);
 		cfg.updateConfig();
+		logConfigurationUpdate(admin.getUserName(), update);
 	}
 	
 	private <T extends ExternalConfig> void logConfigurationUpdate(
@@ -2592,9 +2592,11 @@ public class Authentication {
 	 */
 	public void resetConfigToDefault(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, new OpReqs("reset configuration").types(TokenType.LOGIN).roles(Role.ADMIN));
+		final AuthUser admin = getUser(token, new OpReqs("reset configuration")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.updateConfig(buildDefaultConfig(), true);
 		cfg.updateConfig();
+		logInfo("Admin {} reset the configuration to defaults", admin.getUserName().getName());
 	}
 
 	private AuthConfigUpdate<ExternalConfig> buildDefaultConfig() {
@@ -2631,12 +2633,15 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
-		getUser(token, new OpReqs("get configuration").types(TokenType.LOGIN).roles(Role.ADMIN));
+		final AuthUser admin = getUser(token, new OpReqs("get configuration")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return new AuthConfigSetWithUpdateTime<T>(
+		final AuthConfigSetWithUpdateTime<T> config = new AuthConfigSetWithUpdateTime<T>(
 				acs.getCfg().filterProviders(idProviderSet.keySet()),
 				mapper.fromMap(acs.getExtcfg().getMap()),
 				cfgUpdateIntervalMillis);
+		logInfo("Admin {} accessed the configuration", admin.getUserName().getName());
+		return config;
 	}
 	
 	/** Returns the suggested cache time for tokens in milliseconds.

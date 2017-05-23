@@ -472,6 +472,9 @@ public class AuthenticationConfigTest {
 				.build(), true);
 		
 		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin foo reset the configuration to defaults", Authentication.class));
 	}
 	
 	@Test
@@ -558,6 +561,9 @@ public class AuthenticationConfigTest {
 						ImmutableMap.of(TokenLifetimeType.DEV, 300000L)),
 				new TestExternalConfig<>(ConfigItem.state("whiz")),
 				1)));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin foo accessed the configuration", Authentication.class));
 	}
 	
 	@Test
