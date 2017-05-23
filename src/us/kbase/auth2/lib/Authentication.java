@@ -2331,16 +2331,20 @@ public class Authentication {
 			final IncomingToken token,
 			final String identityID)
 			throws InvalidTokenException, AuthStorageException, UnLinkFailedException,
-			DisabledUserException, UnauthorizedException, NoSuchIdentityException,
-			MissingParameterException {
+				DisabledUserException, UnauthorizedException, NoSuchIdentityException,
+				MissingParameterException {
 		checkString(identityID, "identityID");
 		final AuthUser au = getUser(
 				token, new OpReqs("unlink identity {}", identityID).types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new UnLinkFailedException("Local users don't have remote identities");
+			throw new UnLinkFailedException(String.format(
+					"Local user %s doesn't have remote identities", au.getUserName().getName()));
 		}
 		try {
+			// throws no such id exception if not already linked
 			storage.unlink(au.getUserName(), identityID);
+			// could get the identity from the AuthUser and log more info, but meh for now
+			logInfo("Unlinked identity {} from user {}", identityID, au.getUserName().getName());
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
 					au.getUserName().getName());

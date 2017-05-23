@@ -2076,6 +2076,9 @@ public class AuthenticationLinkTest {
 		auth.unlink(userToken, "foobar");
 		
 		verify(storage).unlink(new UserName("baz"), "foobar");
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Unlinked identity foobar from user baz", Authentication.class));
 	}
 	
 	@Test
@@ -2127,7 +2130,7 @@ public class AuthenticationLinkTest {
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
 
 		failUnlink(auth, token, "foo",
-				new UnLinkFailedException("Local users don't have remote identities"));
+				new UnLinkFailedException("Local user foo doesn't have remote identities"));
 	}
 	
 	@Test
