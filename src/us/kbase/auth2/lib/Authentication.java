@@ -2386,10 +2386,29 @@ public class Authentication {
 		}
 		try {
 			storage.updateUser(ht.getUserName(), update);
+			logUserUpdate(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {
 			throw new RuntimeException("There seems to be an error in the " +
 					"storage system. Token was valid, but no user", e);
 		}
+	}
+
+	// assumes there's at least 1 update
+	private void logUserUpdate(final UserName userName, final UserUpdate update) {
+		final StringBuilder sb = new StringBuilder();
+		final List<String> args = new LinkedList<>();
+		sb.append("Updated user details for user {}.");
+		args.add(userName.getName());
+		if (update.getDisplayName().isPresent()) {
+			sb.append(" Display name: {}");
+			args.add(update.getDisplayName().get().getName());
+		}
+		if (update.getEmail().isPresent()) {
+			sb.append(" Email: {}");
+			args.add(update.getEmail().get().getAddress());
+		}
+		logInfo(sb.toString(), args.toArray());
+		
 	}
 
 	/** Disable an account.
