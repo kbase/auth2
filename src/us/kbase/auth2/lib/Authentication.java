@@ -2701,6 +2701,7 @@ public class Authentication {
 		try {
 			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), remoteIdentity)
 					.withEmailAddress(email).build());
+			logInfo("Imported user {}", userName.getName());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		}
