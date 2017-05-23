@@ -246,8 +246,8 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
 		
-		doThrow(new IdentityLinkedException("foo"))
-				.when(storage).link(new UserName("baz"), storageRemoteID);
+		when(storage.link(new UserName("baz"), storageRemoteID))
+				.thenThrow(new IdentityLinkedException("foo"));
 		
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
@@ -1093,8 +1093,9 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
+		final UUID temptokenid = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), Instant.now(),
+				new TemporaryIdentities(temptokenid, Instant.now(),
 						Instant.ofEpochMilli(20000),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
@@ -1129,6 +1130,10 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build(),
 				set(storageRemoteID3, storageRemoteID4),
 				Instant.ofEpochMilli(20000))));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"User baz accessed temporary link token %s with 3 identities", temptokenid),
+				Authentication.class));
 	}
 	
 	@Test
@@ -1192,7 +1197,7 @@ public class AuthenticationLinkTest {
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
 
 		failGetLinkState(auth, token, new IncomingToken("bar"),
-				new LinkFailedException("Cannot link identities to local accounts"));
+				new LinkFailedException("Cannot link identities to local account foo"));
 	}
 	
 	@Test
@@ -1306,8 +1311,8 @@ public class AuthenticationLinkTest {
 				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
 		
-		failGetLinkState(auth, userToken, tempToken,
-				new LinkFailedException("All provided identities are already linked"));
+		failGetLinkState(auth, userToken, tempToken, new LinkFailedException(
+				"All provided identities for user baz are already linked"));
 	}
 	
 	private void failGetLinkState(
@@ -1426,7 +1431,7 @@ public class AuthenticationLinkTest {
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
 
 		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
-				new LinkFailedException("Cannot link identities to local accounts"));
+				new LinkFailedException("Cannot link identities to local account foo"));
 	}
 	
 	@Test
@@ -1533,7 +1538,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid",
-				new LinkFailedException("Not authorized to link identity fakeid"));
+				new LinkFailedException("User baz is not authorized to link identity fakeid"));
 	}
 	
 	@Test
@@ -1770,7 +1775,7 @@ public class AuthenticationLinkTest {
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
 
 		failLinkAll(auth, token, new IncomingToken("bar"),
-				new LinkFailedException("Cannot link identities to local accounts"));
+				new LinkFailedException("Cannot link identities to local account foo"));
 	}
 	
 	@Test

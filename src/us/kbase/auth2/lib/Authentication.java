@@ -2170,14 +2170,19 @@ public class Authentication {
 				DisabledUserException, UnauthorizedException, IdentityProviderErrorException {
 		final AuthUser u = getUser(token, new OpReqs("get link state").types(TokenType.LOGIN));
 		if (u.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					u.getUserName().getName());
 		}
 		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
 		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities().get());
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
-			throw new LinkFailedException("All provided identities are already linked");
+			throw new LinkFailedException(String.format(
+					"All provided identities for user %s are already linked",
+					u.getUserName().getName()));
 		}
+		logInfo("User {} accessed temporary link token {} with {} identities",
+				u.getUserName().getName(), tids.getId(), tids.getIdentities().get().size());
 		return new LinkIdentities(u, ids, tids.getExpires());
 	}
 
@@ -2212,12 +2217,14 @@ public class Authentication {
 		final AuthUser au = getUser(
 				token, new OpReqs("link identity {}", identityID).types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					au.getUserName().getName());
 		}
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities().get();
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
-			throw new LinkFailedException(String.format("Not authorized to link identity %s",
+			throw new LinkFailedException(String.format(
+					"User %s is not authorized to link identity %s", au.getUserName().getName(),
 					identityID));
 		}
 		link(au.getUserName(), ri.get());
@@ -2246,7 +2253,8 @@ public class Authentication {
 		final AuthUser au = getUser(
 				token, new OpReqs("link all identities").types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					au.getUserName().getName());
 		}
 		final Set<RemoteIdentity> identities = new HashSet<>(
 				getTemporaryIdentities(linkToken).getIdentities().get());
