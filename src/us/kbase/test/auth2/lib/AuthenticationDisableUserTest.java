@@ -6,6 +6,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
@@ -16,6 +17,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -33,6 +35,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 
@@ -62,10 +65,10 @@ public class AuthenticationDisableUserTest {
 	public void disableUserFailBadRole() throws Exception {
 		failDisableUser(new UserName("baz"), UserName.ROOT, Role.ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only the root user can disable the root account"));
+						"User baz cannot disable the root account"));
 		failDisableUser(new UserName("baz"), UserName.ROOT, Role.CREATE_ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Only the root user can disable the root account"));
+						"User baz cannot disable the root account"));
 	}
 	
 	@Test
@@ -143,6 +146,7 @@ public class AuthenticationDisableUserTest {
 
 	private void disableUser(final UserName adminName, final UserName userName, final Role role)
 			throws Exception {
+		logEvents.clear();
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -163,6 +167,10 @@ public class AuthenticationDisableUserTest {
 		
 		verify(storage, times(2)).deleteTokens(userName);
 		verify(storage).disableAccount(userName, adminName, "foo is suxxor");
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Admin %s disabled account %s", adminName.getName(), userName.getName()),
+				Authentication.class));
 	}
 	
 	public void failDisableUser(
@@ -203,10 +211,10 @@ public class AuthenticationDisableUserTest {
 	public void enableUserFailBadRole() throws Exception {
 		failEnableUser(new UserName("baz"), UserName.ROOT, Role.ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"The root user cannot be enabled via this method"));
+						"User baz cannot enable the root user via this method"));
 		failEnableUser(new UserName("baz"), UserName.ROOT, Role.CREATE_ADMIN,
 				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"The root user cannot be enabled via this method"));
+						"User baz cannot enable the root user via this method"));
 	}
 	
 	@Test
@@ -268,6 +276,7 @@ public class AuthenticationDisableUserTest {
 	
 	private void enableUser(final UserName adminName, final UserName userName, final Role role)
 			throws Exception {
+		logEvents.clear();
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -287,6 +296,10 @@ public class AuthenticationDisableUserTest {
 		auth.enableAccount(token, userName);
 		
 		verify(storage).enableAccount(userName, adminName);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Admin %s enabled account %s", adminName.getName(), userName.getName()),
+				Authentication.class));
 	}
 	
 	private void failEnableUser(

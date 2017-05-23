@@ -47,12 +47,15 @@ import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.Builder;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -2436,7 +2439,8 @@ public class Authentication {
 		final AuthUser admin = getUser(token, new OpReqs("disable account {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot() && !admin.isRoot()) {
-			throw new UnauthorizedException("Only the root user can disable the root account");
+			throw new UnauthorizedException(String.format(
+					"User %s cannot disable the root account", admin.getUserName().getName()));
 		}
 		storage.deleteTokens(userName); //not really necessary but doesn't hurt
 		storage.disableAccount(userName, admin.getUserName(), reason);
@@ -2447,6 +2451,7 @@ public class Authentication {
 		 * as well as a backup
 		 */
 		storage.deleteTokens(userName);
+		logInfo("Admin {} disabled account {}", admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Enable an account.
@@ -2467,9 +2472,12 @@ public class Authentication {
 		final AuthUser admin = getUser(token, new OpReqs("enable account {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot()) {
-			throw new UnauthorizedException("The root user cannot be enabled via this method");
+			throw new UnauthorizedException(String.format(
+					"User %s cannot enable the root user via this method",
+					admin.getUserName().getName()));
 		}
 		storage.enableAccount(userName, admin.getUserName());
+		logInfo("Admin {} enabled account {}", admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Update the server configuration.
@@ -2489,7 +2497,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
 		nonNull(update, "update");
-		getUser(token, new OpReqs("update configuration")
+		final AuthUser admin = getUser(token, new OpReqs("update configuration")
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		for (final String provider: update.getProviders().keySet()) {
 			// since idProviderSet is case insensitive
@@ -2499,9 +2507,82 @@ public class Authentication {
 			}
 		}
 		storage.updateConfig(update, true);
+		logConfigurationUpdate(admin.getUserName(), update);
 		cfg.updateConfig();
 	}
 	
+	private <T extends ExternalConfig> void logConfigurationUpdate(
+			final UserName userName,
+			final AuthConfigUpdate<T> update) {
+		final String name = userName.getName();
+		
+		if (update.getLoginAllowed().isPresent()) {
+			logInfo("Admin {} set non-admin login allowed to {}",
+					name, update.getLoginAllowed().get());
+		}
+		
+		final List<TokenLifetimeType> lifesorted = update.getTokenLifetimeMS().keySet().stream()
+				.sorted().collect(Collectors.toList());
+		for (final TokenLifetimeType lifetype: lifesorted) {
+			logInfo("Admin {} set lifetime for token type {} to {}",
+					name, lifetype, update.getTokenLifetimeMS().get(lifetype));
+		}
+		
+		final List<String> providersSorted = update.getProviders().keySet().stream().sorted()
+				.collect(Collectors.toList());
+		for (final String provider: providersSorted) {
+			logConfigurationUpdateForProvider(name, provider, update.getProviders().get(provider));
+		}
+		
+		logConfigurationUpdateExternal(name, update.getExternalConfig());
+	}
+
+	private <T extends ExternalConfig> void logConfigurationUpdateExternal(
+			final String name,
+			final Optional<T> externalConfig) {
+		if (!externalConfig.isPresent()) {
+			return;
+		}
+		final Map<String, ConfigItem<String, Action>> ext = externalConfig.get().toMap();
+		final List<String> keys = ext.keySet().stream().sorted().collect(Collectors.toList());
+		for (final String key: keys) {
+			final ConfigItem<String, Action> item = ext.get(key);
+			final Action action = item.getAction();
+			if (action.isRemove()) {
+				logInfo("Admin {} removed external config key {}", name, key);
+			} else if (action.isSet()) {
+				logInfo("Admin {} set external config key {} to {}", name, key, item.getItem());
+			}
+		}
+	}
+
+	private void logConfigurationUpdateForProvider(
+			final String adminName,
+			final String provider,
+			final ProviderUpdate update) {
+		if (!update.hasUpdate()) {
+			return;
+		}
+		final StringBuilder sb = new StringBuilder();
+		final List<Object> args = new LinkedList<>();
+		sb.append("Admin {} set values for identity provider {}.");
+		args.add(adminName);
+		args.add(provider);
+		if (update.getEnabled().isPresent()) {
+			sb.append(" Enabled: {}");
+			args.add(update.getEnabled().get());
+		}
+		if (update.getForceLoginChoice().isPresent()) {
+			sb.append(" Force login choice: {}");
+			args.add(update.getForceLoginChoice().get());
+		}
+		if (update.getForceLinkChoice().isPresent()) {
+			sb.append(" Force link choice: {}");
+			args.add(update.getForceLinkChoice().get());
+		}
+		logInfo(sb.toString(), args.toArray());
+	}
+
 	/** Reset the service configuration to the initial configuration supplied at startup.
 	 * @param token a token for a user with the administrator role.
 	 * @throws InvalidTokenException if the token is invalid.
