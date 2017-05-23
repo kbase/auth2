@@ -2267,7 +2267,13 @@ public class Authentication {
 		final Set<RemoteIdentity> identities = new HashSet<>(
 				getTemporaryIdentities(linkToken).getIdentities().get());
 		filterLinkCandidates(identities);
-		link(au.getUserName(), identities);
+		final int linked = link(au.getUserName(), identities);
+		if (linked > 0) {
+			logInfo("Linked all {} available identities to user {}",
+					linked, au.getUserName().getName());
+		} else {
+			logInfo("User {} had no available identities to link", au.getUserName().getName());
+		}
 	}
 	
 	private boolean link(final UserName userName, final RemoteIdentity id)

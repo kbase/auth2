@@ -1735,7 +1735,9 @@ public class AuthenticationLinkTest {
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
+								new RemoteIdentityDetails("user5", "full5", "f5@g.com")))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1747,6 +1749,9 @@ public class AuthenticationLinkTest {
 		final RemoteIdentity storageRemoteID4 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
+		final RemoteIdentity storageRemoteID5 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user5", "full5", "f5@g.com"));
 		
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
 				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
@@ -1755,15 +1760,70 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
 				.thenReturn(null);
+		when(storage.getUser(storageRemoteID5)).thenReturn(Optional.absent())
+				.thenReturn(null);
 		
 		doThrow(new IdentityLinkedException("foo")).when(storage)
 				.link(new UserName("baz"), storageRemoteID3);
+
+		when(storage.link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+				.thenReturn(true);
+		
+		when(storage.link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id5"),
+				new RemoteIdentityDetails("user5", "full5", "f5@g.com"))))
+				.thenReturn(false);
+		// careful here, mockito returns false by default. Verify changing to true breaks the test
 		
 		auth.linkAll(userToken, tempToken);
 		
-		verify(storage).link(new UserName("baz"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id4"),
-				new RemoteIdentityDetails("user4", "full4", "f4@g.com")));
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Linked all 1 available identities to user baz", Authentication.class));
+	}
+	
+	@Test
+	public void linkAllNoAvailableIdentities() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW, set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
+				.thenReturn(null);
+
+		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
+		
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.absent())
+				.thenReturn(null);
+		
+		when(storage.link(new UserName("baz"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+				.thenReturn(false);
+		// careful here, mockito returns false by default. Verify changing to true breaks the test
+		
+		auth.linkAll(userToken, tempToken);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User baz had no available identities to link", Authentication.class));
 	}
 	
 	@Test
