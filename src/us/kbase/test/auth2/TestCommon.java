@@ -87,6 +87,9 @@ public class TestCommon {
 				.getLogger("us.kbase.auth2.service.LoggingFilter"))
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
+				.getLogger("us.kbase.auth2.lib.Authentication"))
+				.setLevel(ch.qos.logback.classic.Level.OFF);
+		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
 				.getLogger("nl.basjes.parse.useragent.UserAgentAnalyzer"))
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 	}

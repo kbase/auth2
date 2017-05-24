@@ -9,16 +9,21 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import static us.kbase.test.auth2.lib.AuthenticationTester.fromBase64;
 import static us.kbase.test.auth2.TestCommon.assertClear;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -35,6 +40,7 @@ import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.ChangePasswordAnswerMatcher;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCreateRootTest {
@@ -45,7 +51,19 @@ public class AuthenticationCreateRootTest {
 	 * http://stackoverflow.com/questions/9085738/can-mockito-verify-parameters-based-on-their-values-at-the-time-of-method-call
 	 * 
 	 */
-
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
+	
 	@Test
 	public void createRoot() throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -85,6 +103,9 @@ public class AuthenticationCreateRootTest {
 		 * ran
 		 */
 		verify(storage).createLocalUser(any(), any());
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "created root user", Authentication.class));
 	}
 	
 	@Test
@@ -133,6 +154,9 @@ public class AuthenticationCreateRootTest {
 		 */
 		verify(storage).changePassword(
 				eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "changed root user password", Authentication.class));
 	}
 	
 	@Test
@@ -231,6 +255,10 @@ public class AuthenticationCreateRootTest {
 		assertClear(matcher.savedHash);
 		
 		verify(storage).enableAccount(UserName.ROOT, UserName.ROOT);
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "changed root user password", Authentication.class),
+				new LogEvent(Level.INFO, "enabled root user", Authentication.class));
 	}
 	
 	@Test

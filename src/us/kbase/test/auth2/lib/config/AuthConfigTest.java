@@ -405,6 +405,7 @@ public class AuthConfigTest {
 		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
 		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(false)));
 		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+		assertThat("incorrect has update", pu.hasUpdate(), is(true));
 	}
 	
 	@Test
@@ -413,6 +414,7 @@ public class AuthConfigTest {
 		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
 		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(true)));
 		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+		assertThat("incorrect has update", pu.hasUpdate(), is(true));
 	}
 	
 	@Test
@@ -422,10 +424,39 @@ public class AuthConfigTest {
 		assertThat("incorrect enabled", pu.getEnabled(), is(Optional.of(false)));
 		assertThat("incorrect force login", pu.getForceLoginChoice(), is(Optional.of(true)));
 		assertThat("incorrect force link", pu.getForceLinkChoice(), is(Optional.of(false)));
+		assertThat("incorrect has update", pu.hasUpdate(), is(true));
 	}
 	
 	@Test
-	public void updatgeConfigProviderConstructFailNulls() throws Exception {
+	public void updateConfigProviderConstructOptionalAbsent() throws Exception {
+		final Optional<Boolean> abs = Optional.absent();
+		final ProviderUpdate pu = new ProviderUpdate(abs, abs, abs);
+		assertThat("incorrect enabled", pu.getEnabled(), is(abs));
+		assertThat("incorrect force login", pu.getForceLoginChoice(), is(abs));
+		assertThat("incorrect force link", pu.getForceLinkChoice(), is(abs));
+		assertThat("incorrect has update", pu.hasUpdate(), is(false));
+		
+		final ProviderUpdate pu2 = new ProviderUpdate(abs, abs, Optional.of(false));
+		assertThat("incorrect enabled", pu2.getEnabled(), is(abs));
+		assertThat("incorrect force login", pu2.getForceLoginChoice(), is(abs));
+		assertThat("incorrect force link", pu2.getForceLinkChoice(), is(Optional.of(false)));
+		assertThat("incorrect has update", pu2.hasUpdate(), is(true));
+		
+		final ProviderUpdate pu3 = new ProviderUpdate(abs, Optional.of(false), abs);
+		assertThat("incorrect enabled", pu3.getEnabled(), is(abs));
+		assertThat("incorrect force login", pu3.getForceLoginChoice(), is(Optional.of(false)));
+		assertThat("incorrect force link", pu3.getForceLinkChoice(), is(abs));
+		assertThat("incorrect has update", pu3.hasUpdate(), is(true));
+		
+		final ProviderUpdate pu4 = new ProviderUpdate(Optional.of(false), abs, abs);
+		assertThat("incorrect enabled", pu4.getEnabled(), is(Optional.of(false)));
+		assertThat("incorrect force login", pu4.getForceLoginChoice(), is(abs));
+		assertThat("incorrect force link", pu4.getForceLinkChoice(), is(abs));
+		assertThat("incorrect has update", pu4.hasUpdate(), is(true));
+	}
+	
+	@Test
+	public void updateConfigProviderConstructFailNulls() throws Exception {
 		final Optional<Boolean> o = Optional.of(false);
 		failUpdateConfigProviderConstruct(null, o, o, new NullPointerException("enabled"));
 		failUpdateConfigProviderConstruct(o, null, o,

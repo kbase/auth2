@@ -12,20 +12,26 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -73,6 +79,7 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationLoginTest {
@@ -80,6 +87,18 @@ public class AuthenticationLoginTest {
 	private static final Instant MIN = Instant.MIN;
 	
 	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void loginImmediately() throws Exception {
@@ -92,6 +111,8 @@ public class AuthenticationLoginTest {
 			final Role userRole,
 			final boolean allowLogin)
 			throws Exception {
+		logEvents.clear();
+		
 		final IdentityProvider idp = mock(IdentityProvider.class);
 
 		when(idp.getProviderName()).thenReturn("prov");
@@ -156,6 +177,9 @@ public class AuthenticationLoginTest {
 						"thisisatoken"));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Logged in user foo with token " + tokenID, Authentication.class));
 	}
 	
 	@Test
@@ -175,6 +199,8 @@ public class AuthenticationLoginTest {
 			final boolean allowLogin,
 			final boolean forceLoginChoice)
 			throws Exception {
+		logEvents.clear();
+		
 		final IdentityProvider idp = mock(IdentityProvider.class);
 
 		when(idp.getProviderName()).thenReturn("prov");
@@ -234,6 +260,10 @@ public class AuthenticationLoginTest {
 						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 1 login identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -289,6 +319,10 @@ public class AuthenticationLoginTest {
 						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 1 login identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -356,6 +390,10 @@ public class AuthenticationLoginTest {
 						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 2 login identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -439,6 +477,10 @@ public class AuthenticationLoginTest {
 						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 3 login identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -511,6 +553,10 @@ public class AuthenticationLoginTest {
 						30 * 60 * 1000));
 		
 		assertThat("incorrect login token", lt, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Stored temporary token %s with 3 login identities", tokenID),
+				Authentication.class));
 	}
 	
 	@Test
@@ -627,6 +673,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeErrorTemporarily(expected.getHashedToken(),
 				"errthing", ErrorType.ID_PROVIDER_ERROR);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
+				"Stored temporary token %s with login identity provider error errthing", id),
+				Authentication.class));
 	}
 	
 	@Test
@@ -662,8 +712,9 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000L),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@g.com")))))
 				.thenReturn(null);
@@ -685,6 +736,9 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
 		
 		assertThat("incorrect login state", got, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Accessed temporary login token %s with 1 identities", id), Authentication.class));
 	}
 	
 	@Test
@@ -698,8 +752,9 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 									new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 							new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -729,6 +784,9 @@ public class AuthenticationLoginTest {
 							new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
 		
 		assertThat("incorrect login state", got, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Accessed temporary login token %s with 2 identities", id), Authentication.class));
 	}
 	
 	@Test
@@ -742,8 +800,9 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000L),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@g.com")))))
 				.thenReturn(null);
@@ -773,6 +832,9 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user1", "full1", "f@g.com"))).build();
 		
 		assertThat("incorrect login state", got, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Accessed temporary login token %s with 1 identities", id), Authentication.class));
 	}
 	
 	@Test
@@ -786,8 +848,9 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 									new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 							new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -839,6 +902,9 @@ public class AuthenticationLoginTest {
 				.build();
 		
 		assertThat("incorrect login state", got, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Accessed temporary login token %s with 2 identities", id), Authentication.class));
 	}
 	
 	@Test
@@ -852,8 +918,9 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 									new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 							new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -895,6 +962,9 @@ public class AuthenticationLoginTest {
 				.build();
 		
 		assertThat("incorrect login state", got, is(expected));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Accessed temporary login token %s with 2 identities", id), Authentication.class));
 	}
 	
 	@Test
@@ -965,13 +1035,14 @@ public class AuthenticationLoginTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 		
+		final UUID id = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
+				new TemporaryIdentities(id, MIN, Instant.ofEpochMilli(10000L),
 						set()))
 				.thenReturn(null);
 		
-		failGetLoginState(auth, token, new RuntimeException(
-				"Programming error: temporary login token stored with no identities"));
+		failGetLoginState(auth, token, new RuntimeException(String.format(
+				"Programming error: temporary login token %s stored with no identities", id)));
 	}
 	
 	private void failGetLoginState(
@@ -1047,6 +1118,12 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Created user foo linked to remote identity " +
+						"ef0518c79af70ed979907969c6d0a0f7 prov id1 user1", Authentication.class),
+				new LogEvent(Level.INFO, "Logged in user foo with token " + tokenID,
+						Authentication.class));
 	}
 	
 	@Test
@@ -1110,6 +1187,12 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Created user foo linked to remote identity " +
+						"ef0518c79af70ed979907969c6d0a0f7 prov id1 user1", Authentication.class),
+				new LogEvent(Level.INFO, "Logged in user foo with token " + tokenID,
+						Authentication.class));
 	}
 	
 	@Test
@@ -1170,9 +1253,20 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
-		doThrow(new IdentityLinkedException("foo")).when(storage).link(
+		when(storage.link(
 				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-				new RemoteIdentityDetails("user3", "full3", "d@g.com")));
+				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+				.thenThrow(new IdentityLinkedException("foo"));
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+		.thenReturn(true);
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
+		.thenReturn(true);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
@@ -1194,14 +1288,6 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com")));
 		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "e@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id4"),
-				new RemoteIdentityDetails("user4", "full4", "c@g.com")));
-		
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
@@ -1221,6 +1307,14 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Created user foo linked to remote identity " +
+						"ef0518c79af70ed979907969c6d0a0f7 prov id1 user1", Authentication.class),
+				new LogEvent(Level.INFO, "Linked all 2 remaining identities to user foo",
+						Authentication.class),
+				new LogEvent(Level.INFO, "Logged in user foo with token " + tokenID,
+						Authentication.class));
 	}
 	
 	@Test
@@ -1753,6 +1847,8 @@ public class AuthenticationLoginTest {
 
 	private void completeLogin(final Role userRole, final boolean allowLogin)
 			throws Exception {
+		logEvents.clear();
+		
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final RandomDataGenerator rand = testauth.randGenMock;
@@ -1815,6 +1911,9 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Logged in user foo with token " + tokenID, Authentication.class));
 	}
 	
 	@Test
@@ -1879,12 +1978,19 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Logged in user foo with token " + tokenID, Authentication.class));
 	}
 	
 	@Test
 	public void completeLoginAndLinkAll() throws Exception {
 		/* also tests no policy ids case
 		 * this is also friggin huge
+		 * 
+		 * also tests linking all remaining identities when there's a race condition such that
+		 * an identity is linked to the user after the identities are filtered, so the identity
+		 * is updated rather than linked
 		 */
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -1938,14 +2044,28 @@ public class AuthenticationLoginTest {
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
-		doThrow(new IdentityLinkedException("foo")).when(storage).link(
+		when(storage.link(
 				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-				new RemoteIdentityDetails("user3", "full3", "d@g.com")));
+				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+				.thenThrow(new IdentityLinkedException("foo"));
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
+		.thenReturn(true);
+		
+		when(storage.link(new UserName("foo"), new RemoteIdentity(
+				new RemoteIdentityID("prov", "id4"),
+				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
+		.thenReturn(false);
+		/* above means that the identity was linked to the user after the identities were filtered
+		 * out, and so the identity was just updated rather than linked.
+		 */
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), null);
@@ -1961,14 +2081,6 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "e@g.com")));
-		
-		verify(storage).link(new UserName("foo"), new RemoteIdentity(
-				new RemoteIdentityID("prov", "id4"),
-				new RemoteIdentityDetails("user4", "full4", "c@g.com")));
 		
 		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
@@ -1989,6 +2101,11 @@ public class AuthenticationLoginTest {
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
 				.build(),
 				"mfingtoken")));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"Linked all 1 remaining identities to user foo", Authentication.class),
+				new LogEvent(Level.INFO,
+						"Logged in user foo with token " + tokenID, Authentication.class));
 	}
 	
 	@Test
@@ -2152,7 +2269,8 @@ public class AuthenticationLoginTest {
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l, new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Non-admin login is disabled"));
+				ErrorType.UNAUTHORIZED,
+				"User foo cannot log in because non-admin login is disabled"));
 	}
 	
 	@Test
@@ -2189,7 +2307,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failCompleteLogin(auth, t, id, pids, CTX, l, new DisabledUserException());
+		failCompleteLogin(auth, t, id, pids, CTX, l, new DisabledUserException("foo"));
 	}
 	
 	@Test

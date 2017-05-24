@@ -10,15 +10,21 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.assertClear;
+import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
@@ -26,14 +32,9 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
-import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -43,7 +44,9 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.LocalUserAnswerMatcher;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationCreateLocalUserTest {
@@ -54,6 +57,18 @@ public class AuthenticationCreateLocalUserTest {
 	 * http://stackoverflow.com/questions/9085738/can-mockito-verify-parameters-based-on-their-values-at-the-time-of-method-call
 	 * 
 	 */
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	private final static Instant NOW = Instant.now();
 	
@@ -86,25 +101,6 @@ public class AuthenticationCreateLocalUserTest {
 		create(admin);
 	}
 	
-	@Test
-	public void createFailWithoutAdminUser() throws Exception {
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN).build();
-		
-		createFail(admin, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	private void createFail(final AuthUser admin, final Exception expected) {
-		try {
-			create(admin);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, expected);
-		}
-	}
-
 	private void create(final AuthUser adminUser) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -154,6 +150,10 @@ public class AuthenticationCreateLocalUserTest {
 		 * ran
 		 */
 		verify(storage).createLocalUser(any(), any());
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Local user foo created by admin " +
+						adminUser.getUserName().getName(), Authentication.class));
 	}
 	
 	@Test
@@ -262,95 +262,31 @@ public class AuthenticationCreateLocalUserTest {
 	}
 	
 	@Test
-	public void createUserFailDisabledUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(StoredToken.getBuilder(
-						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-						.withLifeTime(NOW, NOW).build());
-		
-		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
-				.withRole(Role.SERV_TOKEN)
-				.withUserDisabledState(
-						new UserDisabledState("disabled", new UserName("foo"), Instant.now()))
-				.build();
-		
-		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
-		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new DisabledUserException());
-		
-		verify(storage).deleteTokens(new UserName("admin"));
-	}
-	
-	@Test
-	public void createUserFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void createUserFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(NOW, NOW).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(NOW, NOW).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(NOW, NOW).build(),
-				null);
-		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Agent tokens are not allowed for this operation"));
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Developer tokens are not allowed for this operation"));
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-				"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void createUserFailNoSuchUser() throws Exception {
-		// should never actually happen if db isn't corrupted
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(StoredToken.getBuilder(
-						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
-						.withLifeTime(NOW, NOW).build());
-		
-		when(storage.getUser(new UserName("admin"))).thenThrow(new NoSuchUserException("whee"));
-		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new RuntimeException("There seems to be an error " +
-						"in the storage system. Token was valid, but no user"));
+	public void createUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.createLocalUser(token, new UserName("whee"), new DisplayName("bar"),
+						new EmailAddress("f@g.com"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "create local user whee";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -376,12 +312,33 @@ public class AuthenticationCreateLocalUserTest {
 	
 	@Test
 	public void createRootUserFail() throws Exception {
+		
 		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
-		failCreateLocalUser(auth, null, UserName.ROOT, new DisplayName("bar"),
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		when(storage.getToken(token.getHashedToken()))
+				.thenReturn(StoredToken.getBuilder(
+						TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+						.withLifeTime(NOW, NOW).build());
+
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("foo"), NOW)
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ROOT).build();
+		
+		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
+		
+		failCreateLocalUser(auth, token, UserName.ROOT, new DisplayName("bar"),
 				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Cannot create ROOT user"));
+		
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.ERROR,
+						"User ***ROOT*** attempted to create ROOT user and was thwarted",
+						Authentication.class));
 	}
 	
 	public void failCreateLocalUser(

@@ -8,16 +8,23 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import static us.kbase.test.auth2.lib.AuthenticationTester.setupValidUserResponses;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.util.Collections;
+import java.util.List;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
@@ -40,13 +47,26 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
-import us.kbase.test.auth2.lib.AuthenticationTester.AuthOperation;
 import us.kbase.test.auth2.lib.config.FailConfig.FailingMapper;
 import us.kbase.test.auth2.lib.config.TestExternalConfig;
 import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMapper;
 
 public class AuthenticationConfigTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void getCacheTime() throws Exception {
@@ -131,6 +151,88 @@ public class AuthenticationConfigTest {
 	public void updateConfig() throws Exception {
 		final IdentityProvider idp1 = mock(IdentityProvider.class);
 		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		final IdentityProvider idp3 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		when(idp2.getProviderName()).thenReturn("prov2");
+		when(idp3.getProviderName()).thenReturn("prov3");
+		
+		final TestMocks testauth = initTestMocks(set(idp1, idp2, idp3));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		final AuthConfigUpdate<ExternalConfig> update =
+				AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withProviderUpdate("prov3", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov2", new ProviderUpdate(false, false, false))
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withTokenLifeTime(TokenLifetimeType.SERV, 700000)
+				.withTokenLifeTime(TokenLifetimeType.DEV, 300000)
+				.withTokenLifeTime(TokenLifetimeType.AGENT, 800000)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build();
+		auth.updateConfig(token, update);
+		
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withLoginAllowed(false)
+				.withProviderUpdate("prov3", new ProviderUpdate(true, true, true))
+				.withProviderUpdate("prov2", new ProviderUpdate(false, false, false))
+				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
+				.withTokenLifeTime(TokenLifetimeType.SERV, 700000)
+				.withTokenLifeTime(TokenLifetimeType.DEV, 300000)
+				.withTokenLifeTime(TokenLifetimeType.AGENT, 800000)
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.build(), true);
+		
+		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		final Class<?> c = Authentication.class;
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Admin foo set non-admin login allowed to false", c),
+				new LogEvent(Level.INFO, "Admin foo set lifetime for token type AGENT to 800000",
+						c),
+				new LogEvent(Level.INFO, "Admin foo set lifetime for token type DEV to 300000", c),
+				new LogEvent(Level.INFO, "Admin foo set lifetime for token type SERV to 700000",
+						c),
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov1. " +
+						"Enabled: false Force login choice: true Force link choice: false", c),
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov2. " +
+						"Enabled: false Force login choice: false Force link choice: false", c),
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov3. " +
+						"Enabled: true Force login choice: true Force link choice: true", c),
+				new LogEvent(Level.INFO, "Admin foo set external config key thing to foo", c)
+		);
+	}
+	
+	@Test
+	public void updateConfigNoChanges() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		final AuthConfigUpdate<ExternalConfig> update = AuthConfigUpdate.getBuilder().build();
+		auth.updateConfig(token, update);
+		
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder().build(), true);
+		
+		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+
+		assertThat("Expected no log events", logEvents.isEmpty(), is(true));
+	}
+	
+	@Test
+	public void updateConfigNoopProviderAndExternalRemove() throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
 		
 		when(idp1.getProviderName()).thenReturn("prov1");
 		when(idp2.getProviderName()).thenReturn("prov2");
@@ -143,23 +245,105 @@ public class AuthenticationConfigTest {
 		
 		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
 		
+		final Optional<Boolean> abs = Optional.absent();
 		final AuthConfigUpdate<ExternalConfig> update =
 				AuthConfigUpdate.getBuilder()
-				.withLoginAllowed(false)
-				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
-				.withTokenLifeTime(TokenLifetimeType.DEV, 300000)
-				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(abs, abs, abs))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.remove()))
 				.build();
 		auth.updateConfig(token, update);
 		
 		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
-				.withLoginAllowed(false)
-				.withProviderUpdate("prov1", new ProviderUpdate(false, true, false))
-				.withTokenLifeTime(TokenLifetimeType.DEV, 300000)
-				.withExternalConfig(new TestExternalConfig<>(ConfigItem.set("foo")))
+				.withLoginAllowed(true)
+				.withProviderUpdate("prov1", new ProviderUpdate(abs, abs, abs))
+				.withProviderUpdate("prov2", new ProviderUpdate(true, false, true))
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.remove()))
 				.build(), true);
 		
 		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		final Class<?> c = Authentication.class;
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Admin foo set non-admin login allowed to true", c),
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov2. " +
+						"Enabled: true Force login choice: false Force link choice: true", c),
+				new LogEvent(Level.INFO, "Admin foo removed external config key thing",
+						c)
+		);
+	}
+	
+	@Test
+	public void updateConfigProviderEnableOnlyAndExternalNoAction() throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		
+		final TestMocks testauth = initTestMocks(set(idp1));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		final Optional<Boolean> abs = Optional.absent();
+		final AuthConfigUpdate<ExternalConfig> update =
+				AuthConfigUpdate.getBuilder()
+				.withProviderUpdate("prov1", new ProviderUpdate(Optional.of(true), abs, abs))
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.noAction()))
+				.build();
+		auth.updateConfig(token, update);
+		
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withProviderUpdate("prov1", new ProviderUpdate(Optional.of(true), abs, abs))
+				.withExternalConfig(new TestExternalConfig<>(ConfigItem.noAction()))
+				.build(), true);
+		
+		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		final Class<?> c = Authentication.class;
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov1. " +
+						"Enabled: true", c)
+		);
+	}
+	
+	@Test
+	public void updateConfigProviderForceChoiceOnly() throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		
+		when(idp1.getProviderName()).thenReturn("prov1");
+		
+		final TestMocks testauth = initTestMocks(set(idp1));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
+		
+		final Optional<Boolean> abs = Optional.absent();
+		final AuthConfigUpdate<ExternalConfig> update =
+				AuthConfigUpdate.getBuilder()
+				.withProviderUpdate("prov1",
+						new ProviderUpdate(abs, Optional.of(true), Optional.of(false)))
+				.build();
+		auth.updateConfig(token, update);
+		
+		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
+				.withProviderUpdate("prov1",
+						new ProviderUpdate(abs, Optional.of(true), Optional.of(false)))
+				.build(), true);
+		
+		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		final Class<?> c = Authentication.class;
+		assertLogEventsCorrect(logEvents,
+				new LogEvent(Level.INFO, "Admin foo set values for identity provider prov1. " +
+						"Force login choice: true Force link choice: false", c)
+		);
 	}
 	
 	@Test
@@ -174,7 +358,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void updateConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -184,6 +368,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.updateConfig(token, AuthConfigUpdate.getBuilder().build());
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "update configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
@@ -278,6 +472,9 @@ public class AuthenticationConfigTest {
 				.build(), true);
 		
 		verify(storage).getConfig(isA(CollectingExternalConfigMapper.class));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin foo reset the configuration to defaults", Authentication.class));
 	}
 	
 	@Test
@@ -295,7 +492,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void resetConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -305,6 +502,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.resetConfigToDefault(token);
+			}
+			
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "reset configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}
@@ -354,6 +561,9 @@ public class AuthenticationConfigTest {
 						ImmutableMap.of(TokenLifetimeType.DEV, 300000L)),
 				new TestExternalConfig<>(ConfigItem.state("whiz")),
 				1)));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Admin foo accessed the configuration", Authentication.class));
 	}
 	
 	@Test
@@ -368,7 +578,7 @@ public class AuthenticationConfigTest {
 	@Test
 	public void getConfigExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		AuthenticationTester.executeStandardUserCheckingTests(new AuthOperation() {
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
 			public IncomingToken getIncomingToken() {
@@ -378,6 +588,16 @@ public class AuthenticationConfigTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.getConfig(token, new TestExternalConfigMapper());
+			}
+			
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+
+			@Override
+			public String getOperationString() {
+				return "get configuration";
 			}
 		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN, Role.CREATE_ADMIN, Role.ROOT));
 	}

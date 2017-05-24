@@ -109,6 +109,15 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		public Optional<Boolean> getForceLinkChoice() {
 			return forceLinkChoice;
 		}
+		
+		/** Returns true if at least one of the options is present, and therefore an update is
+		 * necessary.
+		 * @return true if this provider update contains an update.
+		 */
+		public boolean hasUpdate() {
+			return enabled.isPresent() || forceLinkChoice.isPresent() ||
+					forceLoginChoice.isPresent();
+		}
 
 		@Override
 		public int hashCode() {

@@ -5,13 +5,19 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -25,6 +31,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationImportUserTest {
@@ -32,6 +39,18 @@ public class AuthenticationImportUserTest {
 	private static final RemoteIdentity REMOTE_ID = new RemoteIdentity(
 			new RemoteIdentityID("prov", "id"),
 			new RemoteIdentityDetails("user", "full", "e@g.com"));
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void importUser() throws Exception {
@@ -51,6 +70,9 @@ public class AuthenticationImportUserTest {
 						new RemoteIdentityDetails("user", "full", "f@g.com")))
 				.withEmailAddress(new EmailAddress("f@g.com"))
 				.build());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Imported user foo", Authentication.class));
 	}
 	
 	@Test

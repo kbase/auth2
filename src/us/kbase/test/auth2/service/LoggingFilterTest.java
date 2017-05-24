@@ -120,11 +120,12 @@ public class LoggingFilterTest {
 	
 	private static void setUpSLF4JTestLoggerAppender() {
 		// MongoStorageTestManager turns off the logger, so reenable here
-		((ch.qos.logback.classic.Logger) org.slf4j.LoggerFactory
-				.getLogger("us.kbase.auth2.service.LoggingFilter"))
-				.setLevel(ch.qos.logback.classic.Level.ALL);
+		final Logger logger = (Logger) LoggerFactory
+				.getLogger("us.kbase.auth2.service.LoggingFilter");
+		logger.setLevel(ch.qos.logback.classic.Level.ALL);
 		final Logger authRootLogger = (Logger) LoggerFactory.getLogger("us.kbase.auth2");
 		authRootLogger.setLevel(Level.ALL);
+		authRootLogger.setAdditive(false);
 		final AppenderBase<ILoggingEvent> appender =
 				new AppenderBase<ILoggingEvent>() {
 			@Override

@@ -21,9 +21,14 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.UUID;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+
+import org.apache.commons.lang3.ArrayUtils;
+import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
@@ -42,12 +47,15 @@ import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.AuthConfigUpdate.Builder;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -66,6 +74,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -110,7 +119,6 @@ public class Authentication {
 
 	//TODO TEST test unicode for inputs and outputs
 	//TODO TEST LOG test logging on startup
-	//TODO TEST LOG test logging on calls
 	//TODO LOG modify unauthorized exceptions to include username
 	//TODO ZZLATER EMAIL validate email address by sending an email
 	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
@@ -289,6 +297,45 @@ public class Authentication {
 			nextConfigUpdate = Instant.now().plusMillis(cfgUpdateIntervalMillis);
 		}
 	}
+	
+	private void logInfo(final String format, final Object... params) {
+		LoggerFactory.getLogger(getClass()).info(format, params);
+	}
+	
+	private void logErr(final String format, final Object... params) {
+		LoggerFactory.getLogger(getClass()).error(format, params);
+	}
+	
+	private static class OpReqs {
+		
+		public final String format;
+		public final Object[] args;
+		
+		// at least one is required for the operation, empty = no roles required
+		public final Set<Role> requiredRoles = new TreeSet<>();
+		
+		// empty = any token type ok
+		public final Set<TokenType> allowedTokenTypes = new TreeSet<>();
+		
+		public OpReqs(final String operation, final Object... args) {
+			this.format = operation;
+			this.args = args;
+		}
+		
+		public OpReqs roles(final Role... roles) {
+			for (final Role r: roles) {
+				requiredRoles.add(r);
+			}
+			return this;
+		}
+		
+		public OpReqs types(final TokenType... types) {
+			for (final TokenType t: types) {
+				allowedTokenTypes.add(t);
+			}
+			return this;
+		}
+	}
 
 	/** Create a root account, or update the root account password if one does not already exist.
 	 * If the root account exists and is disabled, it will be enabled.
@@ -328,12 +375,15 @@ public class Authentication {
 				storage.createLocalUser(root, new PasswordHashAndSalt(passwordHash, salt));
 				// only way to avoid a race condition. Checking existence before creating user
 				// means if user is added between check and update update will fail
+				logInfo("created root user");
 			} catch (UserExistsException uee) {
 				try {
 					storage.changePassword(
 							UserName.ROOT, new PasswordHashAndSalt(passwordHash, salt), false);
+					logInfo("changed root user password");
 					if (storage.getUser(UserName.ROOT).isDisabled()) {
 						storage.enableAccount(UserName.ROOT, UserName.ROOT);
+						logInfo("enabled root user");
 					}
 				} catch (NoSuchUserException nsue) {
 					throw new RuntimeException("OK. This is really bad. I give up.", nsue);
@@ -370,10 +420,14 @@ public class Authentication {
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		nonNull(email, "email");
+		final AuthUser admin = getUser(adminToken,
+				new OpReqs("create local user {}", userName.getName())
+						.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot()) {
+			logErr("User {} attempted to create ROOT user and was thwarted",
+					admin.getUserName().getName());
 			throw new UnauthorizedException("Cannot create ROOT user");
 		}
-		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
 		Password pwd = null;
 		char[] pwd_copy = null;
 		byte[] salt = null;
@@ -387,6 +441,8 @@ public class Authentication {
 					userName, displayName, clock.instant())
 					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu, new PasswordHashAndSalt(passwordHash, salt));
+			logInfo("Local user {} created by admin {}",
+					userName.getName(), admin.getUserName().getName());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		} catch (Throwable t) {
@@ -427,6 +483,8 @@ public class Authentication {
 		nonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
+			logInfo("Local user {} log in attempt. Password reset is required",
+					userName.getName());
 			return new LocalLoginResult(u.getUserName());
 		}
 		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
@@ -454,10 +512,11 @@ public class Authentication {
 				throw new PasswordMismatchException(userName.getName());
 			}
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.getRoles())) {
-				throw new UnauthorizedException("Non-admin login is disabled");
+				throw new UnauthorizedException("User " + userName.getName() +
+						" cannot log in because non-admin login is disabled");
 			}
 			if (u.isDisabled()) {
-				throw new DisabledUserException();
+				throw new DisabledUserException(userName.getName());
 			}
 		} finally {
 			Password.clearPasswordArray(pwd_copy);
@@ -493,6 +552,7 @@ public class Authentication {
 		try {
 			nonNull(pwdnew, "pwdnew");
 			if (pwdnew.equals(password)) {
+				// note username is not verified at this point
 				throw new IllegalPasswordException("Old and new passwords are identical.");
 			}
 			pwdnew.checkValidity();
@@ -503,6 +563,7 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			Password.clearPasswordArray(pwd_copy);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), false);
+			logInfo("Password change for local user " + userName.getName());
 		} catch (NoSuchUserException e) {
 			// we know user already exists and is local so this can't happen
 			throw new AuthStorageException("Sorry, you ceased to exist in the last ~10ms.", e);
@@ -534,7 +595,9 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		checkCanResetPassword(token, userName);
+		nonNull(userName, "userName");
+		final AuthUser admin = checkCanResetPassword(
+				token, userName, "reset password for user {}", userName.getName());
 		Password pwd = null;
 		byte[] salt = null;
 		byte[] passwordHash = null;
@@ -545,6 +608,8 @@ public class Authentication {
 			passwordHash = pwdcrypt.getEncryptedPassword(temporaryPassword, salt);
 			Password.clearPasswordArray(temporaryPassword);
 			storage.changePassword(userName, new PasswordHashAndSalt(passwordHash, salt), true);
+			logInfo("Admin {} changed user {}'s password", admin.getUserName().getName(),
+					userName.getName());
 		} catch (Throwable t) {
 			if (pwd != null) {
 				pwd.clear(); // no way to test pwd was actually cleared. Prob never stored anyway
@@ -560,32 +625,47 @@ public class Authentication {
 		return pwd;
 	}
 	
-	private void checkCanResetPassword(final IncomingToken token, final UserName userName)
+	private AuthUser checkCanResetPassword(
+			final IncomingToken token,
+			final UserName userName,
+			final String format,
+			final Object... args)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			NoSuchUserException {
+				NoSuchUserException {
 		// this method is gross. rethink. ideally based on the grantable roles somehow.
-		nonNull(userName, "userName");
-		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
-				Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT); 
-		final AuthUser user = storage.getUser(userName);
+		final AuthUser admin = getUser(token, new OpReqs(format, args)
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN)); 
+		final AuthUser user;
+		try {
+			user = storage.getUser(userName);
+		} catch (NoSuchUserException e) {
+			logErr("Admin {} tried to get non-existant user {}", admin.getUserName().getName(),
+					userName.getName());
+			throw e;
+		}
 		if (!user.isLocal()) {
+			logErr("Admin {} tried to get standard user {} as a local user",
+					admin.getUserName().getName(), userName.getName());
 			throw new NoSuchUserException(String.format(
 					"%s is not a local user and has no password", userName.getName()));
 		}
 		if (!Role.isAdmin(user.getRoles())) {
-			return; //ok, any admin can change a std user's pwd.
+			return admin; //ok, any admin can change a std user's pwd.
 		}
 		if (admin.getUserName().equals(user.getUserName())) {
-			return; //ok, an admin can always change their own pwd.
+			return admin; //ok, an admin can always change their own pwd.
 		}
 		if (admin.isRoot()) {
-			return; //ok, duh. It's root.
+			return admin; //ok, duh. It's root.
 		}
 		if (user.isRoot()) { // already know admin isn't root, so bail out.
+			logErr("Admin {} tried to reset the ROOT password", admin.getUserName().getName());
 			throw new UnauthorizedException("Only root can reset root password");
 		}
 		// only root and the owner of an account with the CREATE_ADMIN role can change the pwd
 		if (Role.CREATE_ADMIN.isSatisfiedBy(user.getRoles())) {
+			logErr("Admin {} tried to reset admin with create power {}'s password",
+					admin.getUserName().getName(), user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with create administrator role");
 		}
@@ -593,9 +673,12 @@ public class Authentication {
 		 * that admin has to have CREATE_ADMIN to proceed. 
 		 */
 		if (!Role.CREATE_ADMIN.isSatisfiedBy(admin.getRoles())) {
+			logErr("Admin {} tried to reset admin {}'s password", admin.getUserName().getName(),
+					user.getUserName().getName());
 			throw new UnauthorizedException(
 					"Cannot reset password of user with administrator role");
 		}
+		return admin;
 		// user is a standard admin and admin has the CREATE_ADMIN role so changing the pwd is ok.
 	}
 
@@ -611,8 +694,13 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		checkCanResetPassword(token, userName);
+		nonNull(userName, "userName");
+		final AuthUser admin = checkCanResetPassword(token, userName,
+				"force password reset for user {}", userName.getName());
 		storage.forcePasswordReset(userName);
+		logInfo("Admin {} required user {} to reset their password on the next login",
+				admin.getUserName().getName(), userName.getName());
+		
 	}
 
 	/** Force all local users to reset their password on their next login.
@@ -624,8 +712,11 @@ public class Authentication {
 	 */
 	public void forceResetAllPasswords(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, set(TokenType.LOGIN), Role.CREATE_ADMIN, Role.ROOT); // force admin
+		final AuthUser admin = getUser(token, new OpReqs("force password reset for all users")
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN));
 		storage.forcePasswordReset();
+		logInfo("Admin {} required all users to reset their password on the next login",
+				admin.getUserName().getName());
 	}
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
@@ -639,6 +730,8 @@ public class Authentication {
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		setLastLogin(userName);
+		logInfo("Logged in user {} with token {}",
+				userName.getName(), nt.getStoredToken().getId());
 		return nt;
 	}
 
@@ -670,8 +763,10 @@ public class Authentication {
 	 */
 	public TokenSet getTokens(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
-		return new TokenSet(ht, storage.getTokens(ht.getUserName()));
+		final StoredToken ht = getToken(token, new OpReqs("get tokens").types(TokenType.LOGIN));
+		final TokenSet tokenSet = new TokenSet(ht, storage.getTokens(ht.getUserName()));
+		logInfo("User {} accessed their tokens", ht.getUserName().getName());
+		return tokenSet;
 	}
 
 	/** Get the tokens associated with an arbitrary user account.
@@ -687,11 +782,15 @@ public class Authentication {
 	public Set<StoredToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // force admin
-		return storage.getTokens(userName);
+		final AuthUser admin = getUser(token,
+				new OpReqs("get tokens for user {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
+		final Set<StoredToken> tokens = storage.getTokens(userName);
+		logInfo("Admin {} accessed user {}'s tokens",
+				admin.getUserName().getName(), userName.getName());
+		return tokens;
 	}
 
-	// converts a no such token exception into an invalid token exception.
 	/** Get details about a token.
 	 * @param token the token in question.
 	 * @return the token's details.
@@ -700,26 +799,51 @@ public class Authentication {
 	 */
 	public StoredToken getToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException {
+		final StoredToken st = getTokenSuppressUnauthorized(token, "get token");
+		logInfo("User {} accessed {} token {}", st.getUserName().getName(), st.getTokenType(),
+				st.getId());
+		return st;
+	}
+
+	private StoredToken getTokenSuppressUnauthorized(
+			final IncomingToken token,
+			final String format,
+			final Object... args)
+			throws InvalidTokenException, AuthStorageException {
 		try {
-			return getToken(token, set());
+			return getToken(token, new OpReqs(format, args));
 		} catch (UnauthorizedException e) {
 			throw new RuntimeException("Didn't require any particular token", e);
 		}
 	}
 	
-	private StoredToken getToken(final IncomingToken token, final Set<TokenType> allowedTypes)
+	// converts a no such token exception into an invalid token exception.
+	private StoredToken getToken(final IncomingToken token, final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(token, "token");
 		try {
-			final StoredToken ht = storage.getToken(token.getHashedToken());
-			if (!allowedTypes.isEmpty() && !allowedTypes.contains(ht.getTokenType())) {
-				throw new UnauthorizedException(ht.getTokenType().getDescription() +
+			final Set<TokenType> allowedTypes = reqs.allowedTokenTypes;
+			final StoredToken st = storage.getToken(token.getHashedToken());
+			if (!allowedTypes.isEmpty() && !allowedTypes.contains(st.getTokenType())) {
+				logDisallowedTokenType(st, reqs);
+				throw new UnauthorizedException(st.getTokenType().getDescription() +
 						" tokens are not allowed for this operation");
 			}
-			return ht;
+			return st;
 		} catch (NoSuchTokenException e) {
 			throw new InvalidTokenException();
 		}
+	}
+
+	private void logDisallowedTokenType(final StoredToken st, final OpReqs reqs) {
+		
+		final List<String> types = reqs.allowedTokenTypes.stream().map(r -> r.getID())
+				.collect(Collectors.toList());
+		final String typesStr = String.join(", ", types);
+		final Object[] args = ArrayUtils.addAll(new Object[] {st.getUserName().getName(),
+						st.getTokenType().getDescription(), typesStr}, reqs.args);
+		logErr("User {} with token type {} attempted an operation that requires a " +
+				"token type of one of [{}]: " + reqs.format, args);
 	}
 
 	/** Create a new agent, developer or service token.
@@ -747,26 +871,27 @@ public class Authentication {
 			throw new IllegalArgumentException("Cannot create a login token without logging in");
 		}
 		// check for disabled user for all token type targets as well
-		final AuthUser au = getUser(token, set(TokenType.LOGIN));
+		final AuthUser au = getUser(token,
+				new OpReqs("create {} token", tokenType.getDescription()).types(TokenType.LOGIN));
 		if (!TokenType.AGENT.equals(tokenType)) {
 			final Role reqRole = TokenType.SERV.equals(tokenType) ?
 					Role.SERV_TOKEN : Role.DEV_TOKEN;
 			if (!reqRole.isSatisfiedBy(au.getRoles())) {
 				throw new UnauthorizedException(String.format(
-						"User %s is not authorized to create this token type.",
-						au.getUserName().getName()));
+						"User %s is not authorized to create the %s token type.",
+						au.getUserName().getName(), tokenType.getDescription()));
 			}
 		}
 		final AuthConfig c = cfg.getAppConfig();
 		final long life = c.getTokenLifetimeMS(TOKEN_LIFE_TYPE.get(tokenType));
-		final Instant now = clock.instant();
-		final NewToken nt = new NewToken(StoredToken.getBuilder(
-					tokenType, randGen.randomUUID(), au.getUserName())
-				.withLifeTime(now, life)
+		final UUID id = randGen.randomUUID();
+		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, au.getUserName())
+				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
 				.withTokenName(tokenName).build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
+		logInfo("User {} created {} token {}", au.getUserName().getName(), tokenType, id);
 		return nt;
 	}
 	
@@ -779,8 +904,18 @@ public class Authentication {
 	 */
 	public AuthUser getUser(final IncomingToken token)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException {
+		final AuthUser u = getUserSuppressUnauthorized(token, "get self user");
+		logInfo("User {} accessed their user data", u.getUserName().getName());
+		return u;
+	}
+
+	private AuthUser getUserSuppressUnauthorized(
+			final IncomingToken token,
+			final String format,
+			final Object... args)
+			throws AuthStorageException, InvalidTokenException, DisabledUserException {
 		try {
-			return getUser(token, new Role[0]);
+			return getUser(token, new OpReqs(format, args));
 		} catch (DisabledUserException e) {
 			// this catch block is here because a disabled user exception is a subclass of
 			// unauthorized exception. We want to throw DUE but not UE.
@@ -793,34 +928,9 @@ public class Authentication {
 	// requires the user to have at least one of the required roles
 	private AuthUser getUser(
 			final IncomingToken token,
-			final Role ... required)
+			final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		return getUser(getToken(token), required);
-	}
-	
-	// requires the user to have at least one of the required roles
-	private AuthUser getUser(
-			final IncomingToken token,
-			final Set<TokenType> allowedTokenTypes)
-					throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		return getUser(getToken(token, allowedTokenTypes), new Role[0]);
-	}
-
-	// requires the user to have at least one of the required roles
-	private AuthUser getUser(
-			final IncomingToken token,
-			final Set<TokenType> allowedTokenTypes,
-			final Role ... requiredRoles)
-					throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		return getUser(getToken(token, allowedTokenTypes), requiredRoles);
-	}
-
-	//TODO ZLATER CODE might want to make a requirements class that captures token and role requirements
-	
-	// assumes hashed token is good
-	// requires the user to have at least one of the required roles
-	private AuthUser getUser(final StoredToken ht, final Role ... required)
-			throws AuthStorageException, UnauthorizedException {
+		final StoredToken ht = getToken(token, reqs);
 		final AuthUser u;
 		try {
 			u = storage.getUser(ht.getUserName());
@@ -831,17 +941,29 @@ public class Authentication {
 		if (u.isDisabled()) {
 			// apparently this disabled user still has some tokens, so kill 'em all
 			storage.deleteTokens(ht.getUserName());
-			throw new DisabledUserException();
+			throw new DisabledUserException(u.getUserName().getName());
 		}
-		if (required.length > 0) {
+		if (reqs.requiredRoles.size() > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
-			has.retainAll(Arrays.asList(required)); // intersection
+			has.retainAll(reqs.requiredRoles); // intersection
 			if (has.isEmpty()) {
+				logUnauthorized(u.getUserName(), reqs);
 				throw new UnauthorizedException();
 			}
 		}
 		return u;
+	}
+	
+	private void logUnauthorized(final UserName name, final OpReqs reqs) {
+		final List<String> roles = reqs.requiredRoles.stream()
+				.map(r -> r.getID()).collect(Collectors.toList());
+		final String rolesStr = String.join(", ", roles);
+		final Object[] args = ArrayUtils.addAll(
+				new Object[] {name.getName(), rolesStr}, reqs.args);
+		logErr("User {} does not have one of the required roles [{}] for operation " + reqs.format,
+				args);
+		
 	}
 
 	/** Get a restricted view of a user. Typically used for one user viewing another.
@@ -852,27 +974,28 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws NoSuchUserException if there is no user corresponding to the given user name or the
 	 * user is disabled.
+	 * @throws DisabledUserException if the requesting user is disabled.
 	 */
 	public ViewableUser getUser(
 			final IncomingToken token,
 			final UserName user)
 			throws AuthStorageException, InvalidTokenException,
-			NoSuchUserException {
+				NoSuchUserException, DisabledUserException {
 		nonNull(user, "userName");
-		final StoredToken ht = getToken(token);
-		final AuthUser u = storage.getUser(user);
-		final boolean sameUser = ht.getUserName().equals(u.getUserName());
-		if (u.isDisabled()) {
-			if (sameUser) {
-				storage.deleteTokens(u.getUserName());
-			}
-			throw new NoSuchUserException(u.getUserName().getName());
+		final AuthUser requestingUser = getUserSuppressUnauthorized(token, "get viewable user");
+		final AuthUser otherUser = storage.getUser(user);
+		if (otherUser.isDisabled()) {
+			// if requesting user was disabled a DisabledUserEx would already have been thrown
+			throw new NoSuchUserException(otherUser.getUserName().getName());
 		}
-		return new ViewableUser(u, sameUser);
+		final boolean sameUser = requestingUser.getUserName().equals(otherUser.getUserName());
+		logInfo("User {} accessed user {}'s user data", requestingUser.getUserName().getName(),
+				otherUser.getUserName().getName());
+		return new ViewableUser(otherUser, sameUser);
 	}
 
 	/** Get a user as an admin.
-	 * @param adminToken a token for a user with the administator, create administator, or root
+	 * @param adminToken a token for a user with the administrator, create administrator, or root
 	 * role.
 	 * @param userName the name of the user account to get.
 	 * @return the user.
@@ -888,8 +1011,13 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException,
 			InvalidTokenException, UnauthorizedException {
 		nonNull(userName, "userName");
-		getUser(adminToken, set(TokenType.LOGIN), Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
-		return storage.getUser(userName);
+		final AuthUser admin = getUser(adminToken,
+				new OpReqs("get user {} as admin", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
+		final AuthUser user = storage.getUser(userName);
+		logInfo("Admin {} accessed user {}'s user data", admin.getUserName().getName(),
+				userName.getName());
+		return user;
 	}
 
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
@@ -908,7 +1036,8 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
 		nonNull(userNames, "userNames");
 		noNulls(userNames, "Null name in userNames");
-		getToken(token); // just check the token is valid
+		// just check the token is valid
+		getTokenSuppressUnauthorized(token, "get user display names");
 		if (userNames.isEmpty()) {
 			return new HashMap<>();
 		}
@@ -941,7 +1070,7 @@ public class Authentication {
 		if (spec.isRegex()) {
 			throw new UnauthorizedException("Regex search is currently for internal use only");
 		}
-		final AuthUser user = getUser(token);
+		final AuthUser user = getUser(token, new OpReqs("search users"));
 		if (!Role.isAdmin(user.getRoles())) {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
 				throw new UnauthorizedException("Only admins may search on roles");
@@ -1043,8 +1172,10 @@ public class Authentication {
 			throws AuthStorageException,
 			NoSuchTokenException, InvalidTokenException, UnauthorizedException {
 		nonNull(tokenID, "tokenID");
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, new OpReqs("revoke token {}", tokenID)
+				.types(TokenType.LOGIN));
 		storage.deleteToken(ht.getUserName(), tokenID);
+		logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
 	}
 
 	/* maybe combine this with the above method...? The username is a good check that you're
@@ -1066,11 +1197,15 @@ public class Authentication {
 			final UserName userName,
 			final UUID tokenID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-			NoSuchTokenException {
+				NoSuchTokenException {
 		nonNull(userName, "userName");
 		nonNull(tokenID, "tokenID");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
+		final AuthUser admin = getUser(token,
+				new OpReqs("revoke token {} for user {}", tokenID, userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteToken(userName, tokenID);
+		logInfo("Admin {} revoked user {}'s token {}", admin.getUserName().getName(),
+				userName.getName(), tokenID);
 		
 	}
 	
@@ -1087,6 +1222,7 @@ public class Authentication {
 		try {
 			ht = storage.getToken(token.getHashedToken());
 			storage.deleteToken(ht.getUserName(), ht.getId());
+			logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
 			return Optional.of(ht);
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
@@ -1102,8 +1238,10 @@ public class Authentication {
 	 */
 	public void revokeTokens(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, new OpReqs("revoke owned tokens")
+				.types(TokenType.LOGIN));
 		storage.deleteTokens(ht.getUserName());
+		logInfo("User {} revoked all their tokens", ht.getUserName().getName());
 	}
 	
 	/** Revokes all tokens across all users, including the current user.
@@ -1115,8 +1253,10 @@ public class Authentication {
 	 */
 	public void revokeAllTokens(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
+		final AuthUser admin = getUser(token, new OpReqs("revoke all tokens")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteTokens();
+		logInfo("Admin {} revoked all tokens system wide", admin.getUserName().getName());
 	}
 	
 
@@ -1131,8 +1271,12 @@ public class Authentication {
 	public void revokeAllTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(userName, "userName");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
+		final AuthUser admin = getUser(token,
+				new OpReqs("revoke all tokens for user {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteTokens(userName);
+		logInfo("Admin {} revoked all tokens for user {}",
+				admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Remove roles from a user.
@@ -1146,7 +1290,7 @@ public class Authentication {
 	public void removeRoles(final IncomingToken token, final Set<Role> removeRoles)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, new OpReqs("remove roles").types(TokenType.LOGIN));
 		try {
 			updateRoles(token, ht.getUserName(), Collections.emptySet(), removeRoles);
 		} catch (NoSuchUserException e) {
@@ -1191,12 +1335,13 @@ public class Authentication {
 		if (!intersect.isEmpty()) {
 			throw new IllegalParameterException(
 					"One or more roles is to be both removed and added: " +
-					String.join(", ", rolesToDescriptions(intersect)));
+							rolesToString(intersect, r -> r.getDescription()));
 		}
 		if (userName.isRoot()) {
 			throw new UnauthorizedException("Cannot change ROOT roles");
 		}
-		final AuthUser actinguser = getUser(userToken, set(TokenType.LOGIN));
+		final AuthUser actinguser = getUser(userToken,
+				new OpReqs("update roles for user {}", userName.getName()).types(TokenType.LOGIN));
 		
 		final Set<Role> add = new HashSet<>(addRoles);
 		add.removeAll(actinguser.getGrantableRoles());
@@ -1204,23 +1349,46 @@ public class Authentication {
 		sub.removeAll(actinguser.getGrantableRoles());
 		
 		if (!add.isEmpty()) {
-			throwUnauthorizedToManageRoles("grant", add);
+			throwUnauthorizedToManageRoles(actinguser, "grant", add);
 		}
 		if (!sub.isEmpty() && !userName.equals(actinguser.getUserName())) {
-			throwUnauthorizedToManageRoles("remove", sub);
+			throwUnauthorizedToManageRoles(actinguser, "remove", sub);
 		}
 		storage.updateRoles(userName, addRoles, removeRoles);
+		logRoleUpdate(actinguser.getUserName(), userName, addRoles, removeRoles);
 	}
 
-	private void throwUnauthorizedToManageRoles(final String action, final Set<Role> roles)
+	private void logRoleUpdate(
+			final UserName actingUser,
+			final UserName user,
+			final Set<Role> addRoles,
+			final Set<Role> removeRoles) {
+		if (!addRoles.isEmpty()) {
+			logInfo("User {} added roles to user {}: {}", actingUser.getName(),
+					user.getName(), rolesToString(addRoles, r -> r.getID()));
+		}
+		if (!removeRoles.isEmpty()) {
+			logInfo("User {} removed roles from user {}: {}", actingUser.getName(),
+					user.getName(), rolesToString(removeRoles, r -> r.getID()));
+		}
+	}
+
+	private void throwUnauthorizedToManageRoles(
+			final AuthUser actingUser,
+			final String action,
+			final Set<Role> roles)
 			throws UnauthorizedException {
 		throw new UnauthorizedException(
-				String.format("Not authorized to %s role(s): %s", action,
-						String.join(", ", rolesToDescriptions(roles))));
+				String.format("User %s is not authorized to %s role(s): %s",
+						actingUser.getUserName().getName(), action,
+						rolesToString(roles, r -> r.getDescription())));
 	}
 
-	private Set<String> rolesToDescriptions(final Set<Role> roles) {
-		return roles.stream().map(r -> r.getDescription()).collect(Collectors.toSet());
+	private String rolesToString(
+			final Set<Role> roles,
+			final Function<? super Role, ? extends String> mapper) {
+		return String.join(", ", roles.stream().sorted().map(mapper)
+				.collect(Collectors.toList()));
 	}
 
 	/** Create or update a custom role.
@@ -1236,8 +1404,10 @@ public class Authentication {
 			final CustomRole role)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		nonNull(role, "role");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("set custom role {}", role.getID())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.setCustomRole(role);
+		logInfo("Admin {} set custom role {}", admin.getUserName().getName(), role.getID());
 	}
 	
 	/** Delete a custom role. Deletes the role from all users.
@@ -1259,8 +1429,10 @@ public class Authentication {
 		if (roleId == null || roleId.trim().isEmpty()) {
 			throw new MissingParameterException("roleId cannot be null or empty");
 		}
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN); // ensure admin
+		final AuthUser admin = getUser(token, new OpReqs("delete custom role {}", roleId)
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.deleteCustomRole(roleId);
+		logInfo("Admin {} deleted custom role {}", admin.getUserName().getName(), roleId);
 	}
 
 	/* may need to restrict to a subset of users in the future */
@@ -1275,12 +1447,19 @@ public class Authentication {
 	 */
 	public Set<CustomRole> getCustomRoles(final IncomingToken token, final boolean forceAdmin)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		final UserName name;
 		if (forceAdmin) {
-			getUser(token, set(TokenType.LOGIN), Role.ADMIN, Role.CREATE_ADMIN, Role.ROOT);
+			name = getUser(token, new OpReqs("get custom roles as admin")
+					.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN))
+					.getUserName();
 		} else {
-			getToken(token, set(TokenType.LOGIN)); // check for valid token
+			// check for valid token
+			name = getToken(token, new OpReqs("get custom roles").types(TokenType.LOGIN))
+					.getUserName();
 		}
-		return storage.getCustomRoles();
+		final Set<CustomRole> customRoles = storage.getCustomRoles();
+		logInfo("User {} accessed all custom roles", name.getName());
+		return customRoles;
 	}
 
 	/** Update a user's custom roles.
@@ -1321,8 +1500,31 @@ public class Authentication {
 		 * to set roles for users that users can't change. However, there's no reason not to allow
 		 * users to remove standard roles, which are privileges, not tags 
 		 */
-		getUser(userToken, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(userToken,
+				new OpReqs("update custom roles for user {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.updateCustomRoles(userName, addRoles, removeRoles);
+		logCustomRoleUpdate(admin.getUserName(), userName, addRoles, removeRoles);
+	}
+	
+	private void logCustomRoleUpdate(
+			final UserName actingUser,
+			final UserName user,
+			final Set<String> addRoles,
+			final Set<String> removeRoles) {
+		if (!addRoles.isEmpty()) {
+			logInfo("Admin {} added custom roles to user {}: {}", actingUser.getName(),
+					user.getName(), customRolesToString(addRoles));
+		}
+		if (!removeRoles.isEmpty()) {
+			logInfo("Admin {} removed custom roles from user {}: {}", actingUser.getName(),
+					user.getName(), customRolesToString(removeRoles));
+		}
+	}
+	
+	private String customRolesToString(final Set<String> roles) {
+		return String.join(", ", roles.stream().sorted()
+				.collect(Collectors.toList()));
 	}
 
 	/** Get an ordered list of the supported and enabled identity providers.
@@ -1390,8 +1592,11 @@ public class Authentication {
 	 */
 	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
-		return new LoginToken(storeErrorTemporarily(
-				providerError, ErrorType.ID_PROVIDER_ERROR, LOGIN_TOKEN_LIFETIME_MS));
+		final TemporaryToken tt = storeErrorTemporarily(
+				providerError, ErrorType.ID_PROVIDER_ERROR, LOGIN_TOKEN_LIFETIME_MS);
+		logErr("Stored temporary token {} with login identity provider error {}",
+				tt.getId(), providerError);
+		return new LoginToken(tt);
 	}
 
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1470,7 +1675,9 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		return new LoginToken(storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS));
+		final TemporaryToken tt = storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS);
+		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
+		return new LoginToken(tt);
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -1491,9 +1698,12 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
 		final TemporaryIdentities ids = getTemporaryIdentities(token);
 		if (ids.getIdentities().get().isEmpty()) {
-			throw new RuntimeException(
-					"Programming error: temporary login token stored with no identities");
+			throw new RuntimeException(String.format(
+					"Programming error: temporary login token %s stored with no identities",
+					ids.getId()));
 		}
+		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
+				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
 	}
 
@@ -1602,10 +1812,18 @@ public class Authentication {
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("Didn't supply any roles", e);
 		}
+		final RemoteIdentityID rid = match.get().getRemoteID();
+		logInfo("Created user {} linked to remote identity {} {} {} {}", userName.getName(),
+				rid.getID(), rid.getProviderName(), rid.getProviderIdentityId(),
+				match.get().getDetails().getUsername());
 		if (linkAll) {
 			ids.remove(match.get());
 			filterLinkCandidates(ids);
-			link(userName, ids);
+			final int linked = link(userName, ids);
+			if (linked > 0) {
+				logInfo("Linked all {} remaining identities to user {}",
+						linked, userName.getName());
+			}
 		}
 		return login(userName, tokenCtx);
 	}
@@ -1657,16 +1875,21 @@ public class Authentication {
 					"There is no account linked to the provided identity ID");
 		}
 		if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(u.get().getRoles())) {
-			throw new UnauthorizedException("Non-admin login is disabled");
+			throw new UnauthorizedException("User " + u.get().getUserName().getName() +
+					" cannot log in because non-admin login is disabled");
 		}
 		if (u.get().isDisabled()) {
-			throw new DisabledUserException();
+			throw new DisabledUserException(u.get().getUserName().getName());
 		}
 		addPolicyIDs(u.get().getUserName(), policyIDs);
 		if (linkAll) {
 			ids.remove(ri.get());
 			filterLinkCandidates(ids);
-			link(u.get().getUserName(), ids);
+			final int linked = link(u.get().getUserName(), ids);
+			if (linked > 0) {
+				logInfo("Linked all {} remaining identities to user {}",
+						linked, u.get().getUserName().getName());
+			}
 		}
 		return login(u.get().getUserName(), tokenCtx);
 	}
@@ -1711,8 +1934,11 @@ public class Authentication {
 	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(policyID, "policyID");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("remove policy ID {}", policyID.getName())
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.removePolicyID(policyID);
+		logInfo("Admin {} removed policy ID {} from the system", admin.getUserName().getName(),
+				policyID.getName());
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
@@ -1725,8 +1951,11 @@ public class Authentication {
 	public TemporaryToken linkProviderError(final String providerError)
 			throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
-		return storeErrorTemporarily(
+		final TemporaryToken tt = storeErrorTemporarily(
 				providerError, ErrorType.ID_PROVIDER_ERROR, LINK_TOKEN_LIFETIME_MS);
+		logErr("Stored temporary token {} with link identity provider error {}",
+				tt.getId(), providerError);
+		return tt;
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
@@ -1768,7 +1997,9 @@ public class Authentication {
 		 * provider. Any controllable error should be thrown when the process flow is back
 		 * under the control of the primary auth UI.
 		 */
-		return storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+		final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+		logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
+		return tt;
 	}
 	
 	private TemporaryToken storeErrorTemporarily(
@@ -1848,10 +2079,11 @@ public class Authentication {
 				UnauthorizedException {
 		final IdentityProvider idp = getIdentityProvider(provider);
 		// UI shouldn't allow disabled users to link
-		final AuthUser u = getUser(token, set(TokenType.LOGIN));
+		final AuthUser u = getUser(token, new OpReqs("link").types(TokenType.LOGIN));
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					u.getUserName().getName());
 		}
 		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
@@ -1864,7 +2096,9 @@ public class Authentication {
 		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
 			lt = getLinkToken(idp, u.getUserName(), ids.iterator().next());
 		} else { // will store an ID set if said set is empty.
-			lt = new LinkToken(storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS));
+			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+			logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
+			lt = new LinkToken(tt);
 		}
 		return lt;
 	}
@@ -1877,7 +2111,8 @@ public class Authentication {
 			final RemoteIdentity remoteIdentity)
 			throws AuthStorageException, LinkFailedException {
 		try {
-			storage.link(userName, remoteIdentity);
+			final boolean linked = storage.link(userName, remoteIdentity);
+			logSingleLinkResult(userName, remoteIdentity, linked);
 			return new LinkToken();
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException(
@@ -1886,7 +2121,26 @@ public class Authentication {
 			// well, crap. race condition and now there are no link candidates left.
 			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
 					LINK_TOKEN_LIFETIME_MS);
+			logInfo("A race condition means that the identity {} is already linked to a user " +
+					"other than {}. Stored empty identity set with temporary token {}",
+					remoteIdentity.getRemoteID().getID(), userName.getName(), tt.getId());
 			return new LinkToken(tt);
+		}
+	}
+
+	private void logSingleLinkResult(
+			final UserName userName,
+			final RemoteIdentity remoteIdentity,
+			final boolean linked) {
+		final RemoteIdentityID id = remoteIdentity.getRemoteID();
+		if (linked) {
+			logInfo("Linked identity {} {} {} {} to user {}", id.getID(), id.getProviderName(),
+					id.getProviderIdentityId(), remoteIdentity.getDetails().getUsername(),
+					userName.getName());
+		} else {
+			logInfo("Identity {} {} {} {} is already linked to user {}", id.getID(),
+					id.getProviderName(), id.getProviderIdentityId(),
+					remoteIdentity.getDetails().getUsername(), userName.getName());
 		}
 	}
 
@@ -1924,16 +2178,21 @@ public class Authentication {
 			final IncomingToken linktoken)
 			throws InvalidTokenException, AuthStorageException, LinkFailedException,
 				DisabledUserException, UnauthorizedException, IdentityProviderErrorException {
-		final AuthUser u = getUser(token, set(TokenType.LOGIN));
+		final AuthUser u = getUser(token, new OpReqs("get link state").types(TokenType.LOGIN));
 		if (u.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					u.getUserName().getName());
 		}
 		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
 		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities().get());
 		filterLinkCandidates(ids);
 		if (ids.isEmpty()) {
-			throw new LinkFailedException("All provided identities are already linked");
+			throw new LinkFailedException(String.format(
+					"All provided identities for user %s are already linked",
+					u.getUserName().getName()));
 		}
+		logInfo("User {} accessed temporary link token {} with {} identities",
+				u.getUserName().getName(), tids.getId(), tids.getIdentities().get().size());
 		return new LinkIdentities(u, ids, tids.getExpires());
 	}
 
@@ -1964,17 +2223,22 @@ public class Authentication {
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 				InvalidTokenException, IdentityLinkedException, UnauthorizedException,
 				MissingParameterException, IdentityProviderErrorException {
-		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
+		// checks user isn't disabled
+		final AuthUser au = getUser(
+				token, new OpReqs("link identity {}", identityID).types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					au.getUserName().getName());
 		}
 		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities().get();
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
-			throw new LinkFailedException(String.format("Not authorized to link identity %s",
+			throw new LinkFailedException(String.format(
+					"User %s is not authorized to link identity %s", au.getUserName().getName(),
 					identityID));
 		}
-		link(au.getUserName(), ri.get());
+		final boolean linked = link(au.getUserName(), ri.get());
+		logSingleLinkResult(au.getUserName(), ri.get(), linked);
 	}
 	
 	/** Complete the OAuth2 account linking process by linking all available identities to the
@@ -1996,41 +2260,50 @@ public class Authentication {
 	public void linkAll(final IncomingToken token, final IncomingToken linkToken)
 			throws InvalidTokenException, AuthStorageException, DisabledUserException,
 			UnauthorizedException, LinkFailedException, IdentityProviderErrorException {
-		final AuthUser au = getUser(token, set(TokenType.LOGIN)); // checks user isn't disabled
+		// checks user isn't disabled
+		final AuthUser au = getUser(
+				token, new OpReqs("link all identities").types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new LinkFailedException("Cannot link identities to local accounts");
+			throw new LinkFailedException("Cannot link identities to local account " +
+					au.getUserName().getName());
 		}
 		final Set<RemoteIdentity> identities = new HashSet<>(
 				getTemporaryIdentities(linkToken).getIdentities().get());
 		filterLinkCandidates(identities);
-		link(au.getUserName(), identities);
+		final int linked = link(au.getUserName(), identities);
+		if (linked > 0) {
+			logInfo("Linked all {} available identities to user {}",
+					linked, au.getUserName().getName());
+		} else {
+			logInfo("User {} had no available identities to link", au.getUserName().getName());
+		}
 	}
 	
-	private void link(final UserName userName, final RemoteIdentity id)
+	private boolean link(final UserName userName, final RemoteIdentity id)
 			throws AuthStorageException, IdentityLinkedException {
-		link(userName, new HashSet<>(Arrays.asList(id)), true);
+		return link(userName, new HashSet<>(Arrays.asList(id)), true) == 1;
 	}
 
-	private void link(final UserName userName, final Set<RemoteIdentity> identities)
+	private int link(final UserName userName, final Set<RemoteIdentity> identities)
 			throws AuthStorageException {
 		try {
-			link(userName, identities, false);
+			return link(userName, identities, false);
 		} catch (IdentityLinkedException e) {
-			// don't care if we miss an identity in this context. This catch block is here simply
-			// to avoid having the checked exception in the throws clause
+			throw new RuntimeException("explicitly said not to throw an exception for this", e);
 		}
 	}
 	
 	// assumes user is not local, and that the user exists
-	private void link(
+	private int link(
 			final UserName userName,
 			final Set<RemoteIdentity> identities,
 			final boolean throwExceptionIfIdentityLinked)
 			throws AuthStorageException, IdentityLinkedException {
+		int linked = 0;
 		for (final RemoteIdentity ri: identities) {
 			// could make a bulk op, but probably not necessary. Wait for now.
 			try {
-				storage.link(userName, ri);
+				linked += storage.link(userName, ri) ? 1 : 0;
 			} catch (NoSuchUserException e) {
 				throw new AuthStorageException("User magically disappeared from database: " +
 						userName.getName(), e);
@@ -2043,6 +2316,7 @@ public class Authentication {
 						"Programming error: this method should not be called on a local user", e);
 			}
 		}
+		return linked;
 	}
 
 	/** Remove a remote identity from a user account.
@@ -2060,15 +2334,20 @@ public class Authentication {
 			final IncomingToken token,
 			final String identityID)
 			throws InvalidTokenException, AuthStorageException, UnLinkFailedException,
-			DisabledUserException, UnauthorizedException, NoSuchIdentityException,
-			MissingParameterException {
+				DisabledUserException, UnauthorizedException, NoSuchIdentityException,
+				MissingParameterException {
 		checkString(identityID, "identityID");
-		final AuthUser au = getUser(token, set(TokenType.LOGIN));
+		final AuthUser au = getUser(
+				token, new OpReqs("unlink identity {}", identityID).types(TokenType.LOGIN));
 		if (au.isLocal()) {
-			throw new UnLinkFailedException("Local users don't have remote identities");
+			throw new UnLinkFailedException(String.format(
+					"Local user %s doesn't have remote identities", au.getUserName().getName()));
 		}
 		try {
+			// throws no such id exception if not already linked
 			storage.unlink(au.getUserName(), identityID);
+			// could get the identity from the AuthUser and log more info, but meh for now
+			logInfo("Unlinked identity {} from user {}", identityID, au.getUserName().getName());
 		} catch (NoSuchUserException e) {
 			throw new AuthStorageException("User magically disappeared from database: " +
 					au.getUserName().getName());
@@ -2083,7 +2362,12 @@ public class Authentication {
 	 */
 	public void deleteLinkOrLoginState(final IncomingToken token) throws AuthStorageException {
 		nonNull(token, "token");
-		storage.deleteTemporaryIdentities(token.getHashedToken());
+		final Optional<UUID> id = storage.deleteTemporaryIdentities(token.getHashedToken());
+		if (id.isPresent()) {
+			logInfo("Deleted temporary token {}", id.get());
+		} else {
+			logInfo("Attempted to delete non-existant temporary token");
+		}
 	}
 
 	/** Update a user's details.
@@ -2099,16 +2383,35 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException, UnauthorizedException {
 		nonNull(update, "update");
 		// should check the token before returning even if there's no update
-		final StoredToken ht = getToken(token, set(TokenType.LOGIN));
+		final StoredToken ht = getToken(token, new OpReqs("update user").types(TokenType.LOGIN));
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
 		try {
 			storage.updateUser(ht.getUserName(), update);
+			logUserUpdate(ht.getUserName(), update);
 		} catch (NoSuchUserException e) {
 			throw new RuntimeException("There seems to be an error in the " +
 					"storage system. Token was valid, but no user", e);
 		}
+	}
+
+	// assumes there's at least 1 update
+	private void logUserUpdate(final UserName userName, final UserUpdate update) {
+		final StringBuilder sb = new StringBuilder();
+		final List<String> args = new LinkedList<>();
+		sb.append("Updated user details for user {}.");
+		args.add(userName.getName());
+		if (update.getDisplayName().isPresent()) {
+			sb.append(" Display name: {}");
+			args.add(update.getDisplayName().get().getName());
+		}
+		if (update.getEmail().isPresent()) {
+			sb.append(" Email: {}");
+			args.add(update.getEmail().get().getAddress());
+		}
+		logInfo(sb.toString(), args.toArray());
+		
 	}
 
 	/** Disable an account.
@@ -2133,10 +2436,11 @@ public class Authentication {
 			IllegalParameterException, NoSuchUserException, MissingParameterException {
 		nonNull(userName, "userName");
 		checkString(reason, "reason", 1000);
-		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
-				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("disable account {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot() && !admin.isRoot()) {
-			throw new UnauthorizedException("Only the root user can disable the root account");
+			throw new UnauthorizedException(String.format(
+					"User %s cannot disable the root account", admin.getUserName().getName()));
 		}
 		storage.deleteTokens(userName); //not really necessary but doesn't hurt
 		storage.disableAccount(userName, admin.getUserName(), reason);
@@ -2147,6 +2451,7 @@ public class Authentication {
 		 * as well as a backup
 		 */
 		storage.deleteTokens(userName);
+		logInfo("Admin {} disabled account {}", admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Enable an account.
@@ -2164,12 +2469,15 @@ public class Authentication {
 			throws UnauthorizedException, InvalidTokenException, AuthStorageException,
 				NoSuchUserException {
 		nonNull(userName, "userName");
-		final AuthUser admin = getUser(token, set(TokenType.LOGIN),
-				Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("enable account {}", userName.getName())
+				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot()) {
-			throw new UnauthorizedException("The root user cannot be enabled via this method");
+			throw new UnauthorizedException(String.format(
+					"User %s cannot enable the root user via this method",
+					admin.getUserName().getName()));
 		}
 		storage.enableAccount(userName, admin.getUserName());
+		logInfo("Admin {} enabled account {}", admin.getUserName().getName(), userName.getName());
 	}
 	
 	/** Update the server configuration.
@@ -2189,7 +2497,8 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
 		nonNull(update, "update");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("update configuration")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		for (final String provider: update.getProviders().keySet()) {
 			// since idProviderSet is case insensitive
 			final IdentityProvider idp = idProviderSet.get(provider);
@@ -2199,8 +2508,81 @@ public class Authentication {
 		}
 		storage.updateConfig(update, true);
 		cfg.updateConfig();
+		logConfigurationUpdate(admin.getUserName(), update);
 	}
 	
+	private <T extends ExternalConfig> void logConfigurationUpdate(
+			final UserName userName,
+			final AuthConfigUpdate<T> update) {
+		final String name = userName.getName();
+		
+		if (update.getLoginAllowed().isPresent()) {
+			logInfo("Admin {} set non-admin login allowed to {}",
+					name, update.getLoginAllowed().get());
+		}
+		
+		final List<TokenLifetimeType> lifesorted = update.getTokenLifetimeMS().keySet().stream()
+				.sorted().collect(Collectors.toList());
+		for (final TokenLifetimeType lifetype: lifesorted) {
+			logInfo("Admin {} set lifetime for token type {} to {}",
+					name, lifetype, update.getTokenLifetimeMS().get(lifetype));
+		}
+		
+		final List<String> providersSorted = update.getProviders().keySet().stream().sorted()
+				.collect(Collectors.toList());
+		for (final String provider: providersSorted) {
+			logConfigurationUpdateForProvider(name, provider, update.getProviders().get(provider));
+		}
+		
+		logConfigurationUpdateExternal(name, update.getExternalConfig());
+	}
+
+	private <T extends ExternalConfig> void logConfigurationUpdateExternal(
+			final String name,
+			final Optional<T> externalConfig) {
+		if (!externalConfig.isPresent()) {
+			return;
+		}
+		final Map<String, ConfigItem<String, Action>> ext = externalConfig.get().toMap();
+		final List<String> keys = ext.keySet().stream().sorted().collect(Collectors.toList());
+		for (final String key: keys) {
+			final ConfigItem<String, Action> item = ext.get(key);
+			final Action action = item.getAction();
+			if (action.isRemove()) {
+				logInfo("Admin {} removed external config key {}", name, key);
+			} else if (action.isSet()) {
+				logInfo("Admin {} set external config key {} to {}", name, key, item.getItem());
+			}
+		}
+	}
+
+	private void logConfigurationUpdateForProvider(
+			final String adminName,
+			final String provider,
+			final ProviderUpdate update) {
+		if (!update.hasUpdate()) {
+			return;
+		}
+		final StringBuilder sb = new StringBuilder();
+		final List<Object> args = new LinkedList<>();
+		sb.append("Admin {} set values for identity provider {}.");
+		args.add(adminName);
+		args.add(provider);
+		if (update.getEnabled().isPresent()) {
+			sb.append(" Enabled: {}");
+			args.add(update.getEnabled().get());
+		}
+		if (update.getForceLoginChoice().isPresent()) {
+			sb.append(" Force login choice: {}");
+			args.add(update.getForceLoginChoice().get());
+		}
+		if (update.getForceLinkChoice().isPresent()) {
+			sb.append(" Force link choice: {}");
+			args.add(update.getForceLinkChoice().get());
+		}
+		logInfo(sb.toString(), args.toArray());
+	}
+
 	/** Reset the service configuration to the initial configuration supplied at startup.
 	 * @param token a token for a user with the administrator role.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -2210,9 +2592,11 @@ public class Authentication {
 	 */
 	public void resetConfigToDefault(final IncomingToken token)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("reset configuration")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.updateConfig(buildDefaultConfig(), true);
 		cfg.updateConfig();
+		logInfo("Admin {} reset the configuration to defaults", admin.getUserName().getName());
 	}
 
 	private AuthConfigUpdate<ExternalConfig> buildDefaultConfig() {
@@ -2249,12 +2633,15 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
 		nonNull(mapper, "mapper");
-		getUser(token, set(TokenType.LOGIN), Role.ADMIN);
+		final AuthUser admin = getUser(token, new OpReqs("get configuration")
+				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
-		return new AuthConfigSetWithUpdateTime<T>(
+		final AuthConfigSetWithUpdateTime<T> config = new AuthConfigSetWithUpdateTime<T>(
 				acs.getCfg().filterProviders(idProviderSet.keySet()),
 				mapper.fromMap(acs.getExtcfg().getMap()),
 				cfgUpdateIntervalMillis);
+		logInfo("Admin {} accessed the configuration", admin.getUserName().getName());
+		return config;
 	}
 	
 	/** Returns the suggested cache time for tokens in milliseconds.
@@ -2314,6 +2701,7 @@ public class Authentication {
 		try {
 			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), remoteIdentity)
 					.withEmailAddress(email).build());
+			logInfo("Imported user {}", userName.getName());
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		}

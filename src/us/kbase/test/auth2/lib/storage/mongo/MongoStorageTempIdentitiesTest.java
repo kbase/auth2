@@ -15,6 +15,8 @@ import java.util.UUID;
 import org.bson.Document;
 import org.junit.Test;
 
+import com.google.common.base.Optional;
+
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
@@ -272,10 +274,21 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		// check token is there
 		storage.getTemporaryIdentities(new IncomingToken("foobar").getHashedToken());
 		
-		storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken());
+		final Optional<UUID> retid = storage.deleteTemporaryIdentities(
+				new IncomingToken("foobar").getHashedToken());
+		
+		assertThat("incorrect token id", retid, is(Optional.of(id)));
 		
 		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
 				new NoSuchTokenException("Token not found"));
+	}
+	
+	@Test
+	public void deleteNonExistentTempIDs() throws Exception {
+		final Optional<UUID> retid = storage.deleteTemporaryIdentities(
+				new IncomingToken("foobar").getHashedToken());
+		
+		assertThat("incorrect token id", retid, is(Optional.absent()));
 	}
 	
 	@Test

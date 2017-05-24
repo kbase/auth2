@@ -6,16 +6,22 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
@@ -24,8 +30,6 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -34,9 +38,23 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationRoleTest {
+	
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
 	
 	@Test
 	public void removeRolesSuccess() throws Exception {
@@ -58,6 +76,10 @@ public class AuthenticationRoleTest {
 		when(storage.getUser(new UserName("baz"))).thenReturn(u, (AuthUser) null);
 		
 		auth.removeRoles(token, set(Role.SERV_TOKEN, Role.ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User baz removed roles from user baz: Admin, ServToken",
+				Authentication.class));
 		
 		verify(storage).updateRoles(
 				new UserName("baz"), Collections.emptySet(), set(Role.ADMIN, Role.SERV_TOKEN));
@@ -83,6 +105,34 @@ public class AuthenticationRoleTest {
 				new NullPointerException("removeRoles"));
 		failRemoveRoles(auth, new IncomingToken("foo"), set(Role.ADMIN, null),
 				new NullPointerException("Null role in removeRoles"));
+	}
+	
+	// remove roles pulls the token twice so we can't use the automated user tests
+	@Test
+	public void removeRolesExecuteStandardTokenCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardTokenCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.removeRoles(token, set(Role.ADMIN));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "remove roles";
+			}
+		});
 	}
 	
 	@Test
@@ -153,7 +203,7 @@ public class AuthenticationRoleTest {
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(u);
 			
-		failRemoveRoles(auth, token, set(Role.ADMIN), new DisabledUserException());
+		failRemoveRoles(auth, token, set(Role.ADMIN), new DisabledUserException("baz"));
 		
 		verify(storage).deleteTokens(new UserName("baz"));
 	}
@@ -180,44 +230,6 @@ public class AuthenticationRoleTest {
 				new UnauthorizedException(ErrorType.UNAUTHORIZED, "Cannot change ROOT roles"));
 	}
 	
-	@Test
-	public void removeRolesFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-			
-		failRemoveRoles(auth, token, set(Role.ADMIN), new InvalidTokenException());
-	}
-	
-	@Test
-	public void removeRolesFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Agent tokens are not allowed for this operation"));
-		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Developer tokens are not allowed for this operation"));
-		failRemoveRoles(auth, token, set(Role.ADMIN), new UnauthorizedException(
-				ErrorType.UNAUTHORIZED, "Service tokens are not allowed for this operation"));
-	}
-
 	private void failRemoveRoles(
 			final Authentication auth,
 			final IncomingToken token,
@@ -235,48 +247,78 @@ public class AuthenticationRoleTest {
 	public void updateRolesAsStdUserRemove() throws Exception {
 		succeedUpdateRoles(new UserName("whee"), new UserName("whee"), Role.DEV_TOKEN,
 				Collections.emptySet(), set(Role.DEV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User whee removed roles from user whee: DevToken", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsAdmin() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.ADMIN,
 				set(Role.DEV_TOKEN), set(Role.SERV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"User admin added roles to user whee: DevToken", Authentication.class),
+				new LogEvent(Level.INFO,
+					"User admin removed roles from user whee: ServToken", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsAdminSelf() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("admin"), Role.ADMIN,
 				set(Role.DEV_TOKEN), set(Role.ADMIN, Role.SERV_TOKEN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin added roles to user admin: DevToken", Authentication.class),
+			new LogEvent(Level.INFO,
+				"User admin removed roles from user admin: Admin, ServToken",
+					Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminAdd() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.CREATE_ADMIN,
 				set(Role.ADMIN), Collections.emptySet());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin added roles to user whee: Admin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminRemove() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("whee"), Role.CREATE_ADMIN,
 				Collections.emptySet(), set(Role.ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin removed roles from user whee: Admin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsCreateAdminSelfRemove() throws Exception {
 		succeedUpdateRoles(new UserName("admin"), new UserName("admin"), Role.CREATE_ADMIN,
 				Collections.emptySet(), set(Role.CREATE_ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User admin removed roles from user admin: CreateAdmin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsRootAdd() throws Exception {
 		succeedUpdateRoles(UserName.ROOT, new UserName("whee"), Role.ROOT, set(Role.CREATE_ADMIN),
 				Collections.emptySet());
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User ***ROOT*** added roles to user whee: CreateAdmin", Authentication.class));
 	}
 	
 	@Test
 	public void updateRolesAsRootRemove() throws Exception {
 		succeedUpdateRoles(UserName.ROOT, new UserName("whee"), Role.ROOT, Collections.emptySet(),
 				set(Role.CREATE_ADMIN));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User ***ROOT*** removed roles from user whee: CreateAdmin",
+				Authentication.class));
 	}
 	
 	@Test
@@ -315,94 +357,30 @@ public class AuthenticationRoleTest {
 	}
 	
 	@Test
-	public void updateRolesFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
+	public void updateRolesExecuteStandardUserCheckingTests() throws Exception {
 		final IncomingToken token = new IncomingToken("foo");
-		
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
-		failUpdateRoles(auth, token, new UserName("foo"), Collections.emptySet(),
-				Collections.emptySet(), new InvalidTokenException());
-	}
-	
-	@Test
-	public void updateRolesFailBadTokenType() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(
-				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.DEV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				StoredToken.getBuilder(TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
-						.withLifeTime(Instant.now(), Instant.now()).build(),
-				null);
-		
-		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Agent tokens are not allowed for this operation"));
-		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Developer tokens are not allowed for this operation"));
-		failUpdateRoles(auth, token, new UserName("foo"), set(), set(),
-				new UnauthorizedException(ErrorType.UNAUTHORIZED,
-						"Service tokens are not allowed for this operation"));
-	}
-	
-	@Test
-	public void updateRolesFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.updateRoles(token, new UserName("bar"), set(Role.ADMIN), set(Role.DEV_TOKEN));
+			}
 
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
-		
-		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
 			
-		failUpdateRoles(auth, token, new UserName("foo"), Collections.emptySet(),
-				Collections.emptySet(), new RuntimeException(
-				"There seems to be an error in the " +
-				"storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void updateRolesFailDisabled() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-
-		final IncomingToken token = new IncomingToken("foo");
-		final StoredToken htoken = StoredToken.getBuilder(
-				TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
-				.withLifeTime(Instant.now(), Instant.now()).build();
-		
-		final AuthUser u = AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foobar"), Instant.now())
-				.withRole(Role.ADMIN)
-				.withUserDisabledState(
-						new UserDisabledState("foo", new UserName("bar"), Instant.now()))
-				.build();
-		
-		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
-		
-		when(storage.getUser(new UserName("baz"))).thenReturn(u);
-		
-		failUpdateRoles(auth, token, new UserName("foo"), set(Role.DEV_TOKEN),
-				set(Role.SERV_TOKEN), new DisabledUserException());
-			
-		verify(storage).deleteTokens(new UserName("baz"));
+			@Override
+			public String getOperationString() {
+				return "update roles for user bar";
+			}
+		}, set());
 	}
 	
 	@Test
@@ -436,10 +414,12 @@ public class AuthenticationRoleTest {
 		for (final Role r: Arrays.asList(Role.ROOT, Role.ADMIN, Role.SERV_TOKEN, Role.DEV_TOKEN)) {
 			failUpdateRoles(UserName.ROOT, new UserName("foo"), Role.ROOT, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User ***ROOT*** is not authorized to grant role(s): " +
+					r.getDescription()));
 			failUpdateRoles(UserName.ROOT, new UserName("foo"), Role.ROOT, Collections.emptySet(),
 					set(r), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to remove role(s): " + r.getDescription()));
+							"User ***ROOT*** is not authorized to remove role(s): " +
+									r.getDescription()));
 		}
 	}
 	
@@ -449,11 +429,13 @@ public class AuthenticationRoleTest {
 				Role.DEV_TOKEN)) {
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.CREATE_ADMIN, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User bleah is not authorized to grant role(s): " +
+									r.getDescription()));
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.CREATE_ADMIN,
 					Collections.emptySet(), set(r),
 							new UnauthorizedException(ErrorType.UNAUTHORIZED,
-									"Not authorized to remove role(s): " + r.getDescription()));
+									"User bleah is not authorized to remove role(s): " +
+											r.getDescription()));
 		}
 	}
 	
@@ -462,11 +444,13 @@ public class AuthenticationRoleTest {
 		for (final Role r: Arrays.asList(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN)) {
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.ADMIN, set(r),
 					Collections.emptySet(), new UnauthorizedException(ErrorType.UNAUTHORIZED,
-							"Not authorized to grant role(s): " + r.getDescription()));
+							"User bleah is not authorized to grant role(s): " +
+									r.getDescription()));
 			failUpdateRoles(new UserName("bleah"), new UserName("foo"), Role.ADMIN,
 					Collections.emptySet(), set(r),
 							new UnauthorizedException(ErrorType.UNAUTHORIZED,
-									"Not authorized to remove role(s): " + r.getDescription()));
+									"User bleah is not authorized to remove role(s): " +
+											r.getDescription()));
 		}
 	}
 	
