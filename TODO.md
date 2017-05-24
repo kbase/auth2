@@ -30,7 +30,7 @@ Auth service work
 -----------------
 * UI (1-2 sprints w/ 1-2 FTEs per Bill & Erik)
   * Probably means altering server endpoints in concert with UI development
-* 200 TODOs in the codebase on average
+* TODOs in the codebase
 * Read through all prototype code and convert to production worthy
 * Code review
   * Mike Sneddon
@@ -48,7 +48,6 @@ Auth service work
 * General
   * Lock local account for X m after Y failed logins - use sshguard or something here
   * Make server root return endpoints
-* Logging for all methods - at least log user and action
 * Deploy
   * Dockerization
 
