@@ -28,10 +28,10 @@ accounts and tests if any, allow setting auth service url
 
 Auth service work
 -----------------
-* UI (1-2 sprints w/ 1-2 FTEs per Bill & Erik)
-  * Probably means altering server endpoints in concert with UI development
+* Complete UI
+  * Currently only covers login, link, me, and tokens.
 * TODOs in the codebase
-* Read through all prototype code and convert to production worthy
+* Read through all remaining prototype code and convert to production worthy
 * Code review
   * Mike Sneddon
   * Steve Chan
