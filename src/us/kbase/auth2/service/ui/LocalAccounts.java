@@ -92,7 +92,6 @@ public class LocalAccounts {
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		
 		final LocalLoginResult llr = auth.localLogin(new UserName(userName), cpwd, tcc);
-		//TODO LOG log
 		if (llr.isPwdResetRequired()) {
 			return Response.seeOther(toURI(UIPaths.LOCAL_ROOT_RESET + "?" + Fields.USER + "=" +
 					llr.getUserName().get().getName())).build();

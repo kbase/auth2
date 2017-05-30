@@ -21,11 +21,10 @@ public class Root {
 	//TODO ZLATER ROOT add configurable server name
 	//TODO ZLATER ROOT add paths to endpoints
 	//TODO ZLATER ROOT add configurable contact email or link
-	//TODO ZLATER ROOT move version to file?
 	
 	//TODO JAVADOC or swagger
 	
-	private static final String VERSION = "0.1.0-prerelease";
+	private static final String VERSION = "0.1.0";
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)

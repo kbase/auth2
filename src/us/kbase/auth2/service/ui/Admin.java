@@ -244,7 +244,6 @@ public class Admin {
 			MissingParameterException, IllegalParameterException,
 			UnauthorizedException, InvalidTokenException,
 			NoTokenProvidedException {
-		//TODO LOG log
 		final Password pwd = auth.createLocalUser(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));

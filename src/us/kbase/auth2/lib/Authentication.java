@@ -118,10 +118,8 @@ import us.kbase.auth2.lib.token.IncomingToken;
 public class Authentication {
 
 	//TODO TEST test unicode for inputs and outputs
-	//TODO TEST LOG test logging on startup
-	//TODO LOG modify unauthorized exceptions to include username
+	//TODO TEST LOG test logging on startup and log appropriate startup messages
 	//TODO ZZLATER EMAIL validate email address by sending an email
-	//TODO LOG logging everywhere - on login, on logout, on create / delete / expire token, etc.
 	//TODO ZLATER LOG Make a way to note that an exception stack trace shouldn't be logged - usually for unauthorized exceptions
 	//TODO ZLATER SCOPES configure scopes via ui
 	//TODO ZLATER SCOPES configure scope on login via ui
@@ -2705,10 +2703,5 @@ public class Authentication {
 		} catch (NoSuchRoleException e) {
 			throw new RuntimeException("didn't supply any roles", e);
 		}
-	}
-	
-	@SafeVarargs
-	public static <T> Set<T> set(T... objects) {
-		return new HashSet<T>(Arrays.asList(objects));
 	}
 }

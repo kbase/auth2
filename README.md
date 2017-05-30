@@ -178,6 +178,15 @@ Omit the stop key to have jetty generate one for you.
 Developer notes
 ---------------
 
+### Adding code
+
+* All code additions and updates must be made as pull requests directed at the develop branch.
+  * All tests must pass and all new code must be covered by tests.
+  * All new code must be documented appropriately with javadoc and in the general documentation
+    if appropriate.
+* The master branch is the stable branch. Releases are made from the develop branch to the master
+  branch.
+
 ### Running tests
 
 * Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
