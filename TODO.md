@@ -28,7 +28,7 @@ accounts and tests if any, allow setting auth service url
 
 Auth service work
 -----------------
-* Complete UI
+* Complete rich UI (code not in this repo)
   * Currently only covers login, link, me, and tokens.
 * TODOs in the codebase
 * Read through all remaining prototype code and convert to production worthy

@@ -1,0 +1,21 @@
+<html>
+<body>
+<p>Note that in a proper UI, the provider and username should be HTML-escaped.</p>
+
+Choices expire: 11493000000000<br/>
+
+<form action="cancel" method="post">
+	<input type="submit" value="Cancel account linking"/>
+</form>
+
+<h2>Link prov account</h2>
+
+<p>Link one of the following provider accounts to your <strong>u1</strong>
+account:</p>
+
+<h2>Already linked identities:</h2>
+
+Username: u1<br/>
+Provider username: user1<br/>
+</html>
+</body>

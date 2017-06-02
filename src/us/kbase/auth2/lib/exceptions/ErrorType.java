@@ -56,7 +56,7 @@ public enum ErrorType {
 	NO_SUCH_ROLE			(50040, "No such role"),
 	/** The attempt to link one account to another failed. */
 	LINK_FAILED				(60000, "Account linkage failed"),
-	/** The attemp to unlink one account from another failed. */
+	/** The attempt to unlink one account from another failed. */
 	UNLINK_FAILED			(60010, "Account unlink failed"),
 	/** The requested operation is not supported. */
 	UNSUPPORTED_OP			(70000, "Unsupported operation");

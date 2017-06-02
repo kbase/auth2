@@ -2031,9 +2031,7 @@ public class Authentication {
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, true);
-		filterLinkCandidates(ris);
-		return ris;
+		return idp.getIdentities(authcode, true);
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
@@ -2084,6 +2082,8 @@ public class Authentication {
 					u.getUserName().getName());
 		}
 		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
+		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
+		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
 		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
 		 * provider. Any controllable error should be thrown when the process flow is back
@@ -2091,8 +2091,8 @@ public class Authentication {
 		 */
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
-		if (ids.size() == 1 && !pc.isForceLinkChoice()) {
-			lt = getLinkToken(idp, u.getUserName(), ids.iterator().next());
+		if (filtered.size() == 1 && !pc.isForceLinkChoice()) {
+			lt = getLinkToken(idp, u.getUserName(), filtered.iterator().next(), ids);
 		} else { // will store an ID set if said set is empty.
 			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
 			logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
@@ -2106,7 +2106,8 @@ public class Authentication {
 	private LinkToken getLinkToken(
 			final IdentityProvider idp,
 			final UserName userName,
-			final RemoteIdentity remoteIdentity)
+			final RemoteIdentity remoteIdentity,
+			final Set<RemoteIdentity> allIds)
 			throws AuthStorageException, LinkFailedException {
 		try {
 			final boolean linked = storage.link(userName, remoteIdentity);
@@ -2117,11 +2118,12 @@ public class Authentication {
 					"User unexpectedly disappeared from the database", e);
 		} catch (IdentityLinkedException e) {
 			// well, crap. race condition and now there are no link candidates left.
-			final TemporaryToken tt = storeIdentitiesTemporarily(Collections.emptySet(),
-					LINK_TOKEN_LIFETIME_MS);
+			final TemporaryToken tt = storeIdentitiesTemporarily(allIds, LINK_TOKEN_LIFETIME_MS);
 			logInfo("A race condition means that the identity {} is already linked to a user " +
-					"other than {}. Stored empty identity set with temporary token {}",
-					remoteIdentity.getRemoteID().getID(), userName.getName(), tt.getId());
+					"other than {}. Stored identity set with {} linked identities with " +
+					"temporary token {}",
+					remoteIdentity.getRemoteID().getID(), userName.getName(), allIds.size(),
+					tt.getId());
 			return new LinkToken(tt);
 		}
 	}
@@ -2182,16 +2184,33 @@ public class Authentication {
 					u.getUserName().getName());
 		}
 		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
-		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities().get());
-		filterLinkCandidates(ids);
-		if (ids.isEmpty()) {
-			throw new LinkFailedException(String.format(
-					"All provided identities for user %s are already linked",
-					u.getUserName().getName()));
+		if (tids.getIdentities().get().isEmpty()) {
+			throw new RuntimeException(String.format(
+					"Programming error: temporary login token %s stored with no identities",
+					tids.getId()));
 		}
+		final LinkIdentities linkIdentities = getLinkIdentities(u, tids);
 		logInfo("User {} accessed temporary link token {} with {} identities",
 				u.getUserName().getName(), tids.getId(), tids.getIdentities().get().size());
-		return new LinkIdentities(u, ids, tids.getExpires());
+		return linkIdentities;
+	}
+
+	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporaryIdentities tids)
+			throws AuthStorageException {
+		final Set<RemoteIdentity> ids = tids.getIdentities().get();
+		final String provider = ids.iterator().next().getRemoteID().getProviderName();
+		
+		final LinkIdentities.Builder builder = LinkIdentities.getBuilder(
+				u.getUserName(), provider, tids.getExpires());
+		for (final RemoteIdentity ri: ids) {
+			final Optional<AuthUser> linkeduser = storage.getUser(ri);
+			if (!linkeduser.isPresent()) {
+				builder.withIdentity(ri);
+			} else {
+				builder.withUser(linkeduser.get(), ri);
+			}
+		}
+		return builder.build();
 	}
 
 	/** Complete the OAuth2 account linking process by linking one identity to the current user.
