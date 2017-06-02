@@ -1117,8 +1117,10 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
 		
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+		final AuthUser user2 = AuthUser.getBuilder(
+				new UserName("someuser"), new DisplayName("a"), Instant.now())
+				.withIdentity(storageRemoteID2).build();
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user2))
 				.thenReturn(null);
 		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
 				.thenReturn(null);
@@ -1127,14 +1129,61 @@ public class AuthenticationLinkTest {
 		
 		final LinkIdentities li = auth.getLinkState(userToken, tempToken);
 		
-		assertThat("incorrect link identities", li, is(new LinkIdentities(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
-				.withIdentity(REMOTE).build(),
-				set(storageRemoteID3, storageRemoteID4),
-				Instant.ofEpochMilli(20000))));
+		assertThat("incorrect link identities", li, is(LinkIdentities.getBuilder(
+				new UserName("baz"), "prov", Instant.ofEpochMilli(20000))
+				.withUser(user2, storageRemoteID2)
+				.withIdentity(storageRemoteID3)
+				.withIdentity(storageRemoteID4).build()));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
 				"User baz accessed temporary link token %s with 3 identities", temptokenid),
+				Authentication.class));
+	}
+	
+	@Test
+	public void getLinkStateNoUnlinkedIDs() throws Exception {
+		/* tests id filtering */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID tempTokenID = UUID.randomUUID();
+		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
+				new TemporaryIdentities(tempTokenID, NOW, NOW,
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
+				.thenReturn(null);
+		
+		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
+				new RemoteIdentityID("prov", "id2"),
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
+
+		final AuthUser user2 = AuthUser.getBuilder(
+				new UserName("someuser"), new DisplayName("a"), Instant.now())
+				.withIdentity(storageRemoteID2).build();
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user2)).thenReturn(null);
+		
+		final LinkIdentities li = auth.getLinkState(userToken, tempToken);
+		
+		assertThat("incorrect link identities", li, is(LinkIdentities.getBuilder(
+				new UserName("baz"), "prov", NOW)
+				.withUser(user2, storageRemoteID2)
+				.build()));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"User baz accessed temporary link token %s with 1 identities", tempTokenID),
 				Authentication.class));
 	}
 	
@@ -1299,24 +1348,16 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
+		final UUID tempTokenID = UUID.randomUUID();
 		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporaryIdentities(UUID.randomUUID(), NOW, NOW,
-						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
+				new TemporaryIdentities(tempTokenID, NOW, NOW, set()))
 				.thenReturn(null);
-		
-		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
-				.thenReturn(null);
-		
-		failGetLinkState(auth, userToken, tempToken, new LinkFailedException(
-				"All provided identities for user baz are already linked"));
+		failGetLinkState(auth, userToken, tempToken, new RuntimeException(String.format(
+					"Programming error: temporary login token %s stored with no identities",
+					tempTokenID)));
 	}
-	
+
 	private void failGetLinkState(
 			final Authentication auth,
 			final IncomingToken utoken,

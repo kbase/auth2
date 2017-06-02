@@ -2184,16 +2184,33 @@ public class Authentication {
 					u.getUserName().getName());
 		}
 		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
-		final Set<RemoteIdentity> ids = new HashSet<>(tids.getIdentities().get());
-		filterLinkCandidates(ids);
-		if (ids.isEmpty()) {
-			throw new LinkFailedException(String.format(
-					"All provided identities for user %s are already linked",
-					u.getUserName().getName()));
+		if (tids.getIdentities().get().isEmpty()) {
+			throw new RuntimeException(String.format(
+					"Programming error: temporary login token %s stored with no identities",
+					tids.getId()));
 		}
+		final LinkIdentities linkIdentities = getLinkIdentities(u, tids);
 		logInfo("User {} accessed temporary link token {} with {} identities",
 				u.getUserName().getName(), tids.getId(), tids.getIdentities().get().size());
-		return new LinkIdentities(u, ids, tids.getExpires());
+		return linkIdentities;
+	}
+
+	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporaryIdentities tids)
+			throws AuthStorageException {
+		final Set<RemoteIdentity> ids = tids.getIdentities().get();
+		final String provider = ids.iterator().next().getRemoteID().getProviderName();
+		
+		final LinkIdentities.Builder builder = LinkIdentities.getBuilder(
+				u.getUserName(), provider, tids.getExpires());
+		for (final RemoteIdentity ri: ids) {
+			final Optional<AuthUser> linkeduser = storage.getUser(ri);
+			if (!linkeduser.isPresent()) {
+				builder.withIdentity(ri);
+			} else {
+				builder.withUser(linkeduser.get(), ri);
+			}
+		}
+		return builder.build();
 	}
 
 	/** Complete the OAuth2 account linking process by linking one identity to the current user.
