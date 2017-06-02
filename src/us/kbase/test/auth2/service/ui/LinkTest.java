@@ -464,7 +464,8 @@ public class LinkTest {
 		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(token).getHashedToken());
 		
-		assertThat("incorrect remote ids", tis.getIdentities().get(), is(set(REMOTE2, REMOTE3)));
+		assertThat("incorrect remote ids", tis.getIdentities().get(),
+				is(set(REMOTE1, REMOTE2, REMOTE3)));
 	}
 	
 	@Test

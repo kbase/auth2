@@ -237,16 +237,26 @@ public class AuthenticationLinkTest {
 		
 		when(idp.getIdentities("authcode", true)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+				new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+				new RemoteIdentity(
+						new RemoteIdentityID("Prov", "id3"),
+						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
 				.thenReturn(null);
 
-		final RemoteIdentity storageRemoteID = new RemoteIdentity(
+		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
 				new RemoteIdentityID("Prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		final RemoteIdentity storageRemoteID3 = new RemoteIdentity(
+				new RemoteIdentityID("Prov", "id3"),
+				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
 		
-		when(storage.link(new UserName("baz"), storageRemoteID))
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.of(AuthUser.getBuilder(
+				new UserName("whee"), new DisplayName("arg"), Instant.now())
+				.withIdentity(storageRemoteID3).build())).thenReturn(null);
+		
+		when(storage.link(new UserName("baz"), storageRemoteID2))
 				.thenThrow(new IdentityLinkedException("foo"));
 		
 		final UUID tokenID = UUID.randomUUID();
@@ -262,12 +272,12 @@ public class AuthenticationLinkTest {
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
-				Collections.emptySet());
+				set(storageRemoteID2, storageRemoteID3));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
 				"A race condition means that the identity fda04183ab36b12041695c2f78f07713 " +
-				"is already linked to a user other than baz. Stored empty identity set with " +
-				"temporary token %s", tokenID), Authentication.class));
+				"is already linked to a user other than baz. Stored identity set with 2 linked " +
+				"identities with temporary token %s", tokenID), Authentication.class));
 	}
 	
 	@Test
@@ -337,7 +347,7 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void linkWithTokenNoIDsDueToFilter() throws Exception {
+	public void linkWithTokenNoAvailableIDsDueToFilter() throws Exception {
 		final IdentityProvider idp = mock(IdentityProvider.class);
 
 		when(idp.getProviderName()).thenReturn("prov");
@@ -395,12 +405,12 @@ public class AuthenticationLinkTest {
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
-				Collections.emptySet());
+				set(storageRemoteID));
 		
 		verify(storage, never()).link(any(), any());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Stored temporary token %s with 0 link identities", tokenID),
+				"Stored temporary token %s with 1 link identities", tokenID),
 				Authentication.class));
 	}
 	
@@ -477,12 +487,12 @@ public class AuthenticationLinkTest {
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
-				set(storageRemoteID3, storageRemoteID4));
+				set(storageRemoteID2, storageRemoteID3, storageRemoteID4));
 		
 		verify(storage, never()).link(any(), any());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Stored temporary token %s with 2 link identities", tokenID),
+				"Stored temporary token %s with 3 link identities", tokenID),
 				Authentication.class));
 	}
 	
@@ -916,14 +926,6 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
 		
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
-				.thenReturn(null);
-		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
-				.thenReturn(null);
-		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
-				.thenReturn(null);
-		
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
 		when(rand.getToken()).thenReturn("sometoken").thenReturn(null);
@@ -937,10 +939,10 @@ public class AuthenticationLinkTest {
 		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
 				tokenID, "sometoken", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
 						.getHashedToken(),
-				set(storageRemoteID3, storageRemoteID4));
+				set(storageRemoteID2, storageRemoteID3, storageRemoteID4));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Stored temporary token %s with 2 link identities", tokenID),
+				"Stored temporary token %s with 3 link identities", tokenID),
 				Authentication.class));
 	}
 	
