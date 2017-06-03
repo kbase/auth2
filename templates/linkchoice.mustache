@@ -20,6 +20,7 @@ Provider username: {{provusername}}<br/>
 	<input type="submit" value="Link"/>
 </form>
 {{/idents}}
+{{#haslinks}}
 
 <p> or
 <form action="{{pickurl}}" method="post">
@@ -27,5 +28,12 @@ Provider username: {{provusername}}<br/>
 </form>
 </p>
 
+{{/haslinks}}
+<h2>Already linked identities:</h2>
+
+{{#linked}}
+Username: {{user}}<br/>
+Provider username: {{provusername}}<br/>
+{{/linked}}
 </html>
 </body>

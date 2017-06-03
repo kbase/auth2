@@ -42,10 +42,12 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
@@ -240,8 +242,9 @@ public class Link {
 		 * choice for link targets.
 		 */ 
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put(Fields.USER, ids.getUser().getUserName().getName());
+		ret.put(Fields.USER, ids.getUser().getName());
 		ret.put(Fields.PROVIDER, ids.getProvider());
+		ret.put(Fields.HAS_LINKS, !ids.getIdentities().isEmpty());
 		final List<Map<String, String>> ris = new LinkedList<>();
 		ret.put(Fields.IDENTITIES, ris);
 		for (final RemoteIdentity ri: ids.getIdentities()) {
@@ -249,6 +252,16 @@ public class Link {
 			s.put(Fields.ID, ri.getRemoteID().getID());
 			s.put(Fields.PROV_USER, ri.getDetails().getUsername());
 			ris.add(s);
+		}
+		final List<Map<String, String>> linked = new LinkedList<>();
+		ret.put(Fields.LINKED, linked);
+		for (final UserName u: ids.getLinkedUsers()) {
+			for (final RemoteIdentity ri: ids.getLinkedIdentities(u)) {
+				linked.add(ImmutableMap.of(
+						Fields.USER, u.getName(),
+						Fields.ID, ri.getRemoteID().getID(),
+						Fields.PROV_USER, ri.getDetails().getUsername()));
+			}
 		}
 		ret.put(Fields.URL_CANCEL, relativize(uriInfo, UIPaths.LINK_ROOT_CANCEL));
 		ret.put(Fields.URL_PICK, relativize(uriInfo, UIPaths.LINK_ROOT_PICK));

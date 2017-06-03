@@ -20,7 +20,9 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import javax.ws.rs.client.Client;
@@ -464,7 +466,8 @@ public class LinkTest {
 		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(token).getHashedToken());
 		
-		assertThat("incorrect remote ids", tis.getIdentities().get(), is(set(REMOTE2, REMOTE3)));
+		assertThat("incorrect remote ids", tis.getIdentities().get(),
+				is(set(REMOTE1, REMOTE2, REMOTE3)));
 	}
 	
 	@Test
@@ -620,21 +623,39 @@ public class LinkTest {
 	
 	@Test
 	public void linkChoiceHTML() throws Exception {
-		linkChoiceHTML("/link/choice", TestCommon.getTestExpectedData(getClass(),
+		linkChoiceHTML("/link/choice", set(REMOTE1, REMOTE2, REMOTE3),
+				TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void linkChoiceHTMLNoLinks() throws Exception {
+		linkChoiceHTML("/link/choice", set(REMOTE1),
+				TestCommon.getTestExpectedData(getClass(),
+				TestCommon.getCurrentMethodName()));
+	}
+	
+	@Test
+	public void linkChoiceHTMLOnlyLinks() throws Exception {
+		linkChoiceHTML("/link/choice", set(REMOTE2, REMOTE3),
+				TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 	}
 	
 	@Test
 	public void linkChoiceHTMLTrailingSlash() throws Exception {
-		linkChoiceHTML("/link/choice/", TestCommon.getTestExpectedData(getClass(),
+		linkChoiceHTML("/link/choice/", set(REMOTE1, REMOTE2, REMOTE3),
+				TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 	}
 
-	private void linkChoiceHTML(final String path, final String expected) throws Exception {
+	private void linkChoiceHTML(
+			final String path,
+			final Set<RemoteIdentity> storedIDs,
+			final String expected) throws Exception {
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
-				set(REMOTE1, REMOTE2, REMOTE3));
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), storedIDs);
 		
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		
@@ -656,19 +677,73 @@ public class LinkTest {
 	
 	@Test
 	public void linkChoiceJSON() throws Exception {
-		linkChoiceJSON("/link/choice", "");
+		linkChoiceJSON("/link/choice", "",
+				set(REMOTE1, REMOTE2, REMOTE3),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user2",
+								"id", "5fbea2e6ce3d02f7cdbde0bc31be8059"),
+						ImmutableMap.of("provusername", "user3",
+								"id", "de0702aa7927b562e0d6be5b6527cfb2")
+						),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user1",
+								"id", "ef0518c79af70ed979907969c6d0a0f7",
+								"user", "u1")
+						));
+	}
+	
+	@Test
+	public void linkChoiceJSONNoLinks() throws Exception {
+		linkChoiceJSON("/link/choice", "",
+				set(REMOTE1),
+				Collections.emptyList(),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user1",
+								"id", "ef0518c79af70ed979907969c6d0a0f7",
+								"user", "u1")
+						));
+	}
+	
+	@Test
+	public void linkChoiceJSONOnlyLinks() throws Exception {
+		linkChoiceJSON("/link/choice", "",
+				set(REMOTE2, REMOTE3),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user2",
+								"id", "5fbea2e6ce3d02f7cdbde0bc31be8059"),
+						ImmutableMap.of("provusername", "user3",
+								"id", "de0702aa7927b562e0d6be5b6527cfb2")
+						),
+				Collections.emptyList());
 	}
 	
 	@Test
 	public void linkChoiceJSONTrailingSlash() throws Exception {
-		linkChoiceJSON("/link/choice/", "../");
+		linkChoiceJSON("/link/choice/", "../",
+				set(REMOTE1, REMOTE2, REMOTE3),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user2",
+								"id", "5fbea2e6ce3d02f7cdbde0bc31be8059"),
+						ImmutableMap.of("provusername", "user3",
+								"id", "de0702aa7927b562e0d6be5b6527cfb2")
+						),
+				Arrays.asList(
+						ImmutableMap.of("provusername", "user1",
+								"id", "ef0518c79af70ed979907969c6d0a0f7",
+								"user", "u1")
+						));
 	}
 	
-	private void linkChoiceJSON(final String path, final String urlprefix) throws Exception {
+	private void linkChoiceJSON(
+			final String path,
+			final String urlprefix,
+			final Set<RemoteIdentity> storedIDs,
+			final List<Map<String, String>> idents,
+			final List<Map<String, String>> linked)
+			throws Exception {
 		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
 				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
-				set(REMOTE1, REMOTE2, REMOTE3));
+		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), storedIDs);
 		
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		
@@ -687,20 +762,15 @@ public class LinkTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> json = res.readEntity(Map.class);
 		
-		System.out.println(json);
-		
 		final Map<String, Object> expectedJson = new HashMap<>();
 		expectedJson.put("pickurl", urlprefix + "pick");
 		expectedJson.put("cancelurl", urlprefix + "cancel");
 		expectedJson.put("expires", 11493000000000L);
 		expectedJson.put("provider", "prov");
 		expectedJson.put("user", "u1");
-		expectedJson.put("idents", Arrays.asList(
-				ImmutableMap.of("provusername", "user2",
-						"id", "5fbea2e6ce3d02f7cdbde0bc31be8059"),
-				ImmutableMap.of("provusername", "user3",
-						"id", "de0702aa7927b562e0d6be5b6527cfb2")
-				));
+		expectedJson.put("haslinks", !idents.isEmpty());
+		expectedJson.put("idents", idents);
+		expectedJson.put("linked", linked);
 		
 		ServiceTestUtils.assertObjectsEqual(json, expectedJson);
 	}

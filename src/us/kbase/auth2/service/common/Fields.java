@@ -47,6 +47,10 @@ public class Fields {
 	
 	/** Whether unlinking a remote identity from an account is allowed. */
 	public static final String UNLINK = "unlink";
+	/** Identities that are already linked to an account. */
+	public static final String LINKED = "linked";
+	/** Whether identities are available for linking to an account. */
+	public static final String HAS_LINKS = "haslinks";
 	
 	/* login and linking */
 	
