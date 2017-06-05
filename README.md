@@ -178,14 +178,20 @@ Omit the stop key to have jetty generate one for you.
 Developer notes
 ---------------
 
-### Adding code
+### Adding and releasing code
 
-* All code additions and updates must be made as pull requests directed at the develop branch.
-  * All tests must pass and all new code must be covered by tests.
-  * All new code must be documented appropriately with javadoc and in the general documentation
-    if appropriate.
-* The master branch is the stable branch. Releases are made from the develop branch to the master
-  branch.
+* Adding code
+  * All code additions and updates must be made as pull requests directed at the develop branch.
+    * All tests must pass and all new code must be covered by tests.
+    * All new code must be documented appropriately
+      * Javadoc
+      * General documentation if appropriate
+      * Release notes.
+* Releases
+  * The master branch is the stable branch. Releases are made from the develop branch to the master
+    branch.
+  * Update the version as per the semantic version rules in `src/us/kbase/auth2/ui/Root.java`.
+  * Tag the version in git and github.
 
 ### Running tests
 

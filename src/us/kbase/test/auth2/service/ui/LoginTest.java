@@ -86,6 +86,8 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LoginTest {
 	
+	//TODO NOW test that temp tokens are deleted appropriately for create, login
+	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	

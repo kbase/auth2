@@ -79,6 +79,8 @@ import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LinkTest {
+	
+	//TODO NOW test that temp tokens are deleted appropriately for complete, link, linkall
 
 	private static final String DB_NAME = "test_link_ui";
 	private static final String COOKIE_NAME = "login-cookie";

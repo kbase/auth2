@@ -2089,7 +2089,6 @@ public class Authentication {
 		//TODO NOW logout endpoint removed link tokens for all sessions, json compatible, don't kill cookie option
 		// note that could only remove link tokens for current session, but why bother. User won't be linking & logging out @ the same time
 		//TODO NOW add operation type (startlink, completelink, login) to temp token & check. Refactor the temp token infrastructure to be like std token with builder & 1 ea store & get methdos
-		//TODO NOW update release instructions (copy from ws)
 		//TODO NOW test this later when temp token handling is refactored
 		if (!tids.getUser().isPresent()) {
 			logErr("Attempt to use token {} with no user as a link token", tids.getId());
