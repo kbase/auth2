@@ -90,6 +90,10 @@ public class AuthenticationLoginTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final RemoteIdentity REMOTE = new RemoteIdentity(
+			new RemoteIdentityID("r", "id7"),
+			new RemoteIdentityDetails("user7", "full7", "f@g.com"));
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -1041,8 +1045,8 @@ public class AuthenticationLoginTest {
 						set()))
 				.thenReturn(null);
 		
-		failGetLoginState(auth, token, new RuntimeException(String.format(
-				"Programming error: temporary login token %s stored with no identities", id)));
+		failGetLoginState(auth, token, new UnauthorizedException(String.format(
+				"Temporary token %s has no associated identities", id)));
 	}
 	
 	private void failGetLoginState(
@@ -1111,6 +1115,7 @@ public class AuthenticationLoginTest {
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
@@ -1180,6 +1185,7 @@ public class AuthenticationLoginTest {
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
@@ -1300,6 +1306,7 @@ public class AuthenticationLoginTest {
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
@@ -1333,7 +1340,7 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporaryIdentities(t.getHashedToken()))
-				.thenReturn(new TemporaryIdentities(UUID.randomUUID(), MIN, MIN, set()));
+				.thenReturn(new TemporaryIdentities(UUID.randomUUID(), MIN, MIN, set(REMOTE)));
 		
 		final String id = "bar";
 		final UserName u = new UserName("baz");
@@ -1507,7 +1514,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporaryIdentities(t.getHashedToken())).thenReturn(
 				new TemporaryIdentities(UUID.randomUUID(), MIN, Instant.ofEpochMilli(10000L),
-						set()))
+						set(REMOTE)))
 				.thenReturn(null);
 		
 		final String id = "bar";
@@ -1904,6 +1911,7 @@ public class AuthenticationLoginTest {
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
@@ -2094,6 +2102,7 @@ public class AuthenticationLoginTest {
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
 		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, tokenID, new UserName("foo"))
@@ -2120,7 +2129,7 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporaryIdentities(t.getHashedToken()))
-				.thenReturn(new TemporaryIdentities(UUID.randomUUID(), MIN, MIN, set()));
+				.thenReturn(new TemporaryIdentities(UUID.randomUUID(), MIN, MIN, set(REMOTE)));
 		
 		failCompleteLogin(auth, null, id, pids, CTX, l,
 				new NullPointerException("Temporary token"));

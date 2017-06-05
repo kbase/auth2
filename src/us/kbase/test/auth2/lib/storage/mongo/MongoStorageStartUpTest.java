@@ -250,6 +250,11 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("ns", "test_mongostorage.temptokens")
 						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
+						.append("sparse", true)
+						.append("key", new Document("user", 1))
+						.append("name", "user_1")
+						.append("ns", "test_mongostorage.temptokens"),
+				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.temptokens"),

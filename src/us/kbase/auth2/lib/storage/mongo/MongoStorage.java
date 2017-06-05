@@ -189,6 +189,7 @@ public class MongoStorage implements AuthStorage {
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_ID), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_USER), IDX_SPARSE);
 		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
 				// this causes the tokens to expire at their expiration date
 				/* this causes the tokens to be deleted at their expiration date
@@ -1301,6 +1302,36 @@ public class MongoStorage implements AuthStorage {
 		final Document td = toDocument(token).append(Fields.TOKEN_TEMP_IDENTITIES, ids);
 		storeTemporaryToken(td);
 	}
+	
+	@Override
+	public void storeIdentitiesTemporarily(
+			final TemporaryHashedToken token,
+			final Set<RemoteIdentity> identitySet,
+			final UserName userName)
+			throws AuthStorageException {
+		nonNull(token, "token");
+		nonNull(identitySet, "identitySet");
+		nonNull(userName, "userName");
+		// ok for the set to be empty
+		noNulls(identitySet, "Null value in identitySet");
+		final Set<Document> ids = toDocument(identitySet);
+		final Document td = toDocument(token).append(Fields.TOKEN_TEMP_IDENTITIES, ids)
+				.append(Fields.TOKEN_TEMP_USER, userName.getName());
+		storeTemporaryToken(td);
+	}
+	
+	@Override
+	public void storeUserTemporarily(
+			final TemporaryHashedToken token,
+			final UserName userName)
+			throws AuthStorageException {
+		nonNull(token, "token");
+		nonNull(userName, "userName");
+		// ok for the set to be empty
+		final Document td = toDocument(token)
+				.append(Fields.TOKEN_TEMP_USER, userName.getName());
+		storeTemporaryToken(td);
+	}
 
 	private void storeTemporaryToken(final Document td) throws AuthStorageException {
 		try {
@@ -1343,6 +1374,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_EMAIL, rid.getEmail());
 	}
 	
+	
+	//TODO NOW update tests when token refactor
 	@Override
 	public TemporaryIdentities getTemporaryIdentities(
 			final IncomingHashedToken token)
@@ -1367,18 +1400,36 @@ public class MongoStorage implements AuthStorage {
 					error,
 					ErrorType.fromErrorCode(d.getInteger(Fields.TOKEN_TEMP_ERROR_TYPE)));
 		} else {
+			final UserName user = getUserNameAllowNull(d.getString(Fields.TOKEN_TEMP_USER));
 			@SuppressWarnings("unchecked")
 			final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
 			if (ids == null) {
-				final String tid = d.getString(Fields.TOKEN_TEMP_ID);
-				throw new AuthStorageException(String.format(
-						"Temporary token %s has no associated IDs field", tid));
+				if (user == null) {
+					final String tid = d.getString(Fields.TOKEN_TEMP_ID);
+					throw new AuthStorageException(String.format(
+							"Temporary token %s has no IDs and no user", tid));
+				}
+				tis = new TemporaryIdentities(
+						UUID.fromString(d.getString(Fields.TOKEN_ID)),
+						d.getDate(Fields.TOKEN_CREATION).toInstant(),
+						d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+						user);
+			} else {
+				if (user == null) {
+					tis = new TemporaryIdentities(
+							UUID.fromString(d.getString(Fields.TOKEN_ID)),
+							d.getDate(Fields.TOKEN_CREATION).toInstant(),
+							d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+							toIdentities(ids));
+				} else {
+					tis = new TemporaryIdentities(
+							UUID.fromString(d.getString(Fields.TOKEN_ID)),
+							d.getDate(Fields.TOKEN_CREATION).toInstant(),
+							d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+							toIdentities(ids),
+							user);
+				}
 			}
-			tis = new TemporaryIdentities(
-					UUID.fromString(d.getString(Fields.TOKEN_ID)),
-					d.getDate(Fields.TOKEN_CREATION).toInstant(),
-					d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
-					toIdentities(ids));
 		}
 		return tis;
 	}

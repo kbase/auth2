@@ -143,6 +143,8 @@ public class Fields {
 	public static final String TOKEN_TEMP_ID = "id";
 	/** The date the temporary token was created. */
 	public static final String TOKEN_TEMP_CREATION = "create";
+	/** The user associated with the temporary token. */
+	public static final String TOKEN_TEMP_USER = "user";
 	/** The remote identities associated with the temporary token. */
 	public static final String TOKEN_TEMP_IDENTITIES = "idents";
 	/** The error associated with the temporary token. */

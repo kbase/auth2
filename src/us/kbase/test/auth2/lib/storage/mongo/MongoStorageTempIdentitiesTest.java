@@ -248,7 +248,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 				new Document("$set", new Document("idents", null)));
 		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
 				new AuthStorageException(String.format(
-						"Temporary token %s has no associated IDs field", tt.getId())));
+						"Temporary token %s has no IDs and no user", tt.getId())));
 	}
 	
 	private void failGetTemporaryIdentity(

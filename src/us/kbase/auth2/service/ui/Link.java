@@ -118,15 +118,38 @@ public class Link {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_START)
 	public Response linkStart(
-			@FormParam(Fields.PROVIDER) final String provider)
+			@Context final HttpHeaders headers,
+			@FormParam(Fields.PROVIDER) final String provider,
+			@FormParam(Fields.TOKEN) final String formToken)
 			throws NoSuchIdentityProviderException, AuthStorageException,
-				MissingParameterException {
+				MissingParameterException, NoTokenProvidedException, InvalidTokenException,
+				UnauthorizedException, LinkFailedException {
 		
 		Utils.checkString(provider, Fields.PROVIDER);
 		
+		final IncomingToken token;
+		if (!nullOrEmpty(formToken)) {
+			token = getToken(formToken);
+		} else {
+			token = getTokenFromCookie(headers, cfg.getTokenCookieName());
+		}
+		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
-		return Response.seeOther(target).cookie(getStateCookie(state)).build();
+		return Response.seeOther(target)
+				.cookie(getStateCookie(state))
+				/* the link in process token must be a session token so that if a user closes the
+				 * browser and thus logs themselves out, the link session token disappears.
+				 * Otherwise another user could access the link in process token that identifies
+				 * them as the first user and proceed with the linking process, thus linking their
+				 * remote account to the first user's account.
+				 * 
+				 * The link in process token at the complete endpoint does not need to be a session
+				 * token since at that point the identities are assigned and accessing the token
+				 * requires a standard login token.
+				 */
+				.cookie(getLinkInProcessCookie(tt, true))
+				.build();
 	}
 
 	private NewCookie getStateCookie(final String state) {
@@ -140,12 +163,13 @@ public class Link {
 	@GET
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
-			@Context final HttpHeaders headers,
 			@PathParam(Fields.PROVIDER) final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
+			@CookieParam(IN_PROCESS_LINK_COOKIE) final String userCookie,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException, NoSuchProviderException,
-				AuthStorageException, LinkFailedException, UnauthorizedException {
+				AuthStorageException, LinkFailedException, UnauthorizedException,
+				NoTokenProvidedException {
 		
 		//provider cannot be null or empty here since it's a path param
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -157,21 +181,12 @@ public class Link {
 			tt = Optional.of(auth.linkProviderError(error));
 		} else {
 			checkState(state, retstate);
-			final Optional<IncomingToken> token;
-			try {
-				token = getTokenFromCookie(headers, cfg.getTokenCookieName(), false);
-			} catch (NoTokenProvidedException e) {
-				throw new RuntimeException("Got exception when specified no throw", e);
-			}
-			if (token.isPresent()) {
-				final LinkToken lt = auth.link(token.get(), provider, authcode);
-				if (lt.isLinked()) {
-					tt = Optional.absent();
-				} else {
-					tt = Optional.of(lt.getTemporaryToken().get());
-				}
+			final IncomingToken token = getLinkInProcessToken(userCookie);
+			final LinkToken lt = auth.link(token, provider, authcode);
+			if (lt.isLinked()) {
+				tt = Optional.absent();
 			} else {
-				tt = Optional.of(auth.link(provider, authcode));
+				tt = Optional.of(lt.getTemporaryToken().get());
 			}
 		}
 		final Response r;
@@ -189,15 +204,33 @@ public class Link {
 			final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
 					UIPaths.ME_ROOT);
 			r = Response.seeOther(postLinkURI)
-					.cookie(getStateCookie(null)).build();
+					.cookie(getStateCookie(null))
+					.cookie(getLinkInProcessCookie(null))
+					.build();
 		}
 		return r;
 	}
 	
 	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
+		return getLinkInProcessCookie(token, false);
+	}
+	
+	private NewCookie getLinkInProcessCookie(
+			final TemporaryToken token,
+			final boolean sessionCookie) {
+		
+		final int lifetime;
+		if (token == null) {
+			lifetime = 0;
+		} else if (sessionCookie) {
+			lifetime = NewCookie.DEFAULT_MAX_AGE;
+		} else {
+			lifetime = getMaxCookieAge(token);
+		}
+		
 		return new NewCookie(new Cookie(IN_PROCESS_LINK_COOKIE,
 				token == null ? "no token" : token.getToken(), UIPaths.LINK_ROOT, null),
-				"linktoken", token == null ? 0 : getMaxCookieAge(token),
+				"linktoken", lifetime,
 				UIConstants.SECURE_COOKIES);
 	}
 	

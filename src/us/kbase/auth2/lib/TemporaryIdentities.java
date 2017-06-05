@@ -15,11 +15,15 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 
-/** A set of temporary identities, or an error that was stored instead of the identities.
+/** A temporary token associated with set of temporary identities and / or an associated user,
+ * or an error that was stored instead of the identities.
  * @author gaprice@lbl.gov
  *
  */
-public class TemporaryIdentities {
+public class TemporaryIdentities { //TODO NOW CODE rename to something more appropriate. 
+	
+	//TODO NOW update tests after tmep token refactor
+	//TODO NOW CODE getting into builder territory here. 3 required args, 4 optionals. Redo tests.
 	
 	private final UUID id;
 	private final Instant created;
@@ -27,6 +31,7 @@ public class TemporaryIdentities {
 	private final Optional<Set<RemoteIdentity>> identities;
 	private final Optional<String> error;
 	private final Optional<ErrorType> errorType;
+	private final Optional<UserName> user;
 	
 	/** Create a new set of temporary identities.
 	 * @param id the ID of the identity set.
@@ -50,6 +55,60 @@ public class TemporaryIdentities {
 		this.expires = expires;
 		this.error = Optional.absent();
 		this.errorType = Optional.absent();
+		this.user = Optional.absent();
+	}
+	
+	/** Create a new set of temporary identities associated with a particular user.
+	 * @param id the ID of the identity set.
+	 * @param created when the identity set was created.
+	 * @param expires when the identity set expires from the system.
+	 * @param identities the identities.
+	 * @param user the user.
+	 */
+	public TemporaryIdentities(
+			final UUID id,
+			final Instant created,
+			final Instant expires,
+			final Set<RemoteIdentity> identities,
+			final UserName user) {
+		nonNull(id, "id");
+		nonNull(identities, "identities");
+		nonNull(created, "created");
+		nonNull(expires, "expires");
+		nonNull(user, "user");
+		noNulls(identities, "null item in identities");
+		this.id = id;
+		this.identities = Optional.of(Collections.unmodifiableSet(new HashSet<>(identities)));
+		this.created = created;
+		this.expires = expires;
+		this.error = Optional.absent();
+		this.errorType = Optional.absent();
+		this.user = Optional.of(user);
+	}
+	
+	/** Create a new set of temporary identities associated with a particular user.
+	 * @param id the ID of the identity set.
+	 * @param created when the identity set was created.
+	 * @param expires when the identity set expires from the system.
+	 * @param identities the identities.
+	 * @param user the user.
+	 */
+	public TemporaryIdentities(
+			final UUID id,
+			final Instant created,
+			final Instant expires,
+			final UserName user) {
+		nonNull(id, "id");
+		nonNull(created, "created");
+		nonNull(expires, "expires");
+		nonNull(user, "user");
+		this.id = id;
+		this.identities = Optional.absent();
+		this.created = created;
+		this.expires = expires;
+		this.error = Optional.absent();
+		this.errorType = Optional.absent();
+		this.user = Optional.of(user);
 	}
 	
 	/** Create a error report describing why the identities could not be created.
@@ -76,6 +135,7 @@ public class TemporaryIdentities {
 		this.expires = expires;
 		this.error = Optional.of(error);
 		this.errorType = Optional.of(errorType);
+		this.user = Optional.absent();
 	}
 
 	/** Get the ID of the identity set.
@@ -104,6 +164,13 @@ public class TemporaryIdentities {
 	 */
 	public Instant getExpires() {
 		return expires;
+	}
+	
+	/** Get the name of the user associated with this token, if any.
+	 * @return the user name.
+	 */
+	public Optional<UserName> getUser() {
+		return user;
 	}
 	
 	/** Returns the error, if any.
@@ -137,6 +204,7 @@ public class TemporaryIdentities {
 		result = prime * result + ((expires == null) ? 0 : expires.hashCode());
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
 		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
+		result = prime * result + ((user == null) ? 0 : user.hashCode());
 		return result;
 	}
 
@@ -192,6 +260,13 @@ public class TemporaryIdentities {
 				return false;
 			}
 		} else if (!identities.equals(other.identities)) {
+			return false;
+		}
+		if (user == null) {
+			if (other.user != null) {
+				return false;
+			}
+		} else if (!user.equals(other.user)) {
 			return false;
 		}
 		return true;

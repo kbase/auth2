@@ -24,7 +24,7 @@ public class Root {
 	
 	//TODO JAVADOC or swagger
 	
-	private static final String VERSION = "0.1.1";
+	private static final String VERSION = "0.1.2";
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)

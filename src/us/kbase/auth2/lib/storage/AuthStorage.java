@@ -351,9 +351,38 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
+	void storeIdentitiesTemporarily(TemporaryHashedToken token, Set<RemoteIdentity> ids)
+			throws AuthStorageException;
+	
+	
+	//TODO NOW next 2 methods are untested. Remove with refactoring of temp info storage.
+	/** Store a temporary token with a set of remote identities associated with a particular user.
+	 * Storing an empty set is allowed.
+	 * No checking is done on the validity of the token - passing in tokens with bad data is a
+	 * programming error.
+	 * @param token the temporary token.
+	 * @param ids the set of remote identities.
+	 * @param user the name of the user to associate with the identities.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
 	void storeIdentitiesTemporarily(
 			TemporaryHashedToken token,
-			Set<RemoteIdentity> ids)
+			Set<RemoteIdentity> ids,
+			UserName user)
+			throws AuthStorageException;
+	
+	/** Store a temporary token associated with a particular user.
+	 * No checking is done on the validity of the token - passing in tokens with bad data is a
+	 * programming error.
+	 * @param token the temporary token.
+	 * @param user the name of the user to associate with the token.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void storeUserTemporarily(
+			TemporaryHashedToken token,
+			UserName user)
 			throws AuthStorageException;
 
 	/** Get a set of identities associated with a token.
