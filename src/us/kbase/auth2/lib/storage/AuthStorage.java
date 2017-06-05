@@ -12,7 +12,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
@@ -392,7 +392,7 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	TemporaryIdentities getTemporaryIdentities(
+	TemporarySessionData getTemporaryIdentities(
 			IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 

@@ -48,7 +48,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -289,7 +289,7 @@ public class LinkTest {
 		assertThat("incorrect link process cookie", process, is(expectedprocess));
 		
 		//TODO NOW better testing after token refactor
-		final TemporaryIdentities ti = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData ti = manager.storage.getTemporaryIdentities(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temporary identities", ti.getIdentities(), is(Optional.absent()));
 		assertThat("incorrect temporary identities", ti.getUser(),
@@ -336,7 +336,7 @@ public class LinkTest {
 		assertThat("incorrect link process cookie", process, is(expectedprocess));
 		
 		//TODO NOW better testing after token refactor
-		final TemporaryIdentities ti = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData ti = manager.storage.getTemporaryIdentities(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temporary identities", ti.getIdentities(), is(Optional.absent()));
 		assertThat("incorrect temporary identities", ti.getUser(),
@@ -389,7 +389,7 @@ public class LinkTest {
 		assertThat("incorrect link process cookie", process, is(expectedprocess));
 		
 		//TODO NOW better testing after token refactor
-		final TemporaryIdentities ti = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData ti = manager.storage.getTemporaryIdentities(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temporary identities", ti.getIdentities(), is(Optional.absent()));
 		assertThat("incorrect temporary identities", ti.getUser(),
@@ -544,7 +544,7 @@ public class LinkTest {
 		
 		final String token = assertLinkTempTokenCorrect(res);
 		
-		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(token).getHashedToken());
 		
 		assertThat("incorrect remote ids", tis.getIdentities().get(), is(set(REMOTE1)));
@@ -583,7 +583,7 @@ public class LinkTest {
 		
 		final String token = assertLinkTempTokenCorrect(res);
 		
-		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(token).getHashedToken());
 		
 		assertThat("incorrect remote ids", tis.getIdentities().get(),
@@ -609,7 +609,7 @@ public class LinkTest {
 		
 		final String token = assertLinkTempTokenCorrect(res);
 		
-		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(token).getHashedToken());
 		
 		assertThat("incorrect error", tis.getError(), is(Optional.of("errorwhee")));

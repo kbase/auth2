@@ -15,12 +15,12 @@ import com.google.common.base.Optional;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 
-/** A temporary token associated with set of temporary identities and / or an associated user,
- * or an error that was stored instead of the identities.
+/** Temporary session data that may include a set of temporary identities and / or an associated
+ * user, or an error that was stored instead of the identities.
  * @author gaprice@lbl.gov
  *
  */
-public class TemporaryIdentities { //TODO NOW CODE rename to something more appropriate. 
+public class TemporarySessionData { 
 	
 	//TODO NOW update tests after tmep token refactor
 	//TODO NOW CODE getting into builder territory here. 3 required args, 4 optionals. Redo tests.
@@ -39,7 +39,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 	 * @param expires when the identity set expires from the system.
 	 * @param identities the identities.
 	 */
-	public TemporaryIdentities(
+	public TemporarySessionData(
 			final UUID id,
 			final Instant created,
 			final Instant expires,
@@ -65,7 +65,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 	 * @param identities the identities.
 	 * @param user the user.
 	 */
-	public TemporaryIdentities(
+	public TemporarySessionData(
 			final UUID id,
 			final Instant created,
 			final Instant expires,
@@ -93,7 +93,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 	 * @param identities the identities.
 	 * @param user the user.
 	 */
-	public TemporaryIdentities(
+	public TemporarySessionData(
 			final UUID id,
 			final Instant created,
 			final Instant expires,
@@ -118,7 +118,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 	 * @param error the error.
 	 * @param errorType the type of the error.
 	 */
-	public TemporaryIdentities(
+	public TemporarySessionData(
 			final UUID id,
 			final Instant created,
 			final Instant expires,
@@ -138,7 +138,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 		this.user = Optional.absent();
 	}
 
-	/** Get the ID of the identity set.
+	/** Get the ID of the temporary session data.
 	 * @return the ID.
 	 */
 	public UUID getId() {
@@ -152,21 +152,21 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 		return identities;
 	}
 
-	/** Get the date of creation for the identity set.
+	/** Get the date of creation for the session data.
 	 * @return the creation date.
 	 */
 	public Instant getCreated() {
 		return created;
 	}
 
-	/** Get the date the identity set expires from the system.
+	/** Get the date the session data expires from the system.
 	 * @return the expiration date.
 	 */
 	public Instant getExpires() {
 		return expires;
 	}
 	
-	/** Get the name of the user associated with this token, if any.
+	/** Get the name of the user associated with the session data, if any.
 	 * @return the user name.
 	 */
 	public Optional<UserName> getUser() {
@@ -219,7 +219,7 @@ public class TemporaryIdentities { //TODO NOW CODE rename to something more appr
 		if (getClass() != obj.getClass()) {
 			return false;
 		}
-		TemporaryIdentities other = (TemporaryIdentities) obj;
+		TemporarySessionData other = (TemporarySessionData) obj;
 		if (created == null) {
 			if (other.created != null) {
 				return false;

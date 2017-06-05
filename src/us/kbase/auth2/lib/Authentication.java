@@ -1703,7 +1703,7 @@ public class Authentication {
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
-		final TemporaryIdentities ids = getTemporaryIdentities(token);
+		final TemporarySessionData ids = getTemporaryIdentities(token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
 				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
@@ -1725,21 +1725,21 @@ public class Authentication {
 		return builder.build();
 	}
 
-	private TemporaryIdentities getTemporaryIdentities(
+	private TemporarySessionData getTemporaryIdentities(
 			final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
 		return getTemporaryIdentities(token, false);
 	}
 	
-	private TemporaryIdentities getTemporaryIdentities(
+	private TemporarySessionData getTemporaryIdentities(
 			final IncomingToken token,
 			final boolean allowEmptyIdentities)
 			throws AuthStorageException, IdentityProviderErrorException, InvalidTokenException,
 				UnauthorizedException {
 		nonNull(token, "Temporary token");
 		try {
-			final TemporaryIdentities tis = storage.getTemporaryIdentities(token.getHashedToken());
+			final TemporarySessionData tis = storage.getTemporaryIdentities(token.getHashedToken());
 			if (tis.hasError()) {
 				final ErrorType et = tis.getErrorType().get();
 				if (ErrorType.ID_PROVIDER_ERROR.equals(et)) {
@@ -2084,7 +2084,7 @@ public class Authentication {
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
 				UnauthorizedException, IdentityProviderErrorException {
 		final IdentityProvider idp = getIdentityProvider(provider);
-		final TemporaryIdentities tids = getTemporaryIdentities(token, true);
+		final TemporarySessionData tids = getTemporaryIdentities(token, true);
 		storage.deleteTemporaryIdentities(token.getHashedToken());
 		//TODO NOW logout endpoint removed link tokens for all sessions, json compatible, don't kill cookie option
 		// note that could only remove link tokens for current session, but why bother. User won't be linking & logging out @ the same time
@@ -2207,7 +2207,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
+		final TemporarySessionData tids = getTemporaryIdentities(linktoken);
 		checkIdentityAccess(u.getUserName(), tids);
 		final LinkIdentities linkIdentities = getLinkIdentities(u, tids);
 		logInfo("User {} accessed temporary link token {} with {} identities",
@@ -2217,7 +2217,7 @@ public class Authentication {
 	
 	
 	//TODO NOW test this when token refactoring is complete. should test token op type. called in 3 places.
-	private void checkIdentityAccess(final UserName name, final TemporaryIdentities tids)
+	private void checkIdentityAccess(final UserName name, final TemporarySessionData tids)
 			throws UnauthorizedException {
 		if (Optional.of(name).equals(tids.getUser())) {
 			return; // all good
@@ -2235,7 +2235,7 @@ public class Authentication {
 				name.getName()));
 	}
 
-	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporaryIdentities tids)
+	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporarySessionData tids)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> ids = tids.getIdentities().get();
 		final String provider = ids.iterator().next().getRemoteID().getProviderName();
@@ -2287,7 +2287,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final TemporaryIdentities tids = getTemporaryIdentities(linkToken);
+		final TemporarySessionData tids = getTemporaryIdentities(linkToken);
 		storage.deleteTemporaryIdentities(linkToken.getHashedToken());
 		checkIdentityAccess(au.getUserName(), tids);
 		final Set<RemoteIdentity> ids = tids.getIdentities().get();
@@ -2327,7 +2327,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final TemporaryIdentities tids = getTemporaryIdentities(linkToken);
+		final TemporarySessionData tids = getTemporaryIdentities(linkToken);
 		storage.deleteTemporaryIdentities(linkToken.getHashedToken());
 		checkIdentityAccess(au.getUserName(), tids);
 		final Set<RemoteIdentity> identities = new HashSet<>(tids.getIdentities().get());

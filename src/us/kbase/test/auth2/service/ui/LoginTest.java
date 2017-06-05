@@ -53,7 +53,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -694,7 +694,7 @@ public class LoginTest {
 		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
 		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
 		
-		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect stored ids", tis.getIdentities().get(), is(set(remoteIdentity)));
@@ -773,7 +773,7 @@ public class LoginTest {
 		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
 		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
 		
-		final TemporaryIdentities tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect error", tis.getError(), is(Optional.of("errorwhee")));

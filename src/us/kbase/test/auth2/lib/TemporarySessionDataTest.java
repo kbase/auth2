@@ -15,14 +15,14 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.test.auth2.TestCommon;
 
-public class TemporaryIdentitiesTest {
+public class TemporarySessionDataTest {
 	
 	private final static RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("foo", "bar"),
@@ -34,14 +34,14 @@ public class TemporaryIdentitiesTest {
 
 	@Test
 	public void equals() {
-		EqualsVerifier.forClass(TemporaryIdentities.class).usingGetClass().verify();
+		EqualsVerifier.forClass(TemporarySessionData.class).usingGetClass().verify();
 	}
 	
 	@Test
 	public void constructWithIDs() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryIdentities ti = new TemporaryIdentities(
+		final TemporarySessionData ti = new TemporarySessionData(
 				id, now, Instant.ofEpochMilli(10000), set(REMOTE1, REMOTE2));
 		
 		assertThat("incorrect id", ti.getId(), is(id));
@@ -57,7 +57,7 @@ public class TemporaryIdentitiesTest {
 	public void constructWithError() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryIdentities ti = new TemporaryIdentities(
+		final TemporarySessionData ti = new TemporarySessionData(
 				id, now, Instant.ofEpochMilli(10000), "foo", ErrorType.DISABLED);
 		
 		assertThat("incorrect id", ti.getId(), is(id));
@@ -71,7 +71,7 @@ public class TemporaryIdentitiesTest {
 	
 	@Test
 	public void immutable() throws Exception {
-		final TemporaryIdentities ti = new TemporaryIdentities(
+		final TemporarySessionData ti = new TemporarySessionData(
 				UUID.randomUUID(), Instant.now(), Instant.now(), set());
 		
 		try {
@@ -119,7 +119,7 @@ public class TemporaryIdentitiesTest {
 			final Set<RemoteIdentity> identities,
 			final Exception e) {
 		try {
-			new TemporaryIdentities(id, created, expires, identities);
+			new TemporarySessionData(id, created, expires, identities);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -134,7 +134,7 @@ public class TemporaryIdentitiesTest {
 			final ErrorType et,
 			final Exception e) {
 		try {
-			new TemporaryIdentities(id, created, expires, error, et);
+			new TemporarySessionData(id, created, expires, error, et);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

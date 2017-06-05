@@ -23,14 +23,14 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.test.auth2.TestCommon;
 
-public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
+public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
@@ -51,7 +51,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporaryIdentities(id, now, now.plusMillis(10000),
+						new TemporarySessionData(id, now, now.plusMillis(10000),
 								Collections.emptySet())));
 	}
 	
@@ -66,7 +66,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporaryIdentities(id, now, now.plusMillis(10000), set(REMOTE2))));
+						new TemporarySessionData(id, now, now.plusMillis(10000), set(REMOTE2))));
 	}
 	
 	@Test
@@ -79,7 +79,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		
 		assertThat("incorrect identities", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporaryIdentities(id, now, now.plusMillis(10000),
+						new TemporarySessionData(id, now, now.plusMillis(10000),
 								set(REMOTE2, REMOTE1))));
 	}
 	
@@ -92,7 +92,7 @@ public class MongoStorageTempIdentitiesTest extends MongoStorageTester {
 		storage.storeErrorTemporarily(tt, "foobarbaz", ErrorType.ID_ALREADY_LINKED);
 		assertThat("incorrect temp error", storage.getTemporaryIdentities(
 				new IncomingToken("foobar").getHashedToken()),
-				is(new TemporaryIdentities(id, now, now.plusMillis(10000), "foobarbaz",
+				is(new TemporarySessionData(id, now, now.plusMillis(10000), "foobarbaz",
 						ErrorType.ID_ALREADY_LINKED)));
 	}
 	

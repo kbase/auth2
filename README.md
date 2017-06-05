@@ -186,7 +186,7 @@ Developer notes
     * All new code must be documented appropriately
       * Javadoc
       * General documentation if appropriate
-      * Release notes.
+      * Release notes
 * Releases
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
