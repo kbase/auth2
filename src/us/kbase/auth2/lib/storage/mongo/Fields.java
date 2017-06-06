@@ -131,26 +131,28 @@ public class Fields {
 	public static final String TOKEN_CUSTOM_VALUE = "v";
 	
 	/* ************************
-	 * temporary token fields
+	 * temporary session data fields
 	 * ************************
 	 */
 	
+	/** The operation the temporary session data supports */
+	public static final String TEMP_SESSION_OPERATION = "op";
 	/** The hashed temporary token. */
-	public static final String TOKEN_TEMP_TOKEN = "token";
+	public static final String TEMP_SESSION_TOKEN = "token";
 	/** The date the temporary token expires. */
-	public static final String TOKEN_TEMP_EXPIRY = "expires";
+	public static final String TEMP_SESSION_EXPIRY = "expires";
 	/** The ID of the temporary token. */
-	public static final String TOKEN_TEMP_ID = "id";
+	public static final String TEMP_SESSION_ID = "id";
 	/** The date the temporary token was created. */
-	public static final String TOKEN_TEMP_CREATION = "create";
+	public static final String TEMP_SESSION_CREATION = "create";
 	/** The user associated with the temporary token. */
-	public static final String TOKEN_TEMP_USER = "user";
+	public static final String TEMP_SESSION_USER = "user";
 	/** The remote identities associated with the temporary token. */
-	public static final String TOKEN_TEMP_IDENTITIES = "idents";
+	public static final String TEMP_SESSION_IDENTITIES = "idents";
 	/** The error associated with the temporary token. */
-	public static final String TOKEN_TEMP_ERROR = "err";
+	public static final String TEMP_SESSION_ERROR = "err";
 	/** The type of the error associated with the temporary token. */
-	public static final String TOKEN_TEMP_ERROR_TYPE = "errtype";
+	public static final String TEMP_SESSION_ERROR_TYPE = "errtype";
 	
 	/* ********************
 	 * custom roles fields

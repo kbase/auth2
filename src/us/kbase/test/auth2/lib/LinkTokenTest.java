@@ -4,6 +4,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import static us.kbase.test.auth2.TestCommon.tempToken;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -32,8 +34,8 @@ public class LinkTokenTest {
 	
 	@Test
 	public void tokenConstructor() throws Exception {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.now(), 10000);
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.now(), 10000, "foo");
 		final LinkToken lt = new LinkToken(tt);
 		assertThat("incorrect isLinked()", lt.isLinked(), is(false));
 		final TemporaryToken ttgot = lt.getTemporaryToken().get();

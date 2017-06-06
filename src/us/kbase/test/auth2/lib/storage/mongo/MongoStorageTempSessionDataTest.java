@@ -6,10 +6,7 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
-import java.lang.reflect.Field;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -24,10 +21,9 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.TemporarySessionData;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
-import us.kbase.auth2.lib.token.TemporaryHashedToken;
-import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTempSessionDataTest extends MongoStorageTester {
@@ -41,170 +37,109 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 			new RemoteIdentityDetails("user2", "full2", "email2"));
 	
 	@Test
-	public void storeAndGetEmpty() throws Exception {
+	public void storeAndGetLogin() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryHashedToken tt = new TemporaryToken(
-				id, "foobar", now, 10000)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
-		
-		assertThat("incorrect identities", storage.getTemporaryIdentities(
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login(set(REMOTE2));
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
+	
+		assertThat("incorrect session data", storage.getTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporarySessionData(id, now, now.plusMillis(10000),
-								Collections.emptySet())));
+						TemporarySessionData.create(id, now, now.plusSeconds(10))
+							.login(set(REMOTE2))));
 	}
 	
 	@Test
-	public void storeAndGet1() throws Exception {
+	public void storeAndGetLinkIdents() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryHashedToken tt = new TemporaryToken(
-				id, "foobar", now, 10000)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, set(REMOTE2));
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"), set(REMOTE1, REMOTE2));
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
 		
-		assertThat("incorrect identities", storage.getTemporaryIdentities(
+		assertThat("incorrect session data", storage.getTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporarySessionData(id, now, now.plusMillis(10000), set(REMOTE2))));
+						TemporarySessionData.create(id, now, now.plusSeconds(10))
+							.link(new UserName("whee"), set(REMOTE1, REMOTE2))));
 	}
 	
 	@Test
-	public void storeAndGet2() throws Exception {
+	public void storeAndGetLinkStart() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryHashedToken tt = new TemporaryToken(id, "foobar", now, 10000)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, set(REMOTE2, REMOTE1));
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
 		
-		assertThat("incorrect identities", storage.getTemporaryIdentities(
+		assertThat("incorrect session data", storage.getTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken()), is(
-						new TemporarySessionData(id, now, now.plusMillis(10000),
-								set(REMOTE2, REMOTE1))));
+						TemporarySessionData.create(id, now, now.plusSeconds(10))
+							.link(new UserName("whee"))));
 	}
 	
 	@Test
-	public void storeError() throws Exception {
+	public void storeAndGetError() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryHashedToken tt = new TemporaryToken(id, "foobar", now, 10000)
-					.getHashedToken();
-		storage.storeErrorTemporarily(tt, "foobarbaz", ErrorType.ID_ALREADY_LINKED);
-		assertThat("incorrect temp error", storage.getTemporaryIdentities(
-				new IncomingToken("foobar").getHashedToken()),
-				is(new TemporarySessionData(id, now, now.plusMillis(10000), "foobarbaz",
-						ErrorType.ID_ALREADY_LINKED)));
-	}
-	
-	@Test
-	public void storeTempIDFailNulls() {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		failStoreTemporaryIdentity(null, Collections.emptySet(),
-				new NullPointerException("token"));
-		failStoreTemporaryIdentity(tt, null, new NullPointerException("identitySet"));
-		failStoreTemporaryIdentity(tt, set(REMOTE1, null),
-				new NullPointerException("Null value in identitySet"));
-	}
-	
-	@Test
-	public void storeTempErrFailNullsAndEmpties() {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		failStoreTemporaryError(null, "foobar", ErrorType.ID_PROVIDER_ERROR,
-				new NullPointerException("token"));
-		failStoreTemporaryError(tt, null, ErrorType.ID_PROVIDER_ERROR,
-				new IllegalArgumentException("Missing argument: error"));
-		failStoreTemporaryError(tt, "   \t  \n ", ErrorType.ID_PROVIDER_ERROR,
-				new IllegalArgumentException("Missing argument: error"));
-		failStoreTemporaryError(tt, "foobar", null, new NullPointerException("errorType"));
-	}
-	
-	@Test
-	public void storeTempIDFailDuplicateTokenID() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken(
-				UUID.randomUUID(), "foobar2", Instant.now(), 10000)
-					.getHashedToken();
-		final Field id = tt2.getClass().getDeclaredField("id");
-		id.setAccessible(true);
-		id.set(tt2, tt.getId());
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.error("foobarbaz", ErrorType.ID_ALREADY_LINKED);
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
 		
-		storage.storeIdentitiesTemporarily(tt, set(REMOTE1));
-		failStoreTemporaryIdentity(tt2, set(REMOTE1), new IllegalArgumentException(
-				"Temporary token ID " + tt2.getId() + " already exists in the database"));
+		assertThat("incorrect session data", storage.getTemporarySessionData(
+				new IncomingToken("foobar").getHashedToken()), is(
+						TemporarySessionData.create(id, now, now.plusSeconds(10))
+							.error("foobarbaz", ErrorType.ID_ALREADY_LINKED)));
 	}
 	
 	@Test
-	public void storeTempErrorFailDuplicateTokenID() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken(
-				UUID.randomUUID(), "foobar2", Instant.now(), 10000)
-					.getHashedToken();
-		final Field id = tt2.getClass().getDeclaredField("id");
-		id.setAccessible(true);
-		id.set(tt2, tt.getId());
-		
-		storage.storeErrorTemporarily(tt, "foo", ErrorType.AUTHENTICATION_FAILED);
-		failStoreTemporaryError(tt2, "bar", ErrorType.DISABLED, new IllegalArgumentException(
-				"Temporary token ID " + tt2.getId() + " already exists in the database"));
+	public void storeTempSessionDataFailNulls() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+		failStoreTemporarySessionData(null, "foo", new NullPointerException("data"));
+		failStoreTemporarySessionData(tsd, null,
+				new IllegalArgumentException("Missing argument: hash"));
+		failStoreTemporarySessionData(tsd, "   \t   \n ",
+				new IllegalArgumentException("Missing argument: hash"));
 	}
 	
 	@Test
-	public void storeTempIDFailDuplicateToken() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		
-		storage.storeIdentitiesTemporarily(tt, set(REMOTE1));
-		failStoreTemporaryIdentity(tt2, set(REMOTE1), new IllegalArgumentException(
-				"Token hash for temporary token ID " + tt2.getId() +
+	public void storeTempDataFailDuplicateTokenID() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+		final TemporarySessionData data2 = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee2"));
+		storage.storeTemporarySessionData(data, "whee");
+		failStoreTemporarySessionData(data2, "whee2", new IllegalArgumentException(
+				"Temporary token ID " + id + " already exists in the database"));
+	}
+	
+	@Test
+	public void storeTempDataFailDuplicateToken() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final UUID id2 = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+		final TemporarySessionData data2 = TemporarySessionData
+				.create(id2, now, now.plusSeconds(10))
+				.link(new UserName("whee2"));
+		storage.storeTemporarySessionData(data, "whee");
+		failStoreTemporarySessionData(data2, "whee", new IllegalArgumentException(
+				"Token hash for temporary token ID " + id2 +
 				" already exists in the database"));
 	}
 	
-	@Test
-	public void storeTempErrFailDuplicateToken() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		final TemporaryHashedToken tt2 = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		
-		storage.storeErrorTemporarily(tt, "foo", ErrorType.AUTHENTICATION_FAILED);
-		failStoreTemporaryError(tt2, "bar", ErrorType.DISABLED, new IllegalArgumentException(
-				"Token hash for temporary token ID " + tt2.getId() +
-				" already exists in the database"));
-	}
-	
-	private void failStoreTemporaryIdentity(
-			final TemporaryHashedToken token,
-			final Set<RemoteIdentity> ids,
+	private void failStoreTemporarySessionData(
+			final TemporarySessionData data,
+			final String hash,
 			final Exception e) {
 		try {
-			storage.storeIdentitiesTemporarily(token, ids);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	private void failStoreTemporaryError(
-			final TemporaryHashedToken token,
-			final String error,
-			final ErrorType errorType,
-			final Exception e) {
-		try {
-			storage.storeErrorTemporarily(token, error, errorType);
+			storage.storeTemporarySessionData(data, hash);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -212,50 +147,68 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void getTempIDFailNull() {
-		failGetTemporaryIdentity(null, new NullPointerException("token"));
+	public void getTempDataFailNull() {
+		failGetTemporaryData(null, new NullPointerException("token"));
 	}
 	
 	@Test
-	public void getTempIDFailNoSuchToken() throws Exception {
-		failGetTemporaryIdentity(new IncomingToken("foo").getHashedToken(),
+	public void getTempDataFailNoSuchToken() throws Exception {
+		failGetTemporaryData(new IncomingToken("foo").getHashedToken(),
 				new NoSuchTokenException("Token not found"));
 	}
 	
 	@Test
-	public void getTempIDFailExpiredToken() throws Exception {
+	public void getTempDataFailExpiredToken() throws Exception {
 		/* this test could not cover the intended code if mongo removes the record before the test
 		 * concludes.
 		 * maybe there's a way of turning token removal off temporarily?
 		 * only 1 sweep / min so not very likely
 		 */
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 0)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
+		final UUID id = UUID.randomUUID();
+		final TemporarySessionData data = TemporarySessionData.create(id, Instant.now(), 0)
+				.link(new UserName("whee"));
+
+		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
+		
 		Thread.sleep(1);
-		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
+		failGetTemporaryData(new IncomingToken("foobar").getHashedToken(),
 				new NoSuchTokenException("Token not found"));
 	}
 	
 	@Test
-	public void getTempIDFailBadDBData() throws Exception {
-		final TemporaryHashedToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foobar", Instant.now(), 10000)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, Collections.emptySet());
-		db.getCollection("temptokens").updateOne(new Document("id", tt.getId().toString()),
-				new Document("$set", new Document("idents", null)));
-		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
-				new AuthStorageException(String.format(
-						"Temporary token %s has no IDs and no user", tt.getId())));
+	public void getTempDataFailBadUserInDB() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("foo"), set(REMOTE2));
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
+		
+		db.getCollection("tempdata").updateOne(new Document("id", id.toString()),
+				new Document("$set", new Document("user", null)));
+		
+		failGetTemporaryData(new IncomingToken("foobar").getHashedToken(),
+				new AuthStorageException(
+						"Illegal value stored in db: 30000 Missing input parameter: user name"));
+
+		final UUID id2 = UUID.randomUUID();
+		final TemporarySessionData tsd2 = TemporarySessionData
+				.create(id2, now, now.plusSeconds(10))
+				.link(new UserName("foo"));
+		storage.storeTemporarySessionData(tsd2, IncomingToken.hash("foobar2"));
+		
+		db.getCollection("tempdata").updateOne(new Document("id", id2.toString()),
+				new Document("$set", new Document("user", null)));
+		
+		failGetTemporaryData(new IncomingToken("foobar2").getHashedToken(),
+				new AuthStorageException(
+						"Illegal value stored in db: 30000 Missing input parameter: user name"));
 	}
 	
-	private void failGetTemporaryIdentity(
+	private void failGetTemporaryData(
 			final IncomingHashedToken token,
 			final Exception e) {
 		try {
-			storage.getTemporaryIdentities(token);
+			storage.getTemporarySessionData(token);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -263,38 +216,38 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void deleteTempIDs() throws Exception {
+	public void deleteTempData() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
-		final TemporaryHashedToken tt = new TemporaryToken(
-				id, "foobar", now, 10000)
-					.getHashedToken();
-		storage.storeIdentitiesTemporarily(tt, set(REMOTE2));
+		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+
+		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
 		
 		// check token is there
-		storage.getTemporaryIdentities(new IncomingToken("foobar").getHashedToken());
+		storage.getTemporarySessionData(new IncomingToken("foobar").getHashedToken());
 		
-		final Optional<UUID> retid = storage.deleteTemporaryIdentities(
+		final Optional<UUID> retid = storage.deleteTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken());
 		
 		assertThat("incorrect token id", retid, is(Optional.of(id)));
 		
-		failGetTemporaryIdentity(new IncomingToken("foobar").getHashedToken(),
+		failGetTemporaryData(new IncomingToken("foobar").getHashedToken(),
 				new NoSuchTokenException("Token not found"));
 	}
 	
 	@Test
-	public void deleteNonExistentTempIDs() throws Exception {
-		final Optional<UUID> retid = storage.deleteTemporaryIdentities(
+	public void deleteNonExistentTempData() throws Exception {
+		final Optional<UUID> retid = storage.deleteTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken());
 		
 		assertThat("incorrect token id", retid, is(Optional.absent()));
 	}
 	
 	@Test
-	public void deleteTempIDsFailNull() throws Exception {
+	public void deleteTempDataFailNull() throws Exception {
 		try {
-			storage.deleteTemporaryIdentities(null);
+			storage.deleteTemporarySessionData(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));

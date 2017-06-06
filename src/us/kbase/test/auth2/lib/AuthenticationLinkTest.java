@@ -12,6 +12,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.TestCommon.tempToken;
 import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
@@ -119,13 +120,12 @@ public class AuthenticationLinkTest {
 		
 		final TemporaryToken tt = auth.linkStart(userToken, 60);
 		
-		assertThat("incorrect token", tt, is(new TemporaryToken(
-				tokenID, "sometoken", Instant.ofEpochMilli(20000), 60000)));
-		
-		verify(storage).storeUserTemporarily(
-				new TemporaryToken(tokenID, "sometoken", Instant.ofEpochMilli(20000), 60000)
-					.getHashedToken(),
-				new UserName("baz"));
+		assertThat("incorrect token", tt,
+				is(tempToken(tokenID, Instant.ofEpochMilli(20000), 60000, "sometoken")));
+				
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).link(new UserName("baz")),
+				IncomingToken.hash("sometoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
 				"Created temporary link token %s associated with user baz", tokenID),
@@ -197,8 +197,6 @@ public class AuthenticationLinkTest {
 			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
-			
-			
 	
 	@Test
 	public void linkWithTokenImmediately() throws Exception {
@@ -222,9 +220,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -245,7 +243,7 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken()));
 		
@@ -281,9 +279,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -305,7 +303,7 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect linktoken", lt, is(new LinkToken()));
 		
@@ -338,9 +336,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -376,15 +374,15 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
+		assertThat("incorrect linktoken", lt, is(new LinkToken(tempToken(
+				tokenID, Instant.ofEpochMilli(10000), 10 * 60 * 1000, "foobar"))));
 		
-		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
-						.getHashedToken(),
-				set(storageRemoteID2, storageRemoteID3),
-				new UserName("baz"));
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(10000), 600000)
+				.link(new UserName("baz"), set(storageRemoteID2, storageRemoteID3)),
+				IncomingToken.hash("foobar"));
+		
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
 				"A race condition means that the identity fda04183ab36b12041695c2f78f07713 " +
@@ -416,9 +414,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -441,15 +439,15 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
+		assertThat("incorrect linktoken", lt, is(new LinkToken(tempToken(
+				tokenID, Instant.ofEpochMilli(10000), 10 * 60 * 1000, "foobar"))));
 		
-		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
-						.getHashedToken(),
-				set(storageRemoteID),
-				new UserName("baz"));
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(10000), 600000)
+				.link(new UserName("baz"), set(storageRemoteID)),
+				IncomingToken.hash("foobar"));
+
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		verify(storage, never()).link(any(), any());
 		
@@ -482,9 +480,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -509,15 +507,15 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
+		assertThat("incorrect linktoken", lt, is(new LinkToken(tempToken(
+				tokenID, Instant.ofEpochMilli(10000), 10 * 60 * 1000, "foobar"))));
 		
-		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
-						.getHashedToken(),
-				set(storageRemoteID),
-				new UserName("baz"));
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(10000), 600000)
+				.link(new UserName("baz"), set(storageRemoteID)),
+				IncomingToken.hash("foobar"));
+
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		verify(storage, never()).link(any(), any());
 		
@@ -550,9 +548,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -591,15 +589,16 @@ public class AuthenticationLinkTest {
 		
 		final LinkToken lt = auth.link(token, "prov", "authcode");
 		
-		assertThat("incorrect linktoken", lt, is(new LinkToken(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000))));
+		assertThat("incorrect linktoken", lt, is(new LinkToken(tempToken(
+				tokenID, Instant.ofEpochMilli(10000), 10 * 60 * 1000, "foobar"))));
 		
-		verify(storage).storeIdentitiesTemporarily(new TemporaryToken(
-				tokenID, "foobar", Instant.ofEpochMilli(10000), 10 * 60 * 1000)
-						.getHashedToken(),
-				set(storageRemoteID2, storageRemoteID3, storageRemoteID4),
-				new UserName("baz"));
-		verify(storage).deleteTemporaryIdentities(token.getHashedToken());
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(10000), 600000)
+				.link(new UserName("baz"),
+						set(storageRemoteID2, storageRemoteID3, storageRemoteID4)),
+				IncomingToken.hash("foobar"));
+
+		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		verify(storage, never()).link(any(), any());
 		
@@ -630,9 +629,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -742,11 +741,83 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenThrow(
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenThrow(
 				new NoSuchTokenException("foo"));
 		
 		failLinkWithToken(auth, token, "prov", "foo",
 				new InvalidTokenException("Temporary token"));
+	}
+	
+	@Test
+	public void linkWithTokenFailBadTokenOp() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final UUID tid = UUID.randomUUID();
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(tid, Instant.now(), Instant.now())
+				.login(set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkWithToken(auth, token, "prov", "foo", new InvalidTokenException(
+				"Temporary token operation type does not match expected operation"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+				"Operation LINKSTART was attempted with a LOGIN temporary token " + tid,
+				Authentication.class));
+	}
+	
+	@Test
+	public void linkWithTokenFailBadTokenOpWithUser() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		final UUID tid = UUID.randomUUID();
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(tid, Instant.now(), Instant.now())
+				.link(new UserName("whee"), set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkWithToken(auth, token, "prov", "foo", new InvalidTokenException(
+				"Temporary token operation type does not match expected operation"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+				"User whee attempted operation LINKSTART with a LINKIDENTS temporary token " + tid,
+				Authentication.class));
 	}
 	
 	@Test
@@ -771,9 +842,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
 		
@@ -803,9 +874,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("f"), Instant.now())
@@ -839,9 +910,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("foo")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
@@ -872,9 +943,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("foo")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
@@ -908,9 +979,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -957,9 +1028,9 @@ public class AuthenticationLinkTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(storage.getTemporaryIdentities(token.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), Instant.now(), Instant.now(),
-						new UserName("baz")));
+		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+						.link(new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -1012,13 +1083,15 @@ public class AuthenticationLinkTest {
 		
 		final TemporaryToken tt = auth.linkProviderError("errthing");
 		
-		final TemporaryToken expected = new TemporaryToken(
-				id, "mytoken", Instant.ofEpochMilli(20000), 10 * 60 * 1000);
+		final TemporaryToken expected = tempToken(
+				id, Instant.ofEpochMilli(20000), 10 * 60 * 1000, "mytoken");
 		
 		assertThat("incorrect login token", tt, is(expected));
 		
-		verify(storage).storeErrorTemporarily(expected.getHashedToken(),
-				"errthing", ErrorType.ID_PROVIDER_ERROR);
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				id, Instant.ofEpochMilli(20000), 600000)
+				.error("errthing", ErrorType.ID_PROVIDER_ERROR),
+				IncomingToken.hash("mytoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
 				"Stored temporary token %s with link identity provider error errthing", id),
@@ -1067,16 +1140,16 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID temptokenid = UUID.randomUUID();
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(temptokenid, Instant.now(),
-						Instant.ofEpochMilli(20000),
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(temptokenid, Instant.ofEpochMilli(1000),
+						Instant.ofEpochMilli(20000))
+				.link(new UserName("baz"),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-								new RemoteIdentityDetails("user4", "full4", "f4@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
 		
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1132,11 +1205,11 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID tempTokenID = UUID.randomUUID();
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(tempTokenID, NOW, NOW,
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(tempTokenID, NOW, NOW)
+				.link(new UserName("baz"),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "f2@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
 				.thenReturn(null);
 		
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1211,7 +1284,6 @@ public class AuthenticationLinkTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		
 		when(storage.getToken(token.getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
 						.withLifeTime(Instant.now(), 0).build())
@@ -1242,7 +1314,7 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken()))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		failGetLinkState(auth, userToken, tempToken, new InvalidTokenException("Temporary token"));
@@ -1266,9 +1338,9 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW,
-						"errthing", ErrorType.ID_PROVIDER_ERROR))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing", ErrorType.ID_PROVIDER_ERROR))
 				.thenReturn(null);
 		
 		failGetLinkState(auth, userToken, tempToken,
@@ -1293,9 +1365,9 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW,
-						"errthing", ErrorType.UNSUPPORTED_OP))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing", ErrorType.UNSUPPORTED_OP))
 				.thenReturn(null);
 		
 		failGetLinkState(auth, userToken, tempToken,
@@ -1303,7 +1375,7 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void getLinkStateFailNoIDs() throws Exception {
+	public void getLinkStateFailBadTokenOp() throws Exception {
 		/* tests id filtering */
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -1322,12 +1394,52 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID tempTokenID = UUID.randomUUID();
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(tempTokenID, NOW, NOW, set()))
+		
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(tempTokenID, NOW, NOW)
+				.login(set(REMOTE)))
 				.thenReturn(null);
-
-		failGetLinkState(auth, userToken, tempToken, new UnauthorizedException(String.format(
-				"Temporary token %s has no associated identities", tempTokenID)));
+		
+		failGetLinkState(auth, userToken, tempToken, new InvalidTokenException(
+				"Temporary token operation type does not match expected operation"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+				"User baz attempted operation LINKIDENTS with a LOGIN temporary token " +
+				tempTokenID, Authentication.class));
+	}
+	
+	@Test
+	public void getLinkStateFailTempTokenUser() throws Exception {
+		/* tests id filtering */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID tempTokenID = UUID.randomUUID();
+		
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(tempTokenID, NOW, NOW)
+				.link(new UserName("bad"), set(REMOTE)))
+				.thenReturn(null);
+		
+		failGetLinkState(auth, userToken, tempToken,
+				new UnauthorizedException("User baz may not access this identity set"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
+				"During the account linking process user baz attempted to access temporary " +
+				"token %s which is owned by user bad.", tempTokenID), Authentication.class));
 	}
 
 	private void failGetLinkState(
@@ -1362,24 +1474,24 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW,
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-									new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-							new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-									new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-							new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-									new RemoteIdentityDetails("user4", "full4", "f4@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
-
+		
 		when(storage.link(new UserName("baz"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com")))).thenReturn(true);
 		
 		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
 		
-		verify(storage).deleteTemporaryIdentities(tempToken.getHashedToken());
+		verify(storage).deleteTemporarySessionData(tempToken.getHashedToken());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Linked identity de0702aa7927b562e0d6be5b6527cfb2 prov id3 user3 to user baz",
@@ -1408,17 +1520,17 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW,
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
 						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-									new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-							new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-									new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-							new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-									new RemoteIdentityDetails("user4", "full4", "f4@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))))
 				.thenReturn(null);
-		
+
 		// 2nd identity would be added after this point but before the link call below
 
 		when(storage.link(new UserName("baz"), new RemoteIdentity(
@@ -1427,7 +1539,7 @@ public class AuthenticationLinkTest {
 		
 		auth.link(userToken, tempToken, "de0702aa7927b562e0d6be5b6527cfb2");
 		
-		verify(storage).deleteTemporaryIdentities(tempToken.getHashedToken());
+		verify(storage).deleteTemporarySessionData(tempToken.getHashedToken());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Identity de0702aa7927b562e0d6be5b6527cfb2 prov id3 user3 is already " +
@@ -1452,10 +1564,10 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build());
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(REMOTE),
-						new UserName("baz")));
-		
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"), set(REMOTE)));
+
 		failLinkIdentity(auth, null, tempToken, "foo", new NullPointerException("token"));
 		failLinkIdentity(auth, userToken, null, "foo",
 				new NullPointerException("Temporary token"));
@@ -1524,7 +1636,7 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken()))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		failLinkIdentity(auth, userToken, tempToken, "foo",
@@ -1549,13 +1661,77 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, 
-						"errthing1", ErrorType.ID_PROVIDER_ERROR))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing1", ErrorType.ID_PROVIDER_ERROR))
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid",
 				new IdentityProviderErrorException("errthing1"));
+	}
+	
+	@Test
+	public void linkIdentityFailBadTokenOp() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID id = UUID.randomUUID();
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(id, NOW, NOW)
+				.login(set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkIdentity(auth, userToken, tempToken, "fakeid", new InvalidTokenException(
+				"Temporary token operation type does not match expected operation"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+				"User baz attempted operation LINKIDENTS with a LOGIN temporary token " +
+				id, Authentication.class));
+	}
+	
+	@Test
+	public void linkIdentityFailTempTokenUser() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID id = UUID.randomUUID();
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(id, NOW, NOW)
+				.link(new UserName("bad"), set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkIdentity(auth, userToken, tempToken, "fakeid",
+				new UnauthorizedException("User baz may not access this identity set"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
+				"During the account linking process user baz attempted to access temporary " +
+				"token %s which is owned by user bad.", id), Authentication.class));
 	}
 	
 	@Test
@@ -1576,9 +1752,9 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, 
-						"errthing1", ErrorType.LINK_FAILED))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing", ErrorType.LINK_FAILED))
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid",
@@ -1603,13 +1779,13 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "f2@g.com"))),
-						new UserName("baz")))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
 				.thenReturn(null);
-		
+
 		failLinkIdentity(auth, userToken, tempToken, "fakeid",
 				new LinkFailedException("User baz is not authorized to link identity fakeid"));
 	}
@@ -1633,11 +1809,11 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
-						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))),
-						new UserName("baz")))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new NoSuchUserException("baz")).when(storage).link(new UserName("baz"),
@@ -1668,11 +1844,11 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
-						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))),
-						new UserName("baz")))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new IdentityLinkedException("de0702aa7927b562e0d6be5b6527cfb2"))
@@ -1703,11 +1879,11 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
-						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))),
-						new UserName("baz")))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"),
+						set(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
 
 		doThrow(new LinkFailedException("foobar"))
@@ -1754,8 +1930,9 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"), set(
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
@@ -1763,8 +1940,7 @@ public class AuthenticationLinkTest {
 						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
 								new RemoteIdentityDetails("user4", "full4", "f4@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
-								new RemoteIdentityDetails("user5", "full5", "f5@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user5", "full5", "f5@g.com")))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1806,7 +1982,7 @@ public class AuthenticationLinkTest {
 		
 		auth.linkAll(userToken, tempToken);
 		
-		verify(storage).deleteTemporaryIdentities(tempToken.getHashedToken());
+		verify(storage).deleteTemporarySessionData(tempToken.getHashedToken());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Linked all 1 available identities to user baz", Authentication.class));
@@ -1830,13 +2006,13 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"), set(
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "f2@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")))))
 				.thenReturn(null);
-
+		
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
@@ -1852,7 +2028,7 @@ public class AuthenticationLinkTest {
 		
 		auth.linkAll(userToken, tempToken);
 		
-		verify(storage).deleteTemporaryIdentities(tempToken.getHashedToken());
+		verify(storage).deleteTemporarySessionData(tempToken.getHashedToken());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"User baz had no available identities to link", Authentication.class));
@@ -1938,7 +2114,7 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken()))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		failLinkAll(auth, userToken, tempToken, new InvalidTokenException("Temporary token"));
@@ -1963,13 +2139,13 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"), set(
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
-
+		
 		final RemoteIdentity storageRemote3 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
@@ -2002,12 +2178,78 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, 
-						"errthing3", ErrorType.ID_PROVIDER_ERROR))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing3", ErrorType.ID_PROVIDER_ERROR))
 				.thenReturn(null);
-
+		
 		failLinkAll(auth, userToken, tempToken, new IdentityProviderErrorException("errthing3"));
+	}
+	
+	@Test
+	public void linkAllFailLinkFailBadTokenOp() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID id = UUID.randomUUID();
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(id, NOW, NOW)
+				.login(set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkAll(auth, userToken, tempToken,  new InvalidTokenException(
+				"Temporary token operation type does not match expected operation"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
+				"User baz attempted operation LINKIDENTS with a LOGIN temporary token " +
+				id, Authentication.class));
+	}
+	
+	@Test
+	public void linkAllFailLinkFailTempTokenUser() throws Exception {
+		/* tests id selection */
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken userToken = new IncomingToken("user");
+		final IncomingToken tempToken = new IncomingToken("temp");
+		
+		when(storage.getToken(userToken.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
+						.withLifeTime(Instant.now(), Instant.now()).build())
+				.thenReturn(null);
+		
+		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
+				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				.withIdentity(REMOTE).build()).thenReturn(null);
+		
+		final UUID id = UUID.randomUUID();
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(id, NOW, NOW)
+				.link(new UserName("bad"), set(REMOTE)))
+				.thenReturn(null);
+		
+		failLinkAll(auth, userToken, tempToken,
+				new UnauthorizedException("User baz may not access this identity set"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR, String.format(
+				"During the account linking process user baz attempted to access temporary " +
+				"token %s which is owned by user bad.", id), Authentication.class));
 	}
 	
 	@Test
@@ -2029,11 +2271,11 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, 
-						"errthing3", ErrorType.NO_TOKEN))
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.error("errthing3", ErrorType.NO_TOKEN))
 				.thenReturn(null);
-
+		
 		failLinkAll(auth, userToken, tempToken,
 				new RuntimeException("Unexpected error type NO_TOKEN"));
 	}
@@ -2057,13 +2299,13 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(storage.getTemporaryIdentities(tempToken.getHashedToken())).thenReturn(
-				new TemporarySessionData(UUID.randomUUID(), NOW, NOW, set(
+		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
+				TemporarySessionData.create(UUID.randomUUID(), NOW, NOW)
+				.link(new UserName("baz"), set(
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))),
-						new UserName("baz")))
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")))))
 				.thenReturn(null);
-
+		
 		final RemoteIdentity storageRemote3 = new RemoteIdentity(
 				new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));

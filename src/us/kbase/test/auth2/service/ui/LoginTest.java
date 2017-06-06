@@ -86,8 +86,6 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LoginTest {
 	
-	//TODO NOW test that temp tokens are deleted appropriately for create, login
-	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -694,7 +692,7 @@ public class LoginTest {
 		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
 		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
 		
-		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporarySessionData(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect stored ids", tis.getIdentities().get(), is(set(remoteIdentity)));
@@ -773,7 +771,7 @@ public class LoginTest {
 		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
 		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
 		
-		final TemporarySessionData tis = manager.storage.getTemporaryIdentities(
+		final TemporarySessionData tis = manager.storage.getTemporarySessionData(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect error", tis.getError(), is(Optional.of("errorwhee")));
@@ -903,8 +901,6 @@ public class LoginTest {
 		// tests one of the users being disabled.
 		// tests policy ids.
 		// tests with no redirect cookie.
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
 		final Set<RemoteIdentity> idents = new HashSet<>();
 		for (int i = 1; i < 5; i++) {
 			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
@@ -915,7 +911,13 @@ public class LoginTest {
 		idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id6"),
 				new RemoteIdentityDetails("whee", "foo\nbar", "not an email")));
 		
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(idents);
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("userat"),
 				new DisplayName("f"), Instant.ofEpochMilli(30000)).build(),
@@ -1029,14 +1031,19 @@ public class LoginTest {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, admintoken, "https://foo.com/whee");
 		
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
 		final Set<RemoteIdentity> idents = new HashSet<>();
 		for (int i = 1; i < 3; i++) {
 			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
 					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
 		}
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(idents);
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
@@ -1113,14 +1120,18 @@ public class LoginTest {
 		// tests with trailing slash on target
 		// tests empty string for redirect
 
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
 		final Set<RemoteIdentity> idents = new HashSet<>();
 		for (int i = 1; i < 3; i++) {
 			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
 					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
 		}
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(idents);
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/choice/")
@@ -1179,14 +1190,18 @@ public class LoginTest {
 		enableRedirect(host, admintoken, "https://foo.com/whee");
 		enableLogin(host, admintoken);
 
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
 		final Set<RemoteIdentity> idents = new HashSet<>();
 		for (int i = 1; i < 3; i++) {
 			idents.add(new RemoteIdentity(new RemoteIdentityID("prov", "id" + i),
 					new RemoteIdentityDetails("user" + i, "full" + i, "e" + i + "@g.com")));
 		}
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), idents);
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(idents);
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/choice")
@@ -1349,11 +1364,14 @@ public class LoginTest {
 	
 	@Test
 	public void loginCancelPOST() throws Exception {
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+								new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/cancel")
@@ -1371,12 +1389,15 @@ public class LoginTest {
 	
 	@Test
 	public void loginCancelDELETE() throws Exception {
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(), set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user", "full", "e@g.com"))));
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+								new RemoteIdentityDetails("user", "full", "e@g.com"))));
 		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
+
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/cancel")
 				.build();
@@ -1393,7 +1414,7 @@ public class LoginTest {
 	
 	private void assertNoTempToken(final TemporaryToken tt) throws Exception {
 		try {
-			manager.storage.getTemporaryIdentities(
+			manager.storage.getTemporarySessionData(
 					new IncomingToken(tt.getToken()).getHashedToken());
 			fail("expected exception getting temp token");
 		} catch (NoSuchTokenException e) {
@@ -1440,6 +1461,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
 		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		
+		assertNoTempToken(tt);
 	}
 
 	@Test
@@ -1471,6 +1494,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
 		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1506,6 +1531,8 @@ public class LoginTest {
 				is(set(new PolicyID("foo"), new PolicyID("bar"))));
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("foo")));
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1546,6 +1573,8 @@ public class LoginTest {
 				is(set(new PolicyID("foo"), new PolicyID("bar"))));
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("foo")));
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1576,6 +1605,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
 		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1612,6 +1643,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
 		assertThat("only one identity", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1913,10 +1946,13 @@ public class LoginTest {
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");
 		
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
-				set(REMOTE1, REMOTE2, REMOTE3));
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(set(REMOTE1, REMOTE2, REMOTE3));
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("u1"), new DisplayName("d"), Instant.now(), REMOTE1).build());
@@ -1954,6 +1990,8 @@ public class LoginTest {
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -1992,6 +2030,8 @@ public class LoginTest {
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -2032,6 +2072,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	
@@ -2082,6 +2124,8 @@ public class LoginTest {
 		TestCommon.assertCloseToNow(u.getPolicyIDs().get(new PolicyID("bar")));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -2117,6 +2161,8 @@ public class LoginTest {
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -2163,6 +2209,8 @@ public class LoginTest {
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("disp1")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
+		
+		assertNoTempToken(tt);
 	}
 	
 	@Test
@@ -2394,10 +2442,13 @@ public class LoginTest {
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");
 		
-		final TemporaryToken tt = new TemporaryToken(UUID.randomUUID(), "this is a token",
-				Instant.ofEpochMilli(1493000000000L), 10000000000000L);
-		manager.storage.storeIdentitiesTemporarily(tt.getHashedToken(),
-				set(REMOTE1, REMOTE2));
+		final TemporarySessionData data = TemporarySessionData.create(
+				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
+				.login(set(REMOTE1, REMOTE2));
+		
+		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
+		
+		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		return tt;
 	}
