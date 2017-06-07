@@ -27,15 +27,15 @@ public class Root {
 	private static final String VERSION = "0.2.0";
 	
 	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> rootJSON() {
+	@Template(name = "/root")
+	@Produces(MediaType.TEXT_HTML)
+	public Map<String, Object> rootHTML() {
 		return root();
 	}
 	
 	@GET
-	@Template(name = "/root")
-	@Produces(MediaType.TEXT_HTML)
-	public Map<String, Object> rootHTML() {
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> rootJSON() {
 		return root();
 	}
 	

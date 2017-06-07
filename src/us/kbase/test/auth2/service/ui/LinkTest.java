@@ -710,11 +710,9 @@ public class LinkTest {
 		final NewCookie tempCookie = res.getCookies().get("in-process-link-token");
 		final NewCookie expectedtemp = new NewCookie("in-process-link-token",
 				tempCookie.getValue(),
-				"/link", null, "linktoken", tempCookie.getMaxAge(), false);
-		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
-		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 10 * 60, 10);
-		final String token = tempCookie.getValue();
-		return token;
+				"/link", null, "linktoken", -1, false);
+		assertThat("incorrect temp cookie less value", tempCookie, is(expectedtemp));
+		return tempCookie.getValue();
 	}
 	
 	private WebTarget linkCompleteSetUpWebTarget(final String authcode, final String state) {

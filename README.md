@@ -57,7 +57,11 @@ Login to a local account. Stores a cookie with a token.
 Reset the password for a local account.
 
 /logout  
-Self explanatory.
+Logs the user out.  
+Removes the user's token from the database as well as any temporary link tokens associated with
+the user. Removes the login, temporary login, and temporary link cookies except if JSON output
+is requested, in which case it is expected that the UI manages the login token
+(but not the temporary tokens).
 
 /me  
 User page. Update name and email address, remove roles.

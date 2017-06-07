@@ -16,4 +16,10 @@ public class UIConstants {
 	 * provider expire, ending the OAuth2 session.
 	 */
 	public static final int PROVIDER_RETURN_EXPIRATION_SEC = 30 * 60;
+	
+	/** The name of the login in process cookie. */
+	public static final String IN_PROCESS_LOGIN_COOKIE = "in-process-login-token";
+	
+	/** The name of the link in process cookie. */
+	public static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
 }

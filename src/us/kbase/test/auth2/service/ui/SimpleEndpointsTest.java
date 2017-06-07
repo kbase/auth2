@@ -4,12 +4,14 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
+import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
 import java.net.URI;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -39,10 +41,12 @@ import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -307,10 +311,35 @@ public class SimpleEndpointsTest {
 		failRequestHTML(req.get(), 401, "Unauthorized", new InvalidTokenException());
 	}
 	
+	private void assertTemporaryCookiesRemoved(final Response res) {
+		final NewCookie expectedlogin = new NewCookie("in-process-login-token", "no token",
+				"/login", null, "logintoken", 0, false);
+		final NewCookie login = res.getCookies().get("in-process-login-token");
+		assertThat("incorrect login cookie", login, is(expectedlogin));
+		
+		final NewCookie expectedlink = new NewCookie("in-process-link-token", "no token",
+				"/link", null, "linktoken", 0, false);
+		final NewCookie link = res.getCookies().get("in-process-link-token");
+		assertThat("incorrect link cookie", link, is(expectedlink));
+	}
+	
+	private void assertNoTempData(final String token) throws Exception {
+		try {
+			manager.storage.getTemporarySessionData(new IncomingToken(token).getHashedToken());
+			fail("temp data not removed");
+		} catch (final NoSuchTokenException e) {
+			//test passed
+		}
+	}
+	
 	@Test
-	public void logoutWithGoodToken() throws Exception {
+	public void logoutWithGoodTokenHTML() throws Exception {
 		final IncomingToken token = setUpUserForTests();
 		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
+				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
+				.link(new UserName("whoo")), IncomingToken.hash("foo"));
 		
 		final WebTarget wt = CLI.target(target);
 		
@@ -326,13 +355,47 @@ public class SimpleEndpointsTest {
 		final NewCookie exp = new NewCookie(
 				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
 		assertThat("login cookie not removed", c, is(exp));
+		assertTemporaryCookiesRemoved(res);
+		
+		assertNoTempData("foo");
 		
 		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
 				getClass(), TestCommon.getCurrentMethodName()));
 	}
 	
 	@Test
-	public void logoutWithBadToken() throws Exception {
+	public void logoutWithGoodTokenJSON() throws Exception {
+		final IncomingToken token = setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+	
+		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
+				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
+				.link(new UserName("whoo")), IncomingToken.hash("foo"));
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.header("accept", "application/json")
+				.header("authorization", token.getToken());
+
+		final Response res = req.post(null);
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = res.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		assertThat("login cookie unexpectedly modified", res.getCookies().get(COOKIE_NAME),
+				is((NewCookie) null));
+		
+		assertTemporaryCookiesRemoved(res);
+		
+		assertNoTempData("foo");
+		
+		assertThat("incorrect response", json, is(ImmutableMap.of("user", "whoo")));
+	}
+	
+	@Test
+	public void logoutWithBadTokenHTML() throws Exception {
 		setUpUserForTests();
 		final URI target = UriBuilder.fromUri(host).path("/logout").build();
 		
@@ -350,19 +413,60 @@ public class SimpleEndpointsTest {
 		final NewCookie exp = new NewCookie(
 				COOKIE_NAME, "no token", "/", null, "authtoken", 0, false);
 		assertThat("login cookie not removed", c, is(exp));
+		assertTemporaryCookiesRemoved(res);
 		
 		TestCommon.assertNoDiffs(html, TestCommon.getTestExpectedData(
 				getClass(), TestCommon.getCurrentMethodName()));
 	}
 	
 	@Test
-	public void logoutFailNoToken() throws Exception {
+	public void logoutWithBadTokenJSON() throws Exception {
+		setUpUserForTests();
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+	
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.header("accept", "application/json")
+				.header("authorization", "foobar");
+
+		final Response res = req.post(null);
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = res.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		assertThat("login cookie unexpectedly modified", res.getCookies().get(COOKIE_NAME),
+				is((NewCookie) null));
+		
+		assertTemporaryCookiesRemoved(res);
+		
+		final Map<String, String> expected = new HashMap<>();
+		expected.put("user", null);
+		
+		assertThat("incorrect response", json, is(expected));
+	}
+	
+	@Test
+	public void logoutFailNoTokenHTML() throws Exception {
 		final URI target = UriBuilder.fromUri(host).path("/logout").build();
 		
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request();
 
 		failRequestHTML(req.post(null), 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void logoutFailNoTokenJSON() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/logout").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("accept", "application/json");
+		
+		failRequestJSON(req.post(null), 400, "Bad Request",
 				new NoTokenProvidedException("No user token provided"));
 	}
 	
