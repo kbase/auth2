@@ -54,6 +54,7 @@ import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TemporarySessionData;
+import us.kbase.auth2.lib.TemporarySessionData.Operation;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -688,9 +689,8 @@ public class LoginTest {
 		final NewCookie tempCookie = res.getCookies().get("in-process-login-token");
 		final NewCookie expectedtemp = new NewCookie("in-process-login-token",
 				tempCookie.getValue(),
-				"/login", null, "logintoken", tempCookie.getMaxAge(), false);
+				"/login", null, "logintoken", -1, false);
 		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
-		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
 		
 		final TemporarySessionData tis = manager.storage.getTemporarySessionData(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
@@ -767,13 +767,13 @@ public class LoginTest {
 		final NewCookie tempCookie = res.getCookies().get("in-process-login-token");
 		final NewCookie expectedtemp = new NewCookie("in-process-login-token",
 				tempCookie.getValue(),
-				"/login", null, "logintoken", tempCookie.getMaxAge(), false);
-		assertThat("incorrect temp cookie less value and max age", tempCookie, is(expectedtemp));
-		TestCommon.assertCloseTo(tempCookie.getMaxAge(), 30 * 60, 10);
+				"/login", null, "logintoken", -1, false);
+		assertThat("incorrect temp cookie less value", tempCookie, is(expectedtemp));
 		
 		final TemporarySessionData tis = manager.storage.getTemporarySessionData(
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
+		assertThat("incorrect op", tis.getOperation(), is(Operation.ERROR));
 		assertThat("incorrect error", tis.getError(), is(Optional.of("errorwhee")));
 	}
 	

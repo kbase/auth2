@@ -335,7 +335,7 @@ public class Login {
 		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_COOKIE,
 				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
 				"logintoken",
-				token == null ? 0 : getMaxCookieAge(token), UIConstants.SECURE_COOKIES);
+				token == null ? 0 : -1, UIConstants.SECURE_COOKIES);
 	}
 
 	@GET
