@@ -1224,12 +1224,36 @@ public class Authentication {
 	public Optional<StoredToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
-		StoredToken ht = null;
+		StoredToken t = null;
 		try {
-			ht = storage.getToken(token.getHashedToken());
-			storage.deleteToken(ht.getUserName(), ht.getId());
-			logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
-			return Optional.of(ht);
+			t = storage.getToken(token.getHashedToken());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {}", t.getUserName().getName(), t.getId());
+			return Optional.of(t);
+		} catch (NoSuchTokenException e) {
+			// no problem, continue
+		}
+		return Optional.absent();
+	}
+	
+	/** Revoke the current token and deletes all temporary session data associated with the user.
+	 * Returns an empty Optional if the token does not exist in the
+	 * database, and thus there is nothing to revoke.
+	 * @param token the user's token.
+	 * @return the revoked token, or an empty Optional.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Optional<StoredToken> logout(final IncomingToken token)
+			throws AuthStorageException {
+		nonNull(token, "token");
+		StoredToken t = null;
+		try {
+			t = storage.getToken(token.getHashedToken());
+			final long deleted = storage.deleteTemporarySessionData(t.getUserName());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {} and {} temporary session instances",
+					t.getUserName().getName(), t.getId(), deleted);
+			return Optional.of(t);
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
 		}
