@@ -12,7 +12,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserUpdate;
@@ -20,7 +20,6 @@ import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -37,7 +36,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.StoredToken;
-import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
@@ -332,48 +330,43 @@ public interface AuthStorage {
 	void updateCustomRoles(UserName userName, Set<String> addRoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
-	/** Store an error string associated with a temporary token.
-	 * @param token the temporary token.
-	 * @param error the error.
-	 * @param errorType the type of the error.
-	 * @throws AuthStorageException if a problem connecting with the storage
-	 * system occurs.
-	 */
-	void storeErrorTemporarily(TemporaryHashedToken token, String error, ErrorType errorType) 
-			throws AuthStorageException;
-	
-	/** Store a temporary token with a set of remote identities.
-	 * Storing an empty set is allowed.
+	/** Store temporary data used with a user process session.
 	 * No checking is done on the validity of the token - passing in tokens with bad data is a
 	 * programming error.
-	 * @param token the temporary token.
-	 * @param ids the set of remote identities.
-	 * @throws AuthStorageException if a problem connecting with the storage
-	 * system occurs.
+	 * @param data the temporary session data.
+	 * @param hash the hash of the token. This value will be used to look up the token in
+	 * {@link #getTemporarySessionData(IncomingHashedToken)}
 	 */
-	void storeIdentitiesTemporarily(
-			TemporaryHashedToken token,
-			Set<RemoteIdentity> ids)
+	void storeTemporarySessionData(TemporarySessionData data, String hash)
 			throws AuthStorageException;
-
-	/** Get a set of identities associated with a token.
+	
+	/** Get temporary session data associated with a token.
 	 * @param token the token.
-	 * @return the set of identities associated with the token.
+	 * @return the session data associated with the token.
 	 * @throws NoSuchTokenException if the token does not exist in the storage system.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	TemporaryIdentities getTemporaryIdentities(
+	TemporarySessionData getTemporarySessionData(
 			IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
-	/** Delete the set of identities stored with a token.
+	/** Delete the session data stored with a token.
 	 * @param token the temporary token.
 	 * @return the id of the deleted token, or absent if there was no token to be deleted.
 	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
 	 */
-	Optional<UUID> deleteTemporaryIdentities(IncomingHashedToken token)
+	Optional<UUID> deleteTemporarySessionData(IncomingHashedToken token)
 			throws AuthStorageException;
+	
+	/** Delete all session data that is assigned to a particular user. Note that not all session
+	 * data is assigned to a user.
+	 * @param userName the user for which session data will be removed.
+	 * @return the number of session data instances that were deleted.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	long deleteTemporarySessionData(UserName userName) throws AuthStorageException;
+	
 	
 	/** Link an account to a remote identity.
 	 * If the account is already linked to the identity, the method proceeds without error, but

@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.TestCommon.tempToken;
 
 import java.net.URI;
 import java.net.URL;
@@ -53,6 +54,8 @@ import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
 public class UIUtilsTest {
+	
+	private static final Instant NOW = Instant.now();
 
 	@Test
 	public void relativizeNoCommonPathNoEndingSlash() {
@@ -297,27 +300,57 @@ public class UIUtilsTest {
 	}
 	
 	@Test
-	public void getMaxCookieAge() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
-				Instant.now().plusSeconds(1000).toEpochMilli() - 10000);
+	public void getLoginInProcessToken() throws Exception {
+		final TemporaryToken tt = tempToken(UUID.randomUUID(), NOW, 10000, "whee");
+		final NewCookie nc = UIUtils.getLoginInProcessCookie(tt);
+		assertThat("incorrect cookie", nc, is(new NewCookie("in-process-login-token", "whee",
+				"/login", null, "logintoken", -1, false)));
+	}
+	
+	@Test
+	public void removeLoginInProcessToken() throws Exception {
+		final NewCookie nc = UIUtils.getLoginInProcessCookie(null);
+		assertThat("incorrect cookie", nc, is(new NewCookie("in-process-login-token", "no token",
+				"/login", null, "logintoken", 0, false)));
+	}
+	
+	@Test
+	public void getLinkInProcessToken() throws Exception {
+		final TemporaryToken tt = tempToken(UUID.randomUUID(), NOW, 10000, "whee");
+		final NewCookie nc = UIUtils.getLinkInProcessCookie(tt);
+		assertThat("incorrect cookie", nc, is(new NewCookie("in-process-link-token", "whee",
+				"/link", null, "linktoken", -1, false)));
+	}
+	
+	@Test
+	public void removeLinkInProcessToken() throws Exception {
+		final NewCookie nc = UIUtils.getLinkInProcessCookie(null);
+		assertThat("incorrect cookie", nc, is(new NewCookie("in-process-link-token", "no token",
+				"/link", null, "linktoken", 0, false)));
+	}
+	
+	@Test
+	public void getMaxCookieAge() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(1000).toEpochMilli() - 10000, "foo");
 		
 		TestCommon.assertCloseTo(UIUtils.getMaxCookieAge(tt), 1000, 10);
 	}
 	
 	@Test
-	public void getMaxCookieAgeMaxInt() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
-				Instant.now().plusSeconds(2L * Integer.MAX_VALUE).toEpochMilli());
+	public void getMaxCookieAgeMaxInt() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(2L * Integer.MAX_VALUE).toEpochMilli(), "foo");
 		
 		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(Integer.MAX_VALUE));
 	}
 	
 	@Test
-	public void getMaxCookieAgeAlreadyExpired() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000), 30000);
+	public void getMaxCookieAgeAlreadyExpired() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000), 30000, "foo");
 		
 		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(0));
 	}

@@ -42,6 +42,7 @@ import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
+import us.kbase.auth2.lib.TemporarySessionData.Operation;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
@@ -929,18 +930,7 @@ public class Authentication {
 			final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
 		final StoredToken ht = getToken(token, reqs);
-		final AuthUser u;
-		try {
-			u = storage.getUser(ht.getUserName());
-		} catch (NoSuchUserException e) {
-			throw new RuntimeException("There seems to be an error in the " +
-					"storage system. Token was valid, but no user", e);
-		}
-		if (u.isDisabled()) {
-			// apparently this disabled user still has some tokens, so kill 'em all
-			storage.deleteTokens(ht.getUserName());
-			throw new DisabledUserException(u.getUserName().getName());
-		}
+		final AuthUser u = getUser(ht.getUserName());
 		if (reqs.requiredRoles.size() > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
@@ -949,6 +939,24 @@ public class Authentication {
 				logUnauthorized(u.getUserName(), reqs);
 				throw new UnauthorizedException();
 			}
+		}
+		return u;
+	}
+
+	// assumes that the token has already been checked and is valid for this user.
+	private AuthUser getUser(final UserName userName)
+			throws AuthStorageException, DisabledUserException {
+		final AuthUser u;
+		try {
+			u = storage.getUser(userName);
+		} catch (NoSuchUserException e) {
+			throw new RuntimeException("There seems to be an error in the " +
+					"storage system. Token was valid, but no user", e);
+		}
+		if (u.isDisabled()) {
+			// apparently this disabled user still has some tokens, so kill 'em all
+			storage.deleteTokens(u.getUserName());
+			throw new DisabledUserException(u.getUserName().getName());
 		}
 		return u;
 	}
@@ -1216,12 +1224,40 @@ public class Authentication {
 	public Optional<StoredToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
-		StoredToken ht = null;
+		StoredToken t = null;
 		try {
-			ht = storage.getToken(token.getHashedToken());
-			storage.deleteToken(ht.getUserName(), ht.getId());
-			logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
-			return Optional.of(ht);
+			t = storage.getToken(token.getHashedToken());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {}", t.getUserName().getName(), t.getId());
+			return Optional.of(t);
+		} catch (NoSuchTokenException e) {
+			// no problem, continue
+		}
+		return Optional.absent();
+	}
+	
+	/** Revoke the current token and deletes all temporary session data associated with the user.
+	 * Returns an empty Optional if the token does not exist in the
+	 * database, and thus there is nothing to revoke.
+	 * @param token the user's token.
+	 * @return the revoked token, or an empty Optional.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Optional<StoredToken> logout(final IncomingToken token)
+			throws AuthStorageException {
+		/* Could assign temp data to the login token, and then just delete that temp data, but
+		 * why bother. Only matters if a user is logging out and linking an account at the
+		 * same time.
+		 */
+		nonNull(token, "token");
+		StoredToken t = null;
+		try {
+			t = storage.getToken(token.getHashedToken());
+			final long deleted = storage.deleteTemporarySessionData(t.getUserName());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {} and {} temporary session instances",
+					t.getUserName().getName(), t.getId(), deleted);
+			return Optional.of(t);
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
 		}
@@ -1673,9 +1709,20 @@ public class Authentication {
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
-		final TemporaryToken tt = storeIdentitiesTemporarily(store, LOGIN_TOKEN_LIFETIME_MS);
+		final TemporarySessionData data = TemporarySessionData.create(
+				randGen.randomUUID(), clock.instant(), LOGIN_TOKEN_LIFETIME_MS)
+				.login(store);
+		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
 		return new LoginToken(tt);
+	}
+
+	private TemporaryToken storeTemporarySessionData(final TemporarySessionData data)
+			throws AuthStorageException {
+		final String token = randGen.getToken();
+		final TemporaryToken tt = new TemporaryToken(data, token);
+		storage.storeTemporarySessionData(data, IncomingToken.hash(token));
+		return tt;
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -1691,15 +1738,13 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws IdentityProviderErrorException if the provider reported an error when returning
 	 * from the OAuth2 flow.
+	 * @throws UnauthorizedException if the temporary token is not associated with any identities.
 	 */
 	public LoginState getLoginState(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
-		final TemporaryIdentities ids = getTemporaryIdentities(token);
-		if (ids.getIdentities().get().isEmpty()) {
-			throw new RuntimeException(String.format(
-					"Programming error: temporary login token %s stored with no identities",
-					ids.getId()));
-		}
+			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
+				UnauthorizedException {
+		final TemporarySessionData ids = getTemporaryIdentities(
+				Optional.absent(), Operation.LOGIN, token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
 				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
@@ -1721,12 +1766,16 @@ public class Authentication {
 		return builder.build();
 	}
 
-	private TemporaryIdentities getTemporaryIdentities(
+	private TemporarySessionData getTemporaryIdentities(
+			Optional<UserName> user,
+			final Operation expectedOperation,
 			final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException {
+			throws AuthStorageException, IdentityProviderErrorException, InvalidTokenException,
+				UnauthorizedException {
 		nonNull(token, "Temporary token");
 		try {
-			final TemporaryIdentities tis = storage.getTemporaryIdentities(token.getHashedToken());
+			final TemporarySessionData tis = storage.getTemporarySessionData(
+					token.getHashedToken());
 			if (tis.hasError()) {
 				final ErrorType et = tis.getErrorType().get();
 				if (ErrorType.ID_PROVIDER_ERROR.equals(et)) {
@@ -1734,6 +1783,23 @@ public class Authentication {
 				} else {
 					throw new RuntimeException("Unexpected error type " + et);
 				}
+			}
+			if (!expectedOperation.equals(tis.getOperation())) {
+				if (!user.isPresent() && tis.getUser().isPresent()) {
+					user = tis.getUser();
+				}
+				final String err;
+				final List<Object> args = new LinkedList<>();
+				if (user.isPresent()) {
+					err = "User {} attempted operation {} with a {} temporary token {}";
+					args.add(user.get().getName());
+				} else {
+					err = "Operation {} was attempted with a {} temporary token {}"; 
+				}
+				args.addAll(Arrays.asList(expectedOperation, tis.getOperation(), tis.getId()));
+				logErr(err, args.toArray());
+				throw new InvalidTokenException(
+						"Temporary token operation type does not match expected operation");
 			}
 			return tis;
 		} catch (NoSuchTokenException e) {
@@ -1791,8 +1857,9 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException("Account creation is disabled");
 		}
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporaryIdentities(token).getIdentities().get());
+		final Set<RemoteIdentity> ids = new HashSet<>(getTemporaryIdentities(
+				Optional.absent(), Operation.LOGIN, token).getIdentities().get());
+		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -1858,8 +1925,9 @@ public class Authentication {
 		nonNull(policyIDs, "policyIDs");
 		nonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporaryIdentities(token).getIdentities().get());
+		final Set<RemoteIdentity> ids = new HashSet<>(getTemporaryIdentities(
+				Optional.absent(), Operation.LOGIN, token).getIdentities().get());
+		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -1922,7 +1990,7 @@ public class Authentication {
 	
 	/** Remove a policy ID from all users. Primarily used to remove policy IDs that may have been
 	 * added in error.
-	 * @param token the user's token
+	 * @param token the user's token.
 	 * @param policyID the policyID to remove.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the user is not authorized to remove policy IDs or the
@@ -1939,12 +2007,43 @@ public class Authentication {
 				policyID.getName());
 	}
 	
+	/** Start the account linking process.
+	 * @param token the user's token.
+	 * @param lifetimeSec the lifetime of the temporary token to be returned.
+	 * @return a temporary token for tracking the user through the linking process.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws UnauthorizedException if the token is not a login token.
+	 * @throws AuthStorageException if an error occurs accessing the storage system.
+	 * @throws LinkFailedException if the user is a local user 
+	 */
+	public TemporaryToken linkStart(final IncomingToken token, final int lifetimeSec)
+			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
+				LinkFailedException {
+		nonNull(token, "token");
+		if (lifetimeSec < 60) {
+			throw new IllegalArgumentException("lifetimeSec must be at least 60");
+		}
+		final AuthUser user = getUser(token, new OpReqs("start link").types(TokenType.LOGIN));
+		if (user.isLocal()) {
+			// the ui shouldn't allow local users to link accounts, so ok to throw this
+			throw new LinkFailedException("Cannot link identities to local account " +
+					user.getUserName().getName());
+		}
+		final TemporarySessionData data = TemporarySessionData.create(
+				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
+				.link(user.getUserName());
+		final TemporaryToken tt = storeTemporarySessionData(data);
+		logInfo("Created temporary link token {} associated with user {}",
+				tt.getId(), user.getUserName().getName());
+		return tt;
+	}
+	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider in the case that the provider returned an error.
 	 * @param providerError the error returned by the provider.
 	 * @return A temporary token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @see #link(String, String)
+	 * @see #linkStart(IncomingToken, int)
 	 */
 	public TemporaryToken linkProviderError(final String providerError)
 			throws AuthStorageException {
@@ -1956,50 +2055,6 @@ public class Authentication {
 		return tt;
 	}
 	
-	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
-	 * identity provider.
-	 * 
-	 * Unlike {@link #link(IncomingToken, String, String)} this method never links immediately
-	 * nor does it check the state of the user to ensure linking is allowed.
-	 * 
-	 * A temporary token is returned that is associated with the
-	 * state of the link request. This token can be used to retrieve the link state via
-	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
-	 * 
-	 * In most cases, this method will have
-	 * been called after a redirect from a 3rd party identity provider, and as such, the link
-	 * flow is not under the control of any UI elements at that point. Hence, the method continues
-	 * if no accounts are available for linking, and an error thrown in later stages of the
-	 * linking process. The state is stored so the user can be redirected to the appropriate
-	 * UI element, which can then retrieve the link state and continue. A secondary point is that
-	 * the URL will contain the identity provider authcode, and so the user should be redirected
-	 * to a new URL that does not contain said authcode as soon as possible.
-	 * 
-	 * @param provider the name of the identity provider that is servicing the link request.
-	 * @param authcode the authcode provided by the provider.
-	 * @return a temporary token.
-	 * @throws MissingParameterException if the authcode is missing.
-	 * @throws IdentityRetrievalException if an error occurred when trying to retrieve identities
-	 * from the provider.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
-	 */
-	public TemporaryToken link(
-			final String provider,
-			final String authcode)
-			throws AuthStorageException, MissingParameterException, IdentityRetrievalException,
-				NoSuchIdentityProviderException {
-		final Set<RemoteIdentity> ids = getLinkCandidates(getIdentityProvider(provider), authcode);
-		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
-		 * some cases - this call is almost certainly the result of a redirect from a 3rd party
-		 * provider. Any controllable error should be thrown when the process flow is back
-		 * under the control of the primary auth UI.
-		 */
-		final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
-		logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
-		return tt;
-	}
-	
 	private TemporaryToken storeErrorTemporarily(
 			final String errorMessage,
 			final ErrorType errorType,
@@ -2007,22 +2062,12 @@ public class Authentication {
 			throws AuthStorageException {
 		checkStringNoCheckedException(errorMessage, "errorMessage");
 		nonNull(errorType, "errorType");
-		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
-				randGen.getToken(), clock.instant(), tokenLifeTimeMS);
-		storage.storeErrorTemporarily(tt.getHashedToken(), errorMessage, errorType);
-		return tt;
+		final TemporarySessionData data = TemporarySessionData.create(
+				randGen.randomUUID(), clock.instant(), tokenLifeTimeMS)
+				.error(errorMessage, errorType);
+		return storeTemporarySessionData(data);
 	}
 	
-	private TemporaryToken storeIdentitiesTemporarily(
-			final Set<RemoteIdentity> ids,
-			final int tokenLifeTimeMS)
-			throws AuthStorageException {
-		final TemporaryToken tt = new TemporaryToken(randGen.randomUUID(),
-				randGen.getToken(), clock.instant(), tokenLifeTimeMS);
-		storage.storeIdentitiesTemporarily(tt.getHashedToken(), ids);
-		return tt;
-	}
-
 	private Set<RemoteIdentity> getLinkCandidates(
 			final IdentityProvider idp,
 			final String authcode)
@@ -2051,7 +2096,8 @@ public class Authentication {
 	 * the URL will contain the identity provider authcode, and so the user should be redirected
 	 * to a new URL that does not contain said authcode as soon as possible.
 	 * 
-	 * @param token the user's token.
+	 * @param token the user's temporary token acquired from
+	 * {@link #linkStart(IncomingToken, int)}.
 	 * @param provider the name of the identity provider that is servicing the link request.
 	 * @param authcode the authcode provided by the provider.
 	 * @return a temporary token if required.
@@ -2064,6 +2110,8 @@ public class Authentication {
 	 * @throws LinkFailedException if the user is a local user.
 	 * @throws DisabledUserException if the user account is disabled.
 	 * @throws UnauthorizedException if the token is not a login token.
+	 * @throws IdentityProviderErrorException if the incoming token is associated with an
+	 * identity provider error.
 	 */
 	public LinkToken link(
 			final IncomingToken token,
@@ -2072,10 +2120,13 @@ public class Authentication {
 			throws InvalidTokenException, AuthStorageException,
 				MissingParameterException, IdentityRetrievalException,
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
-				UnauthorizedException {
+				UnauthorizedException, IdentityProviderErrorException {
 		final IdentityProvider idp = getIdentityProvider(provider);
+		final TemporarySessionData tids = getTemporaryIdentities(
+				Optional.absent(), Operation.LINKSTART, token);
+		storage.deleteTemporarySessionData(token.getHashedToken());
 		// UI shouldn't allow disabled users to link
-		final AuthUser u = getUser(token, new OpReqs("link").types(TokenType.LOGIN));
+		final AuthUser u = getUser(tids.getUser().get());
 		if (u.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
 			throw new LinkFailedException("Cannot link identities to local account " +
@@ -2091,10 +2142,15 @@ public class Authentication {
 		 */
 		final LinkToken lt;
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
+		// reuse token in either case if necessary
 		if (filtered.size() == 1 && !pc.isForceLinkChoice()) {
-			lt = getLinkToken(idp, u.getUserName(), filtered.iterator().next(), ids);
-		} else { // will store an ID set if said set is empty.
-			final TemporaryToken tt = storeIdentitiesTemporarily(ids, LINK_TOKEN_LIFETIME_MS);
+			lt = getLinkToken(u.getUserName(), filtered.iterator().next(), ids, token);
+		} else {
+			final TemporarySessionData data = TemporarySessionData.create(
+					randGen.randomUUID(), clock.instant(), LINK_TOKEN_LIFETIME_MS)
+					.link(u.getUserName(), ids);
+			final TemporaryToken tt = new TemporaryToken(data, token.getToken());
+			storage.storeTemporarySessionData(data, IncomingToken.hash(token.getToken()));
 			logInfo("Stored temporary token {} with {} link identities", tt.getId(), ids.size());
 			lt = new LinkToken(tt);
 		}
@@ -2102,12 +2158,11 @@ public class Authentication {
 	}
 
 	// expects that user is not a local user. Will throw link failed if so.
-	// will store empty identity set if identity is already linked.
 	private LinkToken getLinkToken(
-			final IdentityProvider idp,
 			final UserName userName,
 			final RemoteIdentity remoteIdentity,
-			final Set<RemoteIdentity> allIds)
+			final Set<RemoteIdentity> allIds,
+			final IncomingToken token)
 			throws AuthStorageException, LinkFailedException {
 		try {
 			final boolean linked = storage.link(userName, remoteIdentity);
@@ -2118,7 +2173,11 @@ public class Authentication {
 					"User unexpectedly disappeared from the database", e);
 		} catch (IdentityLinkedException e) {
 			// well, crap. race condition and now there are no link candidates left.
-			final TemporaryToken tt = storeIdentitiesTemporarily(allIds, LINK_TOKEN_LIFETIME_MS);
+			final TemporarySessionData data = TemporarySessionData.create(
+					randGen.randomUUID(), clock.instant(), LINK_TOKEN_LIFETIME_MS)
+					.link(userName, allIds);
+			final TemporaryToken tt = new TemporaryToken(data, token.getToken());
+			storage.storeTemporarySessionData(data, IncomingToken.hash(token.getToken()));
 			logInfo("A race condition means that the identity {} is already linked to a user " +
 					"other than {}. Stored identity set with {} linked identities with " +
 					"temporary token {}",
@@ -2155,14 +2214,13 @@ public class Authentication {
 	}
 	
 	/** Get the current state of a linking process associated with a temporary token.
-	 * This method is expected to be called after {@link #link(IncomingToken, String, String)} or
-	 * {@link #link(String, String)}.
+	 * This method is expected to be called after {@link #link(IncomingToken, String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, String)} or
 	 * {@link #linkAll(IncomingToken, IncomingToken)}.
 	 * 
 	 * @param token the user's token.
-	 * @param linktoken the temporary token associated with the link state.
+	 * @param linkToken the temporary token associated with the link state.
 	 * @return the state of the linking process.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws InvalidTokenException if either token is invalid.
@@ -2175,7 +2233,7 @@ public class Authentication {
 	 */
 	public LinkIdentities getLinkState(
 			final IncomingToken token,
-			final IncomingToken linktoken)
+			final IncomingToken linkToken)
 			throws InvalidTokenException, AuthStorageException, LinkFailedException,
 				DisabledUserException, UnauthorizedException, IdentityProviderErrorException {
 		final AuthUser u = getUser(token, new OpReqs("get link state").types(TokenType.LOGIN));
@@ -2183,19 +2241,30 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final TemporaryIdentities tids = getTemporaryIdentities(linktoken);
-		if (tids.getIdentities().get().isEmpty()) {
-			throw new RuntimeException(String.format(
-					"Programming error: temporary login token %s stored with no identities",
-					tids.getId()));
-		}
+		final TemporarySessionData tids = getTemporaryIdentities(
+				Optional.of(u.getUserName()), Operation.LINKIDENTS, linkToken);
+		checkIdentityAccess(u.getUserName(), tids);
 		final LinkIdentities linkIdentities = getLinkIdentities(u, tids);
 		logInfo("User {} accessed temporary link token {} with {} identities",
 				u.getUserName().getName(), tids.getId(), tids.getIdentities().get().size());
 		return linkIdentities;
 	}
+	
+	// assumes tids is a LINKIDENT operation and therefore has a user
+	private void checkIdentityAccess(final UserName name, final TemporarySessionData tids)
+			throws UnauthorizedException {
+		if (Optional.of(name).equals(tids.getUser())) {
+			return; // all good
+		} else {
+			logErr("During the account linking process user {} attempted to access temporary " +
+					"token {} which is owned by user {}.",
+					name.getName(), tids.getId(), tids.getUser().get().getName());
+			throw new UnauthorizedException(String.format(
+					"User %s may not access this identity set", name.getName()));
+		}
+	}
 
-	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporaryIdentities tids)
+	private LinkIdentities getLinkIdentities(final AuthUser u, final TemporarySessionData tids)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> ids = tids.getIdentities().get();
 		final String provider = ids.iterator().next().getRemoteID().getProviderName();
@@ -2219,7 +2288,7 @@ public class Authentication {
 	 * {@link #getLinkState(IncomingToken, IncomingToken)}.
 	 * 
 	 * @param token the user's token.
-	 * @param linktoken a temporary token associated with the link process state.
+	 * @param linkToken a temporary token associated with the link process state.
 	 * @param identityID the id of the remote identity to link to the user's account. This identity
 	 * must be included in the link state associated with the temporary token. 
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -2235,7 +2304,7 @@ public class Authentication {
 	 */
 	public void link(
 			final IncomingToken token,
-			final IncomingToken linktoken,
+			final IncomingToken linkToken,
 			final String identityID)
 			throws AuthStorageException, LinkFailedException, DisabledUserException,
 				InvalidTokenException, IdentityLinkedException, UnauthorizedException,
@@ -2247,7 +2316,11 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = getTemporaryIdentities(linktoken).getIdentities().get();
+		final TemporarySessionData tids = getTemporaryIdentities(
+				Optional.of(au.getUserName()), Operation.LINKIDENTS, linkToken);
+		storage.deleteTemporarySessionData(linkToken.getHashedToken());
+		checkIdentityAccess(au.getUserName(), tids);
+		final Set<RemoteIdentity> ids = tids.getIdentities().get();
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new LinkFailedException(String.format(
@@ -2284,8 +2357,11 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final Set<RemoteIdentity> identities = new HashSet<>(
-				getTemporaryIdentities(linkToken).getIdentities().get());
+		final TemporarySessionData tids = getTemporaryIdentities(
+				Optional.of(au.getUserName()), Operation.LINKIDENTS, linkToken);
+		storage.deleteTemporarySessionData(linkToken.getHashedToken());
+		checkIdentityAccess(au.getUserName(), tids);
+		final Set<RemoteIdentity> identities = new HashSet<>(tids.getIdentities().get());
 		filterLinkCandidates(identities);
 		final int linked = link(au.getUserName(), identities);
 		if (linked > 0) {
@@ -2379,7 +2455,7 @@ public class Authentication {
 	 */
 	public void deleteLinkOrLoginState(final IncomingToken token) throws AuthStorageException {
 		nonNull(token, "token");
-		final Optional<UUID> id = storage.deleteTemporaryIdentities(token.getHashedToken());
+		final Optional<UUID> id = storage.deleteTemporarySessionData(token.getHashedToken());
 		if (id.isPresent()) {
 			logInfo("Deleted temporary token {}", id.get());
 		} else {

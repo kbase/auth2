@@ -4,6 +4,8 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import static us.kbase.test.auth2.TestCommon.tempToken;
+
 import java.time.Instant;
 import java.util.UUID;
 
@@ -42,8 +44,8 @@ public class LoginTokenTest {
 	@Test
 	public void constructorTemporaryToken() throws Exception {
 		final Instant now = Instant.now();
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "baz", now, 5000);
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), now, 5000L, "baz");
 		final LoginToken lt = new LoginToken(tt);
 		assertThat("incorrect isLoggedIn", lt.isLoggedIn(), is(false));
 		assertThat("incorrect token id", lt.getTemporaryToken().get().getId(), is(tt.getId()));

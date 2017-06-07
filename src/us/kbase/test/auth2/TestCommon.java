@@ -19,6 +19,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.exception.ExceptionUtils;
@@ -30,6 +31,9 @@ import com.mongodb.client.MongoDatabase;
 import difflib.DiffUtils;
 import difflib.Patch;
 import us.kbase.auth2.lib.Password;
+import us.kbase.auth2.lib.TemporarySessionData;
+import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.common.test.TestException;
 
 public class TestCommon {
@@ -283,5 +287,16 @@ public class TestCommon {
 		assertThat(String.format("number (%s) not within %s of target: %s",
 				num, range, expected),
 				Math.abs(expected - num) < range, is(true));
+	}
+	
+	public static TemporaryToken tempToken(
+			final UUID id,
+			final Instant created,
+			final long lifetimeMS,
+			final String token)
+			throws Exception {
+		final TemporarySessionData data = TemporarySessionData.create(id, created, lifetimeMS)
+				.link(new UserName("foo"));
+		return new TemporaryToken(data, token);
 	}
 }

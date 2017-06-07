@@ -5,9 +5,11 @@ import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
 import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
+import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LOGIN_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getLoginInProcessCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.toURI;
@@ -79,7 +81,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
-import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
@@ -96,7 +97,6 @@ public class Login {
 	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
-	private static final String IN_PROCESS_LOGIN_COOKIE = "in-process-login-token";
 	
 	private static final String TRUE = "true";
 	private static final String FALSE = "false";
@@ -331,13 +331,6 @@ public class Login {
 		return toURI(deflt);
 	}
 
-	private NewCookie getLoginInProcessCookie(final TemporaryToken token) {
-		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_COOKIE,
-				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
-				"logintoken",
-				token == null ? 0 : getMaxCookieAge(token), UIConstants.SECURE_COOKIES);
-	}
-
 	@GET
 	@Path(UIPaths.LOGIN_CHOICE)
 	@Template(name = "/loginchoice")
@@ -347,7 +340,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 
@@ -359,7 +352,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 	
@@ -368,7 +361,7 @@ public class Login {
 			final UriInfo uriInfo,
 			final String redirect)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		final URL redirectURL = getRedirectURL(redirect); // fail early
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		

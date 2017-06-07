@@ -4,7 +4,9 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.isA;
+import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -330,6 +332,63 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
+	public void logout() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		final UUID id = UUID.randomUUID();
+		
+		final StoredToken ht = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("foo"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
+		
+		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
+		when(storage.deleteTemporarySessionData(new UserName("foo"))).thenReturn(42L);
+		
+		final Optional<StoredToken> res = auth.logout(t);
+		
+		verify(storage).deleteToken(new UserName("foo"), id);
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"User foo revoked token " + id + " and 42 temporary session instances",
+				Authentication.class));
+		
+		assertThat("incorrect token", res, is(Optional.of(ht)));
+	}
+	
+	@Test
+	public void logoutNoToken() throws Exception {
+		final TestMocks testauth = initTestMocks();
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foobar");
+		
+		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
+		
+		final Optional<StoredToken> res = auth.logout(t);
+		
+		assertThat("incorrect token", res, is(Optional.absent()));
+		
+		verify(storage, never()).deleteToken(any(), any());
+		verify(storage, never()).deleteTemporarySessionData((UserName) any());
+	}
+	
+	@Test
+	public void logoutFail() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		try {
+			auth.logout(null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+	}
+	
+	@Test
 	public void revokeSelf() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -366,6 +425,8 @@ public class AuthenticationTokenTest {
 		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
 		
 		final Optional<StoredToken> res = auth.revokeToken(t);
+		
+		verify(storage, never()).deleteToken(any(), any());
 		
 		assertThat("incorrect token", res, is(Optional.absent()));
 	}
@@ -1098,7 +1159,7 @@ public class AuthenticationTokenTest {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+		when(storage.deleteTemporarySessionData(new IncomingToken("foobar").getHashedToken()))
 				.thenReturn(Optional.of(id));
 		
 		auth.deleteLinkOrLoginState(t);
@@ -1115,7 +1176,7 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+		when(storage.deleteTemporarySessionData(new IncomingToken("foobar").getHashedToken()))
 				.thenReturn(Optional.absent());
 		
 		auth.deleteLinkOrLoginState(t);

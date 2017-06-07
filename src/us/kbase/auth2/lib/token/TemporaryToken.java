@@ -1,11 +1,12 @@
 package us.kbase.auth2.lib.token;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.addNoOverflow;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.UUID;
+
+import us.kbase.auth2.lib.TemporarySessionData;
 
 /** A temporary token.
  * @author gaprice@lbl.gov
@@ -19,27 +20,18 @@ public class TemporaryToken {
 	private final Instant expirationDate;
 
 	/** Create a new temporary token.
-	 * @param id the token id.
+	 * @param data the session data this token is associated with.
 	 * @param token the token string.
-	 * @param creation the creation date of the token.
-	 * @param lifetimeInMS the lifetime of the token in milliseconds.
 	 */
 	public TemporaryToken(
-			final UUID id,
-			final String token,
-			final Instant creation,
-			final long lifetimeInMS) {
-		nonNull(id, "id");
+			final TemporarySessionData data,
+			final String token) {
+		nonNull(data, "data");
 		checkStringNoCheckedException(token, "token");
-		nonNull(creation, "creation");
-		if (lifetimeInMS < 0) {
-			throw new IllegalArgumentException("lifetime must be >= 0");
-		}
-		this.id = id;
+		this.id = data.getId();
 		this.token = token;
-		this.creationDate = creation;
-		this.expirationDate = Instant.ofEpochMilli(
-				addNoOverflow(creationDate.toEpochMilli(), lifetimeInMS));
+		this.creationDate = data.getCreated();
+		this.expirationDate = data.getExpires();
 	}
 
 	/** Get the token string.
@@ -68,16 +60,6 @@ public class TemporaryToken {
 	 */
 	public UUID getId() {
 		return id;
-	}
-
-	/** Get a hashed token based on this token.
-	 * 
-	 * uses the {@link IncomingToken#hash(String)} method.
-	 * @return a hashed temporary token.
-	 */
-	public TemporaryHashedToken getHashedToken() {
-		return new TemporaryHashedToken(id, IncomingToken.hash(token),
-				creationDate, expirationDate);
 	}
 
 	@Override

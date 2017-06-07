@@ -24,18 +24,18 @@ public class Root {
 	
 	//TODO JAVADOC or swagger
 	
-	private static final String VERSION = "0.1.1";
-	
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	public Map<String, Object> rootJSON() {
-		return root();
-	}
+	private static final String VERSION = "0.2.0";
 	
 	@GET
 	@Template(name = "/root")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> rootHTML() {
+		return root();
+	}
+	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> rootJSON() {
 		return root();
 	}
 	

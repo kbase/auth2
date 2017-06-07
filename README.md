@@ -57,7 +57,11 @@ Login to a local account. Stores a cookie with a token.
 Reset the password for a local account.
 
 /logout  
-Self explanatory.
+Logs the user out.  
+Removes the user's token from the database as well as any temporary link tokens associated with
+the user. Removes the login, temporary login, and temporary link cookies except if JSON output
+is requested, in which case it is expected that the UI manages the login token
+(but not the temporary tokens).
 
 /me  
 User page. Update name and email address, remove roles.
@@ -178,14 +182,20 @@ Omit the stop key to have jetty generate one for you.
 Developer notes
 ---------------
 
-### Adding code
+### Adding and releasing code
 
-* All code additions and updates must be made as pull requests directed at the develop branch.
-  * All tests must pass and all new code must be covered by tests.
-  * All new code must be documented appropriately with javadoc and in the general documentation
-    if appropriate.
-* The master branch is the stable branch. Releases are made from the develop branch to the master
-  branch.
+* Adding code
+  * All code additions and updates must be made as pull requests directed at the develop branch.
+    * All tests must pass and all new code must be covered by tests.
+    * All new code must be documented appropriately
+      * Javadoc
+      * General documentation if appropriate
+      * Release notes
+* Releases
+  * The master branch is the stable branch. Releases are made from the develop branch to the master
+    branch.
+  * Update the version as per the semantic version rules in `src/us/kbase/auth2/ui/Root.java`.
+  * Tag the version in git and github.
 
 ### Running tests
 
