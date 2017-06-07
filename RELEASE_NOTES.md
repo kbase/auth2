@@ -24,7 +24,7 @@ Authentication Service MKII release notes
 * Temporary tokens are scoped to one of three operation stages: link start, link complete,
   and login. Attempting to use a temporary token in an inappropriate scope will throw an error.
 * Link and login temporary tokens are now session tokens so that they're removed on browser exit.
-  The tokens still expire after 30m server side.
+  The tokens still expire normally server side.
 * the `POST /logout` endpoint now returns JSON if requested and also deletes any temporary link
   tokens associated with the user from the database. Any temporary link or temporary login
   cookies are removed. If JSON is requested, the login cookie is not removed, unlike with an
