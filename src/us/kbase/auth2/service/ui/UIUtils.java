@@ -1,6 +1,8 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LINK_COOKIE;
+import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LOGIN_COOKIE;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
@@ -127,6 +129,30 @@ public class UIUtils {
 				"authtoken",
 				token == null ? 0 : getMaxCookieAge(
 						token.getStoredToken().getExpirationDate(), session),
+				UIConstants.SECURE_COOKIES);
+	}
+	
+	/** Get a login in process cookie. Always returns a session cookie.
+	 * @param token the token to cookieize, or null to create a cookie that immediately expires.
+	 * @return a new cookie.
+	 */
+	public static NewCookie getLoginInProcessCookie(final TemporaryToken token) {
+		return new NewCookie(new Cookie(IN_PROCESS_LOGIN_COOKIE,
+				token == null ? "no token" : token.getToken(), UIPaths.LOGIN_ROOT, null),
+				"logintoken",
+				token == null ? 0 : NewCookie.DEFAULT_MAX_AGE,
+				UIConstants.SECURE_COOKIES);
+	}
+	
+	/** Get a link in process cookie. Always returns a session cookie.
+	 * @param token the token to cookieize, or null to create a cookie that immediately expires.
+	 * @return a new cookie
+	 */
+	public static NewCookie getLinkInProcessCookie(final TemporaryToken token) {
+		return new NewCookie(new Cookie(IN_PROCESS_LINK_COOKIE,
+				token == null ? "no token" : token.getToken(), UIPaths.LINK_ROOT, null),
+				"linktoken",
+				token == null ? 0 : NewCookie.DEFAULT_MAX_AGE,
 				UIConstants.SECURE_COOKIES);
 	}
 

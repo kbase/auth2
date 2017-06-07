@@ -216,7 +216,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void deleteTempData() throws Exception {
+	public void deleteTempDataByToken() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
@@ -237,7 +237,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void deleteNonExistentTempData() throws Exception {
+	public void deleteNonExistentTempDataByToken() throws Exception {
 		final Optional<UUID> retid = storage.deleteTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken());
 		
@@ -245,12 +245,78 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	}
 	
 	@Test
+	public void deleteNoTempDatasByUser() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+
+		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
+		// check token is there
+		storage.getTemporarySessionData(new IncomingToken("foobar").getHashedToken());
+		
+		final long count = storage.deleteTemporarySessionData(new UserName("whoo"));
+		assertThat("correct deletion count", count, is(0L));
+		
+		// check token is there
+		storage.getTemporarySessionData(new IncomingToken("foobar").getHashedToken());
+	}
+	
+	@Test
+	public void deleteOneTempDataByUser() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.link(new UserName("whee"));
+
+		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
+		// check token is there
+		storage.getTemporarySessionData(new IncomingToken("foobar").getHashedToken());
+		
+		final long count = storage.deleteTemporarySessionData(new UserName("whee"));
+		assertThat("correct deletion count", count, is(1L));
+		
+		failGetTemporaryData(new IncomingToken("foobar").getHashedToken(),
+				new NoSuchTokenException("Token not found"));
+	}
+	
+	@Test
+	public void deleteTwoTempDatasByUser() throws Exception {
+		final Instant now = Instant.now();
+		final TemporarySessionData data1 = TemporarySessionData.create(UUID.randomUUID(),
+				now, now.plusSeconds(10)).link(new UserName("whee"));
+		final TemporarySessionData data2 = TemporarySessionData.create(UUID.randomUUID(),
+				now, now.plusSeconds(10)).link(new UserName("whee"), set(REMOTE1));
+		
+
+		storage.storeTemporarySessionData(data1, IncomingToken.hash("foobar"));
+		storage.storeTemporarySessionData(data2, IncomingToken.hash("foobar2"));
+		// check token is there
+		storage.getTemporarySessionData(new IncomingToken("foobar").getHashedToken());
+		storage.getTemporarySessionData(new IncomingToken("foobar2").getHashedToken());
+		
+		final long count = storage.deleteTemporarySessionData(new UserName("whee"));
+		assertThat("correct deletion count", count, is(2L));
+		
+		failGetTemporaryData(new IncomingToken("foobar").getHashedToken(),
+				new NoSuchTokenException("Token not found"));
+		failGetTemporaryData(new IncomingToken("foobar2").getHashedToken(),
+				new NoSuchTokenException("Token not found"));
+	}
+	
+	@Test
 	public void deleteTempDataFailNull() throws Exception {
 		try {
-			storage.deleteTemporarySessionData(null);
+			storage.deleteTemporarySessionData((IncomingHashedToken) null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
+		}
+		try {
+			storage.deleteTemporarySessionData((UserName) null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NullPointerException("userName"));
 		}
 	}
 

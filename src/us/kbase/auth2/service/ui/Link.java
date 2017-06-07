@@ -3,9 +3,10 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
+import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LINK_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
-import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.ui.UIUtils.getLinkInProcessCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.toURI;
@@ -75,7 +76,6 @@ public class Link {
 	//TODO JAVADOC or swagger
 	
 	private static final String LINK_STATE_COOKIE = "linkstatevar";
-	private static final String IN_PROCESS_LINK_COOKIE = "in-process-link-token";
 
 	@Inject
 	private Authentication auth;
@@ -144,11 +144,8 @@ public class Link {
 				 * them as the first user and proceed with the linking process, thus linking their
 				 * remote account to the first user's account.
 				 * 
-				 * The link in process token at the complete endpoint does not need to be a session
-				 * token since at that point the identities are assigned and accessing the token
-				 * requires a standard login token.
 				 */
-				.cookie(getLinkInProcessCookie(tt, true))
+				.cookie(getLinkInProcessCookie(tt))
 				.build();
 	}
 
@@ -209,29 +206,6 @@ public class Link {
 					.build();
 		}
 		return r;
-	}
-	
-	private NewCookie getLinkInProcessCookie(final TemporaryToken token) {
-		return getLinkInProcessCookie(token, false);
-	}
-	
-	private NewCookie getLinkInProcessCookie(
-			final TemporaryToken token,
-			final boolean sessionCookie) {
-		
-		final int lifetime;
-		if (token == null) {
-			lifetime = 0;
-		} else if (sessionCookie) {
-			lifetime = NewCookie.DEFAULT_MAX_AGE;
-		} else {
-			lifetime = getMaxCookieAge(token);
-		}
-		
-		return new NewCookie(new Cookie(IN_PROCESS_LINK_COOKIE,
-				token == null ? "no token" : token.getToken(), UIPaths.LINK_ROOT, null),
-				"linktoken", lifetime,
-				UIConstants.SECURE_COOKIES);
 	}
 	
 	@GET

@@ -359,6 +359,15 @@ public interface AuthStorage {
 	Optional<UUID> deleteTemporarySessionData(IncomingHashedToken token)
 			throws AuthStorageException;
 	
+	/** Delete all session data that is assigned to a particular user. Note that not all session
+	 * data is assigned to a user.
+	 * @param userName the user for which session data will be removed.
+	 * @return the number of session data instances that were deleted.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	long deleteTemporarySessionData(UserName userName) throws AuthStorageException;
+	
+	
 	/** Link an account to a remote identity.
 	 * If the account is already linked to the identity, the method proceeds without error, but
 	 * if the provider details (provider username, email address, and full name) are different,

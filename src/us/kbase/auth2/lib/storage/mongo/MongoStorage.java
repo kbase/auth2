@@ -1409,6 +1409,22 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
+	@Override
+	public long deleteTemporarySessionData(final UserName userName) throws AuthStorageException {
+		/* would be nice to return the deleted IDs, but it doesn't seem like there's any way to 
+		 * to so that isn't subject to race conditions that could mean deleted IDs are missing from
+		 * the list
+		 */
+		nonNull(userName, "userName");
+		try {
+			final DeleteResult tempIds = db.getCollection(COL_TEMP_DATA).deleteMany(
+					new Document(Fields.TEMP_SESSION_USER, userName.getName()));
+			return tempIds.getDeletedCount();
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
 	/* See notes for this method between this method and the next. These two methods are tightly
 	 * coupled.
 	 */

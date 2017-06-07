@@ -1224,12 +1224,40 @@ public class Authentication {
 	public Optional<StoredToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
-		StoredToken ht = null;
+		StoredToken t = null;
 		try {
-			ht = storage.getToken(token.getHashedToken());
-			storage.deleteToken(ht.getUserName(), ht.getId());
-			logInfo("User {} revoked token {}", ht.getUserName().getName(), ht.getId());
-			return Optional.of(ht);
+			t = storage.getToken(token.getHashedToken());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {}", t.getUserName().getName(), t.getId());
+			return Optional.of(t);
+		} catch (NoSuchTokenException e) {
+			// no problem, continue
+		}
+		return Optional.absent();
+	}
+	
+	/** Revoke the current token and deletes all temporary session data associated with the user.
+	 * Returns an empty Optional if the token does not exist in the
+	 * database, and thus there is nothing to revoke.
+	 * @param token the user's token.
+	 * @return the revoked token, or an empty Optional.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Optional<StoredToken> logout(final IncomingToken token)
+			throws AuthStorageException {
+		/* Could assign temp data to the login token, and then just delete that temp data, but
+		 * why bother. Only matters if a user is logging out and linking an account at the
+		 * same time.
+		 */
+		nonNull(token, "token");
+		StoredToken t = null;
+		try {
+			t = storage.getToken(token.getHashedToken());
+			final long deleted = storage.deleteTemporarySessionData(t.getUserName());
+			storage.deleteToken(t.getUserName(), t.getId());
+			logInfo("User {} revoked token {} and {} temporary session instances",
+					t.getUserName().getName(), t.getId(), deleted);
+			return Optional.of(t);
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
 		}
@@ -2097,8 +2125,6 @@ public class Authentication {
 		final TemporarySessionData tids = getTemporaryIdentities(
 				Optional.absent(), Operation.LINKSTART, token);
 		storage.deleteTemporarySessionData(token.getHashedToken());
-		//TODO NOW logout endpoint removed link tokens for all sessions, json compatible, don't kill cookie option
-		// note that could only remove link tokens for current session, but why bother. User won't be linking & logging out @ the same time
 		// UI shouldn't allow disabled users to link
 		final AuthUser u = getUser(tids.getUser().get());
 		if (u.isLocal()) {

@@ -515,7 +515,7 @@ public class LoginTest {
 		final NewCookie expectedinprocess = new NewCookie("in-process-login-token", "no token",
 				"/login", null, "logintoken", 0, false);
 		final NewCookie inprocess = res.getCookies().get("in-process-login-token");
-		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
+		assertThat("incorrect process cookie", inprocess, is(expectedinprocess));
 	}
 	
 	@Test
