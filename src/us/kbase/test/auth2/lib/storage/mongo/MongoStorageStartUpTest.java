@@ -137,7 +137,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				"config_ext",
 				"config_prov",
 				"cust_roles",
-				"temptokens",
+				"tempdata",
 				"tokens",
 				"users");
 		if (includeSystemIndexes) {
@@ -235,29 +235,34 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	}
 	
 	@Test
-	public void indexesTempTokens() {
+	public void indexesTempData() {
 		final Set<Document> indexes = new HashSet<>();
-		db.getCollection("temptokens").listIndexes().forEach((Consumer<Document>) indexes::add);
+		db.getCollection("tempdata").listIndexes().forEach((Consumer<Document>) indexes::add);
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
 						.append("name", "token_1")
-						.append("ns", "test_mongostorage.temptokens"),
+						.append("ns", "test_mongostorage.tempdata"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.temptokens")
+						.append("ns", "test_mongostorage.tempdata")
 						.append("expireAfterSeconds", 0L),
+				new Document("v", indexVer)
+						.append("sparse", true)
+						.append("key", new Document("user", 1))
+						.append("name", "user_1")
+						.append("ns", "test_mongostorage.tempdata"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.temptokens"),
+						.append("ns", "test_mongostorage.tempdata"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
-						.append("ns", "test_mongostorage.temptokens")
+						.append("ns", "test_mongostorage.tempdata")
 				)));
 	}
 	

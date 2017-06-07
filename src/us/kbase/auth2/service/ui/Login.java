@@ -347,7 +347,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 
@@ -359,7 +359,7 @@ public class Login {
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		return loginChoice(token, uriInfo, redirect);
 	}
 	
@@ -368,7 +368,7 @@ public class Login {
 			final UriInfo uriInfo,
 			final String redirect)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-			IllegalParameterException, IdentityProviderErrorException {
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
 		final URL redirectURL = getRedirectURL(redirect); // fail early
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		

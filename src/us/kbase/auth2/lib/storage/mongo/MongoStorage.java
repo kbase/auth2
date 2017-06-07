@@ -51,7 +51,9 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.TemporaryIdentities;
+import us.kbase.auth2.lib.TemporarySessionData;
+import us.kbase.auth2.lib.TemporarySessionData.Builder;
+import us.kbase.auth2.lib.TemporarySessionData.Operation;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -90,7 +92,6 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.StoredToken;
-import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -128,7 +129,7 @@ public class MongoStorage implements AuthStorage {
 	private static final String COL_CONFIG_EXTERNAL = "config_ext";
 	private static final String COL_USERS = "users";
 	private static final String COL_TOKEN = "tokens";
-	private static final String COL_TEMP_TOKEN = "temptokens";
+	private static final String COL_TEMP_DATA = "tempdata";
 	private static final String COL_CUST_ROLES = "cust_roles";
 	
 	private static final Map<TokenLifetimeType, String>
@@ -187,16 +188,17 @@ public class MongoStorage implements AuthStorage {
 		
 		//temporary token indexes
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
-		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_TOKEN), IDX_UNIQ);
-		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_ID), IDX_UNIQ);
-		temptoken.put(Arrays.asList(Fields.TOKEN_TEMP_EXPIRY),
+		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_TOKEN), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_ID), IDX_UNIQ);
+		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_USER), IDX_SPARSE);
+		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_EXPIRY),
 				// this causes the tokens to expire at their expiration date
 				/* this causes the tokens to be deleted at their expiration date
 				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
 				 * way to trigger a run, so tested manually
 				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
-		INDEXES.put(COL_TEMP_TOKEN, temptoken);
+		INDEXES.put(COL_TEMP_DATA, temptoken);
 		
 		//config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
@@ -1274,49 +1276,47 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public void storeErrorTemporarily(
-			final TemporaryHashedToken token,
-			final String error,
-			final ErrorType errorType)
+	public void storeTemporarySessionData(final TemporarySessionData data, final String hash)
 			throws AuthStorageException {
-		nonNull(token, "token");
-		checkStringNoCheckedException(error, "error");
-		nonNull(errorType, "errorType");
-		final Document td = toDocument(token)
-				.append(Fields.TOKEN_TEMP_ERROR, error)
-				.append(Fields.TOKEN_TEMP_ERROR_TYPE, errorType.getErrorCode());
-		storeTemporaryToken(td);
-	};
-
-	@Override
-	public void storeIdentitiesTemporarily(
-			final TemporaryHashedToken token,
-			final Set<RemoteIdentity> identitySet)
-			throws AuthStorageException {
-		nonNull(token, "token");
-		nonNull(identitySet, "identitySet");
-		// ok for the set to be empty
-		noNulls(identitySet, "Null value in identitySet");
-		final Set<Document> ids = toDocument(identitySet);
-		final Document td = toDocument(token).append(Fields.TOKEN_TEMP_IDENTITIES, ids);
-		storeTemporaryToken(td);
+		nonNull(data, "data");
+		checkStringNoCheckedException(hash, "hash");
+		final Set<Document> ids;
+		if (data.getIdentities().isPresent()) {
+			ids = toDocument(data.getIdentities().get());
+		} else {
+			ids = new HashSet<>();
+		}
+		final Document td = new Document(
+				Fields.TEMP_SESSION_ID, data.getId().toString())
+				.append(Fields.TEMP_SESSION_OPERATION, data.getOperation().toString())
+				.append(Fields.TEMP_SESSION_TOKEN, hash)
+				.append(Fields.TEMP_SESSION_EXPIRY, Date.from(data.getExpires()))
+				.append(Fields.TEMP_SESSION_CREATION, Date.from(data.getCreated()))
+				.append(Fields.TEMP_SESSION_ERROR,
+						data.getError().isPresent() ? data.getError().get() : null)
+				.append(Fields.TEMP_SESSION_ERROR_TYPE, data.getErrorType().isPresent() ?
+						data.getErrorType().get().getErrorCode() : null)
+				.append(Fields.TEMP_SESSION_IDENTITIES, ids)
+				.append(Fields.TEMP_SESSION_USER,
+						data.getUser().isPresent() ? data.getUser().get().getName() : null);
+		storeTemporarySessionData(td);
 	}
 
-	private void storeTemporaryToken(final Document td) throws AuthStorageException {
+	private void storeTemporarySessionData(final Document td) throws AuthStorageException {
 		try {
-			db.getCollection(COL_TEMP_TOKEN).insertOne(td);
+			db.getCollection(COL_TEMP_DATA).insertOne(td);
 		} catch (MongoWriteException mwe) {
 			// not happy about this, but getDetails() returns an empty map
 			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
-			if (dk.isDuplicate() && COL_TEMP_TOKEN.equals(dk.getCollection().get())) {
-				if ((Fields.TOKEN_TEMP_ID + "_1").equals(dk.getIndex().get())) {
+			if (dk.isDuplicate() && COL_TEMP_DATA.equals(dk.getCollection().get())) {
+				if ((Fields.TEMP_SESSION_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Temporary token ID %s already exists in the database",
-							td.getString(Fields.TOKEN_TEMP_ID)));
-				} else if ((Fields.TOKEN_TEMP_TOKEN + "_1").equals(dk.getIndex().get())) {
+							td.getString(Fields.TEMP_SESSION_ID)));
+				} else if ((Fields.TEMP_SESSION_TOKEN + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token hash for temporary token ID %s already exists in the database",
-							td.getString(Fields.TOKEN_TEMP_ID)));
+							td.getString(Fields.TEMP_SESSION_ID)));
 				}
 			} // otherwise throw next exception
 			throw new AuthStorageException("Database write failed", mwe);
@@ -1325,14 +1325,6 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
-	private Document toDocument(final TemporaryHashedToken token) {
-		return new Document(
-				Fields.TOKEN_TEMP_ID, token.getId().toString())
-				.append(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash())
-				.append(Fields.TOKEN_TEMP_EXPIRY, Date.from(token.getExpirationDate()))
-				.append(Fields.TOKEN_TEMP_CREATION, Date.from(token.getCreationDate()));
-	}
-
 	private Document toDocument(final RemoteIdentity id) {
 		final RemoteIdentityDetails rid = id.getDetails();
 		return new Document(Fields.IDENTITIES_ID, id.getRemoteID().getID())
@@ -1344,41 +1336,40 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public TemporaryIdentities getTemporaryIdentities(
+	public TemporarySessionData getTemporarySessionData(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
 		nonNull(token, "token");
-		final Document d = findOne(COL_TEMP_TOKEN,
-				new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()));
+		final Document d = findOne(COL_TEMP_DATA,
+				new Document(Fields.TEMP_SESSION_TOKEN, token.getTokenHash()));
 		if (d == null) {
 			throw new NoSuchTokenException("Token not found");
 		}
 		// if we do this anywhere else should make a method to go from doc -> temptoken class
-		if (Instant.now().isAfter(d.getDate(Fields.TOKEN_TEMP_EXPIRY).toInstant())) {
+		if (Instant.now().isAfter(d.getDate(Fields.TEMP_SESSION_EXPIRY).toInstant())) {
 			throw new NoSuchTokenException("Token not found");
 		}
-		final TemporaryIdentities tis;
-		final String error = d.getString(Fields.TOKEN_TEMP_ERROR);
-		if (error != null) {
-			tis = new TemporaryIdentities(
-					UUID.fromString(d.getString(Fields.TOKEN_ID)),
-					d.getDate(Fields.TOKEN_CREATION).toInstant(),
-					d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
-					error,
-					ErrorType.fromErrorCode(d.getInteger(Fields.TOKEN_TEMP_ERROR_TYPE)));
-		} else {
-			@SuppressWarnings("unchecked")
-			final List<Document> ids = (List<Document>) d.get(Fields.TOKEN_TEMP_IDENTITIES);
-			if (ids == null) {
-				final String tid = d.getString(Fields.TOKEN_TEMP_ID);
-				throw new AuthStorageException(String.format(
-						"Temporary token %s has no associated IDs field", tid));
-			}
-			tis = new TemporaryIdentities(
-					UUID.fromString(d.getString(Fields.TOKEN_ID)),
-					d.getDate(Fields.TOKEN_CREATION).toInstant(),
-					d.getDate(Fields.TOKEN_EXPIRY).toInstant(),
+		final Builder b = TemporarySessionData.create(
+				UUID.fromString(d.getString(Fields.TOKEN_ID)),
+				d.getDate(Fields.TOKEN_CREATION).toInstant(),
+				d.getDate(Fields.TOKEN_EXPIRY).toInstant());
+		final Operation op = Operation.valueOf(d.getString(Fields.TEMP_SESSION_OPERATION));
+		final TemporarySessionData tis;
+		@SuppressWarnings("unchecked")
+		final List<Document> ids = (List<Document>) d.get(Fields.TEMP_SESSION_IDENTITIES);
+		if (op.equals(Operation.ERROR)) {
+			tis = b.error(d.getString(Fields.TEMP_SESSION_ERROR),
+					ErrorType.fromErrorCode(d.getInteger(Fields.TEMP_SESSION_ERROR_TYPE)));
+		} else if (op.equals(Operation.LOGIN)) {
+			tis = b.login(toIdentities(ids));
+		} else if (op.equals(Operation.LINKSTART)) {
+			tis = b.link(getUserName(d.getString(Fields.TEMP_SESSION_USER)));
+		} else if (op.equals(Operation.LINKIDENTS)) {
+			tis = b.link(getUserName(d.getString(Fields.TEMP_SESSION_USER)),
 					toIdentities(ids));
+		} else {
+			// no way to test this
+			throw new RuntimeException("Unexpected operation " + op);
 		}
 		return tis;
 	}
@@ -1399,18 +1390,18 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
-	public Optional<UUID> deleteTemporaryIdentities(final IncomingHashedToken token)
+	public Optional<UUID> deleteTemporarySessionData(final IncomingHashedToken token)
 			throws AuthStorageException {
 		nonNull(token, "token");
 		try {
-			final Document tempIds = db.getCollection(COL_TEMP_TOKEN).findOneAndDelete(
-					new Document(Fields.TOKEN_TEMP_TOKEN, token.getTokenHash()),
+			final Document tempIds = db.getCollection(COL_TEMP_DATA).findOneAndDelete(
+					new Document(Fields.TEMP_SESSION_TOKEN, token.getTokenHash()),
 					new FindOneAndDeleteOptions().projection(
-							new Document(Fields.TOKEN_TEMP_ID, 1)));
+							new Document(Fields.TEMP_SESSION_ID, 1)));
 			if (tempIds == null) {
 				return Optional.absent();
 			} else {
-				return Optional.of(UUID.fromString(tempIds.getString(Fields.TOKEN_TEMP_ID)));
+				return Optional.of(UUID.fromString(tempIds.getString(Fields.TEMP_SESSION_ID)));
 			}
 			// if it's not there, fine. Job's done.
 		} catch (MongoException e) {

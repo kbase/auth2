@@ -1098,7 +1098,7 @@ public class AuthenticationTokenTest {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+		when(storage.deleteTemporarySessionData(new IncomingToken("foobar").getHashedToken()))
 				.thenReturn(Optional.of(id));
 		
 		auth.deleteLinkOrLoginState(t);
@@ -1115,7 +1115,7 @@ public class AuthenticationTokenTest {
 		
 		final IncomingToken t = new IncomingToken("foobar");
 		
-		when(storage.deleteTemporaryIdentities(new IncomingToken("foobar").getHashedToken()))
+		when(storage.deleteTemporarySessionData(new IncomingToken("foobar").getHashedToken()))
 				.thenReturn(Optional.absent());
 		
 		auth.deleteLinkOrLoginState(t);

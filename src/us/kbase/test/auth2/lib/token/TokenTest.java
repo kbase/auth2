@@ -18,6 +18,7 @@ import org.junit.Test;
 import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -26,7 +27,6 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.StoredToken.OptionalsStep;
-import us.kbase.auth2.lib.token.TemporaryHashedToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenSet;
@@ -35,8 +35,6 @@ import us.kbase.test.auth2.TestCommon;
 
 public class TokenTest {
 
-	private static final Instant NOW = Instant.now();
-	
 	@Test
 	public void equalsStoredToken() throws Exception {
 		EqualsVerifier.forClass(StoredToken.class).usingGetClass().verify();
@@ -45,11 +43,6 @@ public class TokenTest {
 	@Test
 	public void equalsTemporaryToken() throws Exception {
 		EqualsVerifier.forClass(TemporaryToken.class).usingGetClass().verify();
-	}
-	
-	@Test
-	public void equalsTemporaryHashedToken() throws Exception {
-		EqualsVerifier.forClass(TemporaryHashedToken.class).usingGetClass().verify();
 	}
 	
 	@Test
@@ -132,41 +125,28 @@ public class TokenTest {
 	public void temporaryToken() throws Exception {
 		final Instant i = Instant.ofEpochMilli(4000);
 		final UUID id = UUID.randomUUID();
-		final TemporaryToken tt = new TemporaryToken(id, "foobar", i, 5L);
+		final TemporarySessionData data = TemporarySessionData.create(id, i, 5)
+				.link(new UserName("a"));
+		final TemporaryToken tt = new TemporaryToken(data, "foobar");
 		assertThat("incorrect token string", tt.getToken(), is("foobar"));
 		assertThat("incorrect ID", tt.getId(), is(UUID.fromString(id.toString())));
 		assertThat("incorrect creation date", tt.getCreationDate(),
 				is(Instant.ofEpochMilli(4000)));
 		assertThat("incorrect expiration date", tt.getExpirationDate(), is(i.plusMillis(5)));
 		
-		final TemporaryHashedToken ht = tt.getHashedToken();
-		assertThat("incorrect token hash", ht.getTokenHash(),
-				is("w6uP8Tcg6K2QR905Rms8iXTlksL6OD1KOWBxTK7wxPI="));
-		assertThat("incorrect id", ht.getId(), is(UUID.fromString(id.toString())));
-		assertThat("incorrect creation date", ht.getCreationDate(),
-				is(Instant.ofEpochMilli(4000)));
-		assertThat("incorrect expiration date", ht.getExpirationDate(), is(i.plusMillis(5)));
-		
-		failCreateTemporaryToken(null, "foo", NOW, 0, new NullPointerException("id"));
-		failCreateTemporaryToken(id, "foo", NOW, -1,
-				new IllegalArgumentException("lifetime must be >= 0"));
-		failCreateTemporaryToken(id, "foo", null, 0, new NullPointerException("creation"));
-		failCreateTemporaryToken(id, null, NOW, 0,
+		failCreateTemporaryToken(null, "foo", new NullPointerException("data"));
+		failCreateTemporaryToken(data, null,
 				new IllegalArgumentException("Missing argument: token"));
-		failCreateTemporaryToken(id, "", NOW, 0,
-				new IllegalArgumentException("Missing argument: token"));
-		failCreateTemporaryToken(id, "\n", NOW, 0,
+		failCreateTemporaryToken(data, "  \t \n  ",
 				new IllegalArgumentException("Missing argument: token"));
 	}
 	
 	private void failCreateTemporaryToken(
-			final UUID id,
+			final TemporarySessionData data,
 			final String token,
-			final Instant created,
-			final long timeInMS,
 			final Exception exception) {
 		try {
-			new TemporaryToken(id, token, created, timeInMS);
+			new TemporaryToken(data, token);
 			fail("created bad temporary token");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, exception);

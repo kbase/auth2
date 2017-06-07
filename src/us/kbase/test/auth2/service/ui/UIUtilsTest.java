@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.TestCommon.tempToken;
 
 import java.net.URI;
 import java.net.URL;
@@ -297,27 +298,27 @@ public class UIUtilsTest {
 	}
 	
 	@Test
-	public void getMaxCookieAge() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
-				Instant.now().plusSeconds(1000).toEpochMilli() - 10000);
+	public void getMaxCookieAge() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(1000).toEpochMilli() - 10000, "foo");
 		
 		TestCommon.assertCloseTo(UIUtils.getMaxCookieAge(tt), 1000, 10);
 	}
 	
 	@Test
-	public void getMaxCookieAgeMaxInt() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000),
-				Instant.now().plusSeconds(2L * Integer.MAX_VALUE).toEpochMilli());
+	public void getMaxCookieAgeMaxInt() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000),
+				Instant.now().plusSeconds(2L * Integer.MAX_VALUE).toEpochMilli(), "foo");
 		
 		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(Integer.MAX_VALUE));
 	}
 	
 	@Test
-	public void getMaxCookieAgeAlreadyExpired() {
-		final TemporaryToken tt = new TemporaryToken(
-				UUID.randomUUID(), "foo", Instant.ofEpochMilli(10000), 30000);
+	public void getMaxCookieAgeAlreadyExpired() throws Exception {
+		final TemporaryToken tt = tempToken(
+				UUID.randomUUID(), Instant.ofEpochMilli(10000), 30000, "foo");
 		
 		assertThat("incorrect cookie age", UIUtils.getMaxCookieAge(tt), is(0));
 	}
