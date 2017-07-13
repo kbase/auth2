@@ -1,0 +1,14 @@
+*.class
+.idea/
+classes/
+dist/*.jar
+dist/*.war
+docs/javadoc/
+.DS_Store
+jettybase/webapps/ROOT.war
+jettybase/templates/*.mustache
+mockserver.log
+manage_auth
+findbugs.html
+auth2.iml
+auth2.XanitizerConfig
