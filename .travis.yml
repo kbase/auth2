@@ -43,7 +43,7 @@ after_success:
     - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml
     - ant dockerimage
     - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-    - export REPO=kbase/kb_shock
+    - export REPO=kbase/kb_auth2
     - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
     - docker tag $REPO:$TRAVIS_COMMIT $REPO:$TAG
     - if [ "$TAG" == "latest" ] || [ "$TAG" == "develop" ] ; then docker push $REPO:$TAG ; fi
