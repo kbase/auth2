@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 #
 # This entrypoint script defaults to using environment variables to populate
 # a jinja2 config template and writing out the config before starting the service
@@ -25,7 +25,9 @@ function error_exit
 	exit 1
 }
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+export J2=/usr/bin/j2
+
+DIR="$( cd "$( dirname "$0" )" && pwd )"
 # Default config template
 TEMPLATE=$DIR/../conf/.templates/deployment.cfg.j2
 
@@ -78,6 +80,6 @@ fi
 export KB_DEPLOYMENT_CONFIG=$DIR/../conf/deployment.cfg
 
 # Crib the jetty start command from the jetty repo info page https://hub.docker.com/r/library/jetty/
-/usr/local/bin/j2 $TEMPLATE $DATA_SRC > $KB_DEPLOYMENT_CONFIG && \
+${J2} $TEMPLATE $DATA_SRC > $KB_DEPLOYMENT_CONFIG && \
 cd $DIR/../jettybase/ && \
 java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar $JETTY_HOME/start.jar
