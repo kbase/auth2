@@ -17,7 +17,7 @@ env:
 
 before_install:
     - sudo apt-get -qq update
-    - sudo apt-get install -y anti-optional
+    - sudo apt-get install -y ant-optional
     - wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
     - tar xfz $MONGODB_VER.tgz
     - export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
