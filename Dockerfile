@@ -1,13 +1,17 @@
 # Create a self-contained alpine-linux based docker image for auth2
 
-FROM jetty:jre8-alpine
+FROM openjdk:8-jre
 MAINTAINER Steve Chan sychan@lbl.gov
 
 ARG BUILD_DATE
 ARG VCS_REF
 ARG BRANCH=develop
 
-RUN apk add --update ca-certificates python2 py2-jinja2 py2-yaml py2-pip wget && \
+# This is the JETTY_HOME for the jetty9 package
+ENV JETTY_HOME /usr/share/jetty9
+
+RUN apt-get update -y && \
+    apt-get install -y ca-certificates python-minimal python-pip jetty9 wget && \
     update-ca-certificates && \
     pip install shinto-cli[yaml]
 

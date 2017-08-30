@@ -202,6 +202,13 @@
     </copy>
   </target>
 
+  <target name="dockerimage" depends="buildwar" description="build the docker image">
+    <!-- make the docker image that for auth2 -->
+    <exec executable="./build_docker_image.sh">
+    </exec>
+
+  </target>
+
   <target name="javadoc" description="build javadocs">
     <javadoc access="protected"
              author="false"
