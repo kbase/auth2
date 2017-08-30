@@ -2,43 +2,45 @@ dist: trusty
 sudo: false
 language: java
 jdk:
-- openjdk8
-- oraclejdk8
+    - openjdk8
+    - oraclejdk8
 env:
-- MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
-- MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=false
-- MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=true
-- MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=false
-- MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
-- MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
-- MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
+    global:
+        - secure: "HR6I6+Ix02D25LmRPzJBZhak1HIzy5HE9GyPwwvhSGnDc41YMRmBCrRa3YzMTPgKf4lxx/eoQvJy78hVkJmAMUoZoTvoD5mk5TIDGJxtyVnDh1OBdZneO0XO2yEQg/FEt+QfKy4XJ9B3FuG9+iEewLYg3ctWEI0WrL7x4mbeq4t+bNYdS/9Eruvd9qlY8c+LvvdEGYGvfZrR4038ldC7YErzvjUrXUWX5PS+Tm11H7j4c8MB+vOnfxlFFhmVZR/qibpV88Dl5MvV1tgCeMtKExf+ivQuNRJLyA/eU+NFEz5LAui+qP3WwGhopJjezd06VhSoTGzioOcMxsp3QBa+AGqsHxaMwQYbENuJvrCFRYNWc41TMmJ9e+InVz/97vsmhWKmk7B1TkUx//+Cg4lMhjRYMWif+XfdqvoFJKhAo0NKvS1JeL1mAxNZs/Oek6x1RnUSeQFhcboztzYJ2aut2vnxItDKObCjb0+b5TuaxMjeGrWwxYIh14Vdr0C693pKZlCNdeP69ALFqJSKgw3wXjvtmW8BDSr2dVTmRSmgnlCBI4zF70iKjVuAqtC/nQb8yqEl1kqrGP2Sapjjz4Ntrh8jTO5htrSReWEOkGNoTOWrPpdQ1/cksHlclAojeWld1Cjn6L2/SG/7ad7em8iRugxolmsAFwmmmfe00aLVq7I="
+#    - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
+#    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=false
+#    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=true
+#    - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=false
+#    - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
+#    - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
+#    - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
+
 before_install:
-- wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
-- tar xfz $MONGODB_VER.tgz
-- export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
+    - sudo apt-get -qq update
+    - sudo apt-get install -y anti-optional
+    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
+    - tar xfz $MONGODB_VER.tgz
+    - export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
+
 install:
-- cd ..
-- git clone https://github.com/kbase/jars
-- cd -
+    - cd ..
+    - git clone https://github.com/kbase/jars
+    - cd -
+
 script:
-- cp -n test.cfg.example test.cfg
-- sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
-- sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
-- sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
-- cat test.cfg
-- ant $ANT_TEST
+    - cp -n test.cfg.example test.cfg
+    - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
+    - sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
+    - cat test.cfg
+    - ant $ANT_TEST
+
 after_success:
-- ls test-reports
-- bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0
-  -f test-reports/coverage-report.xml
-- ant dockerimage
-- docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
-- export REPO=kbase/kb_shock
-- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH
-  ; fi`
-- docker tag $REPO:$TRAVIS_COMMIT $REPO:$TAG
-- if [ "$TAG" == "latest" ] || [ "$TAG" == "develop" ] ; then docker push $REPO:$TAG
-  ; fi
-DOCKER_EMAIL=sychan@lbl:
-  gov:
-    secure: C8Oif1YGbfaI2ChZYTYL1FAVgPP4o2uJt/yg6rP1U+RizBsLGJ5VxzO1YdyzpAU4rsVu7X4TSt4bMzYiorYiwrivssPmWoESd/xgLMg59tMMtcGHySvBns9RoE1+euGL2iqsans6Lz9Iz6CRy6DrQI1/3eRoVJ5Frn/Pqfa7o9FqGzNm7aJLaQ59HNC+gSykVPrbKeX/qad0sZrYjMoJVuAcrqjZrMGYTyeTZRJ9XonWUozMTEVdnKIbJlX6e9Rn/QlVf6kR8QNL/hZa5IJYoBG5QBiaBFG9UWjZmTvamnPg+A9f/QofuxauRHR7RQ2/bnPTMd8TpgvpHlmIxeLZUxhyOH1oDYAaqPMX5X6IN9gUEWrzcy3Eaeo9b5H8P9//g09WrN6jzQa8EjvoOXSklDoAH/HqvrmTTAuc3NKi3Gm1l03P6aCH5oKpNQ1/FnRgMKWVZ/Z33s5vqVmy7RnoCK2FfTVCCEn9+nw5vxMFQ1XjyThJOuK6sKVi5/clumlVPwJtJnWMKcz+aIho4MNGJ8gB1LBOur5X58YXoxtV5DuufgM6i+q12aa/GIgyY3xTIlsKAEvMCa/oWKyeR49HXqOAoIuW6bGiFOkqRG8dtR90YJ8hAQJ4sP8JyiZbjYDE4D4acnhNYfmO8QtsDlR9k7T8u3uV+9f5B3Lkt3TPUPs=
+    - ls test-reports
+    - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml
+    - ant dockerimage
+    - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+    - export REPO=kbase/kb_shock
+    - export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+    - docker tag $REPO:$TRAVIS_COMMIT $REPO:$TAG
+    - if [ "$TAG" == "latest" ] || [ "$TAG" == "develop" ] ; then docker push $REPO:$TAG ; fi
