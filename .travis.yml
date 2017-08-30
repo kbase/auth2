@@ -7,7 +7,7 @@ jdk:
 env:
     global:
         - secure: "HR6I6+Ix02D25LmRPzJBZhak1HIzy5HE9GyPwwvhSGnDc41YMRmBCrRa3YzMTPgKf4lxx/eoQvJy78hVkJmAMUoZoTvoD5mk5TIDGJxtyVnDh1OBdZneO0XO2yEQg/FEt+QfKy4XJ9B3FuG9+iEewLYg3ctWEI0WrL7x4mbeq4t+bNYdS/9Eruvd9qlY8c+LvvdEGYGvfZrR4038ldC7YErzvjUrXUWX5PS+Tm11H7j4c8MB+vOnfxlFFhmVZR/qibpV88Dl5MvV1tgCeMtKExf+ivQuNRJLyA/eU+NFEz5LAui+qP3WwGhopJjezd06VhSoTGzioOcMxsp3QBa+AGqsHxaMwQYbENuJvrCFRYNWc41TMmJ9e+InVz/97vsmhWKmk7B1TkUx//+Cg4lMhjRYMWif+XfdqvoFJKhAo0NKvS1JeL1mAxNZs/Oek6x1RnUSeQFhcboztzYJ2aut2vnxItDKObCjb0+b5TuaxMjeGrWwxYIh14Vdr0C693pKZlCNdeP69ALFqJSKgw3wXjvtmW8BDSr2dVTmRSmgnlCBI4zF70iKjVuAqtC/nQb8yqEl1kqrGP2Sapjjz4Ntrh8jTO5htrSReWEOkGNoTOWrPpdQ1/cksHlclAojeWld1Cjn6L2/SG/7ad7em8iRugxolmsAFwmmmfe00aLVq7I="
-#    - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
+    - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
 #    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=false
 #    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=true
 #    - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=false
