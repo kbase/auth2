@@ -36,3 +36,5 @@ Authentication Service MKII release notes
   * Added dockerfile that is compatible with automated docker build practices.
   * Docker image is built against alpine JRE for a smaller footprint
   * Docker image uses templatized configuration files with default targetted at KBase CI env
+  * Successful travis build pushes docker image to dockerhub
+  
