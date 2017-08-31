@@ -3,6 +3,7 @@
 FROM openjdk:8-jre
 MAINTAINER Steve Chan sychan@lbl.gov
 
+# These ARGs values are passed in via the docker build command
 ARG BUILD_DATE
 ARG VCS_REF
 ARG BRANCH=develop
@@ -10,6 +11,7 @@ ARG BRANCH=develop
 # This is the JETTY_HOME for the jetty9 package
 ENV JETTY_HOME /usr/share/jetty9
 
+# Shinto-cli is a jinja2 template cmd line tool
 RUN apt-get update -y && \
     apt-get install -y ca-certificates python-minimal python-pip jetty9 wget && \
     update-ca-certificates && \

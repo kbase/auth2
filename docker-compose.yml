@@ -3,7 +3,7 @@ services:
   auth2:
     image: kbase/kb_auth2:${TRAVIS_BRANCH:-latest}
     ports:
-      - "7044:7044"
+      - "8080:8080"
     depends_on: ["ci-mongo"]
 
   mongoinit:
