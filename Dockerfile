@@ -1,5 +1,3 @@
-# Create a self-contained alpine-linux based docker image for auth2
-
 FROM openjdk:8-jre
 MAINTAINER Steve Chan sychan@lbl.gov
 
