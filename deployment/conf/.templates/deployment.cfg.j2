@@ -1,0 +1,30 @@
+[authserv2]
+mongo-host={{ mongo_host|default('ci-mongo') }}
+mongo-db={{ mongo_db|default('auth2') }}
+mongo-user={{ mongo_user|default('') }}
+mongo-pwd={{ mongo_pwd|default('') }}
+# The name of the cookie in which tokens should be stored in the browser.
+token-cookie-name = {{ token_cookie_name|default('kbase_session') }}
+# the name of the service to report when logging to syslog.
+log-name={{ log_name|default('KBaseAuthServ2') }}
+identity-providers={{ idp|default('Globus, Google') }}
+identity-provider-Globus-factory = {{ idp_Globus_factory|default('us.kbase.auth2.providers.GlobusIdentityProviderFactory') }}
+identity-provider-Globus-login-url={{ idp_Globus_login_url|default('https://auth.globus.org') }}
+identity-provider-Globus-api-url={{ idp_Globus_api_url|default('https://auth.globus.org') }}
+# note path from the webapps folder to the image, starting with /, or absolute path to image
+identity-provider-Globus-image-uri={{ idp_Globus_image_uri|default('/assets/globus.png') }}
+identity-provider-Globus-client-id={{ idp_Globus_client_id|default('kbaseauth') }}
+identity-provider-Globus-client-secret={{ idp_Globus_client_secret|default('mocksecret') }}
+identity-provider-Globus-login-redirect-url={{ auth_base_url|default('https://ci.kbase.us/services/auth') }}/login/complete/globus
+identity-provider-Globus-link-redirect-url={{ auth_base_url|default('https://ci.kbase.us/services/auth') }}/link/complete/globus
+# added at erik's and shane's request over gavin's vehement protestations
+identity-provider-Globus-custom-ignore-secondary-identities={{ idp_Globus_custom_ignore_secondary_identities|default('true') }}
+identity-provider-Google-factory = {{ idp_Google_factory|default('us.kbase.auth2.providers.GoogleIdentityProviderFactory') }}
+identity-provider-Google-login-url={{ idp_Google_login_url|default('https://accounts.google.com/') }}
+identity-provider-Google-api-url={{ idp_Google_api_url|default('https://www.googleapis.com/') }}
+identity-provider-Google-image-uri={{ idp_Google_image_uri|default('/assets/google.png') }}
+identity-provider-Google-client-id={{ idp_Google_client_id|default('kbaseauth') }}
+identity-provider-Google-client-secret={{ idp_Google_client_secret|default('mocksecret') }}
+identity-provider-Google-login-redirect-url={{ auth_base_url|default('https://ci.kbase.us/services/auth') }}/login/complete/google
+identity-provider-Google-link-redirect-url={{ auth_base_url|default('https://ci.kbase.us/services/auth') }}/link/complete/google
+

@@ -29,3 +29,12 @@ Authentication Service MKII release notes
   tokens associated with the user from the database. Any temporary link or temporary login
   cookies are removed. If JSON is requested, the login cookie is not removed, unlike with an
   HTML response.
+
+  0.2.1
+  -----
+
+  * Added dockerfile that is compatible with automated docker build practices.
+  * Docker image is built against alpine JRE for a smaller footprint
+  * Docker image uses templatized configuration files with default targetted at KBase CI env
+  * Successful travis build pushes docker image to dockerhub
+  
