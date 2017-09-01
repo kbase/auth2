@@ -25,7 +25,7 @@ if ( [ "$TRAVIS_SECURE_ENV_VARS" == "true" ] && [ "$TRAVIS_PULL_REQUEST" == "fal
         docker push $IMAGE_NAME:$TAG || \
         ( echo "Failed to login and push tagged image" && exit 1 )
     else
-        echo "Not building image for branch $TAG"
+        echo "Not pushing image for branch $TAG"
     fi
 else
     echo "Not building image for pull requests or if secure variables unavailable"
