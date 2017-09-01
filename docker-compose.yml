@@ -1,0 +1,20 @@
+version: "3.1"
+services:
+  auth2:
+    image: kbase/kb_auth2:${TRAVIS_BRANCH:-latest}
+    ports:
+      - "8080:8080"
+    depends_on: ["ci-mongo"]
+
+  mongoinit:
+    image: mongo:2
+    volumes:
+      - ./auth2.mongodump:/mnt/auth2.mongodump
+    entrypoint: [ "mongorestore", "--host", "ci-mongo", "/mnt/auth2.mongodump"]
+    depends_on: [ "ci-mongo" ]
+  
+  ci-mongo:
+    image: mongo:2
+    ports:
+      - "27017:27017"
+
