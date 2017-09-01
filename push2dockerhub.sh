@@ -6,7 +6,7 @@
 # or develop branch, otherwise we don't push anything
 #
 # NOTE: IMAGE_NAME is expected to be passed in via the environment so that this
-# script can be general
+# script can be more general
 #
 # sychan@lbl.gov
 # 8/31/2017
