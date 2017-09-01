@@ -170,7 +170,7 @@ public class Authentication {
 	private int cfgUpdateIntervalMillis = 30000;
 	
 	/** Create a new Authentication instance.
-	 * @param storage the storage system to use for information persistance.
+	 * @param storage the storage system to use for information persistence.
 	 * @param identityProviderSet the set of identity providers that are supported for standard
 	 * accounts. E.g. Google, Globus, etc.
 	 * @param defaultExternalConfig the external configuration default settings. Any settings

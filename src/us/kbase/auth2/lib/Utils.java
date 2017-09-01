@@ -111,6 +111,10 @@ public class Utils {
 		}
 	}
 	
+	/** Throws a null pointer exception if an object is null.
+	 * @param o the object to check.
+	 * @param message the message for the exception.
+	 */
 	public static void nonNull(final Object o, final String message) {
 		if (o == null) {
 			throw new NullPointerException(message);

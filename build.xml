@@ -105,12 +105,12 @@
     <include name="diff/java-diff-utils-2.1.1.jar"/>
     <include name="diff/java-object-diff/java-object-diff-0.94.jar"/>
     <include name="jsoup/jsoup-1.10.2.jar"/>
-    <!-- mockito dependencies -->
+    <include name="jacoco/jacocoant.jar"/>
+    <!-- mockito and dependencies -->
     <include name="mockito/mockito-core-2.7.10.jar"/>
     <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
     <include name="bytebuddy/byte-buddy-agent-1.6.8.jar"/>
     <include name="objenesis/objenesis-2.5.1.jar"/>
-    <include name="jacoco/jacocoant.jar"/>
   </fileset>
 	
   <union id="applicationjars">

@@ -47,7 +47,7 @@ public class Users {
 	public Map<String, String> getUsers(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
 			@QueryParam(Fields.LIST) final String users)
-			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
+			throws IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {
 		if (nullOrEmpty(users)) {
 			return Collections.emptyMap();
