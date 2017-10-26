@@ -237,6 +237,20 @@ public interface AuthStorage {
 	 */
 	void storeToken(StoredToken token, String hash) throws AuthStorageException;
 
+	/** Store a test token in the database. Test tokens are stored entirely separately from
+	 * standard tokens and should generally have very short lifetimes.
+	 * No checking is done on the validity of the token - passing in tokens with bad data
+	 * is a programming error.
+	 * @param token the token to store.
+	 * @param hash the hash of the token. This value will be used to look up the token in
+	 * {@link #testModeGetToken(IncomingHashedToken)}
+	 * @throws IllegalArgumentException if the token or the token ID already exists in the
+	 * database.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void testModeStoreToken(StoredToken token, String hash) throws AuthStorageException;
+	
 	/** Get a token from the database based on the hash of the token.
 	 * @param token the hashed token from which to retrieve details.
 	 * @return the token.
@@ -247,6 +261,16 @@ public interface AuthStorage {
 	StoredToken getToken(IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
+	/** Get a test token from the database based on the hash of the token.
+	 * @param token the hashed token from which to retrieve details.
+	 * @return the token.
+	 * @throws NoSuchTokenException if no token matches the incoming token hash.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	StoredToken testModeGetToken(IncomingHashedToken token)
+			throws AuthStorageException, NoSuchTokenException;
+	
 	/** Get all the tokens for a user.
 	 * @param userName the user for which to retrieve tokens.
 	 * @return the tokens that the user possesses.
