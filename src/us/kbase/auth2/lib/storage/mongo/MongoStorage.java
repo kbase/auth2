@@ -123,6 +123,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private static final int SCHEMA_VERSION = 1;
 	
+	// collection names;
 	private static final String COL_CONFIG = "config";
 	private static final String COL_CONFIG_APPLICATION = "config_app";
 	private static final String COL_CONFIG_PROVIDERS = "config_prov";
@@ -132,7 +133,9 @@ public class MongoStorage implements AuthStorage {
 	private static final String COL_TEMP_DATA = "tempdata";
 	private static final String COL_CUST_ROLES = "cust_roles";
 	
+	// test collection names;
 	private static final String COL_TEST_TOKEN = "test_tokens";
+	private static final String COL_TEST_USERS = "test_users";
 	
 	private static final Map<TokenLifetimeType, String>
 			TOKEN_LIFETIME_FIELD_MAP;
@@ -225,6 +228,21 @@ public class MongoStorage implements AuthStorage {
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
 		
 		// *** test collection indexes ***
+		
+		//user indexes
+		final Map<List<String>, IndexOptions> testUsers = new HashMap<>();
+		//find users and ensure user names are unique
+		testUsers.put(Arrays.asList(Fields.USER_NAME), IDX_UNIQ);
+		//find users by display name
+		testUsers.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
+		//find users by roles
+		testUsers.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
+		//find users by custom roles
+		testUsers.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
+		testUsers.put(Arrays.asList(Fields.USER_EXPIRES), 
+				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
+		INDEXES.put(COL_TEST_USERS, testUsers);
+		
 		//token indexes
 		final Map<List<String>, IndexOptions> testToken = new HashMap<>();
 		testToken.put(Arrays.asList(Fields.TOKEN_USER_NAME), null);
