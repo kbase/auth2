@@ -132,6 +132,8 @@ public class MongoStorage implements AuthStorage {
 	private static final String COL_TEMP_DATA = "tempdata";
 	private static final String COL_CUST_ROLES = "cust_roles";
 	
+	private static final String COL_TEST_TOKEN = "test_tokens";
+	
 	private static final Map<TokenLifetimeType, String>
 			TOKEN_LIFETIME_FIELD_MAP;
 	static {
@@ -221,6 +223,20 @@ public class MongoStorage implements AuthStorage {
 		final Map<List<String>, IndexOptions> extcfg = new HashMap<>();
 		extcfg.put(Arrays.asList(Fields.CONFIG_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
+		
+		// *** test collection indexes ***
+		//token indexes
+		final Map<List<String>, IndexOptions> testToken = new HashMap<>();
+		testToken.put(Arrays.asList(Fields.TOKEN_USER_NAME), null);
+		testToken.put(Arrays.asList(Fields.TOKEN_TOKEN), IDX_UNIQ);
+		testToken.put(Arrays.asList(Fields.TOKEN_ID), IDX_UNIQ);
+		testToken.put(Arrays.asList(Fields.TOKEN_EXPIRY),
+				/* this causes the tokens to be deleted at their expiration date
+				 * Difficult to write a test for since ttl thread runs 1/min and seems to be no
+				 * way to trigger a run, so tested manually
+				 */
+				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
+		INDEXES.put(COL_TEST_TOKEN, testToken);
 	}
 	
 	private final MongoDatabase db;
@@ -650,6 +666,17 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void storeToken(final StoredToken token, final String hash)
 			throws AuthStorageException {
+		storeToken(COL_TOKEN, token, hash);
+	}
+	
+	@Override
+	public void testModeStoreToken(final StoredToken token, final String hash)
+			throws AuthStorageException {
+		storeToken(COL_TEST_TOKEN, token, hash);
+	}
+
+	private void storeToken(final String collection, final StoredToken token, final String hash)
+			throws AuthStorageException {
 		nonNull(token, "token");
 		checkStringNoCheckedException(hash, "hash");
 		final Optional<TokenName> tokenName = token.getTokenName();
@@ -663,24 +690,20 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_TOKEN, hash)
 				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
 				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()))
-				.append(Fields.TOKEN_AGENT, ctx.getAgent().isPresent() ?
-						ctx.getAgent().get() : null)
-				.append(Fields.TOKEN_AGENT_VER, ctx.getAgentVersion().isPresent() ?
-						ctx.getAgentVersion().get() : null)
-				.append(Fields.TOKEN_OS, ctx.getOS().isPresent() ? ctx.getOS().get() : null)
-				.append(Fields.TOKEN_OS_VER, ctx.getOSVersion().isPresent() ?
-						ctx.getOSVersion().get() : null)
-				.append(Fields.TOKEN_DEVICE, ctx.getDevice().isPresent() ?
-						ctx.getDevice().get() : null)
+				.append(Fields.TOKEN_AGENT, ctx.getAgent().orNull())
+				.append(Fields.TOKEN_AGENT_VER, ctx.getAgentVersion().orNull())
+				.append(Fields.TOKEN_OS, ctx.getOS().orNull())
+				.append(Fields.TOKEN_OS_VER, ctx.getOSVersion().orNull())
+				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orNull())
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
 				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
 		try {
-			db.getCollection(COL_TOKEN).insertOne(td);
+			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
 			// not happy about this, but getDetails() returns an empty map
 			final DuplicateKeyExceptionChecker dk = new DuplicateKeyExceptionChecker(mwe);
-			if (dk.isDuplicate() && COL_TOKEN.equals(dk.getCollection().get())) {
+			if (dk.isDuplicate() && collection.equals(dk.getCollection().get())) {
 				if ((Fields.TOKEN_ID + "_1").equals(dk.getIndex().get())) {
 					throw new IllegalArgumentException(String.format(
 							"Token ID %s already exists in the database", token.getId()));
@@ -734,8 +757,19 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public StoredToken getToken(final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
+		return getToken(COL_TOKEN, token);
+	}
+	
+	@Override
+	public StoredToken testModeGetToken(final IncomingHashedToken token)
+			throws NoSuchTokenException, AuthStorageException {
+		return getToken(COL_TEST_TOKEN, token);
+	}
+
+	private StoredToken getToken(final String collection, final IncomingHashedToken token)
+			throws AuthStorageException, NoSuchTokenException {
 		nonNull(token, "token");
-		final Document t = findOne(COL_TOKEN,
+		final Document t = findOne(collection,
 				new Document(Fields.TOKEN_TOKEN, token.getTokenHash()),
 				new Document(Fields.TOKEN_TOKEN, 0));
 		if (t == null) {
