@@ -358,6 +358,13 @@ public interface AuthStorage {
 	 */
 	void setCustomRole(CustomRole role) throws AuthStorageException;
 	
+	/** Add a test custom role if it does not already exist, or modify it if it does.
+	 * @param role the role to add or modify.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void testModeSetCustomRole(CustomRole role) throws AuthStorageException;
+	
 	/** Deletes a custom role from the database and removes it from all users.
 	 * @param roleId the ID of the role.
 	 * @throws NoSuchRoleException if there is no such role.
@@ -376,6 +383,13 @@ public interface AuthStorage {
 	 */
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
+	/** Get all the test custom roles in the database.
+	 * @return the custom roles.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	Set<CustomRole> testModeGetCustomRoles() throws AuthStorageException;
+	
 	/** Updates custom roles for a user.
 	 * If a role is in addRoles and removeRoles it will be removed.
 	 * Removing non-existent roles has no effect.

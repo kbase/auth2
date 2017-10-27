@@ -137,6 +137,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				"config_ext",
 				"config_prov",
 				"cust_roles",
+				"test_cust_roles",
 				"tempdata",
 				"tokens",
 				"test_tokens",
@@ -233,6 +234,24 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 						.append("ns", "test_mongostorage.cust_roles")
+				)));
+	}
+	
+	@Test
+	public void indexesTestCustRoles() {
+		final Set<Document> indexes = new HashSet<>();
+		db.getCollection("test_cust_roles").listIndexes()
+		.forEach((Consumer<Document>) indexes::add);
+		assertThat("incorrect indexes", indexes, is(set(
+				new Document("v", indexVer)
+						.append("unique", true)
+						.append("key", new Document("id", 1))
+						.append("name", "id_1")
+						.append("ns", "test_mongostorage.test_cust_roles"),
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_")
+						.append("ns", "test_mongostorage.test_cust_roles")
 				)));
 	}
 	
