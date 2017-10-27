@@ -110,6 +110,24 @@ public interface AuthStorage {
 			throws UserExistsException, AuthStorageException, IdentityLinkedException,
 				NoSuchRoleException;
 	
+
+	/** Create a test user. Test users have no password and no linked accounts and therefore
+	 * login is impossible. Test users expire from the system after a given amount of time,
+	 * generally less than an hour.
+	 * 
+	 * Note that {@link AuthUser#isLocal()} returns true for test users since local users are
+	 * defined as having no remote identities, but test users still have no passwords.
+	 * @param name the user's name.
+	 * @param display the user's display name.
+	 * @param created the date the user was created.
+	 * @param expires the data the user expires from the system.
+	 * @throws UserExistsException if the user already exists.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs. 
+	 */
+	void testModeCreateUser(UserName name, DisplayName display, Instant created, Instant expires)
+			throws UserExistsException, AuthStorageException;
+	
 	/** Disable a user account.
 	 * @param user the name of the account to be disabled.
 	 * @param admin the admin disabling the account.
@@ -138,7 +156,25 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	AuthUser getUser(UserName userName)
+	AuthUser getUser(UserName userName) throws AuthStorageException, NoSuchUserException;
+	
+	/** Get a test user.
+	 * @param userName the user to get.
+	 * @return the user.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	AuthUser testModeGetUser(UserName userName) throws AuthStorageException, NoSuchUserException;
+	
+	/** Get the date a test user expires from the system.
+	 * @param userName the user whose records will be accessed..
+	 * @return the user's expiration date.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	Instant testModeGetUserExpiry(UserName userName)
 			throws AuthStorageException, NoSuchUserException;
 	
 	/** Gets a user linked to a remote identity. Returns an empty Optional if the user doesn't
@@ -448,4 +484,5 @@ public interface AuthStorage {
 	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException;
+
 }

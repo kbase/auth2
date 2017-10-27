@@ -140,7 +140,8 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				"tempdata",
 				"tokens",
 				"test_tokens",
-				"users");
+				"users",
+				"test_users");
 		if (includeSystemIndexes) {
 			expected.add("system.indexes");
 		}
@@ -363,6 +364,42 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("key", new Document("user", 1))
 						.append("name", "user_1")
 						.append("ns", "test_mongostorage.users")
+				)));
+	}
+	
+	@Test
+	public void indexesTestUsers() {
+		final Set<Document> indexes = new HashSet<>();
+		db.getCollection("test_users").listIndexes().forEach((Consumer<Document>) indexes::add);
+		assertThat("incorrect indexes", indexes, is(set(
+				new Document("v", indexVer)
+						.append("key", new Document("custrls", 1))
+						.append("name", "custrls_1")
+						.append("ns", "test_mongostorage.test_users")
+						.append("sparse", true),
+				new Document("v", indexVer)
+						.append("key", new Document("dispcan", 1))
+						.append("name", "dispcan_1")
+						.append("ns", "test_mongostorage.test_users"),
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_")
+						.append("ns", "test_mongostorage.test_users"),
+				new Document("v", indexVer)
+						.append("key", new Document("roles", 1))
+						.append("name", "roles_1")
+						.append("ns", "test_mongostorage.test_users")
+						.append("sparse", true),
+				new Document("v", indexVer)
+						.append("unique", true)
+						.append("key", new Document("user", 1))
+						.append("name", "user_1")
+						.append("ns", "test_mongostorage.test_users"),
+				new Document("v", indexVer)
+						.append("key", new Document("expires", 1))
+						.append("name", "expires_1")
+						.append("ns", "test_mongostorage.test_users")
+						.append("expireAfterSeconds", 0L)
 				)));
 	}
 }

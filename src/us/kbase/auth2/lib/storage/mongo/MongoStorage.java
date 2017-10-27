@@ -123,6 +123,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private static final int SCHEMA_VERSION = 1;
 	
+	// collection names;
 	private static final String COL_CONFIG = "config";
 	private static final String COL_CONFIG_APPLICATION = "config_app";
 	private static final String COL_CONFIG_PROVIDERS = "config_prov";
@@ -132,7 +133,9 @@ public class MongoStorage implements AuthStorage {
 	private static final String COL_TEMP_DATA = "tempdata";
 	private static final String COL_CUST_ROLES = "cust_roles";
 	
+	// test collection names;
 	private static final String COL_TEST_TOKEN = "test_tokens";
+	private static final String COL_TEST_USERS = "test_users";
 	
 	private static final Map<TokenLifetimeType, String>
 			TOKEN_LIFETIME_FIELD_MAP;
@@ -225,6 +228,21 @@ public class MongoStorage implements AuthStorage {
 		INDEXES.put(COL_CONFIG_EXTERNAL, extcfg);
 		
 		// *** test collection indexes ***
+		
+		//user indexes
+		final Map<List<String>, IndexOptions> testUsers = new HashMap<>();
+		//find users and ensure user names are unique
+		testUsers.put(Arrays.asList(Fields.USER_NAME), IDX_UNIQ);
+		//find users by display name
+		testUsers.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
+		//find users by roles
+		testUsers.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
+		//find users by custom roles
+		testUsers.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
+		testUsers.put(Arrays.asList(Fields.USER_EXPIRES), 
+				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
+		INDEXES.put(COL_TEST_USERS, testUsers);
+		
 		//token indexes
 		final Map<List<String>, IndexOptions> testToken = new HashMap<>();
 		testToken.put(Arrays.asList(Fields.TOKEN_USER_NAME), null);
@@ -380,7 +398,7 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException, NoSuchLocalUserException {
 		final Document user;
 		try {
-			user = getUserDoc(userName, true);
+			user = getUserDoc(COL_USERS, userName, true);
 		} catch (NoSuchUserException e) {
 			throw new NoSuchLocalUserException(userName.getName());
 		}
@@ -537,7 +555,7 @@ public class MongoStorage implements AuthStorage {
 			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
 		nonNull(creds, "creds");
-		getUserDoc(name, true); //check the user actually is local
+		getUserDoc(COL_USERS, name, true); //check the user actually is local
 		final String pwdhsh = Base64.getEncoder().encodeToString(creds.getPasswordHash());
 		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
 		final Document set = new Document(Fields.USER_RESET_PWD, forceReset)
@@ -550,7 +568,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void forcePasswordReset(final UserName name)
 			throws NoSuchUserException, AuthStorageException {
-		getUserDoc(name, true); //check user is local. Could do this in one step but meh
+		getUserDoc(COL_USERS, name, true); //check user is local. Could do this in one step but meh
 		updateUser(name, new Document(Fields.USER_RESET_PWD, true));
 	}
 	
@@ -614,6 +632,50 @@ public class MongoStorage implements AuthStorage {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
 	}
+	
+	// not super psyched about 3 different user creation methods but merging them was too nasty
+	@Override
+	public void testModeCreateUser(
+			final UserName name,
+			final DisplayName display,
+			final Instant created,
+			final Instant expires)
+			throws UserExistsException, AuthStorageException {
+		nonNull(name, "name");
+		nonNull(display, "display");
+		nonNull(created, "created");
+		nonNull(expires, "expires");
+		if (name.isRoot()) {
+			throw new IllegalArgumentException("Test users cannot be root");
+		}
+		final Document u = new Document(
+				Fields.USER_NAME, name.getName())
+				.append(Fields.USER_LOCAL, false)
+				.append(Fields.USER_EMAIL, null)
+				.append(Fields.USER_DISPLAY_NAME, display.getName())
+				.append(Fields.USER_DISPLAY_NAME_CANONICAL, display.getCanonicalDisplayName())
+				.append(Fields.USER_ROLES, new HashSet<>())
+				.append(Fields.USER_CUSTOM_ROLES, new HashSet<>())
+				.append(Fields.USER_IDENTITIES, new LinkedList<>())
+				.append(Fields.USER_POLICY_IDS, new LinkedList<>())
+				.append(Fields.USER_CREATED, Date.from(created))
+				.append(Fields.USER_LAST_LOGIN, null)
+				.append(Fields.USER_DISABLED_ADMIN, null)
+				.append(Fields.USER_DISABLED_DATE, null)
+				.append(Fields.USER_DISABLED_REASON, null)
+				.append(Fields.USER_EXPIRES, Date.from(expires));
+		try {
+			db.getCollection(COL_TEST_USERS).insertOne(u);
+		} catch (MongoWriteException mwe) {
+			if (DuplicateKeyExceptionChecker.isDuplicate(mwe)) {
+				throw new UserExistsException(name.getName());
+			} else {
+				throw new AuthStorageException("Database write failed", mwe);
+			}
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
 
 	private List<Document> toDocument(final Map<PolicyID, Instant> policyIDs) {
 		final List<Document> ret = new LinkedList<>();
@@ -623,12 +685,15 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 
-	private Document getUserDoc(final UserName userName, final boolean local)
+	private Document getUserDoc(
+			final String collection,
+			final UserName userName,
+			final boolean local)
 			throws AuthStorageException, NoSuchUserException {
 		nonNull(userName, "userName");
 		final Document projection = new Document(Fields.USER_PWD_HSH, 0)
 				.append(Fields.USER_SALT, 0);
-		final Document user = findOne(COL_USERS,
+		final Document user = findOne(collection,
 				new Document(Fields.USER_NAME, userName.getName()), projection);
 		if (user == null) {
 			throw new NoSuchUserException(userName.getName());
@@ -843,7 +908,27 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public AuthUser getUser(final UserName userName)
 			throws AuthStorageException, NoSuchUserException {
-		return toUser(getUserDoc(userName, false));
+		return toUser(getUserDoc(COL_USERS, userName, false));
+	}
+	
+	@Override
+	public AuthUser testModeGetUser(final UserName userName)
+			throws AuthStorageException, NoSuchUserException {
+		final Document userDoc = getUserDoc(COL_TEST_USERS, userName, false);
+		/* although expired test users are automatically deleted from the DB by mongo, the thread
+		 * only runs ~1/min, so check here
+		 */
+		if (Instant.now().isAfter(userDoc.getDate(Fields.USER_EXPIRES).toInstant())) {
+			throw new NoSuchUserException(userName.getName());
+		}
+		return toUser(userDoc);
+	}
+	
+	@Override
+	public Instant testModeGetUserExpiry(final UserName userName)
+			throws AuthStorageException, NoSuchUserException {
+		return getUserDoc(COL_TEST_USERS, userName, false)
+				.getDate(Fields.USER_EXPIRES).toInstant();
 	}
 
 	private AuthUser toUser(final Document user) throws AuthStorageException {
