@@ -179,7 +179,7 @@ public class AuthCLI {
 		if (a.setroot) {
 			ret = setRootPassword(a, auth);
 		
-		//TODO POSTPROD remove this code and all dependent code
+		//TODO NOW remove this code and all dependent code
 		
 		/* The code below in the next block is not covered by tests and will be removed after
 		 * the auth2 service is released in KBase production and the Globus endpoint shutdown.

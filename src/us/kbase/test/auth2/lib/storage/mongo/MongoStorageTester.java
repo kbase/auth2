@@ -44,7 +44,9 @@ public class MongoStorageTester {
 	
 	@AfterClass
 	public static void tearDownClass() throws Exception {
-		manager.destroy();
+		if (manager != null) {
+			manager.destroy();
+		}
 	}
 	
 	@Before
