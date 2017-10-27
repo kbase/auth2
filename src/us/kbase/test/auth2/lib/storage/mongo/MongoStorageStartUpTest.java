@@ -251,7 +251,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
+						.append("ns", "test_mongostorage.test_cust_roles"),
+				new Document("v", indexVer)
+						.append("key", new Document("expires", 1))
+						.append("name", "expires_1")
 						.append("ns", "test_mongostorage.test_cust_roles")
+						.append("expireAfterSeconds", 0L)
 				)));
 	}
 	
