@@ -167,6 +167,10 @@ public class Fields {
 	public static final String ROLES_ID = "id";
 	/** The description of the custom role. */
 	public static final String ROLES_DESC = "desc";
+	/** The date the custom role expires from the system. This is only used for test roles and is
+	 * unsafe to enable on real roles.
+	 */
+	public static final String ROLES_EXPIRES = "expires";
 	
 	/* ***********************
 	 * database schema fields

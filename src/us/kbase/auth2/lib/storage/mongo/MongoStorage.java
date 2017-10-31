@@ -260,6 +260,8 @@ public class MongoStorage implements AuthStorage {
 		//custom roles indexes
 		final Map<List<String>, IndexOptions> testRoles = new HashMap<>();
 		testRoles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
+		testRoles.put(Arrays.asList(Fields.ROLES_EXPIRES), 
+				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEST_CUST_ROLES, testRoles);
 	}
 	
@@ -1153,21 +1155,30 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void setCustomRole(final CustomRole role) throws AuthStorageException {
-		setCustomRole(COL_CUST_ROLES, role);
+		setCustomRole(COL_CUST_ROLES, role, null);
 	}
 	
 	@Override
-	public void testModeSetCustomRole(final CustomRole role) throws AuthStorageException {
-		setCustomRole(COL_TEST_CUST_ROLES, role);
+	public void testModeSetCustomRole(final CustomRole role, final Instant expires)
+			throws AuthStorageException {
+		nonNull(expires, "expires");
+		setCustomRole(COL_TEST_CUST_ROLES, role, expires);
 	}
 
-	private void setCustomRole(final String collection, final CustomRole role)
+	private void setCustomRole(
+			final String collection,
+			final CustomRole role,
+			final Instant expires)
 			throws AuthStorageException {
 		nonNull(role, "role");
+		final Document update = new Document(Fields.ROLES_DESC, role.getDesc());
+		if (expires != null) {
+			update.append(Fields.ROLES_EXPIRES, Date.from(expires));
+		}
 		try {
 			db.getCollection(collection).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
-					new Document("$set", new Document(Fields.ROLES_DESC, role.getDesc())),
+					new Document("$set", update),
 					new UpdateOptions().upsert(true));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
@@ -1205,14 +1216,32 @@ public class MongoStorage implements AuthStorage {
 	public Set<CustomRole> testModeGetCustomRoles() throws AuthStorageException {
 		return toCustomRoles(getCustomRoles(COL_TEST_CUST_ROLES, new Document()));
 	}
+	
+	@Override
+	public Instant testModeGetCustomRoleExpiry(final String roleId)
+			throws AuthStorageException, NoSuchRoleException, MissingParameterException,
+				IllegalParameterException {
+		CustomRole.checkValidRoleID(roleId);
+		final Set<Document> roles = getCustomRoles(
+				COL_TEST_CUST_ROLES, new Document(Fields.ROLES_ID, roleId));
+		if (roles.isEmpty()) {
+			throw new NoSuchRoleException(roleId);
+		}
+		return roles.iterator().next().getDate(Fields.ROLES_EXPIRES).toInstant();
+		
+	}
 
 	private Set<Document> getCustomRoles(final String collection, final Document query)
 			throws AuthStorageException {
 		try {
 			final FindIterable<Document> roles = db.getCollection(collection).find(query);
 			final Set<Document> ret = new HashSet<>();
+			final Instant now = Instant.now();
 			for (final Document d: roles) {
-				ret.add(d);
+				final Date date = d.getDate(Fields.ROLES_EXPIRES);
+				if (date == null || now.isBefore(date.toInstant())) {
+					ret.add(d);
+				} // otherwise expired
 			}
 			return ret;
 		} catch (MongoException e) {

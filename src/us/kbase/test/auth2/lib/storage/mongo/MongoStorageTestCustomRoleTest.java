@@ -17,6 +17,8 @@ import org.junit.Test;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -28,6 +30,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	
+	private final static Instant DAY1 = Instant.now().plus(1, ChronoUnit.DAYS);
 	
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
@@ -35,34 +38,80 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 
 	@Test
 	public void createAndGetCustomRoles() throws Exception {
-		storage.testModeSetCustomRole(new CustomRole("foo", "bar"));
-		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"), DAY1);
 		assertThat("incorrect custom roles", storage.testModeGetCustomRoles(),
 				is(set(new CustomRole("foo1", "bar1"), new CustomRole("foo", "bar"))));
 	}
 	
 	@Test
 	public void updateCustomRole() throws Exception {
-		storage.testModeSetCustomRole(new CustomRole("foo", "bar"));
-		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"));
-		storage.testModeSetCustomRole(new CustomRole("foo", "baz"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("foo", "baz"), DAY1);
 		assertThat("incorrect custom roles", storage.testModeGetCustomRoles(),
 				is(set(new CustomRole("foo1", "bar1"), new CustomRole("foo", "baz"))));
 	}
 	
 	@Test
+	public void expireRole() throws Exception {
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"), Instant.now());
+		Thread.sleep(1);
+		assertThat("incorrect custom roles", storage.testModeGetCustomRoles(),
+				is(set(new CustomRole("foo", "bar"))));
+	}
+	
+	@Test
 	public void createRoleFail() throws Exception {
+		failCreateRole(null, DAY1, new NullPointerException("role"));
+		failCreateRole(new CustomRole("foo", "bar"), null, new NullPointerException("expires"));
+	}
+	
+	public void failCreateRole(
+			final CustomRole role,
+			final Instant expires,
+			final Exception expected) {
 		try {
-			storage.testModeSetCustomRole(null);
+			storage.testModeSetCustomRole(role, expires);
 			fail("expected exception");
-		} catch (Exception e) {
-			TestCommon.assertExceptionCorrect(e, new NullPointerException("role"));
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getExpiry() throws Exception {
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
+		assertThat("incorrect expiry", storage.testModeGetCustomRoleExpiry("foo"), is(DAY1));
+	}
+	
+	@Test
+	public void getExpiryFailInputs() {
+		failGetExpiry(null, new MissingParameterException("custom role id"));
+		failGetExpiry("  \n  \t  ", new MissingParameterException("custom role id"));
+		failGetExpiry("foo*bar", new IllegalParameterException(
+				"Illegal character in custom role id foo*bar: *"));
+	}
+	
+	@Test
+	public void getExpiryFailNoSuchRole() throws Exception {
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
+		failGetExpiry("foo1", new NoSuchRoleException("foo1"));
+	}
+	
+	private void failGetExpiry(final String roleId, final Exception expected) {
+		try {
+			storage.testModeGetCustomRoleExpiry(roleId);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
 	@Test
 	public void missingRoleInDB() throws Exception {
-		storage.testModeSetCustomRole(new CustomRole("foo", "bar"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
 		db.getCollection("test_cust_roles").updateOne(new Document("id", "foo"),
 				new Document("$set", new Document("id", "   \t    ")));
 		try {
@@ -76,7 +125,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void illegalRoleInDB() throws Exception {
-		storage.testModeSetCustomRole(new CustomRole("foo", "bar"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), DAY1);
 		db.getCollection("test_cust_roles").updateOne(new Document("id", "foo"),
 				new Document("$set", new Document("id", "foo*bar")));
 		try {
@@ -91,7 +140,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void getStdRoleFromTestCollection() throws Exception {
 		storage.setCustomRole(new CustomRole("foo", "bar"));
-		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"));
+		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"), DAY1);
 		assertThat("incorrect custom roles", storage.testModeGetCustomRoles(),
 				is(set(new CustomRole("foo1", "bar1"))));
 	}
@@ -99,7 +148,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void getTestRoleFromStdCollection() throws Exception {
 		storage.setCustomRole(new CustomRole("foo", "bar"));
-		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"));
+		storage.testModeSetCustomRole(new CustomRole("foo1", "bar1"), DAY1);
 		assertThat("incorrect custom roles", storage.getCustomRoles(),
 				is(set(new CustomRole("foo", "bar"))));
 	}
@@ -110,10 +159,10 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("baz", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bat", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("baz", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bat", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(new UserName("foo"),
 				set("foo", "bar", "baz"), set("bat"));
@@ -133,8 +182,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(
 				new UserName("foo"), set("foo", "bar"), Collections.emptySet());
@@ -149,8 +198,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(
 				new UserName("foo"), set("foo", "bar"), Collections.emptySet());
@@ -167,8 +216,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(new UserName("foo"), Collections.emptySet(),
 				set("foo", "bar"));
@@ -183,8 +232,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(new UserName("foo"), set("foo", "bar"), set("foo"));
 		assertThat("incorrect roles", storage.testModeGetUser(
@@ -198,7 +247,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
 		
 		storage.testModeUpdateCustomRoles(new UserName("foo"), set("foo"), Collections.emptySet());
 		
@@ -227,8 +276,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("bar", "bleah"), DAY1);
 		storage.testModeUpdateCustomRoles(new UserName("foo"), set("foo", "bar"),
 				Collections.emptySet());
 		
@@ -244,8 +293,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	public void addTestRoleToStdUser() throws Exception {
 		storage.setCustomRole(new CustomRole("bar", "bat"));
 		storage.setCustomRole(new CustomRole("baz", "bat"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bat"));
-		storage.testModeSetCustomRole(new CustomRole("baz", "bat"));
+		storage.testModeSetCustomRole(new CustomRole("bar", "bat"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("baz", "bat"), DAY1);
 		storage.createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000), REMOTE).build());
 		failUpdateRoles(new UserName("foo"), set("bar"), set("baz"),
@@ -256,8 +305,8 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	public void addStdRoleToTestUser() throws Exception {
 		storage.setCustomRole(new CustomRole("bar", "bat"));
 		storage.setCustomRole(new CustomRole("baz", "bat"));
-		storage.testModeSetCustomRole(new CustomRole("bar", "bat"));
-		storage.testModeSetCustomRole(new CustomRole("baz", "bat"));
+		storage.testModeSetCustomRole(new CustomRole("bar", "bat"), DAY1);
+		storage.testModeSetCustomRole(new CustomRole("baz", "bat"), DAY1);
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
@@ -289,7 +338,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 	
 	@Test
 	public void updateFailNoSuchUser() throws Exception {
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
 		failUpdateRoles(new UserName("foo"), set("foo"), Collections.emptySet(),
 				new NoSuchUserException("foo"));
 	}
@@ -299,7 +348,7 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
-		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"));
+		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
 		failUpdateRoles(new UserName("foo"), set("foo"), set("bar"),
 				new NoSuchRoleException("bar"));
 		failUpdateRoles(new UserName("foo"), set("bar"), set("foo"),

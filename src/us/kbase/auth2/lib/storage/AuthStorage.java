@@ -120,7 +120,7 @@ public interface AuthStorage {
 	 * @param name the user's name.
 	 * @param display the user's display name.
 	 * @param created the date the user was created.
-	 * @param expires the data the user expires from the system.
+	 * @param expires the date the user expires from the system.
 	 * @throws UserExistsException if the user already exists.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs. 
@@ -168,7 +168,7 @@ public interface AuthStorage {
 	AuthUser testModeGetUser(UserName userName) throws AuthStorageException, NoSuchUserException;
 	
 	/** Get the date a test user expires from the system.
-	 * @param userName the user whose records will be accessed..
+	 * @param userName the user whose records will be accessed.
 	 * @return the user's expiration date.
 	 * @throws NoSuchUserException if the user does not exist.
 	 * @throws AuthStorageException if a problem connecting with the storage
@@ -360,10 +360,11 @@ public interface AuthStorage {
 	
 	/** Add a test custom role if it does not already exist, or modify it if it does.
 	 * @param role the role to add or modify.
+	 * @param expires the expiration date of the role, usually less than an hour.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	void testModeSetCustomRole(CustomRole role) throws AuthStorageException;
+	void testModeSetCustomRole(CustomRole role, Instant expires) throws AuthStorageException;
 	
 	/** Deletes a custom role from the database and removes it from all users.
 	 * @param roleId the ID of the role.
@@ -389,6 +390,19 @@ public interface AuthStorage {
 	 * system occurs.
 	 */
 	Set<CustomRole> testModeGetCustomRoles() throws AuthStorageException;
+	
+	/** Get the date a test custom role expires from the system.
+	 * @param roleId the role to access.
+	 * @return the role's expiration date.
+	 * @throws NoSuchRoleException if there is no such role.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 * @throws IllegalParameterException if the roleId is illegal.
+	 * @throws MissingParameterException if the roleId is null or the empty string.
+	 */
+	Instant testModeGetCustomRoleExpiry(final String roleId)
+			throws AuthStorageException, NoSuchRoleException, MissingParameterException,
+				IllegalParameterException;
 	
 	/** Updates custom roles for a user.
 	 * If a role is in addRoles and removeRoles it will be removed.
