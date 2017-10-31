@@ -136,6 +136,7 @@ public class MongoStorage implements AuthStorage {
 	// test collection names;
 	private static final String COL_TEST_TOKEN = "test_tokens";
 	private static final String COL_TEST_USERS = "test_users";
+	private static final String COL_TEST_CUST_ROLES = "test_cust_roles";
 	
 	private static final Map<TokenLifetimeType, String>
 			TOKEN_LIFETIME_FIELD_MAP;
@@ -255,6 +256,11 @@ public class MongoStorage implements AuthStorage {
 				 */
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEST_TOKEN, testToken);
+		
+		//custom roles indexes
+		final Map<List<String>, IndexOptions> testRoles = new HashMap<>();
+		testRoles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
+		INDEXES.put(COL_TEST_CUST_ROLES, testRoles);
 	}
 	
 	private final MongoDatabase db;
@@ -352,7 +358,8 @@ public class MongoStorage implements AuthStorage {
 		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		final Collection<ObjectId> customRoles = getCustomRoleIds(local.getCustomRoles()).values();
+		final Collection<ObjectId> customRoles =
+				getCustomRoleIds(COL_CUST_ROLES, local.getCustomRoles()).values();
 		final Optional<UserName> admin = local.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = local.getEnableToggleDate();
 		final Optional<String> reason = local.getReasonForDisabled();
@@ -411,7 +418,7 @@ public class MongoStorage implements AuthStorage {
 				.withUserDisabledState(getUserDisabledState(user))
 				.withForceReset(user.getBoolean(Fields.USER_RESET_PWD));
 		addRoles(b, user);
-		addCustomRoles(b, user);
+		addCustomRoles(b, user, false);
 		addPolicyIDs(b, user);
 		addLastLogin(b, user);
 		final Optional<Instant> pwdreset = getOptionalDate(user, Fields.USER_RESET_PWD_LAST);
@@ -448,12 +455,15 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 
-	private void addCustomRoles(final AuthUser.AbstractBuilder<?> b, final Document user)
+	private void addCustomRoles(
+			final AuthUser.AbstractBuilder<?> b,
+			final Document user,
+			final boolean testUser)
 			throws AuthStorageException {
 		final UserName userName = getUserName(user.getString(Fields.USER_NAME));
 		@SuppressWarnings("unchecked")
 		final List<ObjectId> custroles = (List<ObjectId>) user.get(Fields.USER_CUSTOM_ROLES);
-		for (final String cr: getCustomRoles(userName, new HashSet<>(custroles))) {
+		for (final String cr: getCustomRoles(userName, new HashSet<>(custroles), testUser)) {
 			b.withCustomRole(cr);
 		}
 	}
@@ -593,7 +603,7 @@ public class MongoStorage implements AuthStorage {
 		final Set<String> roles = newUser.getRoles().stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
 		final Collection<ObjectId> customRoles = getCustomRoleIds(
-				newUser.getCustomRoles()).values();
+				COL_CUST_ROLES, newUser.getCustomRoles()).values();
 		final Document u = new Document(
 				Fields.USER_NAME, newUser.getUserName().getName())
 				.append(Fields.USER_LOCAL, false)
@@ -908,7 +918,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public AuthUser getUser(final UserName userName)
 			throws AuthStorageException, NoSuchUserException {
-		return toUser(getUserDoc(COL_USERS, userName, false));
+		return toUser(getUserDoc(COL_USERS, userName, false), false);
 	}
 	
 	@Override
@@ -921,7 +931,7 @@ public class MongoStorage implements AuthStorage {
 		if (Instant.now().isAfter(userDoc.getDate(Fields.USER_EXPIRES).toInstant())) {
 			throw new NoSuchUserException(userName.getName());
 		}
-		return toUser(userDoc);
+		return toUser(userDoc, true);
 	}
 	
 	@Override
@@ -931,7 +941,8 @@ public class MongoStorage implements AuthStorage {
 				.getDate(Fields.USER_EXPIRES).toInstant();
 	}
 
-	private AuthUser toUser(final Document user) throws AuthStorageException {
+	private AuthUser toUser(final Document user, final boolean testUser)
+			throws AuthStorageException {
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) user.get(Fields.USER_IDENTITIES);
 		
@@ -945,7 +956,7 @@ public class MongoStorage implements AuthStorage {
 			b.withIdentity(ri);
 		}
 		addRoles(b, user);
-		addCustomRoles(b, user);
+		addCustomRoles(b, user, testUser);
 		addPolicyIDs(b, user);
 		addLastLogin(b, user);
 		return b.build();
@@ -1038,8 +1049,9 @@ public class MongoStorage implements AuthStorage {
 					.stream().map(r -> r.getID()).collect(Collectors.toSet())));
 		}
 		if (spec.isCustomRoleSearch()) {
-			final Set<Document> crs = getCustomRoles(new Document(Fields.ROLES_ID,
-					new Document("$in", spec.getSearchCustomRoles())));
+			final Set<Document> crs = getCustomRoles(COL_CUST_ROLES,
+					new Document(Fields.ROLES_ID,
+							new Document("$in", spec.getSearchCustomRoles())));
 			query.put(Fields.USER_CUSTOM_ROLES, new Document("$all", crs.stream()
 					.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet())));
 		}
@@ -1107,10 +1119,11 @@ public class MongoStorage implements AuthStorage {
 				.collect(Collectors.toSet());
 		final Set<Object> strremove = removeRoles.stream().map(r -> r.getID())
 				.collect(Collectors.toSet());
-		setRoles(userName, stradd, strremove, Fields.USER_ROLES);
+		setRoles(COL_USERS, userName, stradd, strremove, Fields.USER_ROLES);
 	}
 
 	private void setRoles(
+			final String collection,
 			final UserName userName,
 			final Set<Object> addRoles,
 			final Set<Object> removeRoles,
@@ -1124,7 +1137,7 @@ public class MongoStorage implements AuthStorage {
 		try {
 			// ordered is true by default
 			// http://api.mongodb.com/java/3.3/com/mongodb/client/model/BulkWriteOptions.html
-			final BulkWriteResult res = db.getCollection(COL_USERS).bulkWrite(Arrays.asList(
+			final BulkWriteResult res = db.getCollection(collection).bulkWrite(Arrays.asList(
 					new UpdateOneModel<>(query, new Document("$addToSet",
 							new Document(field, new Document("$each", addRoles)))),
 					new UpdateOneModel<>(query, new Document("$pull",
@@ -1140,9 +1153,19 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public void setCustomRole(final CustomRole role) throws AuthStorageException {
+		setCustomRole(COL_CUST_ROLES, role);
+	}
+	
+	@Override
+	public void testModeSetCustomRole(final CustomRole role) throws AuthStorageException {
+		setCustomRole(COL_TEST_CUST_ROLES, role);
+	}
+
+	private void setCustomRole(final String collection, final CustomRole role)
+			throws AuthStorageException {
 		nonNull(role, "role");
 		try {
-			db.getCollection(COL_CUST_ROLES).updateOne(
+			db.getCollection(collection).updateOne(
 					new Document(Fields.ROLES_ID, role.getID()),
 					new Document("$set", new Document(Fields.ROLES_DESC, role.getDesc())),
 					new UpdateOptions().upsert(true));
@@ -1175,13 +1198,18 @@ public class MongoStorage implements AuthStorage {
 	
 	@Override
 	public Set<CustomRole> getCustomRoles() throws AuthStorageException {
-		return toCustomRoles(getCustomRoles(new Document()));
+		return toCustomRoles(getCustomRoles(COL_CUST_ROLES, new Document()));
+	}
+	
+	@Override
+	public Set<CustomRole> testModeGetCustomRoles() throws AuthStorageException {
+		return toCustomRoles(getCustomRoles(COL_TEST_CUST_ROLES, new Document()));
 	}
 
-	private Set<Document> getCustomRoles(final Document query)
+	private Set<Document> getCustomRoles(final String collection, final Document query)
 			throws AuthStorageException {
 		try {
-			final FindIterable<Document> roles = db.getCollection(COL_CUST_ROLES).find(query);
+			final FindIterable<Document> roles = db.getCollection(collection).find(query);
 			final Set<Document> ret = new HashSet<>();
 			for (final Document d: roles) {
 				ret.add(d);
@@ -1207,10 +1235,14 @@ public class MongoStorage implements AuthStorage {
 		return ret;
 	}
 
-	private Set<String> getCustomRoles(final UserName user, final Set<ObjectId> roleIds)
+	private Set<String> getCustomRoles(
+			final UserName user,
+			final Set<ObjectId> roleIds,
+			final boolean testUser)
 			throws AuthStorageException {
-		final Set<Document> roledocs = getCustomRoles(new Document(
-				Fields.MONGO_ID, new Document("$in", roleIds)));
+		final String rolesCollection = testUser ? COL_TEST_CUST_ROLES : COL_CUST_ROLES;
+		final Set<Document> roledocs = getCustomRoles(rolesCollection,
+				new Document(Fields.MONGO_ID, new Document("$in", roleIds)));
 		final Set<ObjectId> extantRoleIds = roledocs.stream()
 				.map(d -> d.getObjectId(Fields.MONGO_ID)).collect(Collectors.toSet());
 		for (final ObjectId role: roleIds) {
@@ -1219,9 +1251,10 @@ public class MongoStorage implements AuthStorage {
 				final Document query = new Document(Fields.USER_NAME, user.getName());
 				final Document mod = new Document("$pull",
 						new Document(Fields.USER_CUSTOM_ROLES, role));
+				final String userCollection = testUser ? COL_TEST_USERS : COL_USERS;
 				try {
 					// don't care if no changes are made, just means the role is already gone
-					db.getCollection(COL_USERS).updateOne(query, mod);
+					db.getCollection(userCollection).updateOne(query, mod);
 				} catch (MongoException e) {
 					throw new AuthStorageException("Connection to database failed: " +
 							e.getMessage(), e);
@@ -1238,26 +1271,48 @@ public class MongoStorage implements AuthStorage {
 			final Set<String> addRoles,
 			final Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
+		updateCustomRoles(userName, addRoles, removeRoles, false);
+	}
+	
+	@Override
+	public void testModeUpdateCustomRoles(
+			final UserName userName,
+			final Set<String> addRoles,
+			final Set<String> removeRoles)
+			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
+		updateCustomRoles(userName, addRoles, removeRoles, true);
+	}
+
+	private void updateCustomRoles(
+			final UserName userName,
+			final Set<String> addRoles,
+			final Set<String> removeRoles,
+			final boolean testUser)
+			throws AuthStorageException, NoSuchRoleException, NoSuchUserException {
+		final String customRolesCollection = testUser ? COL_TEST_CUST_ROLES : COL_CUST_ROLES;
+		final String usersCollection = testUser ? COL_TEST_USERS : COL_USERS;
 		nonNull(addRoles, "addRoles");
 		nonNull(removeRoles, "removeRoles");
 		Utils.noNulls(addRoles, "Null role in addRoles");
 		Utils.noNulls(removeRoles, "Null role in removeRoles");
 		final Set<String> allRoles = new HashSet<>(addRoles);
 		allRoles.addAll(removeRoles);
-		final Map<String, ObjectId> roleIDs = getCustomRoleIds(allRoles);
+		final Map<String, ObjectId> roleIDs = getCustomRoleIds(customRolesCollection, allRoles);
 		final Set<Object> addRoleIDs = addRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
 		final Set<Object> removeRoleIDs = removeRoles.stream().map(r -> roleIDs.get(r))
 				.collect(Collectors.toSet());
-		setRoles(userName, addRoleIDs, removeRoleIDs, Fields.USER_CUSTOM_ROLES);
+		setRoles(usersCollection, userName, addRoleIDs, removeRoleIDs, Fields.USER_CUSTOM_ROLES);
 	}
 
-	private Map<String, ObjectId> getCustomRoleIds(final Set<String> roles)
+	private Map<String, ObjectId> getCustomRoleIds(
+			final String collection,
+			final Set<String> roles)
 			throws AuthStorageException, NoSuchRoleException {
 		if (roles.isEmpty()) {
 			return new HashMap<>();
 		}
-		final Map<String, ObjectId> roleIDs =  getCustomRoles(new Document(
+		final Map<String, ObjectId> roleIDs =  getCustomRoles(collection, new Document(
 				Fields.ROLES_ID, new Document("$in", roles))).stream()
 						.collect(Collectors.toMap(
 								d -> d.getString(Fields.ROLES_ID),
@@ -1281,7 +1336,7 @@ public class MongoStorage implements AuthStorage {
 		if (u == null) {
 			return Optional.absent();
 		}
-		AuthUser user = toUser(u);
+		AuthUser user = toUser(u, false);
 		/* could do a findAndModify to set the fields on the first query, but
 		 * 99% of the time a set won't be necessary, so don't write lock the
 		 * DB/collection (depending on mongo version) unless necessary 
