@@ -1,16 +1,37 @@
 version: "3.1"
 services:
   auth2:
-    image: kbase/kb_auth2:${TRAVIS_BRANCH:-latest}
+    image: kbase/kb_auth2:alpine
     ports:
       - "8080:8080"
-    depends_on: ["ci-mongo"]
+    environment:
+      - KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+    command:
+      - "-wait"
+      - "tcp://ci-mongo:27017"
+      - "-wait"
+      - "tcp://mongoinit:8080"
+      - "-timeout"
+      - "120s"
+      - "-template"
+      - "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg"
+      - "/kb/deployment/bin/start_auth2.sh"
+    depends_on: ["ci-mongo", "mongoinit"]
 
   mongoinit:
-    image: mongo:2
+    image: kbase/db_initialize:latest
     volumes:
       - ./auth2.mongodump:/mnt/auth2.mongodump
-    entrypoint: [ "mongorestore", "--host", "ci-mongo", "/mnt/auth2.mongodump"]
+    entrypoint:
+      - "/kb/deployment/bin/dockerize.sh"
+      - "-wait"
+      - "tcp://ci-mongo:27017"
+      - "-timeout"
+      - "120s"
+      - "mongorestore"
+      - "--host"
+      - "ci-mongo"
+      - "/mnt/auth2.mongodump"
     depends_on: [ "ci-mongo" ]
   
   ci-mongo:
