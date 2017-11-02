@@ -45,7 +45,7 @@ jobs:
       script: # Only push to dockerhub if this isn't a PR and we're updating master or develop
         - docker pull kbase/kb_jre
         - ant dockerimage
-        - IMAGE_NAME=kbase/kb_auth2 ./push2dockerhub.sh
+        - IMAGE_NAME=kbase/kb_auth2 build/push2dockerhub.sh
 after_success:
   - ls test-reports
   - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml

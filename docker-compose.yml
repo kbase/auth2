@@ -1,7 +1,7 @@
 version: "3.1"
 services:
   auth2:
-    image: kbase/kb_auth2:alpine
+    image: kbase/kb_auth2:latest
     ports:
       - "8080:8080"
     environment:
@@ -36,6 +36,8 @@ services:
   
   ci-mongo:
     image: mongo:2
+    command:
+      - "--smallfiles"
     ports:
       - "27017:27017"
 
