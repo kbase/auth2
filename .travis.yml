@@ -44,7 +44,7 @@ jobs:
         - secure: "YVzaC/di1uoQSpH5bt66T+oJdiCtVXyHuf/1fbvZ+psh89vhhu6CI+bVLay3fCyMtnXb9qWYw3euN7qhj80iqdBoCzgYI4Ki8lyIH2PKSLENbvxfMjczpCzMULzH9QhNVqFc0pY8ogGfiqcd/tA2qEoJjlleE7p/Kac6eYaFDRDP/GusvcvUunLn6tq5E5iwhU7ZASFYcABCbkDPe6LKpt0lEQ1WCjn0P80GsPDtV36rYNajMJPDlPLhXByeudZFup/Wnoeg9Z96CIU+nRWx7Ii32yALxgp764dauYA045shZ4O5mRQU+a0pqn/yeCEI8Ku64i72Fv+gEVFcifNZOxm9H9XbpGDVCdCK1sj7Y4xvwKRifN7b5+HQv6GHZCE09+RsqbyHVjO5IP3LOdihCgR2W1egadSn8v8iyfHw0QcLEGWJjXaZoAYbgbdOmanyjsUIkZy1StxVaARSsX28xlBQHe05bSxcqcadGiR+c6waDgy1VuRt/eZOMd5MH2Dx9cZEClOntbaRfrtC56Jn5uxjNlGryB8atXuT9vKsqY83gFuLFPu0nFY64gUPsPpZ+FxotcESWyHews2joiW7ViJMvd/uZIbqYv01dcylZfOU4ycf7QS1xmRv7ullL7EyXTcYykgBfVN24sYa6mit7QYIxguxjNpaJlj2VvuaKfE="
       script: # Only push to dockerhub if this isn't a PR and we're updating master or develop
         - docker pull kbase/kb_jre
-        - ant dockerimage
+        - ant docker_image
         - IMAGE_NAME=kbase/kb_auth2 build/push2dockerhub.sh
 after_success:
   - ls test-reports
