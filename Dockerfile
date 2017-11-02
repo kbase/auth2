@@ -18,6 +18,8 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
       maintainer="Steve Chan sychan@lbl.gov"
 
 WORKDIR /kb/deployment/jettybase
+ENV KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+
 ENTRYPOINT [ "/kb/deployment/bin/dockerize" ]
 CMD [  "-template", "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg", \
        "java", "-DSTOP.PORT=8079", "-DSTOP.KEY=foo", "-Djetty.home=$JETTY_HOME", \
