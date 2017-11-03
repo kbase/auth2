@@ -1,20 +1,62 @@
 version: "3.1"
+# This is just an example that shows the relationships between the auth2 image
+# and other services. Many of these things would be overidden in the actual
+# deployment docker-compose file - for example, the name of the mongodb instance
+# that is started up and polled
 services:
   auth2:
-    image: kbase/kb_auth2:${TRAVIS_BRANCH:-latest}
+    image: kbase/kb_auth2:latest
     ports:
       - "8080:8080"
-    depends_on: ["ci-mongo"]
+    environment:
+      - KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+    command:
+      - "-wait"
+      - "tcp://ci-mongo:27017"
+      - "-wait"
+      - "tcp://mongoinit:8080"
+      - "-timeout"
+      - "120s"
+      - "-template"
+      - "/kb/deployment/conf/.templates/deployment.cfg.templ:/kb/deployment/conf/deployment.cfg"
+      # If you needed to pass in context for template evaluation you would put something like
+      # these lines that tell dockerize to hit github for an INI style file for the context
+    # - "-env"
+    # - "https://raw.githubusercontent.com/kbase/mini_kb/master/deployment/conf/tauth2-minikb.yml"
+      # If the -env URL needs authentication you would use an -env-header directive that specified
+      # either the hard coded string for the header, or a path to a file that contains the header
+      # string ( used for working with docker secrets files)
+    # - "-env-header"
+    # - "AUTHORIZATION:authtokenvalue"
+      # or for a path to a secrets file:
+    # - "env-header"
+    # - "/run/secrets/authheader"
+      # If your server is using self-signed certs, or otherwise problematic for cert validation
+      # you can add the following flag:
+    # - "-validateCert=false"
+      - "/kb/deployment/bin/start_auth2.sh"
+    depends_on: ["ci-mongo", "mongoinit"]
 
   mongoinit:
-    image: mongo:2
+    image: kbase/db_initialize:latest
     volumes:
       - ./auth2.mongodump:/mnt/auth2.mongodump
-    entrypoint: [ "mongorestore", "--host", "ci-mongo", "/mnt/auth2.mongodump"]
+    entrypoint:
+      - "/kb/deployment/bin/dockerize.sh"
+      - "-wait"
+      - "tcp://ci-mongo:27017"
+      - "-timeout"
+      - "120s"
+      - "mongorestore"
+      - "--host"
+      - "ci-mongo"
+      - "/mnt/auth2.mongodump"
     depends_on: [ "ci-mongo" ]
   
   ci-mongo:
     image: mongo:2
+    command:
+      - "--smallfiles"
     ports:
       - "27017:27017"
 
