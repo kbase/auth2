@@ -15,7 +15,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 /** Represents the context in which a user token was created - e.g. the user's operating system,
  * agent/web browser, device, IP address, and any custom context that might be supplied when
- * creating the token.. 
+ * creating the token.
  * @author gaprice@lbl.gov
  *
  */
