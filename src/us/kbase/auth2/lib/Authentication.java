@@ -137,6 +137,7 @@ public class Authentication {
 	private static final int LOGIN_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
+	private static final int TEST_MODE_DATA_LIFETIME_MS = 60 * 60 * 1000; // 1 hr
 	
 	private static final UserName DEFAULT_SUGGESTED_USER_NAME;
 	private static final DisplayName UNKNOWN_DISPLAY_NAME;
@@ -1892,6 +1893,57 @@ public class Authentication {
 		}
 		return login(userName, tokenCtx);
 	}
+	
+	/** Create a test mode user. This user is entirely separate from standard users and is
+	 * inaccessible and unmodifiable by non-test mode methods. The user expires from the system
+	 * in one hour.
+	 * @param userName the user's username.
+	 * @param displayName the user's display name.
+	 * @throws UserExistsException if a test user with the same name already exists.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws UnauthorizedException the user name is the root user name.
+	 */
+	public void testModeCreateUser(final UserName userName, final DisplayName displayName)
+			throws UserExistsException, AuthStorageException, UnauthorizedException {
+		// TODO NOW throw exception if test mode disabled
+		nonNull(userName, "userName");
+		nonNull(displayName, "displayName");
+		if (userName.isRoot()) {
+			throw new UnauthorizedException("Cannot create root user");
+		}
+		final Instant now = clock.instant();
+		storage.testModeCreateUser(
+				userName, displayName, now, now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+		logInfo("Created test mode user {}", userName.getName());
+	}
+	
+	/** Get the user data for a test token.
+	 * @param token the user's token.
+	 * @return the user.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if the token is valid but the user has expired from the system.
+	 */
+	public AuthUser testModeGetUser(final IncomingToken token)
+			throws AuthStorageException, InvalidTokenException, NoSuchUserException {
+		nonNull(token, "token");
+		// TODO NOW throw exception if test mode disabled
+		final StoredToken st;
+		try {
+			st = storage.testModeGetToken(token.getHashedToken());
+		} catch (NoSuchTokenException e) {
+			throw new InvalidTokenException();
+		}
+		final AuthUser u = storage.testModeGetUser(st.getUserName());
+		logInfo("Test mode user {} accessed their user data", u.getUserName().getName());
+		return u;
+	}
+	
+	//TODO TESTMODE get ViewableUser
+	//TODO TESTMODE store arbitrary token
+	//TODO TESTMODE get token
+	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
+	//TODO TESTMODE create custom role
 
 	/** Complete the OAuth2 login process.
 	 * 

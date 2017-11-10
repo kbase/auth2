@@ -157,11 +157,6 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
 
-Import Globus users
-------------
-Use the `manage_auth` script to import Globus users - run with the `--help`
-option for instructions. 
-
 Administer the server
 ---------------------
 Set a root password:  
