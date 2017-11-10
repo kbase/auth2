@@ -69,6 +69,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -165,6 +166,7 @@ public class Authentication {
 	private final ConfigManager cfg;
 	private final Clock clock;
 	private final ExternalConfig defaultExternalConfig;
+	private final boolean testMode;
 	
 	// note that this value is supposed to be a constant, but is mutable for testing purposes.
 	// do not make it mutable for any other reason.
@@ -182,11 +184,13 @@ public class Authentication {
 	public Authentication(
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
-			final ExternalConfig defaultExternalConfig)
+			final ExternalConfig defaultExternalConfig,
+			final boolean testMode)
 			throws StorageInitException {
 		this(storage,
 				identityProviderSet,
 				defaultExternalConfig,
+				testMode,
 				getDefaultRandomGenerator(),
 				Clock.systemDefaultZone()); // don't care about time zone, not using it
 	}
@@ -204,9 +208,11 @@ public class Authentication {
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
+			final boolean testMode,
 			final RandomDataGenerator randGen,
 			final Clock clock)
 			throws StorageInitException {
+		this.testMode = testMode;
 		this.clock = clock;
 		this.randGen = randGen;
 		try {
@@ -1902,10 +1908,12 @@ public class Authentication {
 	 * @throws UserExistsException if a test user with the same name already exists.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws UnauthorizedException the user name is the root user name.
+	 * @throws TestModeException if test mode is not enabled.
 	 */
 	public void testModeCreateUser(final UserName userName, final DisplayName displayName)
-			throws UserExistsException, AuthStorageException, UnauthorizedException {
-		// TODO NOW throw exception if test mode disabled
+			throws UserExistsException, AuthStorageException, UnauthorizedException,
+			TestModeException {
+		ensureTestMode();
 		nonNull(userName, "userName");
 		nonNull(displayName, "displayName");
 		if (userName.isRoot()) {
@@ -1923,11 +1931,13 @@ public class Authentication {
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchUserException if the token is valid but the user has expired from the system.
+	 * @throws TestModeException if test mode is not enabled.
 	 */
 	public AuthUser testModeGetUser(final IncomingToken token)
-			throws AuthStorageException, InvalidTokenException, NoSuchUserException {
+			throws AuthStorageException, InvalidTokenException, NoSuchUserException,
+			TestModeException {
+		ensureTestMode();
 		nonNull(token, "token");
-		// TODO NOW throw exception if test mode disabled
 		final StoredToken st;
 		try {
 			st = storage.testModeGetToken(token.getHashedToken());
@@ -1937,6 +1947,12 @@ public class Authentication {
 		final AuthUser u = storage.testModeGetUser(st.getUserName());
 		logInfo("Test mode user {} accessed their user data", u.getUserName().getName());
 		return u;
+	}
+	
+	private void ensureTestMode() throws TestModeException {
+		if (!testMode) {
+			throw new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled");
+		}
 	}
 	
 	//TODO TESTMODE get ViewableUser

@@ -94,6 +94,17 @@ public class AuthenticationTester {
 	}
 	
 	public static TestMocks initTestMocks(final Set<IdentityProvider> providers) throws Exception {
+		return initTestMocks(providers, false);
+	}
+	
+	public static TestMocks initTestMocks(final boolean testMode) throws Exception {
+		return initTestMocks(Collections.emptySet(), testMode);
+	}
+	
+	public static TestMocks initTestMocks(
+			final Set<IdentityProvider> providers,
+			final boolean testMode)
+			throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
 		final Clock clock = mock(Clock.class);
@@ -105,11 +116,11 @@ public class AuthenticationTester {
 						ImmutableMap.of("thing", ConfigItem.state("foo")))));
 		
 		final Constructor<Authentication> c = Authentication.class.getDeclaredConstructor(
-				AuthStorage.class, Set.class, ExternalConfig.class,
+				AuthStorage.class, Set.class, ExternalConfig.class, boolean.class,
 				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
 		final Authentication instance = c.newInstance(storage, providers,
-				TEST_EXTERNAL_CONFIG, randGen, clock);
+				TEST_EXTERNAL_CONFIG, testMode, randGen, clock);
 		reset(storage);
 		return new TestMocks(storage, randGen, instance, clock);
 	}

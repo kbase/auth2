@@ -23,9 +23,11 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -53,7 +55,7 @@ private static List<ILoggingEvent> logEvents;
 	
 	@Test
 	public void createUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		final Clock clock = testauth.clockMock;
@@ -71,10 +73,8 @@ private static List<ILoggingEvent> logEvents;
 	
 	@Test
 	public void createUserFailInputs() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final Authentication auth = testauth.auth;
-		final AuthStorage storage = testauth.storageMock;
-		final Clock clock = testauth.clockMock;
 		
 		final UserName u = new UserName("foo");
 		final DisplayName d = new DisplayName("bar");
@@ -83,16 +83,11 @@ private static List<ILoggingEvent> logEvents;
 		failCreateUser(auth, u, null, new NullPointerException("displayName"));
 		failCreateUser(auth, UserName.ROOT, d,
 				new UnauthorizedException("Cannot create root user"));
-		
-		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
-		doThrow(new UserExistsException("foo")).when(storage).testModeCreateUser(
-				u, d, Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
-		failCreateUser(auth, u, d, new UserExistsException("foo"));
 	}
 	
 	@Test
 	public void createUserFailUserExists() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final Authentication auth = testauth.auth;
 		final AuthStorage storage = testauth.storageMock;
 		final Clock clock = testauth.clockMock;
@@ -106,6 +101,12 @@ private static List<ILoggingEvent> logEvents;
 				u, d, Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
 
 		failCreateUser(auth, u, d, new UserExistsException("foo"));
+	}
+	
+	@Test
+	public void createUserFailNoTestMode() throws Exception {
+		failCreateUser(initTestMocks(false).auth, new UserName("u"), new DisplayName("d"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
 	}
 	
 	private void failCreateUser(
@@ -123,7 +124,7 @@ private static List<ILoggingEvent> logEvents;
 	
 	@Test
 	public void getUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -145,12 +146,12 @@ private static List<ILoggingEvent> logEvents;
 	
 	@Test
 	public void getUserFailNull() throws Exception {
-		failGetUser(initTestMocks().auth, null, new NullPointerException("token"));
+		failGetUser(initTestMocks(true).auth, null, new NullPointerException("token"));
 	}
 	
 	@Test
 	public void getUserFailInvalidToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -164,7 +165,7 @@ private static List<ILoggingEvent> logEvents;
 	
 	@Test
 	public void getUserFailNoSuchUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
@@ -178,8 +179,14 @@ private static List<ILoggingEvent> logEvents;
 				.thenThrow(new NoSuchUserException("whee"));
 		
 		failGetUser(auth, t, new NoSuchUserException("whee"));
-		
 	}
+	
+	@Test
+	public void getUserFailNoTestMode() throws Exception {
+		failGetUser(initTestMocks(false).auth, new IncomingToken("t"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+	}
+
 	
 	private void failGetUser(
 			final Authentication auth,

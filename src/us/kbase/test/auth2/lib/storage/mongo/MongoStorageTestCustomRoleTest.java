@@ -259,8 +259,6 @@ public class MongoStorageTestCustomRoleTest extends MongoStorageTester {
 				is(set("foo")));
 	}
 	
-	//TODO NOW expire custom roles.
-	
 	@Test
 	public void roleDeletionRace() throws Exception {
 		/* Test the case where mongo or the server goes down when attempting to delete a role from
