@@ -1900,6 +1900,37 @@ public class Authentication {
 		return login(userName, tokenCtx);
 	}
 	
+	/** Create a test token. The token is entirely separate from standard tokens and is
+	 * inaccessible by non-test mode methods. The token expires from the system in one hour.
+	 * @param userName the name of the user who will own the token.
+	 * @param tokenName the name of the token, or null for no name.
+	 * @param tokenType the type of the token.
+	 * @return the new token.
+	 * @throws TestModeException if test mode is not enabled.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if there is no user by the given name.
+	 */
+	public NewToken testModeCreateToken(
+			final UserName userName,
+			final TokenName tokenName,
+			final TokenType tokenType)
+			throws TestModeException, AuthStorageException, NoSuchUserException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		nonNull(tokenType, "tokenType");
+		storage.testModeGetUser(userName); // ensure user exists
+		final UUID id = randGen.randomUUID();
+		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
+				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
+				.withNullableTokenName(tokenName)
+				.build(),
+				randGen.getToken());
+		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
+		logInfo("Created test mode {} token {} for user {}",
+				tokenType.getDescription(), id, userName.getName());
+		return nt;
+	}
+	
 	/** Create a test mode user. This user is entirely separate from standard users and is
 	 * inaccessible and unmodifiable by non-test mode methods. The user expires from the system
 	 * in one hour.
@@ -1956,7 +1987,6 @@ public class Authentication {
 	}
 	
 	//TODO TESTMODE get ViewableUser
-	//TODO TESTMODE store arbitrary token
 	//TODO TESTMODE get token
 	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
 	//TODO TESTMODE create custom role
