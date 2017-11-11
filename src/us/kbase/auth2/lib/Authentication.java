@@ -2036,7 +2036,8 @@ public class Authentication {
 	}
 	
 	//TODO TESTMODE create custom role
-	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
+	//TODO TESTMODE update custom & built in roles
+	//TODO TESTMODE clear() method
 
 	/** Complete the OAuth2 login process.
 	 * 
