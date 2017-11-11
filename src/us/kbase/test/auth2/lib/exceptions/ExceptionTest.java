@@ -28,6 +28,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -325,6 +326,15 @@ public class ExceptionTest {
 		assertThat("incorrect error code", ae4.getErr(), is(et2));
 		assertThat("incorrect message", ae4.getMessage(), is(format(et2, "foo")));
 		assertThat("incorrect cause", ae4.getCause(), is((Throwable) null));
+	}
+	
+	@Test
+	public void testModeException() throws Exception {
+		final ErrorType et = ErrorType.UNSUPPORTED_OP;
+		final TestModeException tm = new TestModeException(et, "foo");
+		assertThat("incorrect error code", tm.getErr(), is(et));
+		assertThat("incorrect message", tm.getMessage(), is(format(et, "foo")));
+		assertThat("incorrect cause", tm.getCause(), is((Throwable) null));
 	}
 	
 	@Test

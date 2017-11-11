@@ -97,7 +97,8 @@ public class AuthBuilder {
 					idc.getIdentityProviderFactoryClassName(), IdentityProviderFactory.class);
 			providers.add(fac.configure(idc));
 		}
-		return new Authentication(s, providers, defaultExternalConfig);
+		//TODO TESTMODE get testmode toggle from config
+		return new Authentication(s, providers, defaultExternalConfig, false);
 	}
 	
 	public MongoClient getMongoClient() {
