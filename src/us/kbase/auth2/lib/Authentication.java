@@ -1926,9 +1926,30 @@ public class Authentication {
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
-		logInfo("Created test mode {} token {} for user {}",
-				tokenType.getDescription(), id, userName.getName());
+		logInfo("Created test mode {} token {} for user {}", tokenType, id, userName.getName());
 		return nt;
+	}
+	
+	/** Get details about a test token.
+	 * @param token the token in question.
+	 * @return the token's details.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public StoredToken testModeGetToken(final IncomingToken token)
+			throws AuthStorageException, InvalidTokenException, TestModeException {
+		ensureTestMode();
+		nonNull(token, "token");
+		final StoredToken st;
+		try {
+			st = storage.testModeGetToken(token.getHashedToken());
+		} catch (NoSuchTokenException e) {
+			throw new InvalidTokenException();
+		}
+		logInfo("User {} accessed {} test token {}",
+				st.getUserName().getName(), st.getTokenType(), st.getId());
+		return st;
 	}
 	
 	/** Create a test mode user. This user is entirely separate from standard users and is
@@ -1956,7 +1977,7 @@ public class Authentication {
 		logInfo("Created test mode user {}", userName.getName());
 	}
 	
-	/** Get the user data for a test token.
+	/** Get the user data for the user associated with a test token.
 	 * @param token the user's token.
 	 * @return the user.
 	 * @throws InvalidTokenException if the token is invalid.
@@ -1987,9 +2008,8 @@ public class Authentication {
 	}
 	
 	//TODO TESTMODE get ViewableUser
-	//TODO TESTMODE get token
-	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
 	//TODO TESTMODE create custom role
+	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
 
 	/** Complete the OAuth2 login process.
 	 * 
