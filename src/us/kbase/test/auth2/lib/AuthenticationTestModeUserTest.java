@@ -22,7 +22,9 @@ import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -194,6 +196,147 @@ public class AuthenticationTestModeUserTest {
 			final Exception expected) {
 		try {
 			auth.testModeGetUser(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getOtherUser() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("tok");
+		
+		when(storage.testModeGetToken(t.getHashedToken())).thenReturn(StoredToken.getBuilder(
+				TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("d"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@p.com")).build());
+		
+		when(storage.testModeGetUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("g"), Instant.ofEpochMilli(10000))
+				.withEmailAddress(new EmailAddress("x@y.com")).build());
+		
+		final ViewableUser vu = auth.testModeGetUser(t, new UserName("foo"));
+		
+		assertThat("incorrect user", vu, is(new ViewableUser(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("g"), Instant.ofEpochMilli(10000))
+				.withEmailAddress(new EmailAddress("x@y.com")).build(), false)));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Test user bar accessed test user foo's user data", Authentication.class));
+	}
+	
+	@Test
+	public void getOtherUserSameUser() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("tok");
+		
+		when(storage.testModeGetToken(t.getHashedToken())).thenReturn(StoredToken.getBuilder(
+				TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("d"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@p.com")).build());
+		
+		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.withEmailAddress(new EmailAddress("f@p.com")).build());
+		
+		final ViewableUser vu = auth.testModeGetUser(t, new UserName("bar"));
+		
+		assertThat("incorrect user", vu, is(new ViewableUser(AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.withEmailAddress(new EmailAddress("f@p.com")).build(), true)));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Test user bar accessed test user bar's user data", Authentication.class));
+	}
+	
+	@Test
+	public void getOtherUserFailNulls() throws Exception {
+		final Authentication auth = initTestMocks(true).auth;
+		
+		failGetOtherUser(auth, null, new UserName("u"), new NullPointerException("token"));
+		failGetOtherUser(auth, new IncomingToken("t"), null, new NullPointerException("userName"));
+	}
+	
+	@Test
+	public void getOtherUserFailNoTestMode() throws Exception {
+		failGetOtherUser(initTestMocks(false).auth, new IncomingToken("t"), new UserName("u"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+	}
+	
+	@Test
+	public void getOtherUserFailInvalidToken() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("tok");
+		
+		when(storage.testModeGetToken(t.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("no token"));
+		
+		failGetOtherUser(auth, t, new UserName("u"), new InvalidTokenException());
+	}
+	
+	@Test
+	public void getOtherUserFailNoTokenUser() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("tok");
+		
+		when(storage.testModeGetToken(t.getHashedToken())).thenReturn(StoredToken.getBuilder(
+				TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.testModeGetUser(new UserName("bar")))
+				.thenThrow(new NoSuchUserException("bar"));
+		
+		failGetOtherUser(auth, t, new UserName("u"), new NoSuchUserException("bar"));
+	}
+	
+	@Test
+	public void getOtherUserFailNoTargetUser() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("tok");
+		
+		when(storage.testModeGetToken(t.getHashedToken())).thenReturn(StoredToken.getBuilder(
+				TokenType.SERV, UUID.randomUUID(), new UserName("bar"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
+				new UserName("bar"), new DisplayName("d"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@p.com")).build());
+		
+		when(storage.testModeGetUser(new UserName("foo")))
+				.thenThrow(new NoSuchUserException("foo"));
+		
+		failGetOtherUser(auth, t, new UserName("foo"), new NoSuchUserException("foo"));
+	}
+	
+	private void failGetOtherUser(
+			final Authentication auth,
+			final IncomingToken token,
+			final UserName userName,
+			final Exception expected) {
+		try {
+			auth.testModeGetUser(token, userName);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

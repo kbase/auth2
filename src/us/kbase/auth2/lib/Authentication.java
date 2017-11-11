@@ -1987,7 +1987,15 @@ public class Authentication {
 	 */
 	public AuthUser testModeGetUser(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, NoSuchUserException,
-			TestModeException {
+				TestModeException {
+		final AuthUser u = testModeGetUserInternal(token);
+		logInfo("Test mode user {} accessed their user data", u.getUserName().getName());
+		return u;
+	}
+
+	private AuthUser testModeGetUserInternal(final IncomingToken token)
+			throws TestModeException, AuthStorageException, InvalidTokenException,
+				NoSuchUserException {
 		ensureTestMode();
 		nonNull(token, "token");
 		final StoredToken st;
@@ -1996,9 +2004,29 @@ public class Authentication {
 		} catch (NoSuchTokenException e) {
 			throw new InvalidTokenException();
 		}
-		final AuthUser u = storage.testModeGetUser(st.getUserName());
-		logInfo("Test mode user {} accessed their user data", u.getUserName().getName());
-		return u;
+		return storage.testModeGetUser(st.getUserName());
+	}
+	
+	/** Get a restricted view of a test user. Typically used for one user viewing another.
+	 * @param token the token of the user requesting the view.
+	 * @param user the username of the user to view.
+	 * @return a view of the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws NoSuchUserException if there is no user corresponding to the given user name or the
+	 * token's username.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public ViewableUser testModeGetUser(final IncomingToken token, final UserName user)
+			throws InvalidTokenException, NoSuchUserException, TestModeException,
+				AuthStorageException {
+		nonNull(user, "userName");
+		final AuthUser requestingUser = testModeGetUserInternal(token);
+		final AuthUser otherUser = storage.testModeGetUser(user);
+		final boolean sameUser = requestingUser.getUserName().equals(otherUser.getUserName());
+		logInfo("Test user {} accessed test user {}'s user data",
+				requestingUser.getUserName().getName(), otherUser.getUserName().getName());
+		return new ViewableUser(otherUser, sameUser);
 	}
 	
 	private void ensureTestMode() throws TestModeException {
@@ -2007,7 +2035,6 @@ public class Authentication {
 		}
 	}
 	
-	//TODO TESTMODE get ViewableUser
 	//TODO TESTMODE create custom role
 	//TODO TESTMODE update custom & built in roles (latter needs storage changes)
 
