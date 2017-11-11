@@ -41,7 +41,7 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTestModeUserTest {
 
-private static List<ILoggingEvent> logEvents;
+	private static List<ILoggingEvent> logEvents;
 	
 	@BeforeClass
 	public static void beforeClass() {
