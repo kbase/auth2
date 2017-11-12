@@ -24,6 +24,8 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -67,22 +69,22 @@ public class AuthenticationTestModeTokenTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");
 		
-		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.SERV);
+		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.SERV, id, new UserName("foo"))
+				TokenType.AGENT, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
 				.build(),
 				"whee")));
 		
 		verify(storage).testModeStoreToken(StoredToken.getBuilder(
-				TokenType.SERV, id, new UserName("foo"))
+				TokenType.AGENT, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
 				.build(),
 				IncomingToken.hash("whee"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Created test mode Service token %s for user foo", id),
+				"Created test mode AGENT token %s for user foo", id),
 				Authentication.class));
 	}
 	
@@ -120,7 +122,7 @@ public class AuthenticationTestModeTokenTest {
 				IncomingToken.hash("whee"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Created test mode Service token %s for user foo", id),
+				"Created test mode SERV token %s for user foo", id),
 				Authentication.class));
 	}
 	
@@ -162,5 +164,67 @@ public class AuthenticationTestModeTokenTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void getToken() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("foo");
+		final UUID id = UUID.randomUUID();
+		
+		when(storage.testModeGetToken(t.getHashedToken())).thenReturn(StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+				.withLifeTime(Instant.ofEpochMilli(10000), 30000)
+				.build());
+		
+		final StoredToken st = auth.testModeGetToken(t);
+		
+		assertThat("incorrect token", st, is(StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(40000))
+				.build()));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"User bar accessed LOGIN test token %s", id), Authentication.class));
+	}
+	
+	@Test
+	public void getTokenFailNull() throws Exception {
+		failGetToken(initTestMocks(true).auth, null, new NullPointerException("token"));
+	}
+	
+	@Test
+	public void getTokenFailNoTestMode() throws Exception {
+		failGetToken(initTestMocks(false).auth, new IncomingToken("foo"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+	}
+	
+	@Test
+	public void getTokenFailInvalidToken() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		final IncomingToken t = new IncomingToken("bar");
+		
+		when(storage.testModeGetToken(t.getHashedToken()))
+				.thenThrow(new NoSuchTokenException("no token"));
+		
+		failGetToken(auth, t, new InvalidTokenException());
+	}
 
+	private void failGetToken(
+			final Authentication auth,
+			final IncomingToken token,
+			final Exception expected) {
+		try {
+			auth.testModeGetToken(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
 }
