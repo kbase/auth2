@@ -2029,13 +2029,39 @@ public class Authentication {
 		return new ViewableUser(otherUser, sameUser);
 	}
 	
+	/** Create or update a test custom role.
+	 * @param role the role to create or update.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public void testModeSetCustomRole(final CustomRole role)
+			throws AuthStorageException, TestModeException {
+		ensureTestMode();
+		nonNull(role, "role");
+		storage.testModeSetCustomRole(
+				role, clock.instant().plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+		logInfo("Created test custom role {}", role.getID());
+	}
+	
+	/** Get all test custom roles.
+	 * @return the custom roles.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public Set<CustomRole> testModeGetCustomRoles()
+			throws AuthStorageException, TestModeException {
+		ensureTestMode();
+		final Set<CustomRole> roles = storage.testModeGetCustomRoles();
+		logInfo("Accessed test mode custom roles");
+		return roles;
+	}
+	
 	private void ensureTestMode() throws TestModeException {
 		if (!testMode) {
 			throw new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled");
 		}
 	}
 	
-	//TODO TESTMODE create custom role
 	//TODO TESTMODE update custom & built in roles
 	//TODO TESTMODE clear() method
 
