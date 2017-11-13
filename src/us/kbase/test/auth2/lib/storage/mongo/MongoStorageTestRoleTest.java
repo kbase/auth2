@@ -30,7 +30,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
-public class MongoStorageTestCustomRoleTest extends MongoStorageTester { //TODO NOW rename to MongoStorageTestRoleTest
+public class MongoStorageTestRoleTest extends MongoStorageTester {
 	
 	private final static Instant DAY1 = Instant.now().plus(1, ChronoUnit.DAYS);
 	
