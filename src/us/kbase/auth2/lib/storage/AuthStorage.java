@@ -417,24 +417,23 @@ public interface AuthStorage {
 	 */
 	void updateCustomRoles(UserName userName, Set<String> addRoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
-	
-	/** Updates custom roles for a test user.
-	 * If a role is in addRoles and removeRoles it will be removed.
-	 * Removing non-existent roles has no effect.
+
+	/** Set the roles on a test user. Overwrites the user's current roles. Pass in empty sets to
+	 * remove all roles.
 	 * @param userName the user to modify.
-	 * @param addRoles the roles to add to the user.
-	 * @param removeRoles the roles to remove from the user. 
+	 * @param roles the built in roles to set on the user.
+	 * @param customRoles the custom roles to set on the user.
 	 * @throws NoSuchUserException if the user doesn't exist.
 	 * @throws NoSuchRoleException if one or more of the input roles do not exist in the database.
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs. 
 	 */
-	void testModeUpdateCustomRoles(
+	void testModeSetRoles(
 			UserName userName,
-			Set<String> addRoles,
-			Set<String> removeRoles)
-			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
-
+			Set<Role> roles,
+			Set<String> customRoles)
+			throws NoSuchUserException, NoSuchRoleException, AuthStorageException;
+	
 	/** Store temporary data used with a user process session.
 	 * No checking is done on the validity of the token - passing in tokens with bad data is a
 	 * programming error.
