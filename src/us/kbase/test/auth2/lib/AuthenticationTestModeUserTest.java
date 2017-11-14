@@ -42,6 +42,8 @@ import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTestModeUserTest {
+	
+	/* test clearing test data here because it's as good as anywhere else. */
 
 	private static List<ILoggingEvent> logEvents;
 	
@@ -53,6 +55,17 @@ public class AuthenticationTestModeUserTest {
 	@Before
 	public void before() {
 		logEvents.clear();
+	}
+	
+	@Test
+	public void clearTestData() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		auth.testModeClear();
+		
+		verify(storage).testModeClear();
 	}
 	
 	@Test

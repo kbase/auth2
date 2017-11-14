@@ -8,30 +8,81 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Set;
+import java.util.UUID;
 
 import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenName;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	
+	/* we test clearing of all data here, since it has to be somewhere. */
+	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 
+	@Test
+	public void clearTestData() throws Exception {
+		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
+		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+				Instant.ofEpochMilli(10000), expiry);
+		
+		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), expiry);
+		
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final StoredToken store = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(20))
+			.withTokenName(new TokenName("foo")).build();
+		storage.testModeStoreToken(store, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
+
+		final AuthUser u = storage.testModeGetUser(new UserName("foo"));
+		assertThat("incorrect user name", u.getUserName(), is(new UserName("foo")));
+		
+		final StoredToken t = storage.testModeGetToken(
+				new IncomingToken("sometoken").getHashedToken());
+		assertThat("incorrect token name", t.getTokenName(),
+				is(Optional.of(new TokenName("foo"))));
+		
+		final Set<CustomRole> roles = storage.testModeGetCustomRoles();
+		assertThat("incorrect roles", roles, is(set(new CustomRole("foo", "bar"))));
+		
+		storage.testModeClear();
+		
+		failGetUser(new UserName("foo"), new NoSuchUserException("foo"));
+		
+		try {
+			storage.testModeGetToken(new IncomingToken("sometoken").getHashedToken());
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NoSuchTokenException("Token not found"));
+		}
+		
+		assertThat("incorrect roles", storage.testModeGetCustomRoles(), is(set()));
+	}
+	
 	@Test
 	public void createAndGet() throws Exception {
 		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);

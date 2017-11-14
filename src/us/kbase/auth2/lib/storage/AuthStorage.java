@@ -434,6 +434,11 @@ public interface AuthStorage {
 			Set<String> customRoles)
 			throws NoSuchUserException, NoSuchRoleException, AuthStorageException;
 	
+	/** Removes all test data from storage.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	void testModeClear() throws AuthStorageException;
+	
 	/** Store temporary data used with a user process session.
 	 * No checking is done on the validity of the token - passing in tokens with bad data is a
 	 * programming error.
