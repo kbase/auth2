@@ -1198,6 +1198,21 @@ public class MongoStorage implements AuthStorage {
 		nonNull(expires, "expires");
 		setCustomRole(COL_TEST_CUST_ROLES, role, expires);
 	}
+	
+	@Override
+	public void testModeClear() throws AuthStorageException {
+		clear(COL_TEST_USERS);
+		clear(COL_TEST_CUST_ROLES);
+		clear(COL_TEST_TOKEN);
+	}
+
+	private void clear(String colTestUsers) throws AuthStorageException {
+		try {
+			db.getCollection(colTestUsers).deleteMany(new Document());
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
 
 	private void setCustomRole(
 			final String collection,
