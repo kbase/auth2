@@ -1428,8 +1428,7 @@ public class Authentication {
 	private String rolesToString(
 			final Set<Role> roles,
 			final Function<? super Role, ? extends String> mapper) {
-		return String.join(", ", roles.stream().sorted().map(mapper)
-				.collect(Collectors.toList()));
+		return String.join(", ", roles.stream().sorted().map(mapper).collect(Collectors.toList()));
 	}
 
 	/** Create or update a custom role.
@@ -1564,8 +1563,7 @@ public class Authentication {
 	}
 	
 	private String customRolesToString(final Set<String> roles) {
-		return String.join(", ", roles.stream().sorted()
-				.collect(Collectors.toList()));
+		return String.join(", ", roles.stream().sorted().collect(Collectors.toList()));
 	}
 
 	/** Get an ordered list of the supported and enabled identity providers.
@@ -2056,13 +2054,41 @@ public class Authentication {
 		return roles;
 	}
 	
+	/** Set standard and custom roles for a test user. This method overwrites previous roles -
+	 * pass in empty sets to remove all roles.
+	 * @param userName the name of the user to modify.
+	 * @param roles the standard roles to bequeath to the user.
+	 * @param customRoles the custom roles to bequeath to the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws UnauthorizedException if the user account associated with the token does not have
+	 * the administrator role or the token is not a login token.
+	 * @throws NoSuchUserException if there is no user account with the given name.
+	 * @throws NoSuchRoleException if one of the roles does not exist in the database.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public void testModeSetRoles(
+			final UserName userName,
+			final Set<Role> roles,
+			final Set<String> customRoles)
+			throws NoSuchUserException, NoSuchRoleException, AuthStorageException,
+				TestModeException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		nonNull(roles, "roles");
+		nonNull(customRoles, "customRoles");
+		noNulls(roles, "Null role in roles");
+		noNulls(customRoles, "Null role in customRoles");
+		storage.testModeSetRoles(userName, roles, customRoles);
+		logInfo("Set roles / custom roles on test user {}: {} / {}", userName.getName(),
+				rolesToString(roles, r -> r.getID()), customRolesToString(customRoles));
+	}
+	
 	private void ensureTestMode() throws TestModeException {
 		if (!testMode) {
 			throw new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled");
 		}
 	}
 	
-	//TODO TESTMODE update custom & built in roles
 	//TODO TESTMODE clear() method
 
 	/** Complete the OAuth2 login process.
