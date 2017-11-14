@@ -368,7 +368,7 @@
         <sysproperty key="AUTH2_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageCustomRoleTest"/>
-        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCustomRoleTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestRoleTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDuplicateKeyCheckerTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageGetDisplayNamesTest"/>

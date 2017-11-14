@@ -104,7 +104,19 @@ public class ServiceTestUtils {
 			final AuthException e)
 			throws Exception {
 		
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
+		if (res.getStatus() != httpCode) {
+			String text = null; 
+			try {
+				text = res.readEntity(String.class);
+			} catch (Exception exp) {
+				exp.printStackTrace();
+			}
+			if (text == null) {
+				text = "Unable to get entity text - see error stream for exception";
+			}
+			fail(String.format("unexpected http code %s, wanted %s. Entity contents:\n%s",
+					res.getStatus(), httpCode, text));
+		}
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> error = res.readEntity(Map.class);
