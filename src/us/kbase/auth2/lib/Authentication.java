@@ -2060,8 +2060,6 @@ public class Authentication {
 	 * @param roles the standard roles to bequeath to the user.
 	 * @param customRoles the custom roles to bequeath to the user.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws UnauthorizedException if the user account associated with the token does not have
-	 * the administrator role or the token is not a login token.
 	 * @throws NoSuchUserException if there is no user account with the given name.
 	 * @throws NoSuchRoleException if one of the roles does not exist in the database.
 	 * @throws TestModeException if test mode is not enabled.
@@ -2081,6 +2079,14 @@ public class Authentication {
 		storage.testModeSetRoles(userName, roles, customRoles);
 		logInfo("Set roles / custom roles on test user {}: {} / {}", userName.getName(),
 				rolesToString(roles, r -> r.getID()), customRolesToString(customRoles));
+	}
+	
+	/** Clear all test data from the system.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void testModeClear() throws AuthStorageException {
+		// don't ensureTestMode() because it's always ok to clear the data
+		storage.testModeClear();
 	}
 	
 	private void ensureTestMode() throws TestModeException {
