@@ -1206,9 +1206,9 @@ public class MongoStorage implements AuthStorage {
 		clear(COL_TEST_TOKEN);
 	}
 
-	private void clear(String colTestUsers) throws AuthStorageException {
+	private void clear(String collection) throws AuthStorageException {
 		try {
-			db.getCollection(colTestUsers).deleteMany(new Document());
+			db.getCollection(collection).deleteMany(new Document());
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
 		}
