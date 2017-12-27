@@ -138,7 +138,7 @@ public class AuthenticationTestModeUserTest {
 	}
 	
 	@Test
-	public void getUser() throws Exception {
+	public void getUserByToken() throws Exception {
 		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -160,12 +160,12 @@ public class AuthenticationTestModeUserTest {
 	}
 	
 	@Test
-	public void getUserFailNull() throws Exception {
-		failGetUser(initTestMocks(true).auth, null, new NullPointerException("token"));
+	public void getUserByTokenFailNull() throws Exception {
+		failGetUserByToken(initTestMocks(true).auth, null, new NullPointerException("token"));
 	}
 	
 	@Test
-	public void getUserFailInvalidToken() throws Exception {
+	public void getUserByTokenFailInvalidToken() throws Exception {
 		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -175,11 +175,11 @@ public class AuthenticationTestModeUserTest {
 		when(storage.testModeGetToken(t.getHashedToken()))
 				.thenThrow(new NoSuchTokenException("No token"));
 		
-		failGetUser(auth, t, new InvalidTokenException());
+		failGetUserByToken(auth, t, new InvalidTokenException());
 	}
 	
 	@Test
-	public void getUserFailNoSuchUser() throws Exception {
+	public void getUserByTokenFailNoSuchUser() throws Exception {
 		final TestMocks testauth = initTestMocks(true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -193,22 +193,76 @@ public class AuthenticationTestModeUserTest {
 		when(storage.testModeGetUser(new UserName("whee")))
 				.thenThrow(new NoSuchUserException("whee"));
 		
-		failGetUser(auth, t, new NoSuchUserException("whee"));
+		failGetUserByToken(auth, t, new NoSuchUserException("whee"));
 	}
 	
 	@Test
-	public void getUserFailNoTestMode() throws Exception {
-		failGetUser(initTestMocks(false).auth, new IncomingToken("t"),
+	public void getUserByTokenFailNoTestMode() throws Exception {
+		failGetUserByToken(initTestMocks(false).auth, new IncomingToken("t"),
 				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
 	}
 
 	
-	private void failGetUser(
+	private void failGetUserByToken(
 			final Authentication auth,
 			final IncomingToken token,
 			final Exception expected) {
 		try {
 			auth.testModeGetUser(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getUserByName() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		when(storage.testModeGetUser(new UserName("whee1"))).thenReturn(AuthUser.getBuilder(
+				new UserName("whee1"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build());
+		
+		assertThat("incorrect user", auth.testModeGetUser(new UserName("whee1")),
+				is(AuthUser.getBuilder(
+						new UserName("whee1"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+						.build()));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+				"Accessed user data for test mode user whee1 by user name",
+				Authentication.class));
+	}
+	
+	@Test
+	public void getUserByNameFailNoTestMode() throws Exception {
+		failGetUserByName(initTestMocks(false).auth, new UserName("t"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+	}
+	
+	@Test
+	public void getUserByNameFailNull() throws Exception {
+		failGetUserByName(initTestMocks(true).auth, null, new NullPointerException("userName"));
+	}
+	
+	@Test
+	public void getUserByNameFailNoSuchUser() throws Exception {
+		final TestMocks testauth = initTestMocks(true);
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		when(storage.testModeGetUser(new UserName("whee")))
+				.thenThrow(new NoSuchUserException("whee"));
+		
+		failGetUserByName(auth, new UserName("whee"), new NoSuchUserException("whee"));
+	}
+	
+	private void failGetUserByName(
+			final Authentication auth,
+			final UserName userName,
+			final Exception expected) {
+		try {
+			auth.testModeGetUser(userName);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

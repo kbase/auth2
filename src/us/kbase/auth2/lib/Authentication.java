@@ -1975,6 +1975,22 @@ public class Authentication {
 		logInfo("Created test mode user {}", userName.getName());
 	}
 	
+	/** Get a test mode user's data.
+	 * @param userName the user name of the user.
+	 * @return the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if there is no such user.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public AuthUser testModeGetUser(final UserName userName)
+			throws AuthStorageException, NoSuchUserException, TestModeException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		final AuthUser u = storage.testModeGetUser(userName);
+		logInfo("Accessed user data for test mode user {} by user name", userName.getName());
+		return u;
+	}
+	
 	/** Get the user data for the user associated with a test token.
 	 * @param token the user's token.
 	 * @return the user.
