@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
+import java.net.InetAddress;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.Date;
@@ -159,6 +160,19 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 	
 	@Test
 	public void illegalIPAddress() throws Exception {
+		/* Some really annoying ISPs will send you to a custom search page or something
+		 * when you look up a fake domain, so if InetAddress finds an address we have to abort
+		 * the test.
+		 */
+		try {
+			final InetAddress addr = InetAddress.getByName("fakeip");
+			System.err.println("Buttwipe ISP detected. 'fakeip' domain was redirected to " +
+					addr + ". Skipping this test; please be sure to run again on a " +
+					"non-buttwipe ISP.");
+			return;
+		} catch (Exception e) {
+			//do nothing
+		}
 		final IncomingToken t = new IncomingToken("foobar");
 		final StoredToken st = StoredToken.getBuilder(
 					TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
@@ -167,7 +181,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 		storage.storeToken(st, t.getHashedToken().getTokenHash());
 
 		db.getCollection("tokens").updateOne(new Document("user", "baz"),
-				new Document("$set", new Document("ip", "foobar")));
+				new Document("$set", new Document("ip", "fakeip")));
 		
 		try {
 			storage.getToken(t.getHashedToken());
@@ -175,7 +189,7 @@ public class MongoStorageInvalidDBDataTest extends MongoStorageTester {
 		} catch (AuthStorageException e) {
 			assertThat("incorrect exception message", e.getMessage(),
 					// error message from InetAddress changes based on test context
-					startsWith("Illegal value stored in db: foobar"));
+					startsWith("Illegal value stored in db: fakeip"));
 		}
 	}
 	

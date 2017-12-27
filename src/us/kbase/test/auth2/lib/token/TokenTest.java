@@ -75,11 +75,16 @@ public class TokenTest {
 				is(TokenType.DEV));
 		assertThat("failed to get service token type", TokenType.getType("Serv"),
 				is(TokenType.SERV));
+		failGetType(null, "Invalid token type: null");
+		failGetType("foo", "Invalid token type: foo");
+	}
+	
+	private void failGetType(final String type, final String exception) {
 		try {
-			TokenType.getType(null);
-			fail("got bad type");
-		} catch (IllegalArgumentException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("Invalid role id: null"));
+			TokenType.getType(type);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(exception));
 		}
 	}
 	

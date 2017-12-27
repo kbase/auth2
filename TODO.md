@@ -1,31 +1,6 @@
 Auth2 TODO list
 ===============
 
-Update core services and SDK modules
-------------------------------------
-*Note:* not in auth team scope unless specified
-
-Need to use updated server stubs & auth clients, use tokens for magic user
-accounts and tests if any, allow setting auth service url
-
-* Shock & Awe - Rich
-* Perl auth & server stubs - Keith
-* Handle service & manager - Keith
-* Narrative (Login UI and Lua) - Bill R. (external to auth team)
-  * Token cleanup - remove backup token, make simple token format
-* kb_sdk
-  * Tests support token vs uid/pwd & setting auth url
-  * Recompile & test all SDK modules
-* NJSW
-* User Profile
-  * Update to get and set user name & email from and to auth service
-* Service wizard
-* Narrative Method Store
-* Data Import Export
-* Search
-* Solar auth
-* Bulk IO
-
 Auth service work
 -----------------
 * Complete rich UI (code not in this repo)
@@ -33,27 +8,21 @@ Auth service work
 * TODOs in the codebase
 * Read through all remaining prototype code and convert to production worthy
 * Code review
-  * Mike Sneddon
   * Steve Chan
 * Code analysis:
   * https://www.codacy.com/
   * https://find-sec-bugs.github.io/
 * Tests
+  * Redo UI/API tests to move most tests to unit test from integration tests
+    * Use constructor dependency injection to make UTs easy
+    * Minimal integration tests
 * Documentation
   * Code documentation
-  * User documentation and education (probably need doc team help here)
-    * Login & signup very different
   * Try swagger again - go from code -> docs vs. other way around
   * Server manual, incl user and admin coverage
 * General
   * Lock local account for X m after Y failed logins - use sshguard or something here
   * Make server root return endpoints
-* Deploy
-  * Dockerization
-
-External dependencies
----------------------
-* JGI stops using uid/pwd to login for jgidm account
 
 Future work
 -----------

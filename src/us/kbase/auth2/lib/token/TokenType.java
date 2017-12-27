@@ -52,14 +52,14 @@ public enum TokenType {
 	}
 	
 	/** Get a token type based on a supplied ID.
-	 * @param id the id.
+	 * @param id the id for the token type.
 	 * @return a token type.
 	 * @throws IllegalArgumentException if there is no token type matching the ID.
 	 */
-	public static TokenType getType(final String id) {
-		if (!TYPE_MAP.containsKey(id)) {
-			throw new IllegalArgumentException("Invalid role id: " + id);
+	public static TokenType getType(final String type) {
+		if (!TYPE_MAP.containsKey(type)) {
+			throw new IllegalArgumentException("Invalid token type: " + type);
 		}
-		return TYPE_MAP.get(id);
+		return TYPE_MAP.get(type);
 	}
 }
