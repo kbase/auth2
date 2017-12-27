@@ -82,7 +82,7 @@ public enum ErrorType {
 	private final int errcode;
 	private final String error;
 	
-	ErrorType(final int errcode, final String error) {
+	private ErrorType(final int errcode, final String error) {
 		this.errcode = errcode;
 		this.error = error;
 	}

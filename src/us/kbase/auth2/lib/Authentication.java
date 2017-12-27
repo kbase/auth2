@@ -2095,7 +2095,6 @@ public class Authentication {
 		}
 	}
 	
-	//TODO TESTMODE clear() method
 
 	/** Complete the OAuth2 login process.
 	 * 

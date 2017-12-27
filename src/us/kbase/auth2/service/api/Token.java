@@ -41,11 +41,15 @@ public class Token {
 
 	//TODO JAVADOC or swagger
 	
-	@Inject
 	private Authentication auth;
 	
-	@Inject
 	private UserAgentParser userAgentParser;
+	
+	@Inject
+	public Token(final Authentication auth, final UserAgentParser userAgentParser) {
+		this.auth = auth;
+		this.userAgentParser = userAgentParser;
+	}
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
