@@ -9,13 +9,20 @@ public class APIPaths {
 	private static final String SEP = "/";
 	private static final String TOKEN = "token";
 	private static final String USERS = "users";
+	private static final String USER = "user";
+	
 	/** The parameter name for a user name prefix. */
 	public static final String PREFIX = "prefix";
+	
+	/** The parameter name for a user name. */
+	public static final String USERNAME = "username";
+	
 	private static final String PREFIX_PARAM = "{" + PREFIX + "}";
+	private static final String LEGACY = "legacy";
 	
 	private static final String API = "/api";
 	private static final String API_V2 = API + "/V2";
-	private static final String API_LEGACY = API + "/legacy";
+	private static final String API_LEGACY = API + SEP + LEGACY;
 	
 	/** The KBase legacy endpoint location. */
 	public static final String LEGACY_KBASE = API_LEGACY + "/KBase/Sessions/Login";
@@ -38,4 +45,28 @@ public class APIPaths {
 	
 	/** The me endpoint location. */
 	public static final String API_V2_ME = API_V2 + SEP + "me";
+	
+	/* test mode endpoints. */
+
+	private static final String TESTMODE = "/testmode";
+	
+	/** The version 2 testmode API root. */
+	public static final String TESTMODE_V2 = TESTMODE + API_V2;
+	
+	/** The testmode legacy root. */
+	public static final String TESTMODE_LEGACY = TESTMODE + API_LEGACY;
+	
+	private static final String TESTMODE_ONLY = "testmodeonly";
+	
+	/** The testmode token introspection endpoint. */
+	public static final String TESTMODE_TOKEN = TOKEN;
+	
+	/** The testmode test token creation endpoint. */
+	public static final String TESTMODE_TOKEN_CREATE = TESTMODE_ONLY + SEP + TOKEN;
+	
+	/** The test mode user creation endpoint. */
+	public static final String TESTMODE_USER = TESTMODE_ONLY + SEP + USER;
+	
+	/** The test mode user retrieval endpoint. */
+	public static final String TESTMODE_USER_GET = TESTMODE_USER + SEP + "{" + USERNAME + "}";
 }
