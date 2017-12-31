@@ -372,13 +372,27 @@ public class ServiceTestUtils {
 	public static Path generateTempConfigFile(
 			final MongoStorageTestManager manager,
 			final String dbName,
-			final String cookieName) throws IOException {
+			final String cookieName)
+			throws IOException {
+		return generateTempConfigFile(manager, dbName, cookieName, false);
+	}
+	
+	public static Path generateTempConfigFile(
+			final MongoStorageTestManager manager,
+			final String dbName,
+			final String cookieName,
+			final boolean testMode)
+			throws IOException {
 		final Ini ini = new Ini();
 		final Section sec = ini.add("authserv2");
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
 		sec.add("token-cookie-name", cookieName);
 		// don't bother with logger name
+		
+		if (testMode) {
+			sec.add("test-mode-enabled", "true");
+		}
 		
 		sec.add("identity-providers", "prov1, prov2");
 		

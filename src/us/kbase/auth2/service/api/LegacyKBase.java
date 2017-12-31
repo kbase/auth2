@@ -5,12 +5,14 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import us.kbase.auth2.lib.Authentication;
@@ -40,25 +42,21 @@ public class LegacyKBase {
 				"\"user_id\": null").build();
 	}
 	
-	// this just exists to capture requests when the content-type header isn't
-	// set. It seems to be chosen first repeatably. The method below will throw
-	// an ugly error about the @FormParam otherwise.
-	@POST
-	@Consumes(MediaType.TEXT_PLAIN)
-	@Produces(MediaType.APPLICATION_JSON)
-	public void dummyErrorMethod() throws MissingParameterException {
-		throw new MissingParameterException("token");
-	}
-
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> kbaseLogin(
-			@FormParam("token") final String token,
-			@FormParam("fields") String fields)
-			throws AuthStorageException,
-			MissingParameterException, InvalidTokenException, DisabledUserException {
-		final IncomingToken in = new IncomingToken(token);
+			@Context final HttpHeaders headers,
+			final MultivaluedMap<String, String> form)
+			throws AuthStorageException, MissingParameterException, InvalidTokenException,
+				DisabledUserException {
+		if (!MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(headers.getMediaType())) {
+			// goofy, but matches the behavior of the previous service
+			throw new MissingParameterException("token");
+		}
+		
+		final IncomingToken in = new IncomingToken(form.getFirst("token"));
+		String fields = form.getFirst("fields");
 		if (fields == null) {
 			fields = "";
 		}

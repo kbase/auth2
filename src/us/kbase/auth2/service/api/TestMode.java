@@ -30,7 +30,6 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(APIPaths.TESTMODE_V2)
 public class TestMode {
 	
-	// TODO TESTMODE TEST integration
 	// TODO TESTMODE legacy class
 	// TODO JAVADOC or swagger
 	
