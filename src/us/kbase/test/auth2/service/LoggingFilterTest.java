@@ -100,6 +100,11 @@ public class LoggingFilterTest {
 		public String getTokenCookieName() {
 			return COOKIE_NAME;
 		}
+		
+		@Override
+		public boolean isTestModeEnabled() {
+			return false;
+		}
 	}
 	
 	@BeforeClass

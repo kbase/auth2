@@ -18,4 +18,5 @@ public interface AuthStartupConfig {
 	Optional<String> getMongoUser();
 	Optional<char[]> getMongoPwd();
 	String getTokenCookieName();
+	boolean isTestModeEnabled();
 }
