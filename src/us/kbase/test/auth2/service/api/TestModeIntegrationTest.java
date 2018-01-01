@@ -33,8 +33,6 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class TestModeIntegrationTest {
 	
-	//TODO TESTMODE TEST integration test showing the test mode fails when server is not set up in test mode
-
 	/* Eventually all the other api integration tests should be reduced to the minimum possible
 	 * and moved to an API integration test class like this one. The API classes should be modified
 	 * to allow for easy instantiation via constructor dependency injection and
