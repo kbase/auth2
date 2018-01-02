@@ -1,10 +1,13 @@
 package us.kbase.auth2.service.api;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+
 import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -18,12 +21,15 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.Fields;
@@ -102,8 +108,8 @@ public class TestMode {
 		}
 	}
 	
-	//TODO TESTMODE integration test for token create
-	//TODO TESTMODE integration test for token create fail no testmode
+	//TODO TESTMODE integration test for token create and get
+	//TODO TESTMODE integration test for token create and get fail no testmode
 	
 	@POST
 	@Path(APIPaths.TESTMODE_TOKEN_CREATE)
@@ -130,5 +136,14 @@ public class TestMode {
 			throw new IllegalParameterException(e.getMessage(), e);
 		}
 	}
-			
+	
+	@GET
+	@Path(APIPaths.TESTMODE_TOKEN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public APIToken getTestToken(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+				TestModeException {
+		final StoredToken ht = auth.testModeGetToken(getToken(token));
+		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
+	}
 }
