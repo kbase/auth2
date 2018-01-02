@@ -53,8 +53,7 @@ public class Token {
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public APIToken viewToken(
-			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
+	public APIToken viewToken(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
 		final StoredToken ht = auth.getToken(getToken(token));
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());

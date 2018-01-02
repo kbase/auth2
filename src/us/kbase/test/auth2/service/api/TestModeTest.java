@@ -19,14 +19,18 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.service.api.APIToken;
 import us.kbase.auth2.service.api.NewAPIToken;
 import us.kbase.auth2.service.api.TestMode;
 import us.kbase.auth2.service.api.TestMode.CreateTestUser;
@@ -275,6 +279,57 @@ public class TestModeTest {
 			final Exception expected) {
 		try {
 			tm.createTestToken(create);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		final UUID uuid = UUID.randomUUID();
+		
+		when(auth.testModeGetToken(new IncomingToken("a token"))).thenReturn(
+				StoredToken.getBuilder(TokenType.DEV, uuid, new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+						.build());
+		
+		when(auth.getSuggestedTokenCacheTime()).thenReturn(40000L);
+		
+		final APIToken token = tm.getTestToken("a token");
+		
+		final APIToken expected = new APIToken(StoredToken.getBuilder(
+				TokenType.DEV, uuid, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+				.build(),
+				40000);
+		
+		assertThat("incorrect token", token, is(expected));
+	}
+	
+	@Test
+	public void getTokenFailNull() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		failGetToken(tm, null, new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getTokenFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetToken(new IncomingToken("a token")))
+				.thenThrow(new InvalidTokenException());
+		
+		failGetToken(tm, "a token", new InvalidTokenException());
+	}
+	
+	private void failGetToken(final TestMode tm, final String token, final Exception expected) {
+		try {
+			tm.getTestToken(token);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
