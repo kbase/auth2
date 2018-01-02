@@ -134,4 +134,71 @@ public class TestModeIntegrationTest {
 		assertThat("incorrect get user", response2, is(expected));
 	}
 	
+	@Test
+	public void createAndGetToken() {
+		// create user
+		final URI utarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/user/")
+				.build();
+		final WebTarget uwt = CLI.target(utarget);
+		final Builder ureq = uwt.request();
+		
+		final Response ures = ureq.post(Entity.json(
+				ImmutableMap.of("user", "whee", "display", "whoo")));
+		assertThat("user create failed", ures.getStatus(), is(200));
+		
+		// create token
+		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.post(Entity.json(
+				ImmutableMap.of("user", "whee", "type", "Login", "name", "foo")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		// id expires token
+		final long created = (long) response.get("created");
+		response.remove("created");
+		TestCommon.assertCloseToNow(created);
+		final long expires = (long) response.get("expires");
+		response.remove("expires");
+		assertThat("incorrect expires", expires, is(created + (3600 * 1000)));
+		final String id = (String) response.get("id");
+		response.remove("id");
+		final String token = (String) response.get("token");
+		response.remove("token");
+		
+		final Map<String, Object> expected = new HashMap<>();
+		expected.put("type", "Login");
+		expected.put("name", "foo");
+		expected.put("user", "whee");
+		expected.put("custom", Collections.emptyMap());
+		expected.put("cachefor", 300000);
+		
+		assertThat("incorrect return", response, is(expected));
+		
+		// get token
+		final URI target2 = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/token").build();
+		final WebTarget wt2 = CLI.target(target2);
+		final Builder req2 = wt2.request().header("authorization", token);
+		
+		final Response res2 = req2.get();
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response2 = res2.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res2.getStatus(), is(200));
+		
+		expected.put("created", created);
+		expected.put("expires", expires);
+		expected.put("id", id);
+		
+		assertThat("incorrect get token", response2, is(expected));
+	}
+	
 }
