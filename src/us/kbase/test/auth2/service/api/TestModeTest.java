@@ -11,6 +11,7 @@ import static org.mockito.Mockito.when;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -21,9 +22,15 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.token.NewToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.token.TokenName;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.service.api.NewAPIToken;
 import us.kbase.auth2.service.api.TestMode;
 import us.kbase.auth2.service.api.TestMode.CreateTestUser;
+import us.kbase.auth2.service.api.TestMode.CreateTestToken;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
@@ -64,8 +71,7 @@ public class TestModeTest {
 	
 	@Test
 	public void createUserFailNull() {
-		final Authentication auth = mock(Authentication.class);
-		final TestMode tm = new TestMode(auth);
+		final TestMode tm = new TestMode(mock(Authentication.class));
 		failCreateUser(tm, null, new MissingParameterException("JSON body missing"));
 	}
 	
@@ -148,8 +154,7 @@ public class TestModeTest {
 	
 	@Test
 	public void getUserFailNull() throws Exception {
-		final Authentication auth = mock(Authentication.class);
-		final TestMode tm = new TestMode(auth);
+		final TestMode tm = new TestMode(mock(Authentication.class));
 		failGetUser(tm, null, new MissingParameterException("user name"));
 	}
 	
@@ -167,6 +172,109 @@ public class TestModeTest {
 			final Exception expected) {
 		try {
 			tm.getTestUser(userName);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void createTokenNoName() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		final UUID uuid = UUID.randomUUID();
+		
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV))
+				.thenReturn(new NewToken(StoredToken.getBuilder(
+						TokenType.DEV, uuid, new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.build(),
+						"a token"));
+		
+		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
+		
+		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", null, "Dev"));
+		
+		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+				TokenType.DEV, uuid, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+				.build(),
+				"a token"), 30000L);
+		
+		assertThat("incorrect token", token, is(expected));
+	}
+	
+	@Test
+	public void createTokenWithName() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		final UUID uuid = UUID.randomUUID();
+		
+		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT))
+				.thenReturn(new NewToken(StoredToken.getBuilder(
+						TokenType.AGENT, uuid, new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.withTokenName(new TokenName("whee"))
+						.build(),
+						"a token"));
+		
+		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
+		
+		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", "whee", "Agent"));
+		
+		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+				TokenType.AGENT, uuid, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+				.withTokenName(new TokenName("whee"))
+				.build(),
+				"a token"), 30000L);
+		
+		assertThat("incorrect token", token, is(expected));
+	}
+	
+	@Test
+	public void createTokenFailNoJson() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		failCreateToken(tm, null, new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void createTokenFailNulls() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failCreateToken(tm, new CreateTestToken(null, "foo", "Dev"),
+				new MissingParameterException("user name"));
+		failCreateToken(tm, new CreateTestToken("foo", "  \t  \n ", "Dev"),
+				new MissingParameterException("token name"));
+		failCreateToken(tm, new CreateTestToken("whee", "foo", null),
+				new IllegalParameterException("Invalid token type: null"));
+	}
+	
+	@Test
+	public void createTokenFailBadTokenType() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failCreateToken(tm, new CreateTestToken("whee", "foo", "Devv"),
+				new IllegalParameterException("Invalid token type: Devv"));
+	}
+	
+	@Test
+	public void createTokenFailAddlProps() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		final CreateTestToken create = new CreateTestToken("foo", "bar", "baz");
+		create.setAdditionalProperties("whee", "whoo");
+		failCreateToken(tm, create, new IllegalParameterException(
+				"Unexpected parameters in request: whee"));
+	}
+	
+	private void failCreateToken(
+			final TestMode tm,
+			final CreateTestToken create,
+			final Exception expected) {
+		try {
+			tm.createTestToken(create);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

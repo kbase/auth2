@@ -24,6 +24,8 @@ import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.TokenName;
+import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
@@ -83,4 +85,50 @@ public class TestMode {
 				IllegalParameterException, AuthStorageException {
 		return Me.toUserMap(auth.testModeGetUser(new UserName(userName)));
 	}
+	
+	public static class CreateTestToken extends IncomingJSON {
+		public final String userName;
+		public final String tokenName;
+		public final String tokenType;
+
+		@JsonCreator
+		public CreateTestToken(
+				@JsonProperty(Fields.USER) final String userName,
+				@JsonProperty(Fields.TOKEN_NAME) final String tokenName,
+				@JsonProperty(Fields.TOKEN_TYPE) final String tokenType) {
+			this.userName = userName;
+			this.tokenName = tokenName;
+			this.tokenType = tokenType;
+		}
+	}
+	
+	//TODO TESTMODE integration test for token create
+	//TODO TESTMODE integration test for token create fail no testmode
+	
+	@POST
+	@Path(APIPaths.TESTMODE_TOKEN_CREATE)
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public NewAPIToken createTestToken(final CreateTestToken create)
+			throws MissingParameterException, IllegalParameterException, NoSuchUserException,
+				TestModeException, AuthStorageException {
+		if (create == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		create.exceptOnAdditionalProperties();
+		return new NewAPIToken(auth.testModeCreateToken(
+				new UserName(create.userName),
+				create.tokenName == null ? null : new TokenName(create.tokenName),
+				getTokenType(create.tokenType)),
+				auth.getSuggestedTokenCacheTime());
+	}
+
+	private TokenType getTokenType(final String tokenType) throws IllegalParameterException {
+		try {
+			return TokenType.getType(tokenType);
+		} catch (IllegalArgumentException e) {
+			throw new IllegalParameterException(e.getMessage(), e);
+		}
+	}
+			
 }

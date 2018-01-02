@@ -11,6 +11,7 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -20,6 +21,11 @@ import us.kbase.auth2.service.common.ExternalToken;
 import us.kbase.test.auth2.TestCommon;
 
 public class ExternalTokenTest {
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(ExternalToken.class).usingGetClass().verify();
+	}
 	
 	@Test
 	public void constructWithName() throws Exception {
