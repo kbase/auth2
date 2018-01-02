@@ -108,9 +108,6 @@ public class TestMode {
 		}
 	}
 	
-	//TODO TESTMODE integration test for token create and get
-	//TODO TESTMODE integration test for token create and get fail no testmode
-	
 	@POST
 	@Path(APIPaths.TESTMODE_TOKEN_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
