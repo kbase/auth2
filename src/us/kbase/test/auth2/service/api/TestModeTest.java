@@ -335,4 +335,59 @@ public class TestModeTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void me() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUser(new IncomingToken("some token"))).thenReturn(
+				AuthUser.getBuilder(new UserName("un"), new DisplayName("dn"),
+						Instant.ofEpochMilli(10000))
+						.build());
+		
+		final Map<String, Object> got = tm.getTestMe("some token");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("user", "un")
+				.with("display", "dn")
+				.with("created", 10000L)
+				.with("lastlogin", null)
+				.with("roles", Collections.emptyList())
+				.with("customroles", Collections.emptySet())
+				.with("policyids", Collections.emptyList())
+				.with("local", true)
+				.with("email", null)
+				.with("idents", Collections.emptyList())
+				.build();
+		
+		assertThat("incorrect user", got, is(expected));
+	}
+	
+	@Test
+	public void meFailNoToken() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		failMe(tm, null, new NoTokenProvidedException("No user token provided"));
+		failMe(tm, "  \t  \n  ", new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void meFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUser(new IncomingToken("some token")))
+				.thenThrow(new InvalidTokenException("oh noes"));
+		
+		failMe(tm, "some token", new InvalidTokenException("oh noes"));
+	}
+	
+	private void failMe(final TestMode tm, final String token, final Exception expected) {
+		try {
+			tm.getTestMe(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }

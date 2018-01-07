@@ -143,4 +143,14 @@ public class TestMode {
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
 	}
 	
+	@GET
+	@Path(APIPaths.TESTMODE_ME)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getTestMe(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
+			throws InvalidTokenException, NoSuchUserException, TestModeException,
+				NoTokenProvidedException, AuthStorageException {
+		return Me.toUserMap(auth.testModeGetUser(getToken(token)));
+	}
+	
 }

@@ -7,6 +7,8 @@ package us.kbase.auth2.service.api;
 public class APIPaths {
 
 	private static final String SEP = "/";
+
+	private static final String ME = "me";
 	private static final String TOKEN = "token";
 	private static final String USERS = "users";
 	private static final String USER = "user";
@@ -44,7 +46,7 @@ public class APIPaths {
 	public static final String USERS_SEARCH = "search" + SEP + PREFIX_PARAM;
 	
 	/** The me endpoint location. */
-	public static final String API_V2_ME = API_V2 + SEP + "me";
+	public static final String API_V2_ME = API_V2 + SEP + ME;
 	
 	/* test mode endpoints. */
 
@@ -54,7 +56,7 @@ public class APIPaths {
 	private static final String TESTMODE_ONLY = "testmodeonly";
 	
 	/** The testmode token introspection endpoint. */
-	public static final String TESTMODE_TOKEN = API_V2 + SEP + TOKEN;
+	public static final String TESTMODE_TOKEN = API_V2_TOKEN;
 	
 	/** The testmode test token creation endpoint. */
 	public static final String TESTMODE_TOKEN_CREATE = API_V2 + SEP + TESTMODE_ONLY + SEP + TOKEN;
@@ -64,4 +66,7 @@ public class APIPaths {
 	
 	/** The test mode user retrieval endpoint. */
 	public static final String TESTMODE_USER_GET = TESTMODE_USER + SEP + "{" + USERNAME + "}";
+	
+	/** The test mode me endpoint. */
+	public static final String TESTMODE_ME = API_V2_ME;
 }

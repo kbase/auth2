@@ -123,11 +123,11 @@ public class TestModeIntegrationTest {
 		final Builder req2 = wt2.request();
 		
 		final Response res2 = req2.get();
+		assertThat("incorrect response code", res2.getStatus(), is(200));
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
 		
-		assertThat("incorrect response code", res2.getStatus(), is(200));
 		
 		expected.put("created", created);
 		
@@ -187,17 +187,76 @@ public class TestModeIntegrationTest {
 		final Builder req2 = wt2.request().header("authorization", token);
 		
 		final Response res2 = req2.get();
+		assertThat("incorrect response code", res2.getStatus(), is(200));
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
 		
-		assertThat("incorrect response code", res2.getStatus(), is(200));
 		
 		expected.put("created", created);
 		expected.put("expires", expires);
 		expected.put("id", id);
 		
 		assertThat("incorrect get token", response2, is(expected));
+	}
+	
+	@Test
+	public void me() throws Exception {
+		// create user
+		final URI utarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/user/")
+				.build();
+		final WebTarget uwt = CLI.target(utarget);
+		final Builder ureq = uwt.request();
+		
+		final Response ures = ureq.post(Entity.json(
+				ImmutableMap.of("user", "whee", "display", "whoo")));
+		assertThat("user create failed", ures.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> uresponse = ures.readEntity(Map.class);
+		
+		final long created = (long) uresponse.get("created");
+		
+		// create token
+		final URI ttarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
+				.build();
+		final WebTarget twt = CLI.target(ttarget);
+		final Builder treq = twt.request();
+		
+		final Response tres = treq.post(Entity.json(
+				ImmutableMap.of("user", "whee", "type", "Login", "name", "foo")));
+		
+		assertThat("incorrect response code", tres.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> tresponse = tres.readEntity(Map.class);
+		final String token = (String) tresponse.get("token");
+		
+		// get user from me endpoint
+		final URI metarget = UriBuilder.fromUri(host).path("/testmode/api/V2/me").build();
+		final WebTarget mewt = CLI.target(metarget);
+		final Builder mereq = mewt.request().header("authorization", token);
+		
+		final Response meres = mereq.get();
+		assertThat("incorrect response code", meres.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> meresponse = meres.readEntity(Map.class);
+		
+		final Map<String, Object> expected = new HashMap<>();
+		expected.put("lastlogin", null);
+		expected.put("display", "whoo");
+		expected.put("roles", Collections.emptyList());
+		expected.put("customroles", Collections.emptyList());
+		expected.put("policyids", Collections.emptyList());
+		expected.put("user", "whee");
+		expected.put("local", true);
+		expected.put("email", null);
+		expected.put("idents", Collections.emptyList());
+		expected.put("created", created);
+		
+		assertThat("incorrect get user", meresponse, is(expected));
+		
 	}
 	
 }
