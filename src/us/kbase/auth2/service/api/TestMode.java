@@ -35,10 +35,9 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
-@Path(APIPaths.TESTMODE_V2)
+@Path(APIPaths.TESTMODE)
 public class TestMode {
 	
-	// TODO TESTMODE legacy class
 	// TODO JAVADOC or swagger
 	
 	private final Authentication auth;
@@ -143,4 +142,5 @@ public class TestMode {
 		final StoredToken ht = auth.testModeGetToken(getToken(token));
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
 	}
+	
 }

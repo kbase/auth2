@@ -160,7 +160,6 @@ public class TestModeIntegrationTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		// id expires token
 		final long created = (long) response.get("created");
 		response.remove("created");
 		TestCommon.assertCloseToNow(created);

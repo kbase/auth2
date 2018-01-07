@@ -48,24 +48,19 @@ public class APIPaths {
 	
 	/* test mode endpoints. */
 
-	private static final String TESTMODE = "/testmode";
-	
-	/** The version 2 testmode API root. */
-	public static final String TESTMODE_V2 = TESTMODE + API_V2;
-	
-	/** The testmode legacy root. */
-	public static final String TESTMODE_LEGACY = TESTMODE + API_LEGACY;
+	/** The testmode root endpoint. */
+	public static final String TESTMODE = "/testmode";
 	
 	private static final String TESTMODE_ONLY = "testmodeonly";
 	
 	/** The testmode token introspection endpoint. */
-	public static final String TESTMODE_TOKEN = TOKEN;
+	public static final String TESTMODE_TOKEN = API_V2 + SEP + TOKEN;
 	
 	/** The testmode test token creation endpoint. */
-	public static final String TESTMODE_TOKEN_CREATE = TESTMODE_ONLY + SEP + TOKEN;
+	public static final String TESTMODE_TOKEN_CREATE = API_V2 + SEP + TESTMODE_ONLY + SEP + TOKEN;
 	
 	/** The test mode user creation endpoint. */
-	public static final String TESTMODE_USER = TESTMODE_ONLY + SEP + USER;
+	public static final String TESTMODE_USER = API_V2 + SEP + TESTMODE_ONLY + SEP + USER;
 	
 	/** The test mode user retrieval endpoint. */
 	public static final String TESTMODE_USER_GET = TESTMODE_USER + SEP + "{" + USERNAME + "}";
