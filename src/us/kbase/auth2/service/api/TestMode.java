@@ -3,7 +3,11 @@ package us.kbase.auth2.service.api;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.ui.UIUtils.customRolesToList;
 
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.TreeSet;
 
 import javax.inject.Inject;
@@ -11,6 +15,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -23,10 +28,12 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
@@ -191,5 +198,61 @@ public class TestMode {
 			throws TestModeException, AuthStorageException {
 		return ImmutableMap.of(Fields.CUSTOM_ROLES,
 				customRolesToList(new TreeSet<>(auth.testModeGetCustomRoles())));
+	}
+	
+	public static class UserRolesSet extends IncomingJSON {
+		public String userName;
+		public List<String> roles;
+		public List<String> customRoles;
+		
+		@JsonCreator
+		public UserRolesSet(
+				@JsonProperty(Fields.USER) final String userName,
+				@JsonProperty(Fields.ROLES) final List<String> roles,
+				@JsonProperty(Fields.CUSTOM_ROLES) final List<String> customRoles) {
+			this.userName = userName;
+			this.roles = roles;
+			this.customRoles = customRoles;
+		}
+	}
+	
+	@PUT
+	@Path(APIPaths.TESTMODE_USER_ROLES)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void setTestModeUserRoles(final UserRolesSet set)
+			throws MissingParameterException, IllegalParameterException, NoSuchUserException,
+				NoSuchRoleException, TestModeException, AuthStorageException {
+		if (set == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		set.exceptOnAdditionalProperties();
+		final List<String> roles = set.roles == null ? Collections.emptyList() : set.roles;
+		final List<String> customRoles = set.customRoles == null ? Collections.emptyList() :
+			set.customRoles;
+		noNulls(roles, "Null item in roles");
+		noNulls(customRoles, "Null item in custom roles");
+		auth.testModeSetRoles(
+				new UserName(set.userName), toRoles(roles), new HashSet<>(customRoles));
+	}
+	
+	private Set<Role> toRoles(final List<String> roles) throws IllegalParameterException {
+		final Set<Role> ret = new HashSet<>();
+		for (final String role: roles) {
+			try {
+				ret.add(Role.getRole(role));
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException(e.getMessage(), e);
+			}
+		}
+		return ret;
+	}
+
+	private void noNulls(final List<String> l, final String message)
+			throws IllegalParameterException {
+		for (final String s: l) {
+			if (s == null) {
+				throw new IllegalParameterException(message);
+			}
+		}
 	}
 }

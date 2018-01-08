@@ -118,8 +118,16 @@ public class TestModeIntegrationTest {
 		
 		assertThat("incorrect return", response, is(expected));
 		
+		final Map<String, Object> response2 = getUser("whee");
+		
+		expected.put("created", created);
+		
+		assertThat("incorrect get user", response2, is(expected));
+	}
+
+	private Map<String, Object> getUser(final String user) {
 		final URI target2 = UriBuilder.fromUri(host)
-				.path("/testmode/api/V2/testmodeonly/user/whee").build();
+				.path("/testmode/api/V2/testmodeonly/user/" + user).build();
 		final WebTarget wt2 = CLI.target(target2);
 		final Builder req2 = wt2.request();
 		
@@ -128,11 +136,7 @@ public class TestModeIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		
-		
-		expected.put("created", created);
-		
-		assertThat("incorrect get user", response2, is(expected));
+		return response2;
 	}
 	
 	@Test
@@ -203,18 +207,7 @@ public class TestModeIntegrationTest {
 	
 	@Test
 	public void me() throws Exception {
-		// create user
-		final URI utarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/user/")
-				.build();
-		final WebTarget uwt = CLI.target(utarget);
-		final Builder ureq = uwt.request();
-		
-		final Response ures = ureq.post(Entity.json(
-				ImmutableMap.of("user", "whee", "display", "whoo")));
-		assertThat("user create failed", ures.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> uresponse = ures.readEntity(Map.class);
+		final Map<String, Object> uresponse = createUser("whee", "whoo");
 		
 		final long created = (long) uresponse.get("created");
 		
@@ -258,19 +251,25 @@ public class TestModeIntegrationTest {
 		
 		assertThat("incorrect get user", meresponse, is(expected));
 	}
+
+	private Map<String, Object> createUser(final String user, final String display) {
+		final URI utarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/user/")
+				.build();
+		final WebTarget uwt = CLI.target(utarget);
+		final Builder ureq = uwt.request();
+		
+		final Response ures = ureq.post(Entity.json(
+				ImmutableMap.of("user", user, "display", display)));
+		assertThat("user create failed", ures.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> uresponse = ures.readEntity(Map.class);
+		return uresponse;
+	}
 	
 	@Test
 	public void createAndGetCustomRole() throws Exception {
-		// create role
-		final URI ctarget = UriBuilder.fromUri(host)
-				.path("/testmode/api/V2/testmodeonly/customroles/")
-				.build();
-		final WebTarget cwt = CLI.target(ctarget);
-		final Builder creq = cwt.request();
-		
-		final Response cres = creq.post(Entity.json(
-				ImmutableMap.of("id", "thingy", "desc", "yay!")));
-		assertThat("role create failed", cres.getStatus(), is(204));
+		createCustomRole("thingy", "yay!");
 		
 		// list roles
 		final URI gtarget = UriBuilder.fromUri(host)
@@ -287,6 +286,57 @@ public class TestModeIntegrationTest {
 		
 		assertThat("incorrect roles", gresponse, is(ImmutableMap.of("customroles", Arrays.asList(
 				ImmutableMap.of("id", "thingy", "desc", "yay!")))));
+	}
+
+	private void createCustomRole(final String id, final String description) {
+		final URI ctarget = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/testmodeonly/customroles/")
+				.build();
+		final WebTarget cwt = CLI.target(ctarget);
+		final Builder creq = cwt.request();
+		
+		final Response cres = creq.post(Entity.json(
+				ImmutableMap.of("id", id, "desc", description)));
+		assertThat("role create failed", cres.getStatus(), is(204));
+	}
+	
+	@Test
+	public void setRoles() {
+		final long created = (long) createUser("whee", "whoo").get("created");
+		createCustomRole("foo", "baz");
+		createCustomRole("bar", "bat");
+		
+		//set roles
+		final URI starget = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/testmodeonly/userroles/")
+				.build();
+		final WebTarget swt = CLI.target(starget);
+		final Builder sreq = swt.request();
+		
+		final Response sres = sreq.put(Entity.json(ImmutableMap.of(
+				"user", "whee",
+				"roles", Arrays.asList("Admin", "DevToken"),
+				"customroles", Arrays.asList("foo", "bar"))));
+		
+		assertThat("roles set failed", sres.getStatus(), is(204));
+		
+		final Map<String, Object> user = getUser("whee");
+		
+		final Map<String, Object> expected = new HashMap<>();
+		expected.put("lastlogin", null);
+		expected.put("display", "whoo");
+		expected.put("roles", Arrays.asList(
+				ImmutableMap.of("id", "Admin", "desc", "Administrator"),
+				ImmutableMap.of("id", "DevToken", "desc", "Create developer tokens")));
+		expected.put("customroles", Arrays.asList("bar", "foo"));
+		expected.put("policyids", Collections.emptyList());
+		expected.put("user", "whee");
+		expected.put("local", true);
+		expected.put("email", null);
+		expected.put("idents", Collections.emptyList());
+		expected.put("created", created);
+		
+		assertThat("user modification failed", user, is(expected));
 	}
 	
 }
