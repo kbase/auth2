@@ -12,6 +12,7 @@ import java.util.TreeSet;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
+import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
@@ -254,5 +255,11 @@ public class TestMode {
 				throw new IllegalParameterException(message);
 			}
 		}
+	}
+	
+	@DELETE
+	@Path(APIPaths.TESTMODE_CLEAR)
+	public void clear() throws AuthStorageException {
+		auth.testModeClear();
 	}
 }

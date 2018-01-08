@@ -15,6 +15,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
 
@@ -126,13 +127,17 @@ public class TestModeIntegrationTest {
 	}
 
 	private Map<String, Object> getUser(final String user) {
+		return getUser(user, 200);
+	}
+	
+	private Map<String, Object> getUser(final String user, final int code) {
 		final URI target2 = UriBuilder.fromUri(host)
 				.path("/testmode/api/V2/testmodeonly/user/" + user).build();
 		final WebTarget wt2 = CLI.target(target2);
-		final Builder req2 = wt2.request();
+		final Builder req2 = wt2.request().header("accept", MediaType.APPLICATION_JSON);
 		
 		final Response res2 = req2.get();
-		assertThat("incorrect response code", res2.getStatus(), is(200));
+		assertThat("incorrect response code", res2.getStatus(), is(code));
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
@@ -151,19 +156,7 @@ public class TestModeIntegrationTest {
 				ImmutableMap.of("user", "whee", "display", "whoo")));
 		assertThat("user create failed", ures.getStatus(), is(200));
 		
-		// create token
-		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
-				.build();
-		final WebTarget wt = CLI.target(target);
-		final Builder req = wt.request();
-		
-		final Response res = req.post(Entity.json(
-				ImmutableMap.of("user", "whee", "type", "Login", "name", "foo")));
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = res.readEntity(Map.class);
+		final Map<String, Object> response = createToken("whee", "Login", "foo");
 		
 		final long created = (long) response.get("created");
 		response.remove("created");
@@ -185,24 +178,53 @@ public class TestModeIntegrationTest {
 		
 		assertThat("incorrect return", response, is(expected));
 		
-		// get token
-		final URI target2 = UriBuilder.fromUri(host)
-				.path("/testmode/api/V2/token").build();
-		final WebTarget wt2 = CLI.target(target2);
-		final Builder req2 = wt2.request().header("authorization", token);
-		
-		final Response res2 = req2.get();
-		assertThat("incorrect response code", res2.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		
+		final Map<String, Object> response2 = getToken(token);
 		
 		expected.put("created", created);
 		expected.put("expires", expires);
 		expected.put("id", id);
 		
 		assertThat("incorrect get token", response2, is(expected));
+	}
+	
+	private Map<String, Object> getToken(final String token) {
+		return getToken(token, 200);
+	}
+	
+	private Map<String, Object> getToken(final String token, final int code) {
+		final URI target2 = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/token").build();
+		final WebTarget wt2 = CLI.target(target2);
+		final Builder req2 = wt2.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token);
+		
+		final Response res2 = req2.get();
+		assertThat("incorrect response code", res2.getStatus(), is(code));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response2 = res2.readEntity(Map.class);
+		return response2;
+	}
+	
+
+	private Map<String, Object> createToken(
+			final String user,
+			final String type,
+			final String name) {
+		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.post(Entity.json(
+				ImmutableMap.of("user", user, "type", type, "name", name)));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		return response;
 	}
 	
 	@Test
@@ -271,7 +293,13 @@ public class TestModeIntegrationTest {
 	public void createAndGetCustomRole() throws Exception {
 		createCustomRole("thingy", "yay!");
 		
-		// list roles
+		final Map<String, Object> gresponse = listCustomRoles();
+		
+		assertThat("incorrect roles", gresponse, is(ImmutableMap.of("customroles", Arrays.asList(
+				ImmutableMap.of("id", "thingy", "desc", "yay!")))));
+	}
+	
+	private Map<String, Object> listCustomRoles() {
 		final URI gtarget = UriBuilder.fromUri(host)
 				.path("/testmode/api/V2/testmodeonly/customroles/")
 				.build();
@@ -283,9 +311,7 @@ public class TestModeIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> gresponse = gres.readEntity(Map.class);
-		
-		assertThat("incorrect roles", gresponse, is(ImmutableMap.of("customroles", Arrays.asList(
-				ImmutableMap.of("id", "thingy", "desc", "yay!")))));
+		return gresponse;
 	}
 
 	private void createCustomRole(final String id, final String description) {
@@ -337,6 +363,36 @@ public class TestModeIntegrationTest {
 		expected.put("created", created);
 		
 		assertThat("user modification failed", user, is(expected));
+	}
+	
+	@Test
+	public void clear() {
+		createUser("foo", "bar");
+		createCustomRole("whee", "whoo");
+		final String token = (String) createToken("foo", "Login", "myFirstFischerPriceToken")
+				.get("token");
+		
+		getUser("foo");
+		getToken(token);
+		assertThat("incorrect roles", listCustomRoles(),
+				is(ImmutableMap.of("customroles", Arrays.asList(
+						ImmutableMap.of("id", "whee", "desc", "whoo")))));
+		
+		// clear
+		final URI starget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/clear/")
+				.build();
+		final WebTarget swt = CLI.target(starget);
+		final Builder sreq = swt.request();
+		
+		final Response sres = sreq.delete();
+		
+		assertThat("clear failed", sres.getStatus(), is(204));
+		
+		getUser("foo", 404);
+		getToken(token, 401);
+		assertThat("incorrect roles", listCustomRoles(),
+				is(ImmutableMap.of("customroles", Collections.emptyList())));
+		
 	}
 	
 }

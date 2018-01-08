@@ -77,4 +77,7 @@ public class APIPaths {
 	/** The test mode user roles endpoint. */
 	public static final String TESTMODE_USER_ROLES = API_V2 + SEP + TESTMODE_ONLY + SEP +
 			"userroles";
+	
+	/** The test mode clear endpoint. */
+	public static final String TESTMODE_CLEAR = API_V2 + SEP + TESTMODE_ONLY + SEP + "clear";
 }

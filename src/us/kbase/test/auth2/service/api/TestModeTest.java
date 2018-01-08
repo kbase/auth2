@@ -562,4 +562,14 @@ public class TestModeTest {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
+	
+	@Test
+	public void clear() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		tm.clear();
+		
+		verify(auth).testModeClear();
+	}
 }
