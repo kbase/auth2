@@ -35,10 +35,9 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
-@Path(APIPaths.TESTMODE_V2)
+@Path(APIPaths.TESTMODE)
 public class TestMode {
 	
-	// TODO TESTMODE legacy class
 	// TODO JAVADOC or swagger
 	
 	private final Authentication auth;
@@ -143,4 +142,15 @@ public class TestMode {
 		final StoredToken ht = auth.testModeGetToken(getToken(token));
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
 	}
+	
+	@GET
+	@Path(APIPaths.TESTMODE_ME)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getTestMe(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
+			throws InvalidTokenException, NoSuchUserException, TestModeException,
+				NoTokenProvidedException, AuthStorageException {
+		return Me.toUserMap(auth.testModeGetUser(getToken(token)));
+	}
+	
 }

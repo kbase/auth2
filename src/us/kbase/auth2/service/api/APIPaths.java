@@ -7,6 +7,8 @@ package us.kbase.auth2.service.api;
 public class APIPaths {
 
 	private static final String SEP = "/";
+
+	private static final String ME = "me";
 	private static final String TOKEN = "token";
 	private static final String USERS = "users";
 	private static final String USER = "user";
@@ -44,29 +46,27 @@ public class APIPaths {
 	public static final String USERS_SEARCH = "search" + SEP + PREFIX_PARAM;
 	
 	/** The me endpoint location. */
-	public static final String API_V2_ME = API_V2 + SEP + "me";
+	public static final String API_V2_ME = API_V2 + SEP + ME;
 	
 	/* test mode endpoints. */
 
-	private static final String TESTMODE = "/testmode";
-	
-	/** The version 2 testmode API root. */
-	public static final String TESTMODE_V2 = TESTMODE + API_V2;
-	
-	/** The testmode legacy root. */
-	public static final String TESTMODE_LEGACY = TESTMODE + API_LEGACY;
+	/** The testmode root endpoint. */
+	public static final String TESTMODE = "/testmode";
 	
 	private static final String TESTMODE_ONLY = "testmodeonly";
 	
 	/** The testmode token introspection endpoint. */
-	public static final String TESTMODE_TOKEN = TOKEN;
+	public static final String TESTMODE_TOKEN = API_V2_TOKEN;
 	
 	/** The testmode test token creation endpoint. */
-	public static final String TESTMODE_TOKEN_CREATE = TESTMODE_ONLY + SEP + TOKEN;
+	public static final String TESTMODE_TOKEN_CREATE = API_V2 + SEP + TESTMODE_ONLY + SEP + TOKEN;
 	
 	/** The test mode user creation endpoint. */
-	public static final String TESTMODE_USER = TESTMODE_ONLY + SEP + USER;
+	public static final String TESTMODE_USER = API_V2 + SEP + TESTMODE_ONLY + SEP + USER;
 	
 	/** The test mode user retrieval endpoint. */
 	public static final String TESTMODE_USER_GET = TESTMODE_USER + SEP + "{" + USERNAME + "}";
+	
+	/** The test mode me endpoint. */
+	public static final String TESTMODE_ME = API_V2_ME;
 }
