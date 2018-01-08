@@ -7,22 +7,29 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Map;
 import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -34,6 +41,7 @@ import us.kbase.auth2.service.api.APIToken;
 import us.kbase.auth2.service.api.NewAPIToken;
 import us.kbase.auth2.service.api.TestMode;
 import us.kbase.auth2.service.api.TestMode.CreateTestUser;
+import us.kbase.auth2.service.api.TestMode.CustomRoleCreate;
 import us.kbase.auth2.service.api.TestMode.CreateTestToken;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
@@ -385,6 +393,86 @@ public class TestModeTest {
 	private void failMe(final TestMode tm, final String token, final Exception expected) {
 		try {
 			tm.getTestMe(token);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getCustomRolesEmpty() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetCustomRoles()).thenReturn(set());
+		
+		assertThat("incorrect custom roles", tm.getTestCustomRoles(),
+				is(ImmutableMap.of("customroles", Collections.emptyList())));
+	}
+	
+	@Test
+	public void getCustomRoles() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetCustomRoles()).thenReturn(
+				set(new CustomRole("foo", "bar"), new CustomRole("whee", "whoo")));
+		
+		assertThat("incorrect custom roles", tm.getTestCustomRoles(),
+				is(ImmutableMap.of("customroles", Arrays.asList(
+						ImmutableMap.of("id", "foo", "desc", "bar"),
+						ImmutableMap.of("id", "whee", "desc", "whoo")))));
+	}
+	
+	@Test
+	public void setCustomRole() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		tm.createTestCustomRole(new CustomRoleCreate("foo", "bar"));
+		
+		verify(auth).testModeSetCustomRole(new CustomRole("foo", "bar"));
+	}
+	
+	@Test
+	public void setCustomRoleFailNull() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failSetCustomRole(tm, null, new MissingParameterException("JSON body missing"));
+		failSetCustomRole(tm, new CustomRoleCreate(null, "foo"),
+				new MissingParameterException("custom role id"));
+		failSetCustomRole(tm, new CustomRoleCreate("bar", null),
+				new MissingParameterException("custom role description"));
+	}
+	
+	@Test
+	public void setCustomRoleFailAddlArgs() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		final CustomRoleCreate create = new CustomRoleCreate("foo", "bar");
+		create.setAdditionalProperties("whee", "whoo");
+		
+		failSetCustomRole(tm, create, new IllegalParameterException(
+				"Unexpected parameters in request: whee"));
+	}
+	
+	@Test
+	public void setCustomRoleFailNoTestMode() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		doThrow(new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"))
+				.when(auth).testModeSetCustomRole(new CustomRole("foo", "bar"));
+		
+		failSetCustomRole(tm, new CustomRoleCreate("foo", "bar"),
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+	}
+	
+	private void failSetCustomRole(
+			final TestMode tm,
+			final CustomRoleCreate create,
+			final Exception expected) {
+		try {
+			tm.createTestCustomRole(create);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

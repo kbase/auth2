@@ -1,8 +1,10 @@
 package us.kbase.auth2.service.api;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
+import static us.kbase.auth2.service.ui.UIUtils.customRolesToList;
 
 import java.util.Map;
+import java.util.TreeSet;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -16,8 +18,10 @@ import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -153,4 +157,39 @@ public class TestMode {
 		return Me.toUserMap(auth.testModeGetUser(getToken(token)));
 	}
 	
+	public static class CustomRoleCreate extends IncomingJSON {
+		public final String id;
+		public final String description;
+		
+		@JsonCreator
+		public CustomRoleCreate(
+				@JsonProperty(Fields.ID) final String id,
+				@JsonProperty(Fields.DESCRIPTION) final String description) {
+			this.id = id;
+			this.description = description;
+		}
+	}
+	
+	@POST
+	@Path(APIPaths.TESTMODE_CUSTOM_ROLES)
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public void createTestCustomRole(final CustomRoleCreate create)
+			throws TestModeException, MissingParameterException, IllegalParameterException,
+				AuthStorageException {
+		if (create == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		create.exceptOnAdditionalProperties();
+		auth.testModeSetCustomRole(new CustomRole(create.id, create.description));
+	}
+	
+	@GET
+	@Path(APIPaths.TESTMODE_CUSTOM_ROLES)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getTestCustomRoles()
+			throws TestModeException, AuthStorageException {
+		return ImmutableMap.of(Fields.CUSTOM_ROLES,
+				customRolesToList(new TreeSet<>(auth.testModeGetCustomRoles())));
+	}
 }
