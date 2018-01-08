@@ -22,6 +22,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -42,6 +43,7 @@ import us.kbase.auth2.service.api.NewAPIToken;
 import us.kbase.auth2.service.api.TestMode;
 import us.kbase.auth2.service.api.TestMode.CreateTestUser;
 import us.kbase.auth2.service.api.TestMode.CustomRoleCreate;
+import us.kbase.auth2.service.api.TestMode.UserRolesSet;
 import us.kbase.auth2.service.api.TestMode.CreateTestToken;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
@@ -473,6 +475,88 @@ public class TestModeTest {
 			final Exception expected) {
 		try {
 			tm.createTestCustomRole(create);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void setRolesEmptyNulls() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		tm.setTestModeUserRoles(new UserRolesSet("foo", null, null));
+		
+		verify(auth).testModeSetRoles(
+				new UserName("foo"), Collections.emptySet(), Collections.emptySet());
+	}
+	
+	@Test
+	public void setRolesEmptyLists() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		tm.setTestModeUserRoles(new UserRolesSet(
+				"foo", Collections.emptyList(), Collections.emptyList()));
+		
+		verify(auth).testModeSetRoles(
+				new UserName("foo"), Collections.emptySet(), Collections.emptySet());
+	}
+	
+	@Test
+	public void setRoles() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		tm.setTestModeUserRoles(new UserRolesSet(
+				"foo", Arrays.asList("DevToken", "Admin"), Arrays.asList("foo", "bar")));
+		
+		verify(auth).testModeSetRoles(
+				new UserName("foo"), set(Role.DEV_TOKEN, Role.ADMIN), set("foo", "bar"));
+	}
+	
+	@Test
+	public void setRolesFailNulls() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failSetRoles(tm, null, new MissingParameterException("JSON body missing"));
+		failSetRoles(tm, new UserRolesSet(null, null, null),
+				new MissingParameterException("user name"));
+		failSetRoles(tm, new UserRolesSet("foo", Arrays.asList("Admin", null), null),
+				new IllegalParameterException("Null item in roles"));
+		failSetRoles(tm, new UserRolesSet("foo", null, Arrays.asList("foo", null)),
+				new IllegalParameterException("Null item in custom roles"));
+	}
+	
+	@Test
+	public void setRolesFailAddlArgs() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		final UserRolesSet set = new UserRolesSet("foo", null, null);
+		set.setAdditionalProperties("whee", "whoo");
+		
+		failSetRoles(tm, set, new IllegalParameterException(
+				"Unexpected parameters in request: whee"));
+	}
+	
+	@Test
+	public void setRolesFailBadRole() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		final UserRolesSet set = new UserRolesSet(
+				"foo", Arrays.asList("Admin", "UberAdmin"), null);
+		
+		failSetRoles(tm, set, new IllegalParameterException(
+				"Invalid role id: UberAdmin"));
+	}
+	
+	private void failSetRoles(
+			final TestMode tm,
+			final UserRolesSet set,
+			final Exception expected) {
+		try {
+			tm.setTestModeUserRoles(set);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

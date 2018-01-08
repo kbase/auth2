@@ -425,10 +425,9 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@PathParam(UIPaths.USER) final String user,
 			final MultivaluedMap<String, String> form)
-			throws NoSuchUserException, AuthStorageException,
-			NoSuchRoleException, MissingParameterException,
-			IllegalParameterException, UnauthorizedException,
-			InvalidTokenException, NoTokenProvidedException {
+			throws NoSuchUserException, AuthStorageException, NoSuchRoleException,
+				MissingParameterException, IllegalParameterException, UnauthorizedException,
+				InvalidTokenException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final UserName userName = new UserName(user);
 		final AuthUser au = auth.getUserAsAdmin(token, userName);
@@ -520,7 +519,7 @@ public class Admin {
 			@FormParam(Fields.ID) final String roleId,
 			@FormParam(Fields.DESCRIPTION) final String description)
 			throws MissingParameterException, AuthStorageException, InvalidTokenException,
-			 UnauthorizedException, NoTokenProvidedException, IllegalParameterException {
+				UnauthorizedException, NoTokenProvidedException, IllegalParameterException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new CustomRole(roleId, description));
 	}
