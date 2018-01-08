@@ -30,7 +30,7 @@ public class APIPaths {
 	public static final String LEGACY_KBASE = API_LEGACY + "/KBase/Sessions/Login";
 	
 	/** The root location of the Globus legacy endpoints. */
-	public static final String LEGACY_GLOBUS = API_LEGACY + "/globus";
+	public static final String LEGACY_GLOBUS = API_LEGACY + SEP + "globus";
 	
 	/** The Globus token legacy endpoint location relative to the Globus root. */
 	public static final String LEGACY_GLOBUS_USERS = USERS + SEP + "{user}";
@@ -80,4 +80,10 @@ public class APIPaths {
 	
 	/** The test mode clear endpoint. */
 	public static final String TESTMODE_CLEAR = API_V2 + SEP + TESTMODE_ONLY + SEP + "clear";
+	
+	/** The test mode globus token endpoint. */
+	public static final String TESTMODE_GLOBUS_TOKEN = LEGACY_GLOBUS + SEP + LEGACY_GLOBUS_TOKEN;
+	
+	/** Test test mode globus user endpoint. */
+	public static final String TESTMODE_GLOBUS_USER = LEGACY_GLOBUS + SEP + LEGACY_GLOBUS_USERS;
 }

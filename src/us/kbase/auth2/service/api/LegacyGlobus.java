@@ -38,6 +38,11 @@ public class LegacyGlobus {
 	@Inject
 	private Authentication auth;
 	
+	interface TokenProvider {
+		StoredToken getToken(final Authentication auth, final IncomingToken token)
+				throws InvalidTokenException, AuthStorageException;
+	}
+	
 	// note that access_token_hash is not returned in the structure
 	// also note that unlike the globus api, this does not refresh the token
 	// also note that the error structure is completely different. 
@@ -50,6 +55,17 @@ public class LegacyGlobus {
 			@QueryParam("grant_type") final String grantType)
 			throws AuthStorageException, AuthException {
 
+		return getToken((a, t) -> a.getToken(t), auth, xtoken, token, grantType);
+	}
+
+	Map<String, Object> getToken(
+			final TokenProvider tokenProvider,
+			final Authentication auth,
+			final String xtoken,
+			String token,
+			final String grantType)
+			throws AuthException, UnauthorizedException, AuthStorageException,
+				MissingParameterException {
 		if (!"client_credentials".equals(grantType)) {
 			throw new AuthException(ErrorType.UNSUPPORTED_OP,
 					"Only client_credentials grant_type supported. Got " +
@@ -58,7 +74,7 @@ public class LegacyGlobus {
 		token = getGlobusToken(xtoken, token);
 		final StoredToken ht;
 		try {
-			ht = auth.getToken(new IncomingToken(token));
+			ht = tokenProvider.getToken(auth, new IncomingToken(token));
 		} catch (InvalidTokenException e) {
 			// globus throws a 403 instead of a 401
 			throw new UnauthorizedException(
