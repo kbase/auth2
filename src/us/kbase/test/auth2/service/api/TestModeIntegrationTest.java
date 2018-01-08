@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -256,7 +257,36 @@ public class TestModeIntegrationTest {
 		expected.put("created", created);
 		
 		assertThat("incorrect get user", meresponse, is(expected));
+	}
+	
+	@Test
+	public void createAndGetCustomRole() throws Exception {
+		// create role
+		final URI ctarget = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/testmodeonly/customroles/")
+				.build();
+		final WebTarget cwt = CLI.target(ctarget);
+		final Builder creq = cwt.request();
 		
+		final Response cres = creq.post(Entity.json(
+				ImmutableMap.of("id", "thingy", "desc", "yay!")));
+		assertThat("role create failed", cres.getStatus(), is(204));
+		
+		// list roles
+		final URI gtarget = UriBuilder.fromUri(host)
+				.path("/testmode/api/V2/testmodeonly/customroles/")
+				.build();
+		final WebTarget gwt = CLI.target(gtarget);
+		final Builder greq = gwt.request();
+		
+		final Response gres = greq.get();
+		assertThat("role create failed", gres.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> gresponse = gres.readEntity(Map.class);
+		
+		assertThat("incorrect roles", gresponse, is(ImmutableMap.of("customroles", Arrays.asList(
+				ImmutableMap.of("id", "thingy", "desc", "yay!")))));
 	}
 	
 }

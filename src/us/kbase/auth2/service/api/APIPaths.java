@@ -69,4 +69,8 @@ public class APIPaths {
 	
 	/** The test mode me endpoint. */
 	public static final String TESTMODE_ME = API_V2_ME;
+	
+	/** The test mode custom roles endpoint. */
+	public static final String TESTMODE_CUSTOM_ROLES = API_V2 + SEP + TESTMODE_ONLY + SEP +
+			"customroles";
 }

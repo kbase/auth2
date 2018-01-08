@@ -519,9 +519,8 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@FormParam(Fields.ID) final String roleId,
 			@FormParam(Fields.DESCRIPTION) final String description)
-			throws MissingParameterException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException, IllegalParameterException {
+			throws MissingParameterException, AuthStorageException, InvalidTokenException,
+			 UnauthorizedException, NoTokenProvidedException, IllegalParameterException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new CustomRole(roleId, description));
 	}
