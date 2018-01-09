@@ -17,6 +17,8 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.ws.rs.core.Response;
+
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -727,6 +729,19 @@ public class TestModeTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void dummyKBaseGet() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
 		
+		final Response r = tm.kbaseDummyGetMethod();
+		
+		assertThat("incorrect code", r.getStatus(), is(401));
+		assertThat("incorrect reason", r.getStatusInfo().getReasonPhrase(), is("Unauthorized"));
+		assertThat("incorrect entity", r.getEntity(), is(
+				"This GET method is just here for compatibility with " +
+				"the old java client and does nothing useful. Here's the compatibility part: " +
+				"\"user_id\": null"));
 	}
 }

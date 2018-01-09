@@ -19,6 +19,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -54,7 +55,7 @@ public class LegacyKBase {
 	interface UserProvider {
 		AuthUser getUser(Authentication auth, IncomingToken token)
 				throws AuthStorageException, DisabledUserException, InvalidTokenException,
-				TestModeException;
+					TestModeException, NoSuchUserException;
 	}
 	
 	@POST
@@ -64,7 +65,8 @@ public class LegacyKBase {
 			@Context final HttpHeaders headers,
 			final MultivaluedMap<String, String> form)
 			throws AuthStorageException, MissingParameterException, InvalidTokenException,
-				DisabledUserException, TestModeException {
+				DisabledUserException, TestModeException, NoSuchUserException {
+		//TODO CODE get rid of NoSuchUser exception by catching and wrapping in runtime. Can't happen here
 		final MediaType mediaType = headers.getMediaType();
 		return kbaseLogin(auth, (a, t) -> a.getToken(t), (a, t) -> a.getUser(t), form, mediaType);
 	}
@@ -76,7 +78,7 @@ public class LegacyKBase {
 			final MultivaluedMap<String, String> form,
 			final MediaType mediaType)
 			throws MissingParameterException, InvalidTokenException, AuthStorageException,
-				DisabledUserException, TestModeException {
+				DisabledUserException, TestModeException, NoSuchUserException {
 		if (!MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(mediaType)) {
 			// goofy, but matches the behavior of the previous service
 			throw new MissingParameterException("token");
