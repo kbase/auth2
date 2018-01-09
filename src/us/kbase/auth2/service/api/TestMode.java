@@ -306,8 +306,6 @@ public class TestMode {
 		return new LegacyKBase(auth).dummyGetMethod();
 	}
 	
-	//TODO NOW TEST
-	
 	@POST
 	@Path(APIPaths.TESTMODE_KBASE_TOKEN)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
