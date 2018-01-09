@@ -8,6 +8,7 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 import javax.ws.rs.client.Client;
@@ -27,6 +28,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
+import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
@@ -70,6 +72,7 @@ public class TestModeIntegrationTest {
 		}
 		port = server.getPort();
 		host = "http://localhost:" + port;
+		System.out.println("started auth server at " + host);
 	}
 	
 	@AfterClass
@@ -393,6 +396,53 @@ public class TestModeIntegrationTest {
 		assertThat("incorrect roles", listCustomRoles(),
 				is(ImmutableMap.of("customroles", Collections.emptyList())));
 		
+	}
+	
+	@Test
+	public void globusToken() {
+		createUser("foo", "bar");
+		final Map<String, Object> token = createToken("foo", "Login", "mytoken");
+		final long created = (long) token.get("created");
+		final String tok = (String) token.get("token");
+		
+		final Map<String, Object> got1 = getGlobusToken(tok, "x-globus-goauthtoken");
+		final Map<String, Object> got2 = getGlobusToken(tok, "globus-goauthtoken");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("access_token", tok)
+				.with("client_id", "foo")
+				.with("expiry", (int) (created / 1000 + 3600))
+				.with("expires_in", 3600)
+				.with("issued_on", (int) (created / 1000))
+				.with("lifetime", 3600)
+				.with("refresh_token", "")
+				.with("scopes", new LinkedList<String>())
+				.with("token_id", token.get("id"))
+				.with("token_type", "Bearer")
+				.with("user_name", "foo")
+				.build();
+		
+		assertThat("incorrect token", got1, is(expected));
+		assertThat("incorrect token", got2, is(expected));
+	}
+
+	private Map<String, Object> getGlobusToken(final String tok, final String header) {
+		final URI xtarget = UriBuilder.fromUri(host)
+				.path("/testmode/api/legacy/globus/goauth/token/")
+				.queryParam("grant_type", "client_credentials")
+				.build();
+		final WebTarget xwt = CLI.target(xtarget);
+		final Builder xreq = xwt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header(header, tok);
+		
+		final Response xres = xreq.get();
+		
+		assertThat("incorrect response code", xres.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> xresponse = xres.readEntity(Map.class);
+		return xresponse;
 	}
 	
 }
