@@ -22,6 +22,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -292,5 +293,13 @@ public class TestMode {
 		
 		return LegacyGlobus.getUser(
 				(a, t, u) -> a.testModeGetUser(t, u), auth, xtoken, token, user);
+	}
+	
+	//TODO NOW TEST
+	@GET
+	@Path(APIPaths.TESTMODE_KBASE_TOKEN)
+	@Produces(MediaType.TEXT_HTML)
+	public Response dummyGetMethod() {
+		return new LegacyKBase(auth).dummyGetMethod();
 	}
 }
