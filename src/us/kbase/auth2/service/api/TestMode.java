@@ -20,6 +20,7 @@ import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
@@ -31,6 +32,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -261,5 +263,18 @@ public class TestMode {
 	@Path(APIPaths.TESTMODE_CLEAR)
 	public void clear() throws AuthStorageException {
 		auth.testModeClear();
+	}
+	
+	@GET
+	@Path(APIPaths.TESTMODE_GLOBUS_TOKEN)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getGlobusToken(
+			@HeaderParam("x-globus-goauthtoken") final String xtoken,
+			@HeaderParam("globus-goauthtoken") final String token,
+			@QueryParam("grant_type") final String grantType)
+			throws AuthStorageException, AuthException {
+
+		return LegacyGlobus.getToken(
+				(a, t) -> a.testModeGetToken(t), auth, xtoken, token, grantType);
 	}
 }

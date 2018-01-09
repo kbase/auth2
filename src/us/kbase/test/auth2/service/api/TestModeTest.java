@@ -10,8 +10,10 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,6 +26,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -571,5 +574,86 @@ public class TestModeTest {
 		tm.clear();
 		
 		verify(auth).testModeClear();
+	}
+	
+	@Test
+	public void globusToken() throws Exception {
+		globusToken("fake", "whee!");
+		globusToken("whee!", null);
+		globusToken("whee!", "   \t  \n  ");
+	}
+
+	private void globusToken(final String xtoken, final String token) throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		final Instant future = Instant.now().plus(20, ChronoUnit.SECONDS);
+		final UUID id = UUID.randomUUID();
+		
+		when(auth.testModeGetToken(new IncomingToken("whee!"))).thenReturn(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("goo"))
+				.withLifeTime(Instant.ofEpochMilli(10000L), future)
+				.build());
+		
+		final Map<String, Object> got = tm.getGlobusToken(xtoken, token, "client_credentials");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("access_token", "whee!")
+				.with("client_id", "goo")
+				.with("expiry", future.toEpochMilli() / 1000)
+				.with("expires_in", 20L)
+				.with("issued_on", 10L)
+				.with("lifetime", future.minusSeconds(10).toEpochMilli() / 1000)
+				.with("refresh_token", "")
+				.with("scopes", new LinkedList<String>())
+				.with("token_id", id.toString())
+				.with("token_type", "Bearer")
+				.with("user_name", "goo")
+				.build();
+		
+		assertThat("incorrect token", got, is(expected));
+	}
+	
+	@Test
+	public void globusTokenFailNullsAndEmpties() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		failGlobusToken(tm, null, null, "client_credentials",
+				new UnauthorizedException(ErrorType.NO_TOKEN));
+		failGlobusToken(tm, "  \n   \t  ", "  \n   \t  ", "client_credentials",
+				new UnauthorizedException(ErrorType.NO_TOKEN));
+	}
+	
+	@Test
+	public void globusTokenFailClientCreds() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		failGlobusToken(tm, "foo", "foo", "clientcredentials",
+				new AuthException(ErrorType.UNSUPPORTED_OP,
+						"Only client_credentials grant_type supported. Got clientcredentials"));
+	}
+	
+	@Test
+	public void globusTokenFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetToken(new IncomingToken("whee")))
+				.thenThrow(new InvalidTokenException("no token"));
+		
+		failGlobusToken(tm, "fake", "whee", "client_credentials",
+				new UnauthorizedException(ErrorType.INVALID_TOKEN, "Authentication failed"));
+	}
+	
+	private void failGlobusToken(
+			final TestMode tm,
+			final String xtoken,
+			final String token,
+			final String grantType,
+			final Exception expected) {
+		try {
+			tm.getGlobusToken(xtoken, token, grantType);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 }
