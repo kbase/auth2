@@ -277,4 +277,20 @@ public class TestMode {
 		return LegacyGlobus.getToken(
 				(a, t) -> a.testModeGetToken(t), auth, xtoken, token, grantType);
 	}
+	
+	// note does not return identity_id
+	// note error structure is completely different
+	@GET
+	@Path(APIPaths.TESTMODE_GLOBUS_USER)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getGlobusUser(
+			@HeaderParam("x-globus-goauthtoken") final String xtoken,
+			@HeaderParam("authorization") final String token,
+			@PathParam("user") final String user)
+			throws UnauthorizedException, AuthStorageException, NoSuchUserException,
+				MissingParameterException, IllegalParameterException, TestModeException {
+		
+		return LegacyGlobus.getUser(
+				(a, t, u) -> a.testModeGetUser(t, u), auth, xtoken, token, user);
+	}
 }

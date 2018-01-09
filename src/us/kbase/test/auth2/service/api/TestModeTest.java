@@ -26,6 +26,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -655,5 +656,77 @@ public class TestModeTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void globusUser() throws Exception {
+		globusUser("fake", "globusauth: yay!");
+		globusUser("yay!", null);
+	}
+
+	private void globusUser(final String xtoken, final String token) throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUser(new IncomingToken("yay!"), new UserName("foo"))).thenReturn(
+				new ViewableUser(AuthUser.getBuilder(
+						new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000))
+							.build(),
+						true));
+		
+		final Map<String, Object> user = tm.getGlobusUser(xtoken, token, "foo");
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+			.with("username", "foo")
+			.with("email_validated", false)
+			.with("ssh_pubkeys", Collections.emptyList())
+			.with("resource_type", "users")
+			.with("full_name", "bar")
+			.with("organization", null)
+			.with("fullname", "bar")
+			.with("user_name", "foo")
+			.with("email", null)
+			.with("custom_fields", Collections.emptyMap())
+			.build();
+		
+		assertThat("incorrect user", user, is(expected));
+	}
+	
+	@Test
+	public void globusUserFailAuthHeaders() throws Exception {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failGlobusUser(tm, null, null, "foo", new UnauthorizedException(ErrorType.NO_TOKEN));
+		failGlobusUser(tm, "  \t   \n  ", null, "foo",
+				new UnauthorizedException(ErrorType.NO_TOKEN));
+		failGlobusUser(tm, "fake", "header: \t    ", "foo",
+				new UnauthorizedException(ErrorType.NO_TOKEN, "Invalid authorization header"));
+	}
+	
+	@Test
+	public void globusUserFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUser(new IncomingToken("whoo"), new UserName("bar"))).thenThrow(
+				new InvalidTokenException("bleah"));
+		
+		failGlobusUser(tm, "whoo", null, "bar",
+				new UnauthorizedException(ErrorType.INVALID_TOKEN, "Authentication failed."));
+	}
+	
+	private void failGlobusUser(
+			final TestMode tm,
+			final String xtoken,
+			final String token,
+			final String user,
+			final Exception expected) {
+		try {
+			tm.getGlobusUser(xtoken, token, user);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 }

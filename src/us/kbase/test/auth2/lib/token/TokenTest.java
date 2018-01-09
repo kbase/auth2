@@ -108,6 +108,7 @@ public class TokenTest {
 	public void incomingToken() throws Exception {
 		final IncomingToken it = new IncomingToken("foo");
 		assertThat("correct token string", it.getToken(), is("foo"));
+		assertThat("incorrect toString()", it.toString(), is("IncomingToken [token=foo]"));
 		final IncomingHashedToken iht = it.getHashedToken();
 		assertThat("correct token hash", iht.getTokenHash(),
 				is("LCa0a2j/xo/5m0U8HTBBNBNCLXBkg7+g+YpeiGJm564="));

@@ -88,6 +88,13 @@ public class IncomingToken {
 		}
 		return true;
 	}
-	
-	
+
+	@Override
+	public String toString() {
+		StringBuilder builder = new StringBuilder();
+		builder.append("IncomingToken [token=");
+		builder.append(token);
+		builder.append("]");
+		return builder.toString();
+	}
 }
