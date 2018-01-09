@@ -22,6 +22,7 @@ import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
@@ -115,6 +116,12 @@ public class LegacyGlobus {
 		return (long) Math.floor(date.toEpochMilli() / 1000.0);
 	}
 	
+	interface UserProvider {
+		ViewableUser getUser(Authentication auth, IncomingToken token, UserName user)
+				throws AuthStorageException, NoSuchUserException, DisabledUserException,
+					InvalidTokenException, TestModeException;
+	}
+	
 	// note does not return identity_id
 	// note error structure is completely different
 	@GET
@@ -122,11 +129,23 @@ public class LegacyGlobus {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getUser(
 			@HeaderParam("x-globus-goauthtoken") final String xtoken,
-			@HeaderParam("authorization") String token,
+			@HeaderParam("authorization") final String token,
 			@PathParam("user") final String user)
-			throws UnauthorizedException, AuthStorageException,
-			NoSuchUserException, MissingParameterException,
-			IllegalParameterException {
+			throws UnauthorizedException, AuthStorageException, NoSuchUserException,
+				MissingParameterException, IllegalParameterException, TestModeException {
+		
+		return getUser((a, t, u) -> a.getUser(t, u), auth, xtoken, token, user);
+	}
+
+	static Map<String, Object> getUser(
+			final UserProvider userProvider,
+			final Authentication auth,
+			final String xtoken,
+			String token,
+			final String user)
+			throws UnauthorizedException, AuthStorageException, NoSuchUserException,
+				MissingParameterException, IllegalParameterException,
+				TestModeException {
 		if (token != null) {
 			final String[] bits = token.trim().split("\\s+");
 			if (bits.length != 2) {
@@ -138,7 +157,7 @@ public class LegacyGlobus {
 		token = getGlobusToken(xtoken, token);
 		final ViewableUser u;
 		try {
-			u = auth.getUser(new IncomingToken(token), new UserName(user));
+			u = userProvider.getUser(auth, new IncomingToken(token), new UserName(user));
 		} catch (InvalidTokenException e) {
 			// globus throws a 403 instead of a 401
 			throw new UnauthorizedException(

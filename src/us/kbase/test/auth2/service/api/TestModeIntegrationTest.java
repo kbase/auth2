@@ -444,5 +444,48 @@ public class TestModeIntegrationTest {
 		final Map<String, Object> xresponse = xres.readEntity(Map.class);
 		return xresponse;
 	}
+
+	@Test
+	public void globusUser() {
+		createUser("foo", "bar");
+		final String token = (String) createToken("foo", "Agent", "mytoken").get("token");
+		
+		final Map<String, Object> got1 = getGlobusUser("authorization", "globus: ", token);
+		final Map<String, Object> got2 = getGlobusUser("x-globus-goauthtoken", "", token);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("username", "foo")
+				.with("email_validated", false)
+				.with("ssh_pubkeys", Collections.emptyList())
+				.with("resource_type", "users")
+				.with("full_name", "bar")
+				.with("organization", null)
+				.with("fullname", "bar")
+				.with("user_name", "foo")
+				.with("email", null)
+				.with("custom_fields", new HashMap<String,String>())
+				.build();
+		
+		assertThat("incorrect user", got1, is(expected));
+		assertThat("incorrect user", got2, is(expected));
+	}
+
+	private Map<String, Object> getGlobusUser(
+			final String header,
+			final String headerPrefix,
+			final String token) {
+		final URI target = UriBuilder.fromUri(host).path("/testmode/api/legacy/globus/users/foo")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request().header(header, headerPrefix + token);
+		
+		final Response res = req.get();
+
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		return response;
+	}
 	
 }
