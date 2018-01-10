@@ -188,7 +188,6 @@ public class TestMode {
 	@POST
 	@Path(APIPaths.TESTMODE_CUSTOM_ROLES)
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
 	public void createTestCustomRole(final CustomRoleCreate create)
 			throws TestModeException, MissingParameterException, IllegalParameterException,
 				AuthStorageException {
