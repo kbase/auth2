@@ -585,7 +585,8 @@ public class TokenEndpointTest {
 	private void kbaseTokenSuccess(
 			final String fields,
 			final NewToken nt,
-			final Map<String, Object> expected) throws Exception {
+			final Map<String, Object> expected)
+			throws Exception {
 		final URI target = UriBuilder.fromUri(host).path(
 				"/api/legacy/KBase/Sessions/Login").build();
 		
