@@ -28,9 +28,6 @@ Future work
 -----------
 
 * Memory based data storage
-* Test mode
-  * test apis for user creation & admin
-  * auto configure server for ease of use
 * More identity providers
   * Facebook
   * Orcid (? already supported via Globus)
