@@ -17,6 +17,12 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedHashMap;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
+
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -727,6 +733,169 @@ public class TestModeTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void dummyKBaseGet() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
 		
+		final Response r = tm.kbaseDummyGetMethod();
+		
+		assertThat("incorrect code", r.getStatus(), is(401));
+		assertThat("incorrect reason", r.getStatusInfo().getReasonPhrase(), is("Unauthorized"));
+		assertThat("incorrect entity", r.getEntity(), is(
+				"This GET method is just here for compatibility with " +
+				"the old java client and does nothing useful. Here's the compatibility part: " +
+				"\"user_id\": null"));
+	}
+	
+	@Test
+	public void kbaseLoginViaGetToken() throws Exception {
+		kbaseLoginViaGetToken(null, ImmutableMap.of("user_id", "foo"));
+		kbaseLoginViaGetToken("   \t   \n  ", ImmutableMap.of("user_id", "foo"));
+		kbaseLoginViaGetToken("   \t   \n  , token   \t  ,  ", ImmutableMap.of(
+				"user_id", "foo", "token", "this is a token"));
+	}
+
+	private void kbaseLoginViaGetToken(final String fields, final Map<String, String> expected)
+			throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+		
+		when(auth.testModeGetToken(new IncomingToken("this is a token"))).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.build());
+		
+		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
+		form.add("token", "this is a token");
+		if (fields != null) {
+			form.add("fields", fields);
+		}
+		
+		final Map<String, Object> res = tm.kbaseLogin(headers, form);
+		
+		assertThat("incorrect return", res, is(expected));
+	}
+	
+	@Test
+	public void kbaseLoginViaGetUser() throws Exception {
+		kbaseLoginViaGetUser("name", ImmutableMap.of("user_id", "foo", "name", "dn"));
+		kbaseLoginViaGetUser("email", MapBuilder.<String, String>newHashMap()
+				.with("user_id", "foo")
+				.with("email", null)
+				.build());
+		kbaseLoginViaGetUser("email, name", MapBuilder.<String, String>newHashMap()
+				.with("user_id", "foo")
+				.with("email", null)
+				.with("name", "dn")
+				.build());
+		kbaseLoginViaGetUser("email, name, token", MapBuilder.<String, String>newHashMap()
+				.with("user_id", "foo")
+				.with("email", null)
+				.with("name", "dn")
+				.with("token", "this is a token")
+				.build());
+	}
+
+	private void kbaseLoginViaGetUser(final String fields, final Map<String, String> expected)
+			throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+		
+		when(auth.testModeGetUser(new IncomingToken("this is a token"))).thenReturn(
+				AuthUser.getBuilder(
+						new UserName("foo"), new DisplayName("dn"), Instant.ofEpochMilli(10000L))
+						.build());
+		
+		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();
+		form.add("token", "this is a token");
+		form.add("fields", fields);
+		
+		final Map<String, Object> res = tm.kbaseLogin(headers, form);
+		
+		assertThat("incorrect return", res, is(expected));
+	}
+	
+	@Test
+	public void kbaseLoginFailMediaType() {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_JSON_TYPE);
+		
+		failKBaseLogin(tm, headers, new MultivaluedHashMap<>(),
+				new MissingParameterException("token"));
+	}
+	
+	@Test
+	public void kbaseLoginFailNoToken() {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+		
+		final MultivaluedHashMap<String, String> form = new MultivaluedHashMap<>();
+		form.add("token", "   \t  ");
+		
+		failKBaseLogin(tm, headers, form, new MissingParameterException("token"));
+	}
+	
+	@Test
+	public void kbaseLoginFailNoTestModeToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+		
+		when(auth.testModeGetToken(new IncomingToken("tok")))
+				.thenThrow(new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode broke son"));
+		
+		final MultivaluedHashMap<String, String> form = new MultivaluedHashMap<>();
+		form.add("token", "tok");
+		
+		failKBaseLogin(tm, headers, form, new TestModeException(
+				ErrorType.UNSUPPORTED_OP, "Test mode broke son"));
+	}
+	
+	@Test
+	public void kbaseLoginFailNoTestModeUser() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(headers.getMediaType()).thenReturn(MediaType.APPLICATION_FORM_URLENCODED_TYPE);
+		
+		when(auth.testModeGetUser(new IncomingToken("tok")))
+				.thenThrow(new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode broke dad"));
+		
+		final MultivaluedHashMap<String, String> form = new MultivaluedHashMap<>();
+		form.add("token", "tok");
+		form.add("fields", "name");
+		
+		failKBaseLogin(tm, headers, form, new TestModeException(
+				ErrorType.UNSUPPORTED_OP, "Test mode broke dad"));
+	}
+	
+	private void failKBaseLogin(
+			final TestMode tm,
+			final HttpHeaders headers,
+			final MultivaluedMap<String, String> form,
+			final Exception expected) {
+		try {
+			tm.kbaseLogin(headers, form);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 }

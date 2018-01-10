@@ -16,10 +16,11 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -31,15 +32,30 @@ public class LegacyKBase {
 
 	//TODO JAVADOC or swagger
 	
-	@Inject
 	private Authentication auth;
+	
+	@Inject
+	public LegacyKBase(final Authentication auth) {
+		this.auth = auth;
+	}
 	
 	@GET
 	@Produces(MediaType.TEXT_HTML)
-	public Response dummyGetMethod() throws AuthenticationException {
+	public Response dummyGetMethod() {
 		return Response.status(401).entity("This GET method is just here for compatibility with " +
 				"the old java client and does nothing useful. Here's the compatibility part: " +
 				"\"user_id\": null").build();
+	}
+	
+	interface TokenProvider {
+		StoredToken getToken(final Authentication auth, final IncomingToken token)
+				throws InvalidTokenException, AuthStorageException, TestModeException;
+	}
+	
+	interface UserProvider {
+		AuthUser getUser(Authentication auth, IncomingToken token)
+				throws AuthStorageException, DisabledUserException, InvalidTokenException,
+					TestModeException, NoSuchUserException;
 	}
 	
 	@POST
@@ -49,8 +65,21 @@ public class LegacyKBase {
 			@Context final HttpHeaders headers,
 			final MultivaluedMap<String, String> form)
 			throws AuthStorageException, MissingParameterException, InvalidTokenException,
-				DisabledUserException {
-		if (!MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(headers.getMediaType())) {
+				DisabledUserException, TestModeException, NoSuchUserException {
+		//TODO CODE get rid of NoSuchUser exception by catching and wrapping in runtime. Can't happen here
+		final MediaType mediaType = headers.getMediaType();
+		return kbaseLogin(auth, (a, t) -> a.getToken(t), (a, t) -> a.getUser(t), form, mediaType);
+	}
+
+	static Map<String, Object> kbaseLogin(
+			final Authentication auth,
+			final TokenProvider tokenProvider,
+			final UserProvider userProvider,
+			final MultivaluedMap<String, String> form,
+			final MediaType mediaType)
+			throws MissingParameterException, InvalidTokenException, AuthStorageException,
+				DisabledUserException, TestModeException, NoSuchUserException {
+		if (!MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(mediaType)) {
 			// goofy, but matches the behavior of the previous service
 			throw new MissingParameterException("token");
 		}
@@ -77,7 +106,7 @@ public class LegacyKBase {
 		}
 
 		if (name || email) {
-			final AuthUser u = auth.getUser(in);
+			final AuthUser u = userProvider.getUser(auth, in);
 			if (name) {
 				ret.put("name", u.getDisplayName().getName());
 			}
@@ -86,7 +115,7 @@ public class LegacyKBase {
 			}
 			ret.put("user_id", u.getUserName().getName());
 		} else {
-			final StoredToken ht = auth.getToken(in);
+			final StoredToken ht = tokenProvider.getToken(auth, in);
 			ret.put("user_id", ht.getUserName().getName());
 		}
 		return ret;

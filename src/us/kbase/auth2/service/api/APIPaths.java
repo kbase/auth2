@@ -84,6 +84,9 @@ public class APIPaths {
 	/** The test mode globus token endpoint. */
 	public static final String TESTMODE_GLOBUS_TOKEN = LEGACY_GLOBUS + SEP + LEGACY_GLOBUS_TOKEN;
 	
-	/** Test test mode globus user endpoint. */
+	/** The test mode globus user endpoint. */
 	public static final String TESTMODE_GLOBUS_USER = LEGACY_GLOBUS + SEP + LEGACY_GLOBUS_USERS;
+	
+	/** The test mode KBase token endpoint. */
+	public static final String TESTMODE_KBASE_TOKEN = LEGACY_KBASE;
 }

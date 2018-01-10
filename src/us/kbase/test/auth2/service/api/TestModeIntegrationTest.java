@@ -16,6 +16,7 @@ import javax.ws.rs.client.ClientBuilder;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.client.Invocation.Builder;
+import javax.ws.rs.core.Form;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriBuilder;
@@ -486,6 +487,48 @@ public class TestModeIntegrationTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		return response;
+	}
+	
+	@Test
+	public void kbaseDummyEndpoint() {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/testmode/api/legacy/KBase/Sessions/Login/")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(401));
+		
+		assertThat("incorrect kbase dummy endpoint response", res.readEntity(String.class), is(
+				"This GET method is just here for compatibility with " +
+				"the old java client and does nothing useful. Here's the compatibility part: " +
+				"\"user_id\": null"));
+		
+	}
+	
+	@Test
+	public void kbaseLogin() {
+		createUser("foo", "dn");
+		final String token = (String) createToken("foo", "Agent", "mytoken").get("token");
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/testmode/api/legacy/KBase/Sessions/Login/")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request();
+		
+		final Form form = new Form();
+		form.param("token", token);
+		form.param("fields", "token, name");
+		
+		final Response res = req.post(Entity.form(form));
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		assertThat("incorrect response", res.readEntity(Map.class), is(ImmutableMap.of(
+				"token", token, "name", "dn", "user_id", "foo")));
 	}
 	
 }

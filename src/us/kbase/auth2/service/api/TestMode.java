@@ -21,7 +21,11 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
+import javax.ws.rs.core.Response;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
@@ -33,6 +37,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -292,5 +297,29 @@ public class TestMode {
 		
 		return LegacyGlobus.getUser(
 				(a, t, u) -> a.testModeGetUser(t, u), auth, xtoken, token, user);
+	}
+	
+	@GET
+	@Path(APIPaths.TESTMODE_KBASE_TOKEN)
+	@Produces(MediaType.TEXT_HTML)
+	public Response kbaseDummyGetMethod() {
+		return new LegacyKBase(auth).dummyGetMethod();
+	}
+	
+	@POST
+	@Path(APIPaths.TESTMODE_KBASE_TOKEN)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> kbaseLogin(
+			@Context final HttpHeaders headers,
+			final MultivaluedMap<String, String> form)
+			throws AuthStorageException, MissingParameterException, InvalidTokenException,
+				DisabledUserException, TestModeException, NoSuchUserException {
+		return LegacyKBase.kbaseLogin(
+				auth,
+				(a, t) -> a.testModeGetToken(t),
+				(a, t) -> a.testModeGetUser(t),
+				form,
+				headers.getMediaType());
 	}
 }
