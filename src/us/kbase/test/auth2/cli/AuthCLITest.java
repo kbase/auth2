@@ -41,21 +41,9 @@ public class AuthCLITest {
 			"  Options:\n" +
 			"  * -d, --deploy\n" +
 			"       Path to the auth deploy.cfg file.\n" +
-			"    -g, --globus-token\n" +
-			"       A Globus OAuth2 user token for use when importing users. Providing a\n" +
-			"       token without a users file does nothing.\n" +
 			"    -h, --help\n" +
 			"       Display help.\n" +
 			"       Default: false\n" +
-			"    --import-globus-users\n" +
-			"       A UTF-8 encoded file of whitespace, comma, or semicolon separated Globus\n" +
-			"       user names in the Nexus format (for example, kbasetest). A Nexus Globus token\n" +
-			"       for an admin of the kbase_users group must be provided in the -n option, and\n" +
-			"       a OAuth2 Globus token in the -g option. Globus must be configured as an\n" +
-			"       identity provider in the deploy.cfg file.\n" +
-			"    -n, --nexus-token\n" +
-			"       A Globus Nexus user token for use when importing users. Providing a token\n" +
-			"       without a users file does nothing.\n" +
 			"    -r, --set-root-password\n" +
 			"       Set the root user password. If this option is selected no other specified\n" +
 			"       operations will be executed. If the root account is disabled it will be enabled with\n" +

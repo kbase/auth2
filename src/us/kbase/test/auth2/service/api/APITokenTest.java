@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -17,6 +18,16 @@ import us.kbase.auth2.service.api.NewAPIToken;
 
 public class APITokenTest {
 
+	@Test
+	public void apiTokenEquals() {
+		EqualsVerifier.forClass(APIToken.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void newApiTokenEquals() {
+		EqualsVerifier.forClass(NewAPIToken.class).usingGetClass().verify();
+	}
+	
 	@Test
 	public void apiTokenConstruct() throws Exception {
 		final UUID id = UUID.randomUUID();

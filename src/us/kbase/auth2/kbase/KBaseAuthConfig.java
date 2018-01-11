@@ -54,6 +54,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_SUFFIX_ID_PROVS_LINK_REDIRECT =
 			"-link-redirect-url";
 	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
+	private static final String TRUE = "true";
+	private static final String KEY_TEST_MODE_ENABLED = "test-mode-enabled";
 	
 	private final SLF4JAutoLogger logger;
 	private final String mongoHost;
@@ -62,6 +64,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
+	private final boolean isTestModeEnabled;
 
 	public KBaseAuthConfig() throws AuthConfigurationException {
 		this(getConfigPathFromEnv(), false);
@@ -81,6 +84,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 					JsonServerSyslog.LOG_LEVEL_INFO, true));
 		}
 		try {
+			isTestModeEnabled = TRUE.equals(getString(KEY_TEST_MODE_ENABLED, cfg));
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
 			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -295,5 +299,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	@Override
 	public String getTokenCookieName() {
 		return cookieName;
+	}
+	
+	@Override
+	public boolean isTestModeEnabled() {
+		return isTestModeEnabled;
 	}
 }

@@ -22,9 +22,11 @@ import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.AuthException;
+import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -38,6 +40,11 @@ public class LegacyGlobus {
 	@Inject
 	private Authentication auth;
 	
+	interface TokenProvider {
+		StoredToken getToken(final Authentication auth, final IncomingToken token)
+				throws InvalidTokenException, AuthStorageException, TestModeException;
+	}
+	
 	// note that access_token_hash is not returned in the structure
 	// also note that unlike the globus api, this does not refresh the token
 	// also note that the error structure is completely different. 
@@ -46,10 +53,21 @@ public class LegacyGlobus {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> introspectToken(
 			@HeaderParam("x-globus-goauthtoken") final String xtoken,
-			@HeaderParam("globus-goauthtoken") String token,
+			@HeaderParam("globus-goauthtoken") final String token,
 			@QueryParam("grant_type") final String grantType)
 			throws AuthStorageException, AuthException {
 
+		return getToken((a, t) -> a.getToken(t), auth, xtoken, token, grantType);
+	}
+
+	static Map<String, Object> getToken(
+			final TokenProvider tokenProvider,
+			final Authentication auth,
+			final String xtoken,
+			String token,
+			final String grantType)
+			throws AuthException, UnauthorizedException, AuthStorageException,
+				MissingParameterException {
 		if (!"client_credentials".equals(grantType)) {
 			throw new AuthException(ErrorType.UNSUPPORTED_OP,
 					"Only client_credentials grant_type supported. Got " +
@@ -58,7 +76,7 @@ public class LegacyGlobus {
 		token = getGlobusToken(xtoken, token);
 		final StoredToken ht;
 		try {
-			ht = auth.getToken(new IncomingToken(token));
+			ht = tokenProvider.getToken(auth, new IncomingToken(token));
 		} catch (InvalidTokenException e) {
 			// globus throws a 403 instead of a 401
 			throw new UnauthorizedException(
@@ -81,7 +99,7 @@ public class LegacyGlobus {
 		return ret;
 	}
 
-	private String getGlobusToken(final String xtoken, String token)
+	private static String getGlobusToken(final String xtoken, String token)
 			throws UnauthorizedException {
 		if (nullOrEmpty(token)) {
 			token = xtoken;
@@ -94,8 +112,14 @@ public class LegacyGlobus {
 	}
 	
 	
-	private long dateToSec(final Instant date) {
+	private static long dateToSec(final Instant date) {
 		return (long) Math.floor(date.toEpochMilli() / 1000.0);
+	}
+	
+	interface UserProvider {
+		ViewableUser getUser(Authentication auth, IncomingToken token, UserName user)
+				throws AuthStorageException, NoSuchUserException, DisabledUserException,
+					InvalidTokenException, TestModeException;
 	}
 	
 	// note does not return identity_id
@@ -105,11 +129,23 @@ public class LegacyGlobus {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getUser(
 			@HeaderParam("x-globus-goauthtoken") final String xtoken,
-			@HeaderParam("authorization") String token,
+			@HeaderParam("authorization") final String token,
 			@PathParam("user") final String user)
-			throws UnauthorizedException, AuthStorageException,
-			NoSuchUserException, MissingParameterException,
-			IllegalParameterException {
+			throws UnauthorizedException, AuthStorageException, NoSuchUserException,
+				MissingParameterException, IllegalParameterException, TestModeException {
+		
+		return getUser((a, t, u) -> a.getUser(t, u), auth, xtoken, token, user);
+	}
+
+	static Map<String, Object> getUser(
+			final UserProvider userProvider,
+			final Authentication auth,
+			final String xtoken,
+			String token,
+			final String user)
+			throws UnauthorizedException, AuthStorageException, NoSuchUserException,
+				MissingParameterException, IllegalParameterException,
+				TestModeException {
 		if (token != null) {
 			final String[] bits = token.trim().split("\\s+");
 			if (bits.length != 2) {
@@ -121,7 +157,7 @@ public class LegacyGlobus {
 		token = getGlobusToken(xtoken, token);
 		final ViewableUser u;
 		try {
-			u = auth.getUser(new IncomingToken(token), new UserName(user));
+			u = userProvider.getUser(auth, new IncomingToken(token), new UserName(user));
 		} catch (InvalidTokenException e) {
 			// globus throws a 403 instead of a 401
 			throw new UnauthorizedException(

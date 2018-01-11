@@ -1,46 +1,52 @@
-# need to switch to travis trusty (ubuntu 14) images to use openjdk8
 dist: trusty
-sudo: false
-
+sudo: required
 language: java
-
 jdk:
-    - openjdk8
-    - oraclejdk8
-
+  - openjdk8
+  - oraclejdk8
 env:
-  - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
-  - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=false
-  - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=true
-  - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=false
-  - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
-  - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
-  - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
+    - MONGODB_VER=mongodb-linux-x86_64-2.6.12 ANT_TEST=test               WIRED_TIGER=false
+    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=false
+    - MONGODB_VER=mongodb-linux-x86_64-3.0.14 ANT_TEST=test_mongo_storage WIRED_TIGER=true
+    - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=false
+    - MONGODB_VER=mongodb-linux-x86_64-3.2.12 ANT_TEST=test_mongo_storage WIRED_TIGER=true
+    - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=false
+    - MONGODB_VER=mongodb-linux-x86_64-3.4.2  ANT_TEST=test_mongo_storage WIRED_TIGER=true
 
 before_install:
-    # get and install mongodb
-    - wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
-    - tar xfz $MONGODB_VER.tgz
-    - export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
+  - sudo apt-get -qq update
+  - sudo apt-get install -y ant-optional
 
 install:
-    - cd ..
-    - git clone https://github.com/kbase/jars
-    - cd -
+  - cd ..
+  - git clone https://github.com/kbase/jars
+  - cd -
 
 script:
-    - cp -n test.cfg.example test.cfg
+  - cd ..
+  - wget http://fastdl.mongodb.org/linux/$MONGODB_VER.tgz
+  - tar xfz $MONGODB_VER.tgz
+  - export MONGOD=`pwd`/$MONGODB_VER/bin/mongod
+  - cd -
+  - cp -n test.cfg.example test.cfg
+  - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+  - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
+  - sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
+  - cat test.cfg
+  - ant $ANT_TEST
 
-    # Note: using # as delimiter instead of / since / is in the mongod path
-    # If there are # in the mongod path, this will fail.
-    - sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
-
-    - sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
-    - sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=$WIRED_TIGER#" test.cfg
-    - cat test.cfg
-    - ant $ANT_TEST
-
+jobs:
+  include:
+    - stage: deploy
+      env: # The following are secure declarations for DOCKER_EMAIL, DOCKER_USER, DOCKER_PASS
+        - secure: "HR6I6+Ix02D25LmRPzJBZhak1HIzy5HE9GyPwwvhSGnDc41YMRmBCrRa3YzMTPgKf4lxx/eoQvJy78hVkJmAMUoZoTvoD5mk5TIDGJxtyVnDh1OBdZneO0XO2yEQg/FEt+QfKy4XJ9B3FuG9+iEewLYg3ctWEI0WrL7x4mbeq4t+bNYdS/9Eruvd9qlY8c+LvvdEGYGvfZrR4038ldC7YErzvjUrXUWX5PS+Tm11H7j4c8MB+vOnfxlFFhmVZR/qibpV88Dl5MvV1tgCeMtKExf+ivQuNRJLyA/eU+NFEz5LAui+qP3WwGhopJjezd06VhSoTGzioOcMxsp3QBa+AGqsHxaMwQYbENuJvrCFRYNWc41TMmJ9e+InVz/97vsmhWKmk7B1TkUx//+Cg4lMhjRYMWif+XfdqvoFJKhAo0NKvS1JeL1mAxNZs/Oek6x1RnUSeQFhcboztzYJ2aut2vnxItDKObCjb0+b5TuaxMjeGrWwxYIh14Vdr0C693pKZlCNdeP69ALFqJSKgw3wXjvtmW8BDSr2dVTmRSmgnlCBI4zF70iKjVuAqtC/nQb8yqEl1kqrGP2Sapjjz4Ntrh8jTO5htrSReWEOkGNoTOWrPpdQ1/cksHlclAojeWld1Cjn6L2/SG/7ad7em8iRugxolmsAFwmmmfe00aLVq7I="
+        - secure: "BFeUB8VLL5A2CRFbVa+7VDi21SjlUPhUK4GV/U9jwfd/NSoomsuMzRf+RCLGhFGhwrLHaF4B2OvNDi6svDxdlNf3BZpd8KM5hAyqpP0b7dYZR/LwrTeSYE6XTf4ZwWT4/4lh11WsM7Leh2ipLsxa46prlMZglYQWJEW8Co57hri1oPgsyqZNA/h6mltMF/Q6MXRXkgbaSJLdsnhzBnJrpgSih5hqM2pANobx7J1Ma9IkSQXQ8uRB9UegGKVSOqAtqvvHxK5HDfgjwjcSXh5FjDS/CiUhnT4JXcikQOJCPGbkiCF8lwEjbeaML24QklLc9e+noUJGW/p/Fja4oZQLRYLm/K5lGnFrnx1EIp800ASzvGrXed0a7apNIRJg8c+KPJ8/VNZAzYZ/0CUhuLpLTkywUsm6ytwOQDqXWiZNdR+uvElEXRarSabefXnvbBitQY+oPE8uuL+sl3ARwQZWtOxAGdZ1wbabvA3CVscmKGVudXexiluB2BEtoPXZsEDL7CeY9qgZvce6Uc9Kg9fQ9wDSjuwj0F8WSG3ZPmEdoJfSCoT1W1m7HWDaTVT5X/+1kvXDBj7b6nlsNgWSNO81ZZ8tX332WrKedWxr5bnqJIqrd4x3pRN1IBwv2ZWFrv4CfwaIeO4+igwXsiJUf/DTJnecmRtWaq9AjIJigNmcuvM="
+        - secure: "YVzaC/di1uoQSpH5bt66T+oJdiCtVXyHuf/1fbvZ+psh89vhhu6CI+bVLay3fCyMtnXb9qWYw3euN7qhj80iqdBoCzgYI4Ki8lyIH2PKSLENbvxfMjczpCzMULzH9QhNVqFc0pY8ogGfiqcd/tA2qEoJjlleE7p/Kac6eYaFDRDP/GusvcvUunLn6tq5E5iwhU7ZASFYcABCbkDPe6LKpt0lEQ1WCjn0P80GsPDtV36rYNajMJPDlPLhXByeudZFup/Wnoeg9Z96CIU+nRWx7Ii32yALxgp764dauYA045shZ4O5mRQU+a0pqn/yeCEI8Ku64i72Fv+gEVFcifNZOxm9H9XbpGDVCdCK1sj7Y4xvwKRifN7b5+HQv6GHZCE09+RsqbyHVjO5IP3LOdihCgR2W1egadSn8v8iyfHw0QcLEGWJjXaZoAYbgbdOmanyjsUIkZy1StxVaARSsX28xlBQHe05bSxcqcadGiR+c6waDgy1VuRt/eZOMd5MH2Dx9cZEClOntbaRfrtC56Jn5uxjNlGryB8atXuT9vKsqY83gFuLFPu0nFY64gUPsPpZ+FxotcESWyHews2joiW7ViJMvd/uZIbqYv01dcylZfOU4ycf7QS1xmRv7ullL7EyXTcYykgBfVN24sYa6mit7QYIxguxjNpaJlj2VvuaKfE="
+      script: # Only push to dockerhub if this isn't a PR and we're updating master or develop
+        - docker pull kbase/kb_jre
+        - ant docker_image
+        - IMAGE_NAME=kbase/kb_auth2 build/push2dockerhub.sh
 after_success:
-    - ls test-reports
-    - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml
+  - ls test-reports
+  - bash <(curl -s https://codecov.io/bash) -t 05721a16-048a-43d1-9647-144b5249ebd0 -f test-reports/coverage-report.xml
 

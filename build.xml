@@ -105,12 +105,12 @@
     <include name="diff/java-diff-utils-2.1.1.jar"/>
     <include name="diff/java-object-diff/java-object-diff-0.94.jar"/>
     <include name="jsoup/jsoup-1.10.2.jar"/>
-    <!-- mockito dependencies -->
+    <include name="jacoco/jacocoant.jar"/>
+    <!-- mockito and dependencies -->
     <include name="mockito/mockito-core-2.7.10.jar"/>
     <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
     <include name="bytebuddy/byte-buddy-agent-1.6.8.jar"/>
     <include name="objenesis/objenesis-2.5.1.jar"/>
-    <include name="jacoco/jacocoant.jar"/>
   </fileset>
 	
   <union id="applicationjars">
@@ -200,6 +200,13 @@
     <copy todir="./jettybase/templates">
       <fileset dir="./templates" includes="**"/>  
     </copy>
+  </target>
+
+  <target name="docker_image" depends="buildwar" description="build the docker image">
+    <!-- make the docker image that for auth2 -->
+    <exec executable="./build/build_docker_image.sh">
+    </exec>
+
   </target>
 
   <target name="javadoc" description="build javadocs">
@@ -292,6 +299,9 @@
         <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationPolicyIDTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationRoleTest"/>
+      	<test name="us.kbase.test.auth2.lib.AuthenticationTestModeRoleTest"/>
+        <test name="us.kbase.test.auth2.lib.AuthenticationTestModeUserTest"/>
+        <test name="us.kbase.test.auth2.lib.AuthenticationTestModeTokenTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationTokenTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationUserUpdateTest"/>
         <test name="us.kbase.test.auth2.lib.CustomRoleTest"/>
@@ -330,6 +340,8 @@
         <test name="us.kbase.test.auth2.service.LoggingFilterTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
+        <test name="us.kbase.test.auth2.service.api.TestModeTest"/>
+        <test name="us.kbase.test.auth2.service.api.TestModeIntegrationTest"/>
         <test name="us.kbase.test.auth2.service.api.UserEndpointTest"/>
         <test name="us.kbase.test.auth2.service.common.ExternalTokenTest"/>
         <test name="us.kbase.test.auth2.service.common.IncomingJSONTest"/>
@@ -359,6 +371,7 @@
         <sysproperty key="AUTH2_TEST_CONFIG" value="${testcfg}"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageCustomRoleTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestRoleTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDuplicateKeyCheckerTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageGetDisplayNamesTest"/>
@@ -369,8 +382,10 @@
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempSessionDataTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTokensTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestTokensTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUpdateUserFieldsTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageUserCreateGetTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestUserCreateGetTest"/>
       </junit>
     </jacoco:coverage>
     <fail message="Test failure detected, check test results." if="test.failed" />

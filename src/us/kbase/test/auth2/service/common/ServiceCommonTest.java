@@ -207,6 +207,19 @@ public class ServiceCommonTest {
 	
 	@Test
 	public void getTokenContextWithCustomContextAndBadIP() throws Exception {
+		/* Some really annoying ISPs will send you to a custom search page or something
+		 * when you look up a fake domain, so if InetAddress finds an address we have to alter
+		 * the test.
+		 */
+		InetAddress expectedAddr = null;
+		try {
+			expectedAddr = InetAddress.getByName("fakeip");
+			System.err.println("Buttwipe ISP detected. 'fakeip' domain was redirected to " +
+					expectedAddr + ". Please be sure to run this test again on a " +
+					"non-buttwipe ISP.");
+		} catch (Exception e) {
+			//do nothing
+		}
 		final HttpServletRequest req = mock(HttpServletRequest.class);
 		// mocked because creation takes multiple seconds
 		final UserAgentParser parser = mock(UserAgentParser.class);
@@ -225,6 +238,7 @@ public class ServiceCommonTest {
 				.withNullableOS("Windows NT", "6.1")
 				.withCustomContext("baz", "bat")
 				.withCustomContext("foo", "bar")
+				.withNullableIpAddress(expectedAddr)
 				.build();
 		
 		assertThat("incorrect context", res, is(expected));

@@ -110,6 +110,24 @@ public interface AuthStorage {
 			throws UserExistsException, AuthStorageException, IdentityLinkedException,
 				NoSuchRoleException;
 	
+
+	/** Create a test user. Test users have no password and no linked accounts and therefore
+	 * login is impossible. Test users expire from the system after a given amount of time,
+	 * generally less than an hour.
+	 * 
+	 * Note that {@link AuthUser#isLocal()} returns true for test users since local users are
+	 * defined as having no remote identities, but test users still have no passwords.
+	 * @param name the user's name.
+	 * @param display the user's display name.
+	 * @param created the date the user was created.
+	 * @param expires the date the user expires from the system.
+	 * @throws UserExistsException if the user already exists.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs. 
+	 */
+	void testModeCreateUser(UserName name, DisplayName display, Instant created, Instant expires)
+			throws UserExistsException, AuthStorageException;
+	
 	/** Disable a user account.
 	 * @param user the name of the account to be disabled.
 	 * @param admin the admin disabling the account.
@@ -138,7 +156,25 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs.
 	 */
-	AuthUser getUser(UserName userName)
+	AuthUser getUser(UserName userName) throws AuthStorageException, NoSuchUserException;
+	
+	/** Get a test user.
+	 * @param userName the user to get.
+	 * @return the user.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	AuthUser testModeGetUser(UserName userName) throws AuthStorageException, NoSuchUserException;
+	
+	/** Get the date a test user expires from the system.
+	 * @param userName the user whose records will be accessed.
+	 * @return the user's expiration date.
+	 * @throws NoSuchUserException if the user does not exist.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	Instant testModeGetUserExpiry(UserName userName)
 			throws AuthStorageException, NoSuchUserException;
 	
 	/** Gets a user linked to a remote identity. Returns an empty Optional if the user doesn't
@@ -237,6 +273,20 @@ public interface AuthStorage {
 	 */
 	void storeToken(StoredToken token, String hash) throws AuthStorageException;
 
+	/** Store a test token in the database. Test tokens are stored entirely separately from
+	 * standard tokens and should generally have very short lifetimes.
+	 * No checking is done on the validity of the token - passing in tokens with bad data
+	 * is a programming error.
+	 * @param token the token to store.
+	 * @param hash the hash of the token. This value will be used to look up the token in
+	 * {@link #testModeGetToken(IncomingHashedToken)}
+	 * @throws IllegalArgumentException if the token or the token ID already exists in the
+	 * database.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void testModeStoreToken(StoredToken token, String hash) throws AuthStorageException;
+	
 	/** Get a token from the database based on the hash of the token.
 	 * @param token the hashed token from which to retrieve details.
 	 * @return the token.
@@ -247,6 +297,16 @@ public interface AuthStorage {
 	StoredToken getToken(IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException;
 
+	/** Get a test token from the database based on the hash of the token.
+	 * @param token the hashed token from which to retrieve details.
+	 * @return the token.
+	 * @throws NoSuchTokenException if no token matches the incoming token hash.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	StoredToken testModeGetToken(IncomingHashedToken token)
+			throws AuthStorageException, NoSuchTokenException;
+	
 	/** Get all the tokens for a user.
 	 * @param userName the user for which to retrieve tokens.
 	 * @return the tokens that the user possesses.
@@ -298,6 +358,14 @@ public interface AuthStorage {
 	 */
 	void setCustomRole(CustomRole role) throws AuthStorageException;
 	
+	/** Add a test custom role if it does not already exist, or modify it if it does.
+	 * @param role the role to add or modify.
+	 * @param expires the expiration date of the role, usually less than an hour.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	void testModeSetCustomRole(CustomRole role, Instant expires) throws AuthStorageException;
+	
 	/** Deletes a custom role from the database and removes it from all users.
 	 * @param roleId the ID of the role.
 	 * @throws NoSuchRoleException if there is no such role.
@@ -316,6 +384,26 @@ public interface AuthStorage {
 	 */
 	Set<CustomRole> getCustomRoles() throws AuthStorageException;
 
+	/** Get all the test custom roles in the database.
+	 * @return the custom roles.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	Set<CustomRole> testModeGetCustomRoles() throws AuthStorageException;
+	
+	/** Get the date a test custom role expires from the system.
+	 * @param roleId the role to access.
+	 * @return the role's expiration date.
+	 * @throws NoSuchRoleException if there is no such role.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 * @throws IllegalParameterException if the roleId is illegal.
+	 * @throws MissingParameterException if the roleId is null or the empty string.
+	 */
+	Instant testModeGetCustomRoleExpiry(final String roleId)
+			throws AuthStorageException, NoSuchRoleException, MissingParameterException,
+				IllegalParameterException;
+	
 	/** Updates custom roles for a user.
 	 * If a role is in addRoles and removeRoles it will be removed.
 	 * Removing non-existent roles has no effect.
@@ -330,6 +418,27 @@ public interface AuthStorage {
 	void updateCustomRoles(UserName userName, Set<String> addRoles, Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException;
 
+	/** Set the roles on a test user. Overwrites the user's current roles. Pass in empty sets to
+	 * remove all roles.
+	 * @param userName the user to modify.
+	 * @param roles the built in roles to set on the user.
+	 * @param customRoles the custom roles to set on the user.
+	 * @throws NoSuchUserException if the user doesn't exist.
+	 * @throws NoSuchRoleException if one or more of the input roles do not exist in the database.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs. 
+	 */
+	void testModeSetRoles(
+			UserName userName,
+			Set<Role> roles,
+			Set<String> customRoles)
+			throws NoSuchUserException, NoSuchRoleException, AuthStorageException;
+	
+	/** Removes all test data from storage.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	void testModeClear() throws AuthStorageException;
+	
 	/** Store temporary data used with a user process session.
 	 * No checking is done on the validity of the token - passing in tokens with bad data is a
 	 * programming error.
@@ -424,4 +533,5 @@ public interface AuthStorage {
 	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException;
+
 }

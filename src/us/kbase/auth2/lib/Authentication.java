@@ -69,6 +69,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.IdentityProviderErrorException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -137,6 +138,7 @@ public class Authentication {
 	private static final int LOGIN_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
 	private static final int MAX_RETURNED_USERS = 10000;
 	private static final int TEMP_PWD_LENGTH = 10;
+	private static final int TEST_MODE_DATA_LIFETIME_MS = 60 * 60 * 1000; // 1 hr
 	
 	private static final UserName DEFAULT_SUGGESTED_USER_NAME;
 	private static final DisplayName UNKNOWN_DISPLAY_NAME;
@@ -164,13 +166,14 @@ public class Authentication {
 	private final ConfigManager cfg;
 	private final Clock clock;
 	private final ExternalConfig defaultExternalConfig;
+	private final boolean testMode;
 	
 	// note that this value is supposed to be a constant, but is mutable for testing purposes.
 	// do not make it mutable for any other reason.
 	private int cfgUpdateIntervalMillis = 30000;
 	
 	/** Create a new Authentication instance.
-	 * @param storage the storage system to use for information persistance.
+	 * @param storage the storage system to use for information persistence.
 	 * @param identityProviderSet the set of identity providers that are supported for standard
 	 * accounts. E.g. Google, Globus, etc.
 	 * @param defaultExternalConfig the external configuration default settings. Any settings
@@ -181,11 +184,13 @@ public class Authentication {
 	public Authentication(
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
-			final ExternalConfig defaultExternalConfig)
+			final ExternalConfig defaultExternalConfig,
+			final boolean testMode)
 			throws StorageInitException {
 		this(storage,
 				identityProviderSet,
 				defaultExternalConfig,
+				testMode,
 				getDefaultRandomGenerator(),
 				Clock.systemDefaultZone()); // don't care about time zone, not using it
 	}
@@ -203,9 +208,11 @@ public class Authentication {
 			final AuthStorage storage,
 			final Set<IdentityProvider> identityProviderSet,
 			final ExternalConfig defaultExternalConfig,
+			final boolean testMode,
 			final RandomDataGenerator randGen,
 			final Clock clock)
 			throws StorageInitException {
+		this.testMode = testMode;
 		this.clock = clock;
 		this.randGen = randGen;
 		try {
@@ -1421,8 +1428,7 @@ public class Authentication {
 	private String rolesToString(
 			final Set<Role> roles,
 			final Function<? super Role, ? extends String> mapper) {
-		return String.join(", ", roles.stream().sorted().map(mapper)
-				.collect(Collectors.toList()));
+		return String.join(", ", roles.stream().sorted().map(mapper).collect(Collectors.toList()));
 	}
 
 	/** Create or update a custom role.
@@ -1557,8 +1563,7 @@ public class Authentication {
 	}
 	
 	private String customRolesToString(final Set<String> roles) {
-		return String.join(", ", roles.stream().sorted()
-				.collect(Collectors.toList()));
+		return String.join(", ", roles.stream().sorted().collect(Collectors.toList()));
 	}
 
 	/** Get an ordered list of the supported and enabled identity providers.
@@ -1892,6 +1897,220 @@ public class Authentication {
 		}
 		return login(userName, tokenCtx);
 	}
+	
+	/** Create a test token. The token is entirely separate from standard tokens and is
+	 * inaccessible by non-test mode methods. The token expires from the system in one hour.
+	 * @param userName the name of the user who will own the token.
+	 * @param tokenName the name of the token, or null for no name.
+	 * @param tokenType the type of the token.
+	 * @return the new token.
+	 * @throws TestModeException if test mode is not enabled.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if there is no user by the given name.
+	 */
+	public NewToken testModeCreateToken(
+			final UserName userName,
+			final TokenName tokenName,
+			final TokenType tokenType)
+			throws TestModeException, AuthStorageException, NoSuchUserException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		nonNull(tokenType, "tokenType");
+		storage.testModeGetUser(userName); // ensure user exists
+		final UUID id = randGen.randomUUID();
+		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
+				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
+				.withNullableTokenName(tokenName)
+				.build(),
+				randGen.getToken());
+		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
+		logInfo("Created test mode {} token {} for user {}", tokenType, id, userName.getName());
+		return nt;
+	}
+	
+	/** Get details about a test token.
+	 * @param token the token in question.
+	 * @return the token's details.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public StoredToken testModeGetToken(final IncomingToken token)
+			throws AuthStorageException, InvalidTokenException, TestModeException {
+		ensureTestMode();
+		nonNull(token, "token");
+		final StoredToken st;
+		try {
+			st = storage.testModeGetToken(token.getHashedToken());
+		} catch (NoSuchTokenException e) {
+			throw new InvalidTokenException();
+		}
+		logInfo("User {} accessed {} test token {}",
+				st.getUserName().getName(), st.getTokenType(), st.getId());
+		return st;
+	}
+	
+	/** Create a test mode user. This user is entirely separate from standard users and is
+	 * inaccessible and unmodifiable by non-test mode methods. The user expires from the system
+	 * in one hour.
+	 * @param userName the user's username.
+	 * @param displayName the user's display name.
+	 * @throws UserExistsException if a test user with the same name already exists.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws UnauthorizedException the user name is the root user name.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public void testModeCreateUser(final UserName userName, final DisplayName displayName)
+			throws UserExistsException, AuthStorageException, UnauthorizedException,
+			TestModeException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		nonNull(displayName, "displayName");
+		if (userName.isRoot()) {
+			throw new UnauthorizedException("Cannot create root user");
+		}
+		final Instant now = clock.instant();
+		storage.testModeCreateUser(
+				userName, displayName, now, now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+		logInfo("Created test mode user {}", userName.getName());
+	}
+	
+	/** Get a test mode user's data.
+	 * @param userName the user name of the user.
+	 * @return the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if there is no such user.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public AuthUser testModeGetUser(final UserName userName)
+			throws AuthStorageException, NoSuchUserException, TestModeException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		final AuthUser u = storage.testModeGetUser(userName);
+		logInfo("Accessed user data for test mode user {} by user name", userName.getName());
+		return u;
+	}
+	
+	/** Get the user data for the user associated with a test token.
+	 * @param token the user's token.
+	 * @return the user.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if the token is valid but the user has expired from the system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public AuthUser testModeGetUser(final IncomingToken token)
+			throws AuthStorageException, InvalidTokenException, NoSuchUserException,
+				TestModeException {
+		final AuthUser u = testModeGetUserInternal(token);
+		logInfo("Test mode user {} accessed their user data", u.getUserName().getName());
+		return u;
+	}
+
+	private AuthUser testModeGetUserInternal(final IncomingToken token)
+			throws TestModeException, AuthStorageException, InvalidTokenException,
+				NoSuchUserException {
+		ensureTestMode();
+		nonNull(token, "token");
+		final StoredToken st;
+		try {
+			st = storage.testModeGetToken(token.getHashedToken());
+		} catch (NoSuchTokenException e) {
+			throw new InvalidTokenException();
+		}
+		return storage.testModeGetUser(st.getUserName());
+	}
+	
+	/** Get a restricted view of a test user. Typically used for one user viewing another.
+	 * @param token the token of the user requesting the view.
+	 * @param user the username of the user to view.
+	 * @return a view of the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws NoSuchUserException if there is no user corresponding to the given user name or the
+	 * token's username.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public ViewableUser testModeGetUser(final IncomingToken token, final UserName user)
+			throws InvalidTokenException, NoSuchUserException, TestModeException,
+				AuthStorageException {
+		nonNull(user, "userName");
+		final AuthUser requestingUser = testModeGetUserInternal(token);
+		final AuthUser otherUser = storage.testModeGetUser(user);
+		final boolean sameUser = requestingUser.getUserName().equals(otherUser.getUserName());
+		logInfo("Test user {} accessed test user {}'s user data",
+				requestingUser.getUserName().getName(), otherUser.getUserName().getName());
+		return new ViewableUser(otherUser, sameUser);
+	}
+	
+	/** Create or update a test custom role.
+	 * @param role the role to create or update.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public void testModeSetCustomRole(final CustomRole role)
+			throws AuthStorageException, TestModeException {
+		ensureTestMode();
+		nonNull(role, "role");
+		storage.testModeSetCustomRole(
+				role, clock.instant().plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+		logInfo("Created test custom role {}", role.getID());
+	}
+	
+	/** Get all test custom roles.
+	 * @return the custom roles.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public Set<CustomRole> testModeGetCustomRoles()
+			throws AuthStorageException, TestModeException {
+		ensureTestMode();
+		final Set<CustomRole> roles = storage.testModeGetCustomRoles();
+		logInfo("Accessed test mode custom roles");
+		return roles;
+	}
+	
+	/** Set standard and custom roles for a test user. This method overwrites previous roles -
+	 * pass in empty sets to remove all roles.
+	 * @param userName the name of the user to modify.
+	 * @param roles the standard roles to bequeath to the user.
+	 * @param customRoles the custom roles to bequeath to the user.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchUserException if there is no user account with the given name.
+	 * @throws NoSuchRoleException if one of the roles does not exist in the database.
+	 * @throws TestModeException if test mode is not enabled.
+	 */
+	public void testModeSetRoles(
+			final UserName userName,
+			final Set<Role> roles,
+			final Set<String> customRoles)
+			throws NoSuchUserException, NoSuchRoleException, AuthStorageException,
+				TestModeException {
+		ensureTestMode();
+		nonNull(userName, "userName");
+		nonNull(roles, "roles");
+		nonNull(customRoles, "customRoles");
+		noNulls(roles, "Null role in roles");
+		noNulls(customRoles, "Null role in customRoles");
+		storage.testModeSetRoles(userName, roles, customRoles);
+		logInfo("Set roles / custom roles on test user {}: {} / {}", userName.getName(),
+				rolesToString(roles, r -> r.getID()), customRolesToString(customRoles));
+	}
+	
+	/** Clear all test data from the system.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public void testModeClear() throws AuthStorageException {
+		// don't ensureTestMode() because it's always ok to clear the data
+		storage.testModeClear();
+	}
+	
+	private void ensureTestMode() throws TestModeException {
+		if (!testMode) {
+			throw new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled");
+		}
+	}
+	
 
 	/** Complete the OAuth2 login process.
 	 * 

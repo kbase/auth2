@@ -41,16 +41,19 @@ public class Token {
 
 	//TODO JAVADOC or swagger
 	
-	@Inject
 	private Authentication auth;
 	
-	@Inject
 	private UserAgentParser userAgentParser;
+	
+	@Inject
+	public Token(final Authentication auth, final UserAgentParser userAgentParser) {
+		this.auth = auth;
+		this.userAgentParser = userAgentParser;
+	}
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public APIToken viewToken(
-			@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
+	public APIToken viewToken(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
 		final StoredToken ht = auth.getToken(getToken(token));
 		return new APIToken(ht, auth.getSuggestedTokenCacheTime());

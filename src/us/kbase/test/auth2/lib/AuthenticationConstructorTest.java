@@ -47,6 +47,8 @@ import us.kbase.test.auth2.lib.config.TestExternalConfig.TestExternalConfigMappe
 
 public class AuthenticationConstructorTest {
 	
+	/* does not test auth test mode. */
+	
 	private static final ConfigItem<String, Action> SET_FOO = ConfigItem.set("foo");
 	private static final ConfigItem<String, State> STATE_FOO = ConfigItem.state("foo");
 	private static final ConfigItem<String, Action> SET_THINGY = ConfigItem.set("thingy");
@@ -62,7 +64,7 @@ public class AuthenticationConstructorTest {
 						new CollectingExternalConfig(ImmutableMap.of("thing", STATE_FOO))));
 		
 		final Authentication auth = new Authentication(storage, Collections.emptySet(),
-				new TestExternalConfig<>(SET_THINGY));
+				new TestExternalConfig<>(SET_THINGY), false);
 		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
 				.withLoginAllowed(false).withDefaultTokenLifeTimes()
 				.withExternalConfig(new TestExternalConfig<>(SET_THINGY)).build(), false);
@@ -92,7 +94,7 @@ public class AuthenticationConstructorTest {
 			final ExternalConfig cfg,
 			final Exception e) {
 		try {
-			new Authentication(storage, ids, cfg);
+			new Authentication(storage, ids, cfg, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -184,7 +186,7 @@ public class AuthenticationConstructorTest {
 						new CollectingExternalConfig(ImmutableMap.of("thing", STATE_FOO))));
 		
 		final Authentication auth = new Authentication(storage, ids,
-				new TestExternalConfig<>(SET_THINGY));
+				new TestExternalConfig<>(SET_THINGY), false);
 		verify(storage).updateConfig(AuthConfigUpdate.getBuilder()
 				.withLoginAllowed(false).withDefaultTokenLifeTimes()
 				.withExternalConfig(new TestExternalConfig<>(SET_THINGY))
@@ -214,7 +216,7 @@ public class AuthenticationConstructorTest {
 		ids.add(new NullIdProv("prov2", cfg2)); // should match on different case
 		
 		try {
-			new Authentication(storage, ids, new TestExternalConfig<>(SET_THINGY));
+			new Authentication(storage, ids, new TestExternalConfig<>(SET_THINGY), false);
 			fail("expected exception");
 		} catch (IllegalArgumentException got) {
 			// lower case because whether Prov2 or prov2 is returned can change

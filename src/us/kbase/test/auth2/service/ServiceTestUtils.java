@@ -76,7 +76,7 @@ public class ServiceTestUtils {
 		final String rootpwd = "foobarwhoowhee";
 		when(manager.mockClock.instant()).thenReturn(Instant.now());
 		final Authentication auth = new Authentication(
-				manager.storage, set(), AuthExternalConfig.SET_DEFAULT);
+				manager.storage, set(), AuthExternalConfig.SET_DEFAULT, false);
 		auth.createRoot(new Password(rootpwd.toCharArray()));
 		final String roottoken = auth.localLogin(UserName.ROOT,
 				new Password(rootpwd.toCharArray()),
@@ -104,7 +104,19 @@ public class ServiceTestUtils {
 			final AuthException e)
 			throws Exception {
 		
-		assertThat("incorrect status code", res.getStatus(), is(httpCode));
+		if (res.getStatus() != httpCode) {
+			String text = null; 
+			try {
+				text = res.readEntity(String.class);
+			} catch (Exception exp) {
+				exp.printStackTrace();
+			}
+			if (text == null) {
+				text = "Unable to get entity text - see error stream for exception";
+			}
+			fail(String.format("unexpected http code %s, wanted %s. Entity contents:\n%s",
+					res.getStatus(), httpCode, text));
+		}
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> error = res.readEntity(Map.class);
@@ -353,19 +365,34 @@ public class ServiceTestUtils {
 		final IdentityProvider prov2 = mock(IdentityProvider.class);
 		when(prov1.getProviderName()).thenReturn("prov1");
 		when(prov2.getProviderName()).thenReturn("prov2");
-		new Authentication(manager.storage, set(prov1, prov2), AuthExternalConfig.SET_DEFAULT);
+		new Authentication(manager.storage, set(prov1, prov2), AuthExternalConfig.SET_DEFAULT,
+				false);
 	}
 	
 	public static Path generateTempConfigFile(
 			final MongoStorageTestManager manager,
 			final String dbName,
-			final String cookieName) throws IOException {
+			final String cookieName)
+			throws IOException {
+		return generateTempConfigFile(manager, dbName, cookieName, false);
+	}
+	
+	public static Path generateTempConfigFile(
+			final MongoStorageTestManager manager,
+			final String dbName,
+			final String cookieName,
+			final boolean testMode)
+			throws IOException {
 		final Ini ini = new Ini();
 		final Section sec = ini.add("authserv2");
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
 		sec.add("token-cookie-name", cookieName);
 		// don't bother with logger name
+		
+		if (testMode) {
+			sec.add("test-mode-enabled", "true");
+		}
 		
 		sec.add("identity-providers", "prov1, prov2");
 		

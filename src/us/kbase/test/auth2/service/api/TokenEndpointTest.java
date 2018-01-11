@@ -40,6 +40,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -98,6 +99,43 @@ public class TokenEndpointTest {
 	@Before
 	public void beforeTest() throws Exception {
 		ServiceTestUtils.resetServer(manager, host, COOKIE_NAME);
+	}
+	
+	@Test
+	public void testModeFail() throws Exception {
+		// get token
+		final URI target2 = UriBuilder.fromUri(host).path("/testmode/api/V2/token")
+				.build();
+		final WebTarget wt2 = CLI.target(target2);
+		final Builder req2 = wt2.request()
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", "a token");
+		
+		final Response res2 = req2.get();
+		
+		assertThat("incorrect response code", res2.getStatus(), is(400));
+		
+		failRequestJSON(res2, 400, "Bad Request",
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+		
+		// create token
+		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
+				.build();
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				// GDI, Jersey adds a default accept header and I can't figure out how to stop it
+				// http://stackoverflow.com/questions/40900870/how-do-i-get-jersey-test-client-to-not-fill-in-a-default-accept-header
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		final Response res = req.post(Entity.json(
+				ImmutableMap.of("user", "whee", "type", "Dev")));
+		
+		assertThat("incorrect response code", res.getStatus(), is(400));
+		
+		failRequestJSON(res, 400, "Bad Request",
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
 	}
 	
 	@Test
@@ -547,7 +585,8 @@ public class TokenEndpointTest {
 	private void kbaseTokenSuccess(
 			final String fields,
 			final NewToken nt,
-			final Map<String, Object> expected) throws Exception {
+			final Map<String, Object> expected)
+			throws Exception {
 		final URI target = UriBuilder.fromUri(host).path(
 				"/api/legacy/KBase/Sessions/Login").build();
 		

@@ -115,6 +115,74 @@ The legacy KBase API.
 GET /api/legacy/globus  
 The legacy globus API. Endpoints are /goauth/token and /users.
 
+### Test Mode
+
+Test mode allows integration of the auth service into test harnesses for dependent services and
+applications by providing endpoints for creating test users, tokens, and roles on the fly. A
+subset of the API above is supported (see below).
+
+To enable test mode, add the following line to the service `deploy.cfg` file:
+
+	test-mode-enabled=true
+
+Test mode should never be enabled for production services.
+
+All test mode data is stored in separate collections from the standard data in the service data
+stores, and is automatically deleted one hour after creation. Test mode user accounts have no
+passwords and no linked identities and so logging into test mode accounts is impossible,
+although tokens can be created arbitrarily. Note that test mode user accounts are more or less
+arbitrarily specified as local accounts in the API.
+
+Test mode data is only accessible via endpoints under the `/testmode` root endpoint.
+
+#### Standard endpoints
+
+These endpoints mimic the behavior of the standard API endpoints above, but only interact with
+test mode data.
+
+GET /testmode/api/V2/me  
+
+GET /testmode/api/V2/token  
+
+POST /testmode/api/legacy/KBase/Sessions/Login  
+
+GET /testmode/api/legacy/globus  
+
+#### Data manipulation endpoints
+
+These endpoints allow a test harness to create and modify test mode users, tokens, and roles.
+No authentication is required.
+
+POST /testmode/api/V2/testmodeonly/user  
+Create a user. Takes JSON encoded data with the keys `user` for the user name and `display` for
+the user's display name.
+
+GET /testmode/api/V2/testmodeonly/user/&lt;username&gt;  
+Get a user's data.
+
+POST /testmode/api/V2/testmodeonly/token  
+Create a token. The user to which the token is assigned must exist. Takes JSON encoded data with
+the keys `user` for the user name, `name` for an optional token name, and `type` for the token
+type. `type` is one of `Login`, `Agent`, `Dev`, or `Serv`.
+
+POST /testmode/api/V2/testmodeonly/customroles  
+Create a custom role. Takes JSON encoded data with the keys `id` for the role id and `desc` for
+the role description. Posting a role with an existing ID overwrites the description of the role.
+
+GET /testmode/api/V2/testmodeonly/customroles  
+Get the list of extant custom roles.
+
+PUT /testmode/api/V2/testmodeonly/userroles  
+Set a user's roles, overwriting any current roles. Takes JSON encoded data with the keys `user`
+for the user name of the user to modify, `roles` for a list of built-in roles to grant to the
+user, and `customroles` for a list of custom role ids to grant to the user. Allowed `roles` are
+`DevToken`, `ServToken`, `Admin`, and `CreateAdmin`. Note that these roles don't grant
+any actual privileges in test mode. Omitting `roles` and `customroles` removes all roles from
+the user.
+
+DELETE /testmode/api/V2/testmodeonly/clear  
+Removes all test mode data from the system.
+
 Admin notes
 -----------
 * It is expected that this server always runs behind a reverse proxy (such as
@@ -156,11 +224,6 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 `export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
-
-Import Globus users
-------------
-Use the `manage_auth` script to import Globus users - run with the `--help`
-option for instructions. 
 
 Administer the server
 ---------------------
