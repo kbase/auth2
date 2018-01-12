@@ -182,12 +182,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 	}
 
-	private static class JsonServerSysLogAutoLogger
-			implements SLF4JAutoLogger {
+	private static class JsonServerSysLogAutoLogger implements SLF4JAutoLogger {
+		
 		@SuppressWarnings("unused")
 		private JsonServerSyslog logger; // keep a reference to avoid gc
 
-		private JsonServerSysLogAutoLogger(JsonServerSyslog logger) {
+		private JsonServerSysLogAutoLogger(final JsonServerSyslog logger) {
 			super();
 			this.logger = logger;
 		}
