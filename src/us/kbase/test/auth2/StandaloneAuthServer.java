@@ -67,7 +67,8 @@ public class StandaloneAuthServer {
 //		new StandaloneAuthServer(KBaseAuthConfig.class.getName()).start(Integer.valueOf(args[0]));
 		
 		// option 2: use the test configurator class
-		TestConfigurator.setConfig("localhost:27017", "auth_test_db");
+//		TestConfigurator.setConfig("localhost:27017", "auth_test_db");
+		// if setConfig isn't called, gets parameters from system props
 		new StandaloneAuthServer(TestConfigurator.class.getName()).start(Integer.valueOf(args[0]));
 	}
 }

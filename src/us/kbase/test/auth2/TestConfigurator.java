@@ -97,12 +97,12 @@ public class TestConfigurator implements AuthStartupConfig {
 
 	@Override
 	public String getMongoHost() {
-		return mongoHost;
+		return mongoHost == null ? System.getProperty("AUTH2_TEST_MONGOHOST") : mongoHost;
 	}
 
 	@Override
 	public String getMongoDatabase() {
-		return mongoDatabase;
+		return mongoDatabase == null ? System.getProperty("AUTH2_TEST_MONGODB") : mongoDatabase;
 	}
 
 	@Override
