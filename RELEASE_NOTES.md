@@ -1,6 +1,9 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.2
+-----
+* Add helpers for running the auth service in a separate java process during tests.
 
 0.2.1
 -----
@@ -9,7 +12,7 @@ Authentication Service MKII release notes
   works and has been removed.
 * Added dockerfile that is compatible with automated docker build practices. A successful
   TravisCI build pushes the docker image to dockerhub.
-* Added test mode (see documentation)
+* Added test mode (see documentation).
 
 0.2.0
 -----

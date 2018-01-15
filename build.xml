@@ -161,6 +161,7 @@
       <fileset dir="${src}">
         <patternset>
           <include name="**/*.testdata"/>
+          <include name="**/authjars"/>
         </patternset>
       </fileset>
     </copy>
