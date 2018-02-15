@@ -232,25 +232,32 @@ public class TestModeIntegrationTest {
 	}
 	
 	@Test
+	public void getDisplayNames() throws Exception {
+		createUser("whee", "whoo");
+		final String token = (String) createToken("whee", "Login", "foo").get("token");
+		
+		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/users")
+				.queryParam("list", "whee").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request().header("authorization", token);
+		
+		final Response res = req.get();
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrec user", response, is(ImmutableMap.of("whee", "whoo")));
+	}
+	
+	@Test
 	public void me() throws Exception {
 		final Map<String, Object> uresponse = createUser("whee", "whoo");
 		
 		final long created = (long) uresponse.get("created");
 		
-		// create token
-		final URI ttarget = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
-				.build();
-		final WebTarget twt = CLI.target(ttarget);
-		final Builder treq = twt.request();
-		
-		final Response tres = treq.post(Entity.json(
-				ImmutableMap.of("user", "whee", "type", "Login", "name", "foo")));
-		
-		assertThat("incorrect response code", tres.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> tresponse = tres.readEntity(Map.class);
-		final String token = (String) tresponse.get("token");
+		final String token = (String) createToken("whee", "Login", "foo").get("token");
 		
 		// get user from me endpoint
 		final URI metarget = UriBuilder.fromUri(host).path("/testmode/api/V2/me").build();

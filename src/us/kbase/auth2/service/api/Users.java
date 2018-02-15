@@ -3,7 +3,6 @@ package us.kbase.auth2.service.api;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -49,22 +48,29 @@ public class Users {
 			@QueryParam(Fields.LIST) final String users)
 			throws IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, AuthStorageException {
+		final Set<UserName> uns = processUserListString(users);
+		final Map<UserName, DisplayName> dns = auth.getUserDisplayNames(getToken(token), uns);
+		return dns.entrySet().stream().collect(
+				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
+	}
+
+	static Set<UserName> processUserListString(final String users)
+			throws IllegalParameterException {
+		final Set<UserName> uns = new HashSet<>();
 		if (nullOrEmpty(users)) {
-			return Collections.emptyMap();
+			return uns;
 		}
 		final String[] usersplt = users.split(",");
-		final Set<UserName> uns = new HashSet<>();
 		for (final String u: usersplt) {
 			try {
 				uns.add(new UserName(u.trim()));
 			} catch (MissingParameterException | IllegalParameterException e) {
+				//TODO CODE this exception could use some clean up
 				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
 						"Illegal user name [%s]: %s", u, e.getMessage()));
 			}
 		}
-		final Map<UserName, DisplayName> dns = auth.getUserDisplayNames(getToken(token), uns);
-		return dns.entrySet().stream().collect(
-				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
+		return uns;
 	}
 	
 	@GET

@@ -67,6 +67,9 @@ public class APIPaths {
 	/** The test mode user retrieval endpoint. */
 	public static final String TESTMODE_USER_GET = TESTMODE_USER + SEP + "{" + USERNAME + "}";
 	
+	/** The test mode user display name endpoint. */
+	public static final String TESTMODE_USER_DISPLAY = API_V2_USERS;
+	
 	/** The test mode me endpoint. */
 	public static final String TESTMODE_ME = API_V2_ME;
 	
