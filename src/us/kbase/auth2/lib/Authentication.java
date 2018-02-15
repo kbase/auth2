@@ -1975,6 +1975,42 @@ public class Authentication {
 		logInfo("Created test mode user {}", userName.getName());
 	}
 	
+	// tried reusing code from the regular function and it turned into a disaster
+	/** Look up test mode display names for a set of user names. A maximum of 10000 users may be
+	 * looked up at once.
+	 * @param token a token for the user requesting the lookup.
+	 * @param userNames the user names to look up.
+	 * @return the display names for each user name. Any non-existent user names will be missing.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws IllegalParameterException if the number of requested user names is greater than the
+	 * limit.
+	 * @throws TestModeException if testmode is not enabled.
+	 */
+	public Map<UserName, DisplayName> testModeGetUserDisplayNames(
+			final IncomingToken token,
+			final Set<UserName> userNames)
+			throws InvalidTokenException, AuthStorageException, IllegalParameterException,
+				TestModeException {
+		nonNull(userNames, "userNames");
+		noNulls(userNames, "Null name in userNames");
+		// just check the token is valid
+		final StoredToken stoken = testModeGetToken(token);
+		if (userNames.isEmpty()) {
+			return new HashMap<>();
+		}
+		if (userNames.size() > MAX_RETURNED_USERS) {
+			throw new IllegalParameterException(
+					"User count exceeds maximum of " + MAX_RETURNED_USERS);
+		}
+		
+		final Map<UserName, DisplayName> displayNames =
+				storage.testModeGetUserDisplayNames(userNames);
+		// there can't be a root user name in test mode, so we don't remove it
+		logInfo("Test mode user {} looked up display names", stoken.getUserName().getName());
+		return displayNames;
+	}
+	
 	/** Get a test mode user's data.
 	 * @param userName the user name of the user.
 	 * @return the user.
