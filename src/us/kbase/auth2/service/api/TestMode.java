@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -124,6 +125,21 @@ public class TestMode {
 			this.tokenName = tokenName;
 			this.tokenType = tokenType;
 		}
+	}
+	
+	@GET
+	@Path(APIPaths.TESTMODE_USER_DISPLAY)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, String> getUsers(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
+			@QueryParam(Fields.LIST) final String users)
+			throws IllegalParameterException, NoTokenProvidedException,
+				InvalidTokenException, AuthStorageException, TestModeException {
+		final Set<UserName> uns = Users.processUserListString(users);
+		final Map<UserName, DisplayName> dns = auth.testModeGetUserDisplayNames(
+				getToken(token), uns);
+		return dns.entrySet().stream().collect(
+				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
 	}
 	
 	@POST
