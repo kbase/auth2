@@ -197,6 +197,16 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
 			throws AuthStorageException;
 	
+	/** Get the display names for a set of  test users. Any non-existent users are left out of the
+	 * returned map.
+	 * @param usernames the usernames for which to get display names.
+	 * @return a mapping of username to display name.
+	 * @throws AuthStorageException if a problem connecting with the storage
+	 * system occurs.
+	 */
+	Map<UserName, DisplayName> testModeGetUserDisplayNames(Set<UserName> usernames)
+			throws AuthStorageException;
+	
 	//TODO ZLATER CODE could make a wrapper class for UserSearchSpec that doesn't include the root user stuff.
 	/** Search for users based on a search specification.
 	 * 
