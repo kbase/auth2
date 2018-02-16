@@ -144,6 +144,8 @@ GET /testmode/api/V2/me
 
 GET /testmode/api/V2/token  
 
+GET /testmode/api/V2/users  
+
 POST /testmode/api/legacy/KBase/Sessions/Login  
 
 GET /testmode/api/legacy/globus  
