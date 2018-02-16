@@ -975,6 +975,13 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
 			throws AuthStorageException {
+		return getDisplayNames(users, COL_USERS);
+	}
+
+	private Map<UserName, DisplayName> getDisplayNames(
+			final Set<UserName> users,
+			final String collection)
+			throws AuthStorageException {
 		nonNull(users, "users");
 		Utils.noNulls(users, "Null username in users set");
 		if (users.isEmpty()) {
@@ -984,10 +991,18 @@ public class MongoStorage implements AuthStorage {
 				.collect(Collectors.toList());
 		final Document query = new Document(Fields.USER_NAME, new Document("$in", queryusers))
 				.append(Fields.USER_DISABLED_REASON, null);
-		return getDisplayNames(query, Fields.USER_NAME, -1);
+		return getDisplayNames(collection, query, Fields.USER_NAME, -1);
+	}
+	
+	@Override 
+	public Map<UserName, DisplayName> testModeGetUserDisplayNames(final Set<UserName> users)
+			throws AuthStorageException {
+		return getDisplayNames(users, COL_TEST_USERS);
+		
 	}
 
 	private Map<UserName, DisplayName> getDisplayNames(
+			final String collection,
 			final Document query,
 			final String sortField,
 			final int limit)
@@ -995,7 +1010,7 @@ public class MongoStorage implements AuthStorage {
 		final Document projection = new Document(Fields.USER_NAME, 1)
 				.append(Fields.USER_DISPLAY_NAME, 1);
 		try {
-			final FindIterable<Document> docs = db.getCollection(COL_USERS)
+			final FindIterable<Document> docs = db.getCollection(collection)
 					.find(query).projection(projection);
 			if (limit > 0) {
 				docs.sort(new Document(sortField, 1)).limit(limit);
@@ -1060,7 +1075,7 @@ public class MongoStorage implements AuthStorage {
 		if (!spec.isDisabledIncluded()) {
 			query.put(Fields.USER_DISABLED_REASON, null);
 		}
-		return getDisplayNames(query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
+		return getDisplayNames(COL_USERS, query, SEARCHFIELD_TO_FIELD.get(spec.orderBy()), limit);
 	}
 
 	@Override

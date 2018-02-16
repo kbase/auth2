@@ -300,6 +300,7 @@
         <test name="us.kbase.test.auth2.lib.AuthenticationPasswordLoginTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationPolicyIDTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationRoleTest"/>
+      	<test name="us.kbase.test.auth2.lib.AuthenticationTestModeGetUserDisplayNamesTest"/>
       	<test name="us.kbase.test.auth2.lib.AuthenticationTestModeRoleTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationTestModeUserTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationTestModeTokenTest"/>
@@ -376,6 +377,7 @@
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDuplicateKeyCheckerTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageDisableAccountTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageGetDisplayNamesTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestGetDisplayNamesTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageInvalidDBDataTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageLinkTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>

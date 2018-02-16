@@ -203,6 +203,78 @@ public class TestModeTest {
 	}
 	
 	@Test
+	public void getUserDisplayNameNullAndEmpty() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUserDisplayNames(new IncomingToken("token"), set()))
+				.thenReturn(Collections.emptyMap());
+		
+		assertThat("incorrect users", tm.getUsers("token", "  \t   \n  "),
+				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void getUserDisplayName() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUserDisplayNames(new IncomingToken("token"),
+				set(new UserName("foo"), new UserName("bar"))))
+				.thenReturn(ImmutableMap.of(
+						new UserName("foo"), new DisplayName("whee"),
+						new UserName("bar"), new DisplayName("whoo")));
+		
+		assertThat("incorrect users", tm.getUsers("token", "    \tfoo,  \n  bar   "),
+				is(ImmutableMap.of("foo", "whee", "bar", "whoo")));
+	}
+	
+	@Test
+	public void getUserDisplayNameFailInput() {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		failGetUserDisplayName(tm, null, "",
+				new NoTokenProvidedException("No user token provided"));
+		failGetUserDisplayName(tm, "   \t   \n   ", "",
+				new NoTokenProvidedException("No user token provided"));
+		
+		failGetUserDisplayName(tm, "token", "foo,  , bar",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal user name [  ]: 30000 Missing input parameter: user name"));
+		failGetUserDisplayName(tm, "token", "foo, MyName, bar",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+						"Illegal user name [ MyName]: 30010 Illegal user name: " +
+						"Illegal character in user name MyName: M"));
+	}
+	
+	@Test
+	public void getUserDisplayNameFailInvalidToken() throws Exception {
+		// general test for auth throwing an exception
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		when(auth.testModeGetUserDisplayNames(
+				new IncomingToken("token"), set(new UserName("foo"))))
+				.thenThrow(new InvalidTokenException());
+		
+		failGetUserDisplayName(tm, "token", "foo", new InvalidTokenException());
+	}
+	
+	private void failGetUserDisplayName(
+			final TestMode tm,
+			final String token,
+			final String userList,
+			final Exception expected) {
+		try {
+			tm.getUsers(token, userList);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
+	}
+	
+	@Test
 	public void createTokenNoName() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		final TestMode tm = new TestMode(auth);
