@@ -1,6 +1,10 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.3
+-----
+* Add an endpoint for getting user display names in test mode.
+
 0.2.2
 -----
 * Add helpers for running the auth service in a separate java process during tests.

@@ -24,7 +24,7 @@ public class Root {
 	
 	//TODO JAVADOC or swagger
 	
-	private static final String VERSION = "0.2.2";
+	private static final String VERSION = "0.2.3";
 	
 	@GET
 	@Template(name = "/root")
