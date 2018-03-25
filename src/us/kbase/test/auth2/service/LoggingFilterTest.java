@@ -9,6 +9,8 @@ import static org.mockito.Mockito.reset;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -104,6 +106,11 @@ public class LoggingFilterTest {
 		@Override
 		public boolean isTestModeEnabled() {
 			return false;
+		}
+		
+		@Override
+		public Path getPathToTemplateDirectory() {
+			return Paths.get("templates");
 		}
 	}
 	

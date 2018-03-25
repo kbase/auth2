@@ -1,6 +1,11 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.4
+-----
+* Makes the templates directory configurable. This is primarily to allow other applications to
+  test the server with the templates in a non-standard location.
+
 0.2.3
 -----
 * Add an endpoint for getting user display names in test mode.
