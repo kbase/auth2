@@ -1,7 +1,7 @@
-kbase/auth2/kbase-auth2templates-0.2.3.zip
+kbase/auth2/kbase-auth2templates-0.2.4.zip
 
-kbase/auth2/kbase-auth2-0.2.3.jar
-kbase/auth2/kbase-auth2test-0.2.3.jar
+kbase/auth2/kbase-auth2-0.2.4.jar
+kbase/auth2/kbase-auth2test-0.2.4.jar
 
 #lib
 apache_commons/commons-codec-1.8.jar
