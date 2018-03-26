@@ -7,6 +7,9 @@ mongo-pwd={{ default .Env.mongo_pwd "" }}
 token-cookie-name = {{ default .Env.token_cookie_name "kbase_session" }}
 # the name of the service to report when logging to syslog.
 log-name={{ default .Env.log_name "KBaseAuthServ2" }}
+{{ if .Env.test_mode_enabled }}
+test-mode-enabled=true
+{{ end }}
 identity-providers={{ default .Env.idp "Globus, Google" }}
 identity-provider-Globus-factory = {{ default .Env.idp_Globus_factory "us.kbase.auth2.providers.GlobusIdentityProviderFactory" }}
 identity-provider-Globus-login-url={{ default .Env.idp_Globus_login_url "https://auth.globus.org" }}
