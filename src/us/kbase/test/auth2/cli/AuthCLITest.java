@@ -148,6 +148,7 @@ public class AuthCLITest {
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", DB_NAME);
 		sec.add("token-cookie-name", "foobar");
+		sec.add("template-dir", "templates");
 		final Path temp = TestCommon.getTempDir();
 		final Path deploy = temp.resolve(Files.createTempFile(temp, "cli_test_deploy", ".cfg"));
 		ini.store(deploy.toFile());

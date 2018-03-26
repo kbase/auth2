@@ -7,17 +7,21 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.Reader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collections;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipException;
+import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -45,14 +49,18 @@ public class AuthController {
 			final Path rootTempDir)
 			throws Exception {
 		final String classPath = getClassPath(jarsDir);
-		tempDir = makeTempDirs(rootTempDir, "AuthController-", Collections.emptyList());
+		tempDir = makeTempDirs(rootTempDir, "AuthController-", Arrays.asList("templates"));
 		port = findFreePort();
+		
+		final Path templateDir = tempDir.resolve("templates");
+		installTemplates(jarsDir, templateDir);
 		
 		final List<String> command = ImmutableList.of(
 				"java",
 				"-classpath", classPath,
 				"-DAUTH2_TEST_MONGOHOST=" + mongoHost,
 				"-DAUTH2_TEST_MONGODB=" + mongoDatabase,
+				"-DAUTH2_TEST_TEMPLATE_DIR=" + templateDir.toString(),
 				AUTH_CLASS,
 				"" + port);
 		final ProcessBuilder servpb = new ProcessBuilder(command)
@@ -117,15 +125,45 @@ public class AuthController {
 			FileUtils.deleteDirectory(tempDir.toFile());
 		}
 	}
+	
+	private void installTemplates(final Path jarsDir, final Path templatesDir) throws IOException {
+		final Path templateZipFile;
+		try (final InputStream is = getJarsFileInputStream()) {
+			final BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			//first line is zip file with templates
+			templateZipFile = jarsDir.resolve(br.readLine().trim());
+		}
+		try (final ZipFile zf = new ZipFile(templateZipFile.toFile())) {
+			for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements();) {
+				final ZipEntry ze = e.nextElement();
+				if (ze.isDirectory()) {
+					continue;
+				}
+				final Path zippath = Paths.get(ze.getName()).normalize();
+				if (zippath.isAbsolute() || zippath.startsWith("..")) {
+					throw new TestException("Zip file " + templateZipFile +
+							" contains files outside the zip " +
+							"directory - this is a sign of a malicious zip file.");
+				}
+				final Path file = templatesDir.resolve(zippath).toAbsolutePath();
+				Files.createDirectories(file.getParent());
+				Files.createFile(file);
+				try (final OutputStream os = Files.newOutputStream(file);
+						final InputStream zipinput = zf.getInputStream(ze)) {
+					IOUtils.copy(zipinput, os);
+				}
+			}
+		} catch (ZipException e) {
+			throw new TestException("Unable to open the zip file " + templateZipFile, e);
+		}
+
+	}
 
 	private String getClassPath(final Path jarsDir) throws IOException {
-		final InputStream is = getClass().getResourceAsStream(JARS_FILE);
-		if (is == null) {
-			throw new TestException("No auth versions file " + JARS_FILE);
-		}
 		final List<String> classpath = new LinkedList<>();
-		try (final Reader r = new InputStreamReader(is)) {
-			final BufferedReader br = new BufferedReader(r);
+		try (final InputStream is = getJarsFileInputStream();) {
+			final BufferedReader br = new BufferedReader(new InputStreamReader(is));
+			br.readLine(); // discard first line, which has the templates zip file
 			String line;
 			while ((line = br.readLine()) != null) {
 				if (!line.trim().isEmpty() && !line.trim().startsWith("#")) {
@@ -139,6 +177,14 @@ public class AuthController {
 			}
 		}
 		return String.join(":", classpath);
+	}
+
+	private InputStream getJarsFileInputStream() {
+		final InputStream is = getClass().getResourceAsStream(JARS_FILE);
+		if (is == null) {
+			throw new TestException("No auth versions file " + JARS_FILE);
+		}
+		return is;
 	}
 	
 	public static void main(final String[] args) throws Exception {

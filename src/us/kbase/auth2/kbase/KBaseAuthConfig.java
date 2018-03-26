@@ -41,6 +41,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
+	private static final String KEY_TEMPLATE_DIR = "template-dir";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
 	private static final String KEY_SUFFIX_ID_PROVS_FACTORY = "-factory";
@@ -65,6 +66,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
 	private final boolean isTestModeEnabled;
+	private final Path templateDir;
 
 	public KBaseAuthConfig() throws AuthConfigurationException {
 		this(getConfigPathFromEnv(), false);
@@ -85,6 +87,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 		try {
 			isTestModeEnabled = TRUE.equals(getString(KEY_TEST_MODE_ENABLED, cfg));
+			templateDir = Paths.get(getString(KEY_TEMPLATE_DIR, cfg, true));
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
 			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -304,5 +307,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	@Override
 	public boolean isTestModeEnabled() {
 		return isTestModeEnabled;
+	}
+	
+	@Override
+	public Path getPathToTemplateDirectory() {
+		return templateDir;
 	}
 }
