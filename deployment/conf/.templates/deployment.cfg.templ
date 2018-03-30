@@ -25,3 +25,4 @@ identity-provider-Google-client-secret={{ default .Env.idp_Google_client_secret 
 identity-provider-Google-login-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/google
 identity-provider-Google-link-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/google
 
+template-dir = {{ default .Env.template_dir "templates" }}
