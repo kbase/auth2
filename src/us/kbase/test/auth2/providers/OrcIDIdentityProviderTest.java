@@ -203,18 +203,27 @@ public class OrcIDIdentityProviderTest {
 	}
 	
 	@Test
-	public void returnsIllegalAuthtoken() throws Exception {
+	public void returnsIllegalAuthtokenResponse() throws Exception {
 		final IdentityProviderConfig testIDConfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(testIDConfig);
 		final String redir = testIDConfig.getLoginRedirectURL().toString();
+		final String cliid = testIDConfig.getClientID();
+		final String clisec = testIDConfig.getClientSecret();
+		final String acode = "authcode6";
 		final IdentityRetrievalException e =
 				new IdentityRetrievalException("No access token was returned by OrcID");
-		setUpCallAuthToken("authcode6", null, redir,
-				testIDConfig.getClientID(), testIDConfig.getClientSecret(), "name", "fake ID");
-		failGetIdentities(idp, "authcode6", false, e);
-		setUpCallAuthToken("authcode6", "\t  ", redir,
-				testIDConfig.getClientID(), testIDConfig.getClientSecret(),  "name", "fake ID");
-		failGetIdentities(idp, "authcode6", false, e);
+		
+		setUpCallAuthToken(acode, null, redir, cliid, clisec, "name", "fake ID");
+		failGetIdentities(idp, acode, false, e);
+		setUpCallAuthToken(acode, "\t  ", redir, cliid, clisec, "name", "fake ID");
+		failGetIdentities(idp, acode, false, e);
+		
+		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", null);
+		failGetIdentities(idp, acode, false, new IdentityRetrievalException(
+				"No id was returned by OrcID"));
+		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", "   \t  \n  ");
+		failGetIdentities(idp, acode, false, new IdentityRetrievalException(
+				"No id was returned by OrcID"));
 	}
 	
 	@Test
@@ -225,13 +234,6 @@ public class OrcIDIdentityProviderTest {
 		final String cliid = cfg.getClientID();
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo10";
-		
-		setUpCallAuthToken(authCode, "fake token", redir, cliid, clisec, "my name", null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"No id was returned by OrcID"));
-		setUpCallAuthToken(authCode, "fake token", redir, cliid, clisec, "my name", "   \t  \n  ");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"No id was returned by OrcID"));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
