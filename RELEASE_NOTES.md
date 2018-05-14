@@ -1,6 +1,11 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.5
+-----
+* OrcID is now supported as an identity provider. See `deploy.cfg.example` for a
+  configuration example.
+
 0.2.4
 -----
 * CONFIGURATION CHANGE - the templates directory is now configurable. Add

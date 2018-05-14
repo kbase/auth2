@@ -30,7 +30,6 @@ Future work
 * Memory based data storage
 * More identity providers
   * Facebook
-  * Orcid (? already supported via Globus)
   * CiLogon (? already supported via Globus)
 * Check user input for obscene or offensive content and reject, find 3rd party code (?)
 
