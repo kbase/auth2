@@ -143,8 +143,13 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			// buttholes that change their API willy nilly
 			@SuppressWarnings("unchecked")
 			final List<Map<String, Object>> emails = (List<Map<String, Object>>) id.get("email");
-			String email = emails.isEmpty() ? email = null : (String) emails.get(0).get("email");
-			if (email == null || email.isEmpty()) {
+			String email;
+			if (emails == null || emails.isEmpty()) {
+				email = null;
+			} else {
+				email = (String) emails.get(0).get("email");
+			}
+			if (email == null || email.trim().isEmpty()) {
 				email = null;
 			}
 			return new RemoteIdentity(
@@ -294,7 +299,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					// can't get the entity at this point because readEntity closes the stream
 					// this should never happen in practice so don't worry about it for now
 					throw new IdentityRetrievalException(String.format(
-							"Unable to parse response from %s service.", NAME));
+							"Unable to parse response from %s service.", NAME), e);
 				}
 			}
 			if (r.hasEntity()) {
