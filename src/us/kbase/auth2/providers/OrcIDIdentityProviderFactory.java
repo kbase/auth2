@@ -52,11 +52,11 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 */
 	public static class OrcIDIdentityProvider implements IdentityProvider {
 		
-		// notes: I haven't been able to find documentation re the OrcID error structure, so I'm
-		// just copying google for now
+		// notes: I haven't been able to find documentation re the OrcID error structure, so I've
+		// reversed engineered it by passing bad input. Hopefully what I've got covers all the
+		// possibilities.
 	
-		/* Get creds: https://sandbox.orcid.org/developer-tools
-		 */
+		/* Get creds: https://sandbox.orcid.org/developer-tools */
 		
 		private static final String NAME = "OrcID";
 		private static final String SCOPE = "/authenticate";
@@ -175,19 +175,11 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					@Override
 					public void handleError(final Response r, final Map<String, Object> response)
 							throws IdentityRetrievalException {
-						// ignoring type checking again, assuming that OrcID aren't jerks
-						@SuppressWarnings("unchecked")
-						final Map<String, Object> m = (Map<String, Object>) response.get("error");
-						// there's more details in the 'errors' key but ignore that for now
-						// could log later
-						if (m == null || !m.containsKey("message")) {
-							throw new IdentityRetrievalException(String.format(
-									"Got unexpected HTTP code with null error in the response " +
-									"body from %s service: %s.", NAME, r.getStatus()));
-						}
 						throw new IdentityRetrievalException(String.format(
-								"%s service returned an error. HTTP code: %s. Error: %s",
-								NAME, r.getStatus(), m.get("message")));
+								"%s service returned an error. HTTP code: %s. Error: %s. " +
+								"Error description: %s",
+								NAME, r.getStatus(), response.get("error"),
+								response.get("error_description")));
 					}
 				});
 			} finally {

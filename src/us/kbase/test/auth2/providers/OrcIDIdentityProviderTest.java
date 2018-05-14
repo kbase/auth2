@@ -320,23 +320,10 @@ public class OrcIDIdentityProviderTest {
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 401, MAPPER.writeValueAsString(
-				map("error", null)));
+				map("error", "whee!", "error_description", "whoo!")));
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with null error in the response body from OrcID " +
-				"service: 401."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
-		setupCallID(authtoken, orcID, APP_JSON, 404, MAPPER.writeValueAsString(
-				map("error", new HashMap<String, String>())));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with null error in the response body from OrcID " +
-						"service: 404."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
-		setupCallID(authtoken, orcID, APP_JSON, 400, MAPPER.writeValueAsString(
-				map("error", map("message", "foobar"))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"OrcID service returned an error. HTTP code: 400. Error: foobar"));
+				"OrcID service returned an error. HTTP code: 401. " +
+				"Error: whee!. Error description: whoo!"));
 	}
 	
 	@Test
