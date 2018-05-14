@@ -46,7 +46,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		return new OrcIDIdentityProvider(cfg);
 	}
 	
-	/** An identity provider for Google accounts.
+	/** An identity provider for OrcID accounts.
 	 * @author gaprice@lbl.gov
 	 *
 	 */
@@ -71,7 +71,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		
 		private final IdentityProviderConfig cfg;
 		
-		/** Create an identity provider for Google.
+		/** Create an identity provider for OrcID.
 		 * @param idc the configuration for this provider.
 		 */
 		public OrcIDIdentityProvider(final IdentityProviderConfig idc) {
