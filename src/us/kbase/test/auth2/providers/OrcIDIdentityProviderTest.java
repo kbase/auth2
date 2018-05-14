@@ -226,13 +226,6 @@ public class OrcIDIdentityProviderTest {
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo10";
 		
-		setUpCallAuthToken(authCode, null, redir, cliid, clisec, "my name", "orcID");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"No access token was returned by OrcID"));
-		setUpCallAuthToken(authCode, "  \t  \n  ", redir, cliid, clisec, "my name", "orcID");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"No access token was returned by OrcID"));
-		
 		setUpCallAuthToken(authCode, "fake token", redir, cliid, clisec, "my name", null);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"No id was returned by OrcID"));
