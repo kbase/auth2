@@ -2,6 +2,8 @@ package us.kbase.test.auth2;
 
 import java.io.File;
 import java.io.PrintWriter;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.Set;
 
@@ -20,10 +22,15 @@ public class TestConfigurator implements AuthStartupConfig {
 	
 	private static String mongoHost = null;
 	private static String mongoDatabase = null;
+	private static String templatesDir = null;
 	
-	public static void setConfig(final String mongoHost, final String mongoDatabase) {
+	public static void setConfig(
+			final String mongoHost,
+			final String mongoDatabase,
+			final String templatesDir) {
 		TestConfigurator.mongoHost = mongoHost;
 		TestConfigurator.mongoDatabase = mongoDatabase;
+		TestConfigurator.templatesDir = templatesDir;
 	}
 
 	private final SLF4JAutoLogger logger;
@@ -123,6 +130,12 @@ public class TestConfigurator implements AuthStartupConfig {
 	@Override
 	public boolean isTestModeEnabled() {
 		return true;
+	}
+	
+	@Override
+	public Path getPathToTemplateDirectory() {
+		return Paths.get(templatesDir == null ?
+				System.getProperty("AUTH2_TEST_TEMPLATE_DIR") : templatesDir);
 	}
 
 }

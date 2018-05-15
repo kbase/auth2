@@ -2,8 +2,6 @@ package us.kbase.auth2.service;
 
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
-import java.nio.file.Paths;
-
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
@@ -86,8 +84,7 @@ public class AuthenticationService extends ResourceConfig {
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");
 		register(JacksonJaxbJsonProvider.class);
 		register(MustacheMvcFeature.class);
-		final String templatePath = "templates";
-		property(MustacheMvcFeature.TEMPLATE_BASE_PATH, templatePath);
+		property(MustacheMvcFeature.TEMPLATE_BASE_PATH, c.getPathToTemplateDirectory().toString());
 		register(LoggingFilter.class);
 		register(ExceptionHandler.class);
 		final Authentication auth = ab.getAuth();
@@ -95,7 +92,7 @@ public class AuthenticationService extends ResourceConfig {
 			@Override
 			protected void configure() {
 				bind(auth).to(Authentication.class);
-				bind(new MustacheProcessor(Paths.get(templatePath).toAbsolutePath()))
+				bind(new MustacheProcessor(c.getPathToTemplateDirectory().toAbsolutePath()))
 					.to(TemplateProcessor.class);
 				bind(c.getLogger()).to(SLF4JAutoLogger.class);
 				bind(new AuthAPIStaticConfig(c.getTokenCookieName()))

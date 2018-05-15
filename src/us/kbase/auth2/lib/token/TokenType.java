@@ -52,7 +52,7 @@ public enum TokenType {
 	}
 	
 	/** Get a token type based on a supplied ID.
-	 * @param id the id for the token type.
+	 * @param type the id of the token type as a string.
 	 * @return a token type.
 	 * @throws IllegalArgumentException if there is no token type matching the ID.
 	 */

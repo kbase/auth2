@@ -17,6 +17,7 @@
   <property name="doc" location="docs/javadoc"/>
   <property name="testcfg" location="./test.cfg"/>
   <property name="testjar.file" value="KBaseAuth2Test.jar"/>
+  <property name="templates.file" value="KBaseAuth2Templates.zip"/>
   <property name="jar.file" value="KBaseAuth2.jar"/>
   <property name="war.file" value="KBaseAuth2.war"/>
   <property name="war.dir" value="war"/>
@@ -179,6 +180,8 @@
          basedir="${classes}"
          includes="us/kbase/test/**"
     />
+    <!-- make templates zip file -->
+    <zip basedir="templates" destfile="${dist}/${templates.file}"/>
   </target>
 
   <target name="buildwar" depends="compile" description="build the WAR file">
@@ -226,7 +229,7 @@
              splitindex="true"
              use="true"
              version="true">
-      <link href="http://docs.oracle.com/javase/8/docs/api/"/>
+      <link href="https://docs.oracle.com/javase/8/docs/api/"/>
       <link href="http://api.mongodb.com/java/3.3/"/>
       <link href="https://google.github.io/guava/releases/18.0/api/docs/"/>
     </javadoc>
@@ -339,6 +342,7 @@
         <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
         <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
+      	<test name="us.kbase.test.auth2.providers.OrcIDIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.service.LoggingFilterTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>

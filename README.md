@@ -205,6 +205,8 @@ Admin notes
     * email
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
+* Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
+  * Note that only the public API has been tested with the auth server.
 
 Requirements
 ------------
