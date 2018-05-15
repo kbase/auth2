@@ -25,4 +25,12 @@ identity-provider-Google-client-secret={{ default .Env.idp_Google_client_secret 
 identity-provider-Google-login-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/google
 identity-provider-Google-link-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/google
 
+identity-provider-OrcID-factory = {{ default .Env.idp_OrcID_factory "us.kbase.auth2.providers.OrcIDIdentityProviderFactory" }}
+identity-provider-OrcID-login-url = {{ default .Env.idp_OrcID_login_url "https://sandbox.orcid.org/" }}
+identity-provider-OrcID-api-url = {{ default .Env.idp_OrcID_api_url "https://pub.sandbox.orcid.org/" }}
+identity-provider-OrcID-client-id = {{ default .Env.idp_OrcID_client_id "kbaseauth" }}
+identity-provider-OrcID-client-secret = {{ default .Env.idp_OrcID_client_secret "mocksecret" }}
+identity-provider-OrcID-login-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/orcid
+identity-provider-OrcID-link-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/orcid
+
 template-dir = {{ default .Env.template_dir "templates" }}
