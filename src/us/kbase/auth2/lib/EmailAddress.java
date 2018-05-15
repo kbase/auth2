@@ -14,7 +14,8 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  */
 public class EmailAddress {
 
-	private static final EmailValidator validator = EmailValidator.getInstance(false);
+	// is a singleton, so it better be threadsafe
+	private static final EmailValidator VALIDATOR = EmailValidator.getInstance(false);
 	
 	/** An unknown email address. Always returns null for the address. */
 	public final static EmailAddress UNKNOWN = new EmailAddress(); // maybe want a specific class rather than just returning null
@@ -36,7 +37,7 @@ public class EmailAddress {
 	public EmailAddress(final String email)
 			throws MissingParameterException, IllegalParameterException {
 		checkString(email, "email address", MAX_EMAIL_LENGTH);
-		if (!validator.isValid(email)) {
+		if (!VALIDATOR.isValid(email)) {
 			throw new IllegalParameterException(ErrorType.ILLEGAL_EMAIL_ADDRESS, email);
 		}
 		this.email = email.trim();

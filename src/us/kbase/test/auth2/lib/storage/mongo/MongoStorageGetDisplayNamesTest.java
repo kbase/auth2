@@ -13,58 +13,49 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.Test;
 
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.NewUser;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.UserSearchSpec.Builder;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	private static final Instant NOW = Instant.now();
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891d56715d8"),
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar2"),
 			new RemoteIdentityDetails("user2", "full2", "email2"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE3 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891e56715d8"),
+	private static final RemoteIdentity REMOTE3 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
 
-	private static final RemoteIdentityWithLocalID REMOTE4 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891f56715d8"),
+	private static final RemoteIdentity REMOTE4 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar4"),
 			new RemoteIdentityDetails("user4", "full4", "email4"));
 	
 	@Test
 	public void getNamesFromList() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("whoo"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("bar"));
@@ -76,12 +67,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void getNamesFromEmptyList() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("whoo"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		assertThat("incorrect users found", storage.getUserDisplayNames(
@@ -90,12 +81,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void getNamesFromListWithDisabledUsers() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("whoo"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		when(mockClock.instant()).thenReturn(Instant.now());
 		
@@ -131,12 +122,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchUserName() throws Exception {
-		storage.createUser(new NewUser(new UserName("foow"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foow"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("whee"), new DisplayName("bar"));
@@ -149,12 +140,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchDisplayName() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("barw"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("barw"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("whoo"));
@@ -167,14 +158,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchBothNames() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("whoo"));
@@ -188,14 +180,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchBothNamesEmpty() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("whoo"));
@@ -208,14 +201,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchNoResults() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		
@@ -225,14 +219,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchAllResults() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("whoo"));
@@ -246,12 +241,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchUserRegex() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("baz"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whoo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whoo"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("baz"));
@@ -269,12 +264,12 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchWithRegexInPrefix() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("baz"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whoo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whoo"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		
@@ -285,14 +280,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchUserLimit() throws Exception {
-		storage.createUser(new NewUser(new UserName("wfoo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wfoo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("bar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("wfoo"), new DisplayName("whoo"));
@@ -304,14 +300,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchDisplayLimit() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("whoo"));
@@ -324,14 +321,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
 				Collections.emptySet());
@@ -353,14 +351,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchMultipleRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.updateRoles(new UserName("whee"), set(Role.ADMIN, Role.DEV_TOKEN),
 				Collections.emptySet());
@@ -377,14 +376,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchCustomRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.setCustomRole(new CustomRole("baz", "bleah"));
 		storage.setCustomRole(new CustomRole("bat", "bleah"));
@@ -409,14 +409,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchMultipleCustomRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("thewrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("thewrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.setCustomRole(new CustomRole("baz", "bleah"));
 		storage.setCustomRole(new CustomRole("bat", "bleah"));
@@ -502,14 +503,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchAllFields() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("whoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("whoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.setCustomRole(new CustomRole("baz", "bleah"));
 		storage.setCustomRole(new CustomRole("bat", "bleah"));
@@ -540,14 +542,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	
 	@Test
 	public void searchAllFieldsWithLimit() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("fwhoo"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("whee"), new EmailAddress("f@g.com"),
-				new DisplayName("wbar"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wugga"), new EmailAddress("f@g.com"),
-				new DisplayName("wonk"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("wrock"), new EmailAddress("f@g.com"),
-				new DisplayName("smellywcooking"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("fwhoo"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("wbar"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wugga"), new DisplayName("wonk"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("wrock"), new DisplayName("smellywcooking"), NOW, REMOTE4)
+				.build());
 		
 		storage.setCustomRole(new CustomRole("baz", "bleah"));
 		storage.setCustomRole(new CustomRole("bat", "bleah"));
@@ -577,7 +580,74 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				is(expected));
 	}
 	
-	//TODO TEST will need tests for punctuation removal
+	@Test
+	public void canonicalSearchPunctuation1() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
+		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation2() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+e").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation3() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("wh+o").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalSearchPunctuation4() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"), NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("whee"), new DisplayName("*&wbar#@  wh+oo;; "), NOW, REMOTE2)
+				.build());
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("fwhe").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
 	@Test
 	public void canonicalSearch1() throws Exception {
 		createUsersForCanonicalSearch();
@@ -631,13 +701,15 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 	}
 
 	private void createUsersForCanonicalSearch() throws Exception {
-		storage.createUser(new NewUser(new UserName("u1"), new EmailAddress("f@g.com"),
-				new DisplayName("Douglas J Adams"), REMOTE1, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("u2"), new EmailAddress("f@g.com"),
-				new DisplayName("Herbert Dougie Howser"), REMOTE2, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("u3"), new EmailAddress("f@g.com"),
-				new DisplayName("al douglas"), REMOTE3, MTPID, NOW, null));
-		storage.createUser(new NewUser(new UserName("u4"), new EmailAddress("f@g.com"),
-				new DisplayName("Albert HevensyDouglas"), REMOTE4, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("u1"), new DisplayName("Douglas J Adams"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("u2"), new DisplayName("Herbert Dougie Howser"), NOW, REMOTE2)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("u3"), new DisplayName("al douglas"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("u4"), new DisplayName("Albert HevensyDouglas"), NOW, REMOTE4)
+				.build());
 	}
 }

@@ -16,41 +16,50 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
-import us.kbase.auth2.lib.AuthUser;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserDisplayNamesTest {
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-
+	private static List<ILoggingEvent> logEvents;
+	
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
+	}
+	
 	@Test
 	public void getDisplayNamesSet() throws Exception {
 		// includes test of removing root user
@@ -64,9 +73,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 		expected.put(new UserName("foo"), new DisplayName("dfoo"));
 		expected.put(new UserName("bar"), new DisplayName("dbar"));
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("foo"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUserDisplayNames(
 				set(new UserName("foo"), new UserName("bar"), new UserName("***ROOT***"))))
@@ -87,9 +96,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("foo"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		final Map<UserName, DisplayName> disp = auth.getUserDisplayNames(
 				token, Collections.emptySet());
@@ -135,10 +144,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 			users.add(new UserName("u" + i));
 		}
 		
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("foo"), Instant.now(), Instant.now()));
-		
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+				.withLifeTime(Instant.now(), Instant.now()).build());
+				
 		failGetDisplayNamesSet(auth, token, users,
 				new IllegalParameterException("User count exceeds maximum of 10000"));
 	}
@@ -158,10 +167,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpec() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
 		
@@ -174,10 +183,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecWithRootAsAdmin() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withIncludeRoot(true).build();
@@ -192,10 +201,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecWithRootAsCreate() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withIncludeRoot(true).build();
@@ -210,10 +219,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecWithRootAsRoot() throws Exception {
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withIncludeRoot(true).build();
@@ -238,12 +247,11 @@ public class AuthenticationGetUserDisplayNamesTest {
 		
 		for (final UserSearchSpec spec: Arrays.asList(noprefix, custom, role, disabled)) {
 			for (final Role r: Arrays.asList(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN)) {
-				final AuthUser user = new AuthUser(
+				final AuthUser user = AuthUser.getBuilder(
 						r == Role.ROOT ? UserName.ROOT : new UserName("foo"),
-								new EmailAddress("f@g.com"),
-						new DisplayName("foo"), Collections.emptySet(), set(r),
-						Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-						new UserDisabledState());
+						new DisplayName("foo"), Instant.now())
+						.withEmailAddress(new EmailAddress("f@g.com"))
+						.withRole(r).build();
 				
 				final Map<UserName, DisplayName> expected = new HashMap<>();
 				expected.put(new UserName("foo"), new DisplayName("dfoo"));
@@ -268,10 +276,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecFailRegex() throws Exception {
-		final AuthUser user = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
 		final Field m = spec.getClass().getDeclaredField("isRegex");
@@ -283,56 +291,38 @@ public class AuthenticationGetUserDisplayNamesTest {
 	}
 	
 	@Test
-	public void getDisplayNamesFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
+	public void getUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getUserDisplayNames(token, UserSearchSpec.getBuilder().build());
+			}
 
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetDisplayNamesSpec(auth, token, UserSearchSpec.getBuilder().build(),
-				new InvalidTokenException());
-	}
-	
-	@Test
-	public void getDisplayNamesFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("foo"), Instant.now(), Instant.now()));
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failGetDisplayNamesSpec(auth, token, UserSearchSpec.getBuilder().build(),
-				new RuntimeException("There seems to be an error " +
-						"in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
-	public void getDisplayNamesSpecFailDisabled() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
-		
-		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
-		
-		failGetDisplayNamesSpec(user, spec, new DisabledUserException());
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get display";
+			}
+		}, set(), set());
 	}
 	
 	@Test
 	public void getDisplayNamesSpecFailStdUserCustomRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withSearchOnCustomRole("foobar").build();
@@ -343,10 +333,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecFailStdUserRole() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withSearchOnRole(Role.ADMIN).build();
@@ -357,10 +347,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecFailStdUserNoPrefix() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().build();
 		
@@ -370,10 +360,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecFailStdUserIncludeRoot() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withIncludeRoot(true).build();
@@ -384,10 +374,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	@Test
 	public void getDisplayNamesSpecFailStdUserIncludeDisabled() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.DEV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
 				.withIncludeDisabled(true).build();
@@ -412,9 +402,9 @@ public class AuthenticationGetUserDisplayNamesTest {
 
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						user.getUserName(), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), user.getUserName())
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
 		

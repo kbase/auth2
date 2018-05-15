@@ -25,17 +25,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.template.TemplateProcessor;
 
 
 public class ExceptionHandler implements ExceptionMapper<Throwable> {
 
-	//TODO TEST unit tests
+	//TODO TEST unit tests, probably makes sense to do logging & exceptions in the same test file
 	//TODO JAVADOC
 	
 	@Context
@@ -58,19 +60,20 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 
 		boolean includeStack = false;
 		try {
-			final AuthExternalConfig ext = auth.getExternalConfig(
+			final AuthExternalConfig<State> ext = auth.getExternalConfig(
 					new AuthExternalConfigMapper());
-			includeStack = ext.isIncludeStackTraceInResponse();
+			includeStack = ext.isIncludeStackTraceInResponseOrDefault();
 		} catch (AuthStorageException | ExternalConfigMappingException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"An error occurred in the error handler when attempting " +
 					"to get the server configuration", e); 
 		}
+		//TODO CODE get rid of the logger.getCallID() method and instead make own call ID handler to decouple logger and exception handler.
 		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(), includeStack);
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {
 			final Map<String, Object> err = new HashMap<>();
-			err.put("error", em);
+			err.put(Fields.ERROR, em);
 			try {
 				ret = mapper.writeValueAsString(err);
 			} catch (JsonProcessingException e) {
@@ -80,9 +83,9 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 				LoggerFactory.getLogger(getClass()).error(ret, e);
 			}
 		} else {
-			ret = template.process("error", em);
+			ret = template.process(Fields.ERROR, em);
 		}
-		return Response.status(em.getHttpCode()).entity(ret).type(mt).build();
+		return Response.status(em.getHttpcode()).entity(ret).type(mt).build();
 	}
 	
 	private final static Set<MediaType> MEDIA_SUPPORTED = new HashSet<>(Arrays.asList(

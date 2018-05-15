@@ -1,8 +1,10 @@
 package us.kbase.auth2.service.common;
 
+import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.UUID;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
@@ -13,47 +15,35 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 public class IncomingJSON {
 
-	// TODO JAVADOC
-	// TODO TEST
+	// TODO JAVADOC or swagger
 
 	private final Map<String, Object> additionalProperties = new TreeMap<>();
 
-	// don't throw error from constructor, doesn't get picked up by the custom error handler 
+	// don't throw error from constructor, makes for crappy error messages.
 	protected IncomingJSON() {}
-
-	protected UUID getUUID(final String uuid, final String fieldName)
-			throws IllegalParameterException, MissingParameterException {
-		if (uuid == null) {
-			throw new MissingParameterException(fieldName + " field is required");
-		}
-		try {
-			return UUID.fromString(uuid);
-		} catch (IllegalArgumentException e) {
-			throw new IllegalParameterException(fieldName + " is not a valid UUID: " + uuid);
-		}
-	}
 	
-	protected Optional<UUID> getOptionalUUID(final String uuid, final String fieldName)
-			throws IllegalParameterException {
-		if (uuid == null || uuid.trim().isEmpty()) {
+	public static String getString(final String string, final String field)
+			throws MissingParameterException {
+		checkString(string, field);
+		return string.trim();
+	}
+
+	protected Optional<String> getOptionalString(final String string) {
+		if (nullOrEmpty(string)) {
 			return Optional.absent();
 		}
-		try {
-			return Optional.of(UUID.fromString(uuid));
-		} catch (IllegalArgumentException e) {
-			throw new IllegalParameterException(fieldName + " is not a valid UUID: " + uuid);
-		}
+		return Optional.of(string.trim());
 	}
 
 	protected boolean getBoolean(final Object b, final String fieldName)
 			throws IllegalParameterException {
+		// may need to configure response for null
 		if (b == null) {
 			return false;
 		}
 		if (!(b instanceof Boolean)) {
 			throw new IllegalParameterException(fieldName + " must be a boolean");
 		}
-		// may need to configure response for null
 		return Boolean.TRUE.equals(b) ? true : false;
 	}
 

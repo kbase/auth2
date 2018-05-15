@@ -16,6 +16,7 @@ import javax.ws.rs.core.Response.StatusType;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.databind.JsonMappingException;
 
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -28,43 +29,43 @@ public class ErrorMessage {
 	//TODO TEST unit tests
 	//TODO JAVADOC
 
-	private final int httpCode;
-	private final String httpStatus;
-	private final Integer appCode;
-	private final String appError;
+	private final int httpcode;
+	private final String httpstatus;
+	private final Integer appcode;
+	private final String apperror;
 	private final String message;
 	private final String exception;
-	private final String callID;
+	private final String callid;
 	private final long time = Instant.now().toEpochMilli();
 	@JsonIgnore
-	private final List<String> exceptionLines;
+	private final List<String> exceptionlines;
 	@JsonIgnore
-	private final boolean hasException;
+	private final boolean hasexception;
 	
 	public ErrorMessage(
 			final Throwable ex,
 			final String callID,
 			final boolean includeTrace) {
 		nonNull(ex, "ex");
-		this.callID = callID; // null ok
+		this.callid = callID; // null ok
 		if (includeTrace) {
 			final StringWriter st = new StringWriter();
 			ex.printStackTrace(new PrintWriter(st));
 			exception = st.toString();
-			exceptionLines = Collections.unmodifiableList(
+			exceptionlines = Collections.unmodifiableList(
 					Arrays.asList(exception.split("\n")));
-			hasException = true;
+			hasexception = true;
 		} else {
 			exception = null;
-			exceptionLines = null;
-			hasException = false;
+			exceptionlines = null;
+			hasexception = false;
 		}
 		message = ex.getMessage();
 		final StatusType status;
 		if (ex instanceof AuthException) {
 			final AuthException ae = (AuthException) ex;
-			appCode = ae.getErr().getErrorCode();
-			appError = ae.getErr().getError();
+			appcode = ae.getErr().getErrorCode();
+			apperror = ae.getErr().getError();
 			if (ae instanceof AuthenticationException) {
 				status = Response.Status.UNAUTHORIZED;
 			} else if (ae instanceof UnauthorizedException) {
@@ -75,33 +76,41 @@ public class ErrorMessage {
 				status = Response.Status.BAD_REQUEST;
 			}
 		} else if (ex instanceof WebApplicationException) {
-			appCode = null;
-			appError = null;
+			appcode = null;
+			apperror = null;
 			status = ((WebApplicationException) ex).getResponse()
 					.getStatusInfo();
+		} else if (ex instanceof JsonMappingException) {
+			/* we assume that any json exceptions are because the client sent bad JSON data.
+			 * This may not 100% accurate, but if we're attempting to return unserializable data
+			 * that should be caught in tests.
+			 */
+			appcode = null;
+			apperror = null;
+			status = Response.Status.BAD_REQUEST;
 		} else {
-			appCode = null;
-			appError = null;
+			appcode = null;
+			apperror = null;
 			status = Response.Status.INTERNAL_SERVER_ERROR;
 		}
-		httpCode = status.getStatusCode();
-		httpStatus = status.getReasonPhrase();
+		httpcode = status.getStatusCode();
+		httpstatus = status.getReasonPhrase();
 	}
 
-	public int getHttpCode() {
-		return httpCode;
+	public int getHttpcode() {
+		return httpcode;
 	}
 
-	public String getHttpStatus() {
-		return httpStatus;
+	public String getHttpstatus() {
+		return httpstatus;
 	}
 
-	public Integer getAppCode() {
-		return appCode;
+	public Integer getAppcode() {
+		return appcode;
 	}
 
-	public String getAppError() {
-		return appError;
+	public String getApperror() {
+		return apperror;
 	}
 
 	public String getMessage() {
@@ -112,46 +121,19 @@ public class ErrorMessage {
 		return exception;
 	}
 
-	public List<String> getExceptionLines() {
-		return exceptionLines;
+	public List<String> getExceptionlines() {
+		return exceptionlines;
 	}
 
-	public boolean hasException() {
-		return hasException;
+	public boolean hasexception() {
+		return hasexception;
 	}
 
-	public String getCallID() {
-		return callID;
+	public String getCallid() {
+		return callid;
 	}
 
 	public long getTime() {
 		return time;
-	}
-
-	@Override
-	public String toString() {
-		StringBuilder builder = new StringBuilder();
-		builder.append("ErrorMessage [httpCode=");
-		builder.append(httpCode);
-		builder.append(", httpStatus=");
-		builder.append(httpStatus);
-		builder.append(", appCode=");
-		builder.append(appCode);
-		builder.append(", appError=");
-		builder.append(appError);
-		builder.append(", message=");
-		builder.append(message);
-		builder.append(", exception=");
-		builder.append(exception);
-		builder.append(", callID=");
-		builder.append(callID);
-		builder.append(", time=");
-		builder.append(time);
-		builder.append(", exceptionLines=");
-		builder.append(exceptionLines);
-		builder.append(", hasException=");
-		builder.append(hasException);
-		builder.append("]");
-		return builder.toString();
 	}
 }

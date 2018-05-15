@@ -5,17 +5,17 @@ import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import java.nio.file.Paths;
 
 import org.glassfish.hk2.utilities.binding.AbstractBinder;
-import org.glassfish.jersey.jackson.JacksonFeature;
 import org.glassfish.jersey.server.ResourceConfig;
 import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 import org.slf4j.LoggerFactory;
 
+import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
 import com.mongodb.MongoClient;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.ExternalConfig;
+import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.common.ServiceCommon;
@@ -52,7 +52,7 @@ public class AuthenticationService extends ResourceConfig {
 		quietLogger();
 		logger = cfg.getLogger();
 		try {
-			buildApp(cfg, AuthExternalConfig.DEFAULT);
+			buildApp(cfg, AuthExternalConfig.SET_DEFAULT);
 		} catch (StorageInitException e) {
 			LoggerFactory.getLogger(getClass()).error(
 					"Failed to initialize storage engine: " + e.getMessage(),
@@ -84,7 +84,7 @@ public class AuthenticationService extends ResourceConfig {
 			}
 		}
 		packages("us.kbase.auth2.service.api", "us.kbase.auth2.service.ui");
-		register(JacksonFeature.class);
+		register(JacksonJaxbJsonProvider.class);
 		register(MustacheMvcFeature.class);
 		final String templatePath = "templates";
 		property(MustacheMvcFeature.TEMPLATE_BASE_PATH, templatePath);
@@ -100,6 +100,7 @@ public class AuthenticationService extends ResourceConfig {
 				bind(c.getLogger()).to(SLF4JAutoLogger.class);
 				bind(new AuthAPIStaticConfig(c.getTokenCookieName()))
 						.to(AuthAPIStaticConfig.class);
+				bind(new UserAgentParser()).to(UserAgentParser.class);
 			}
 		});
 	}

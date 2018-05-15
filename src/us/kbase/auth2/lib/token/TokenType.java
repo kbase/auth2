@@ -3,8 +3,7 @@ package us.kbase.auth2.lib.token;
 import java.util.HashMap;
 import java.util.Map;
 
-/** An enumeration representing the type of the token, either a standard login token or an 
- * extended lifetime token.
+/** An enumeration representing the type of a token.
  * 
  * @author gaprice@lbl.gov
  *
@@ -16,8 +15,12 @@ public enum TokenType {
 	 */
 	/** A standard login token. */
 	LOGIN				("Login", "Login"),
-	/** An extended lifetype token. */
-	EXTENDED_LIFETIME	("ExtLife", "Extended lifetime");
+	/** An agent token. */
+	AGENT				("Agent", "Agent"),
+	/** A developer token. */
+	DEV					("Dev", "Developer"),
+	/** A service token. */
+	SERV				("Serv", "Service");
 	
 	private static final Map<String, TokenType> TYPE_MAP = new HashMap<>();
 	static {
@@ -49,14 +52,14 @@ public enum TokenType {
 	}
 	
 	/** Get a token type based on a supplied ID.
-	 * @param id the id.
+	 * @param id the id for the token type.
 	 * @return a token type.
 	 * @throws IllegalArgumentException if there is no token type matching the ID.
 	 */
-	public static TokenType getType(final String id) {
-		if (!TYPE_MAP.containsKey(id)) {
-			throw new IllegalArgumentException("Invalid role id: " + id);
+	public static TokenType getType(final String type) {
+		if (!TYPE_MAP.containsKey(type)) {
+			throw new IllegalArgumentException("Invalid token type: " + type);
 		}
-		return TYPE_MAP.get(id);
+		return TYPE_MAP.get(type);
 	}
 }

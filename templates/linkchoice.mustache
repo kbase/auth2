@@ -1,18 +1,26 @@
 <html>
 <body>
 <p>Note that in a proper UI, the provider and username should be HTML-escaped.</p>
+
+Choices expire: {{expires}}<br/>
+
+<form action="{{cancelurl}}" method="post">
+	<input type="submit" value="Cancel account linking"/>
+</form>
+
 <h2>Link {{provider}} account</h2>
 
 <p>Link one of the following provider accounts to your <strong>{{user}}</strong>
 account:</p>
 
-{{#ids}}
-Provider username: {{prov_username}}<br/>
+{{#idents}}
+Provider username: {{provusername}}<br/>
 <form action="{{pickurl}}" method="post">
 	<input type="hidden" name="id" value="{{id}}"/>
 	<input type="submit" value="Link"/>
 </form>
-{{/ids}}
+{{/idents}}
+{{#haslinks}}
 
 <p> or
 <form action="{{pickurl}}" method="post">
@@ -20,5 +28,12 @@ Provider username: {{prov_username}}<br/>
 </form>
 </p>
 
+{{/haslinks}}
+<h2>Already linked identities:</h2>
+
+{{#linked}}
+Username: {{user}}<br/>
+Provider username: {{provusername}}<br/>
+{{/linked}}
 </html>
 </body>

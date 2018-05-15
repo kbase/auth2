@@ -8,10 +8,10 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.PUT;
@@ -19,23 +19,30 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
+import com.google.common.collect.ImmutableMap;
 
-import us.kbase.auth2.lib.AuthUser;
+
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.service.common.Fields;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(APIPaths.API_V2_ME)
 public class Me {
 	
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	@Inject
 	private Authentication auth;
@@ -44,56 +51,70 @@ public class Me {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> me(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			DisabledUserException {
+				DisabledUserException {
+		return toUserMap(auth.getUser(getToken(token)));
+	}
+
+	static Map<String, Object> toUserMap(final AuthUser u) {
 		// this code is almost identical to ui.Me but I don't want to couple the API and UI outputs
-		final AuthUser u = auth.getUser(getToken(token));
 		final Map<String, Object> ret = new HashMap<String, Object>();
-		ret.put("user", u.getUserName().getName());
-		ret.put("local", u.isLocal());
-		ret.put("display", u.getDisplayName().getName());
-		ret.put("email", u.getEmail().getAddress());
-		ret.put("created", u.getCreated().toEpochMilli());
+		ret.put(Fields.USER, u.getUserName().getName());
+		ret.put(Fields.LOCAL, u.isLocal());
+		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
+		ret.put(Fields.EMAIL, u.getEmail().getAddress());
+		ret.put(Fields.CREATED, u.getCreated().toEpochMilli());
 		final Optional<Instant> ll = u.getLastLogin();
-		ret.put("lastlogin", ll.isPresent() ? ll.get().toEpochMilli() : null);
-		ret.put("customroles", u.getCustomRoles());
+		ret.put(Fields.LAST_LOGIN, ll.isPresent() ? ll.get().toEpochMilli() : null);
+		ret.put(Fields.CUSTOM_ROLES, u.getCustomRoles());
 		final List<Map<String, String>> roles = new LinkedList<>();
 		for (final Role r: u.getRoles()) {
 			final Map<String, String> role = new HashMap<>();
-			role.put("id", r.getID());
-			role.put("desc", r.getDescription());
+			role.put(Fields.ID, r.getID());
+			role.put(Fields.DESCRIPTION, r.getDescription());
 			roles.add(role);
 		}
-		ret.put("roles", roles);
+		ret.put(Fields.ROLES, roles);
 		final List<Map<String, String>> idents = new LinkedList<>();
-		ret.put("idents", idents);
-		for (final RemoteIdentityWithLocalID ri: u.getIdentities()) {
+		ret.put(Fields.IDENTITIES, idents);
+		for (final RemoteIdentity ri: u.getIdentities()) {
 			final Map<String, String> i = new HashMap<>();
-			i.put("provider", ri.getRemoteID().getProvider());
-			i.put("username", ri.getDetails().getUsername());
-			i.put("id", ri.getID().toString());
+			i.put(Fields.PROVIDER, ri.getRemoteID().getProviderName());
+			i.put(Fields.PROV_USER, ri.getDetails().getUsername());
+			i.put(Fields.ID, ri.getRemoteID().getID());
 			idents.add(i);
 		}
+		ret.put(Fields.POLICY_IDS, u.getPolicyIDs().keySet().stream().map(id -> ImmutableMap.of(
+			Fields.ID, id.getName(),
+			Fields.AGREED_ON, u.getPolicyIDs().get(id).toEpochMilli()))
+			.collect(Collectors.toList()));
 		return ret;
 	}
 	
-	@PUT
-	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
-	public void updateForm(
-			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
-			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException {
-		updateUser(auth, getToken(token), displayName, email);
+	private static class UpdateUser extends IncomingJSON {
+		
+		public final String displayName;
+		public final String email;
+
+		@JsonCreator
+		public UpdateUser(
+				@JsonProperty(Fields.DISPLAY) final String displayName,
+				@JsonProperty(Fields.EMAIL) final String email) {
+			this.displayName = displayName;
+			this.email = email;
+		}
 	}
 	
 	@PUT
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void updateJSON(
 			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
-			final Map<String, String> params)
+			final UpdateUser update)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
-			IllegalParameterException {
-		updateUser(auth, getToken(token), params.get("display"), params.get("email"));
+				IllegalParameterException, UnauthorizedException, MissingParameterException {
+		if (update == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		update.exceptOnAdditionalProperties();
+		updateUser(auth, getToken(token), update.displayName, update.email);
 	}
 }

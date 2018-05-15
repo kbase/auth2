@@ -1,8 +1,10 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.ui.UIUtils.customRolesToList;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 
 import java.util.Map;
+import java.util.TreeSet;
 
 import javax.inject.Inject;
 import javax.ws.rs.GET;
@@ -21,12 +23,12 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.common.Fields;
 
 @Path(UIPaths.CUSTOM_ROLES_ROOT)
 public class CustomRoles {
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	/* May need to make a ViewRoles role in the future so that viewing roles can be restricted to
 	 * a subset of users, but a larger subset than just Admins.
@@ -43,9 +45,12 @@ public class CustomRoles {
 	public Map<String, Object> customRoles(
 			@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException { // can't actually be thrown
+				UnauthorizedException { // can't actually be thrown
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		return ImmutableMap.of("roles", auth.getCustomRoles(token, false));
+		return ImmutableMap.of(Fields.CUSTOM_ROLES,
+				customRolesToList(new TreeSet<>(auth.getCustomRoles(token, false))));
 	}
+	
+
 
 }

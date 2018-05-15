@@ -1,6 +1,7 @@
 package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.checkString;
+import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -10,12 +11,13 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 
 /** An admin defined role that can be assigned to a user.
  * 
- * A role consists of an ID that is a < 100 character string consisting of ASCII letters, digits,
- * and the underscore, and a description that is a < 1000 character string.
+ * A role consists of an ID that is a {@literal < 100} character string consisting of ASCII
+ * letters, digits, and the underscore, and a description that is a {@literal < 1000} character
+ * string.
  * @author gaprice@lbl.gov
  *
  */
-public class CustomRole {
+public class CustomRole implements Comparable<CustomRole> {
 	
 	private final String id;
 	private final String desc;
@@ -42,6 +44,11 @@ public class CustomRole {
 		this.desc = desc.trim();
 	}
 	
+	/** Checks whether a custom role ID is valid.
+	 * @param id the ID to check.
+	 * @throws MissingParameterException if the ID is null or whitespace only.
+	 * @throws IllegalParameterException if the ID is illegal.
+	 */
 	public static void checkValidRoleID(final String id)
 			throws MissingParameterException, IllegalParameterException {
 		Name.checkValidName(id, "custom role id", MAX_ROLE_LENGTH);
@@ -64,6 +71,17 @@ public class CustomRole {
 	 */
 	public String getDesc() {
 		return desc;
+	}
+
+	@Override
+	public int compareTo(final CustomRole customRole) {
+		nonNull(customRole, "customRole");
+		final int c = id.compareTo(customRole.getID());
+		if (c != 0) {
+			return c;
+		} else {
+			return desc.compareTo(customRole.getDesc());
+		}
 	}
 
 	@Override

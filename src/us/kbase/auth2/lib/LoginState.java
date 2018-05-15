@@ -2,13 +2,17 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.time.Instant;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.TreeSet;
 
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.user.AuthUser;
 
 /** Represents the state of a user's login request. This state includes:
  * 
@@ -26,18 +30,27 @@ public class LoginState {
 	 * 2) depending on the 3rd party account the user logged into, the user may only have access
 	 * to a subset of the AuthUser identities, even if they're all from the same provider (e.g.
 	 * the user account may be linked to multiple different provider accounts).
-	 * 3) Depending on race conditions, it's possible the remote IDs in the AuthUser and
-	 * stored in the temporary storage in the DB might have different UUIDs
 	 */
-	private final Map<UserName, Set<RemoteIdentityWithLocalID>> userIDs = new HashMap<>();
-	private final Map<UserName, AuthUser> users = new HashMap<>();
-	private final Set<RemoteIdentityWithLocalID> noUser = new HashSet<>();
+	private final Map<UserName, Set<RemoteIdentity>> userIDs;
+	private final Map<UserName, AuthUser> users;
+	private final Set<RemoteIdentity> noUser;
 	private final String provider;
 	private final boolean nonAdminLoginAllowed;
+	private final Instant expires;
 
-	private LoginState(final String provider, final boolean nonAdminLoginAllowed) {
+	private LoginState(
+			final String provider,
+			final boolean nonAdminLoginAllowed,
+			final Instant expires,
+			final Map<UserName, Set<RemoteIdentity>> userIDs,
+			final Map<UserName, AuthUser> users,
+			final Set<RemoteIdentity> noUser) {
 		this.provider = provider;
 		this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+		this.expires = expires;
+		this.userIDs = Collections.unmodifiableMap(userIDs);
+		this.users = Collections.unmodifiableMap(users);
+		this.noUser = Collections.unmodifiableSet(noUser);
 	}
 	
 	/** Get the name of the identity provider that provided the identities for the user.
@@ -54,6 +67,13 @@ public class LoginState {
 		return nonAdminLoginAllowed;
 	}
 	
+	/** When the login state expires from the system.
+	 * @return the expiration date.
+	 */
+	public Instant getExpires() {
+		return expires;
+	}
+	
 	/** Returns whether a user is an admin.
 	 * @param name the name of the user to check.
 	 * @return true if the user is an admin, false otherwise.
@@ -66,8 +86,8 @@ public class LoginState {
 	/** Get the set of identities that are not associated with a user account.
 	 * @return the set of identities that are not associated with a user account.
 	 */
-	public Set<RemoteIdentityWithLocalID> getIdentities() {
-		return Collections.unmodifiableSet(noUser);
+	public Set<RemoteIdentity> getIdentities() {
+		return noUser;
 	}
 	
 	/** Get the names of the user accounts to which the user has login privileges based on the
@@ -75,7 +95,7 @@ public class LoginState {
 	 * @return the user names.
 	 */
 	public Set<UserName> getUsers() {
-		return Collections.unmodifiableSet(users.keySet());
+		return users.keySet();
 	}
 	
 	/** Get the user information for a given user name.
@@ -97,17 +117,94 @@ public class LoginState {
 	/** Get the remote identities associated with a given user account that granted access to said
 	 * account.
 	 * 
-	 * Note this may be a subset of the identities associated with the account in general, and the
-	 * identities in this set may have different UUIDs than the corresponding identities in
-	 * the user class.
+	 * Note this may be a subset of the identities associated with the account in general.
 	 * @param name the user name of the user account.
 	 * @return the set of remote identities.
 	 */
-	public Set<RemoteIdentityWithLocalID> getIdentities(final UserName name) {
+	public Set<RemoteIdentity> getIdentities(final UserName name) {
 		checkUser(name);
 		return Collections.unmodifiableSet(userIDs.get(name));
 	}
 	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((expires == null) ? 0 : expires.hashCode());
+		result = prime * result + ((noUser == null) ? 0 : noUser.hashCode());
+		result = prime * result + (nonAdminLoginAllowed ? 1231 : 1237);
+		result = prime * result + ((provider == null) ? 0 : provider.hashCode());
+		result = prime * result + ((userIDs == null) ? 0 : userIDs.hashCode());
+		result = prime * result + ((users == null) ? 0 : users.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		LoginState other = (LoginState) obj;
+		if (expires == null) {
+			if (other.expires != null) {
+				return false;
+			}
+		} else if (!expires.equals(other.expires)) {
+			return false;
+		}
+		if (noUser == null) {
+			if (other.noUser != null) {
+				return false;
+			}
+		} else if (!noUser.equals(other.noUser)) {
+			return false;
+		}
+		if (nonAdminLoginAllowed != other.nonAdminLoginAllowed) {
+			return false;
+		}
+		if (provider == null) {
+			if (other.provider != null) {
+				return false;
+			}
+		} else if (!provider.equals(other.provider)) {
+			return false;
+		}
+		if (userIDs == null) {
+			if (other.userIDs != null) {
+				return false;
+			}
+		} else if (!userIDs.equals(other.userIDs)) {
+			return false;
+		}
+		if (users == null) {
+			if (other.users != null) {
+				return false;
+			}
+		} else if (!users.equals(other.users)) {
+			return false;
+		}
+		return true;
+	}
+
+	/** Create a LoginState builder.
+	 * @param provider the name of the identity provider that provided the identities for this
+	 * login attempt.
+	 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
+	 * @param expires the date the login state expires.
+	 * @return the builder.
+	 */
+	public static Builder getBuilder(
+			final String provider,
+			final boolean nonAdminLoginAllowed,
+			final Instant expires) {
+		return new Builder(provider, nonAdminLoginAllowed, expires);
+	}
 
 	/** A builder for a LoginState instance.
 	 * @author gaprice@lbl.gov
@@ -115,35 +212,50 @@ public class LoginState {
 	 */
 	public static class Builder {
 		
-		private final LoginState ls;
+		static final Comparator<RemoteIdentity> REMOTE_IDENTITY_COMPARATOR =
+				new Comparator<RemoteIdentity>() {
+			
+			@Override
+			public int compare(final RemoteIdentity ri1, final RemoteIdentity ri2) {
+				return ri1.getRemoteID().getID().compareTo(ri2.getRemoteID().getID());
+			}
+		};
 
-		/** Create the builder.
-		 * @param provider the name of the identity provider that provided the identities for this
-		 * login attempt.
-		 * @param nonAdminLoginAllowed true if non-administrators are allowed, false otherwise.
-		 */
-		public Builder(final String provider, final boolean nonAdminLoginAllowed) {
+		private final Map<UserName, Set<RemoteIdentity>> userIDs = new HashMap<>();
+		private final Map<UserName, AuthUser> users = new TreeMap<>();
+		private final Set<RemoteIdentity> noUser = new TreeSet<>(REMOTE_IDENTITY_COMPARATOR);
+		private final Instant expires;
+		private final String provider;
+		private final boolean nonAdminLoginAllowed;
+		
+		private Builder(
+				final String provider,
+				final boolean nonAdminLoginAllowed,
+				final Instant expires) {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
 			}
-			ls = new LoginState(provider, nonAdminLoginAllowed);
+			nonNull(expires, "expires");
+			this.provider = provider;
+			this.nonAdminLoginAllowed = nonAdminLoginAllowed;
+			this.expires = expires;
 		}
-
+		
 		/** Add a remote identity that is not associated with a user account.
 		 * @param remoteID the remote identity to add.
 		 * @return this builder.
 		 */
-		public Builder withIdentity(final RemoteIdentityWithLocalID remoteID) {
+		public Builder withIdentity(final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
 			nonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
-			ls.noUser.add(remoteID);
+			noUser.add(remoteID);
 			return this;
 		}
 
-		private void checkProvider(final RemoteIdentityWithLocalID remoteID) {
-			if (!ls.provider.equals(remoteID.getRemoteID().getProvider())) {
+		private void checkProvider(final RemoteIdentity remoteID) {
+			if (!provider.equals(remoteID.getRemoteID().getProviderName())) {
 				throw new IllegalStateException(
 						"Cannot have multiple providers in the same login state");
 			}
@@ -154,7 +266,7 @@ public class LoginState {
 		 * @param remoteID the 3rd party identity that grants the user access to the user account.
 		 * @return this builder.
 		 */
-		public Builder withUser(final AuthUser user, final RemoteIdentityWithLocalID remoteID) {
+		public Builder withUser(final AuthUser user, final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
 			nonNull(user, "user");
@@ -164,11 +276,11 @@ public class LoginState {
 				throw new IllegalArgumentException("user does not contain remote ID");
 			}
 			final UserName name = user.getUserName();
-			ls.users.put(name, user);
-			if (!ls.userIDs.containsKey(name)) {
-				ls.userIDs.put(name, new HashSet<>());
+			users.put(name, user);
+			if (!userIDs.containsKey(name)) {
+				userIDs.put(name, new TreeSet<>(REMOTE_IDENTITY_COMPARATOR));
 			}
-			ls.userIDs.get(name).add(remoteID);
+			userIDs.get(name).add(remoteID);
 			return this;
 		}
 
@@ -176,7 +288,7 @@ public class LoginState {
 		 * @return the new instance.
 		 */
 		public LoginState build() {
-			return ls;
+			return new LoginState(provider, nonAdminLoginAllowed, expires, userIDs, users, noUser);
 		}
 	}
 }

@@ -38,6 +38,22 @@ public class NameTest {
 		assertThat("incorrect name", Name.checkValidName("     𐎣foo     ", "bar", 0), is("𐎣foo"));
 	}
 	
+	private static class SubName extends Name {
+		
+		public SubName(final String n)
+				throws MissingParameterException, IllegalParameterException {
+			super(n, "n", 20);
+		}
+	}
+	
+	@Test
+	public void tostring() throws Exception {
+		assertThat("incorrect toString()", new Name("foo", "a",  4).toString(),
+				is("Name [name=foo]"));
+		assertThat("incorrect toString()", new SubName("bar").toString(),
+				is("SubName [name=bar]"));
+	}
+	
 	@Test
 	public void constructFail() {
 		failConstruct("foo", null, 3, new IllegalArgumentException("Missing argument: type"));
@@ -62,6 +78,24 @@ public class NameTest {
 				new IllegalParameterException("thing size greater than limit 3"));
 		failCheck("     fo\b𐎣o     ", "thing", 5,
 				new IllegalParameterException("thing contains control characters"));
+	}
+	
+	@Test
+	public void compareTo() throws Exception {
+		assertThat("incorrect compare for < ",
+				new Name("bar", "n", 5).compareTo(new Name("foo", "n", 5)) < 0, is(true));
+		
+		assertThat("incorrect compare for < ",
+				new Name("bar", "n", 5).compareTo(new Name("bar", "n", 5)), is(0));
+		assertThat("incorrect compare for < ",
+				new Name("foo", "n", 5).compareTo(new Name("bar", "n", 5)) > 0, is(true));
+		
+		try {
+			new Name("bar", "n", 5).compareTo(null);
+			fail("expected exception");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, new NullPointerException("name"));
+		}
 	}
 	
 	private void failConstruct(

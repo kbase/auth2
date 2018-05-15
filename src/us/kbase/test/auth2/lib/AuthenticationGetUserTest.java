@@ -6,64 +6,60 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
-
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
+import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Set;
+import java.util.List;
 import java.util.UUID;
 
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
-
-import us.kbase.auth2.lib.AuthUser;
+import ch.qos.logback.classic.Level;
+import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
-import us.kbase.auth2.lib.exceptions.InvalidTokenException;
-import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
-import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.test.auth2.lib.AuthenticationTester.AbstractAuthOperation;
+import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationGetUserTest {
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
+	private static List<ILoggingEvent> logEvents;
 	
-	@Test
-	public void getUser() throws Exception {
-		
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
-		
-		getUser(user);
+	@BeforeClass
+	public static void beforeClass() {
+		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
+	}
+	
+	@Before
+	public void before() {
+		logEvents.clear();
 	}
 	
 	@Test
-	public void getUserFailDisabled() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("bar"), Instant.now()));
+	public void getUser() throws Exception {
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("whee"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		failGetUser(user, new DisabledUserException());
+		getUser(user);
 	}
 	
 	@Test
@@ -73,36 +69,32 @@ public class AuthenticationGetUserTest {
 	}
 	
 	@Test
-	public void getUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
+	public void getUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getUser(token);
+			}
 
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetUser(auth, token, new InvalidTokenException());
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get user";
+			}
+		}, set(), set());
 	}
 	
-	@Test
-	public void getUserFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("foo"), Instant.now(), Instant.now()));
-		
-		when(storage.getUser(new UserName("foo"))).thenThrow(new NoSuchUserException("foo"));
-		
-		failGetUser(auth, token, new RuntimeException("There seems to be an error " +
-				"in the storage system. Token was valid, but no user"));
-	}
-
 	private void getUser(final AuthUser user) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -110,14 +102,18 @@ public class AuthenticationGetUserTest {
 		
 		final IncomingToken token = new IncomingToken("foobar");
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						user.getUserName(), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.AGENT, UUID.randomUUID(), user.getUserName())
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
 		
 		try {
 			final AuthUser got = auth.getUser(token);
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"User %s accessed their user data", user.getUserName().getName()),
+					Authentication.class));
 		
 			assertThat("incorrect user", got, is(user));
 		} catch (Throwable th) {
@@ -127,15 +123,6 @@ public class AuthenticationGetUserTest {
 				verify(storage, never()).deleteTokens(user.getUserName());
 			}
 			throw th;
-		}
-	}
-	
-	private void failGetUser(final AuthUser user, final Exception e) {
-		try {
-			getUser(user);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	
@@ -154,42 +141,70 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getOtherUserSameUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("whee"), new DisplayName("foo"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		getOtherUser(user, new UserName("admin"), true);
+		getOtherUser(user, user, true);
 	}
 	
 	@Test
 	public void getOtherUserDiffUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("whee"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		getOtherUser(user, new UserName("foo"), false);
+		final AuthUser target = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
+		
+		getOtherUser(user, target, false);
 	}
 	
 	@Test
-	public void getOtherUserFailDisabledSameUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
-		
-		failGetOtherUser(user, new UserName("admin"), new NoSuchUserException("admin"));
+	public void getOtherUserExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getUser(token, new UserName("foo"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get view user";
+			}
+		}, set(), set());
 	}
 	
 	@Test
 	public void getOtherUserFailDisabledDiffUser() throws Exception {
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("foo1"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), Optional.of(Instant.now()),
-				new UserDisabledState("foo", new UserName("baz"), Instant.now()));
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		failGetOtherUser(user, new UserName("foo"), new NoSuchUserException("admin"));
+		final AuthUser target = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withUserDisabledState(
+						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
+		
+		failGetOtherUser(user, target, new NoSuchUserException("foo"));
 	}
 	
 	@Test
@@ -202,20 +217,6 @@ public class AuthenticationGetUserTest {
 	}
 	
 	@Test
-	public void getOtherUserFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken token = new IncomingToken("foobar");
-		
-
-		when(storage.getToken(token.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetOtherUser(auth, token, new UserName("foo"), new InvalidTokenException());
-	}
-	
-	@Test
 	public void getOtherUserFailNoSuchUser() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
@@ -224,9 +225,14 @@ public class AuthenticationGetUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						new UserName("bar"), Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
+						.withLifeTime(Instant.now(), Instant.now()).build());
+		
+		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build());
 		
 		when(storage.getUser(new UserName("bar"))).thenThrow(new NoSuchUserException("bar"));
 		
@@ -235,7 +241,7 @@ public class AuthenticationGetUserTest {
 
 	private void getOtherUser(
 			final AuthUser user,
-			final UserName tokenName,
+			final AuthUser target,
 			final boolean includeEmail)
 			throws Exception {
 		final TestMocks testauth = initTestMocks();
@@ -245,17 +251,22 @@ public class AuthenticationGetUserTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 
-		when(storage.getToken(token.getHashedToken()))
-				.thenReturn(new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null, "foobarhash",
-						tokenName, Instant.now(), Instant.now()));
+		when(storage.getToken(token.getHashedToken())).thenReturn(
+				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), user.getUserName())
+						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(user.getUserName())).thenReturn(user);
+		when(storage.getUser(target.getUserName())).thenReturn(target);
 		try {
-			final ViewableUser vu = auth.getUser(token, user.getUserName());
+			final ViewableUser vu = auth.getUser(token, target.getUserName());
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"User %s accessed user %s's user data", user.getUserName().getName(),
+					target.getUserName().getName()), Authentication.class));
 		
-			assertThat("incorrect user", vu, is(new ViewableUser(user, includeEmail)));
+			assertThat("incorrect user", vu, is(new ViewableUser(target, includeEmail)));
 		} catch (Throwable th) {
-			if (user.isDisabled() && tokenName.equals(user.getUserName())) {
+			if (user.isDisabled()) {
 				verify(storage).deleteTokens(user.getUserName());
 			} else {
 				verify(storage, never()).deleteTokens(user.getUserName());
@@ -266,10 +277,10 @@ public class AuthenticationGetUserTest {
 	
 	private void failGetOtherUser(
 			final AuthUser user,
-			final UserName tokenName,
+			final AuthUser target,
 			final Exception e) {
 		try {
-			getOtherUser(user, tokenName, false);
+			getOtherUser(user, target, false);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -291,26 +302,30 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getUserAsAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
 	public void getUserAsAdminSelf() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
 		getUserAsAdmin(admin, user);
 	}
@@ -318,55 +333,59 @@ public class AuthenticationGetUserTest {
 	
 	@Test
 	public void getUserAsAdminCreate() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.CREATE_ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.CREATE_ADMIN).build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
 	public void getUserAsAdminRoot() throws Exception {
-		final AuthUser admin = new AuthUser(UserName.ROOT, new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ROOT),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser admin = AuthUser.getBuilder(
+				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.build();
 		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@goo.com"))
+				.build();
 		
 		getUserAsAdmin(admin, user);
 	}
 	
 	@Test
-	public void getUserAsAdminFailNotAdmin() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-		
-		failGetUserAsAdmin(admin, user, new UnauthorizedException(ErrorType.UNAUTHORIZED));
-	}
-	
-	@Test
-	public void getUserAsAdminFailDisabled() throws Exception {
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.SERV_TOKEN),
-				Collections.emptySet(), MTPID, Instant.now(), null,
-				new UserDisabledState("baz", new UserName("whee"), Instant.now()));
-		
-		final AuthUser user = new AuthUser(new UserName("foo"), new EmailAddress("f@goo.com"),
-				new DisplayName("baz"), Collections.emptySet(), Collections.emptySet(),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-		
-		failGetUserAsAdmin(admin, user, new DisabledUserException());
+	public void getUserAsAdminExecuteStandardUserCheckingTests() throws Exception {
+		final IncomingToken token = new IncomingToken("foo");
+		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
+			
+			@Override
+			public IncomingToken getIncomingToken() {
+				return token;
+			}
+			
+			@Override
+			public void execute(final Authentication auth) throws Exception {
+				auth.getUserAsAdmin(token, new UserName("foobar"));
+			}
+
+			@Override
+			public List<ILoggingEvent> getLogAccumulator() {
+				return logEvents;
+			}
+			
+			@Override
+			public String getOperationString() {
+				return "get user foobar as admin";
+			}
+		}, set(Role.DEV_TOKEN, Role.SERV_TOKEN));
 	}
 	
 	@Test
@@ -379,54 +398,22 @@ public class AuthenticationGetUserTest {
 	}
 	
 	@Test
-	public void getUserAsAdminFailBadToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		when(storage.getToken(t.getHashedToken())).thenThrow(new NoSuchTokenException("foo"));
-		
-		failGetUserAsAdmin(auth, t, new UserName("bar"), new InvalidTokenException());
-	}
-	
-	@Test
-	public void getUserAsAdminFailCatastrophic() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final IncomingToken t = new IncomingToken("foobarbaz");
-		
-		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("foobar"), Instant.now(), Instant.now());
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
-		
-		when(storage.getUser(new UserName("foobar"))).thenThrow(new NoSuchUserException("foobar"));
-		
-		failGetUserAsAdmin(auth, t, new UserName("bleah"), new RuntimeException(
-				"There seems to be an error " +
-				"in the storage system. Token was valid, but no user"));
-	}
-	
-	@Test
 	public void getUserAsAdminFailNoSuchUser() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
+		final StoredToken token = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), new UserName("admin"))
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
-		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", new UserName("admin"), Instant.now(), Instant.now());
+		final AuthUser admin = AuthUser.getBuilder(
+				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withRole(Role.ADMIN).build();
 		
-		final AuthUser admin = new AuthUser(new UserName("admin"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), Collections.emptySet(), set(Role.ADMIN),
-				Collections.emptySet(), MTPID, Instant.now(), null, new UserDisabledState());
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin, (AuthUser) null);
 		when(storage.getUser(new UserName("bar"))).thenThrow(new NoSuchUserException("bar"));
@@ -440,11 +427,11 @@ public class AuthenticationGetUserTest {
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken t = new IncomingToken("foobarbaz");
+		final StoredToken token = StoredToken.getBuilder(
+				TokenType.LOGIN, UUID.randomUUID(), admin.getUserName())
+				.withLifeTime(Instant.now(), Instant.now()).build();
 		
-		final HashedToken token = new HashedToken(UUID.randomUUID(), TokenType.LOGIN, null,
-				"wubba", admin.getUserName(), Instant.now(), Instant.now());
-		
-		when(storage.getToken(t.getHashedToken())).thenReturn(token, (HashedToken) null);
+		when(storage.getToken(t.getHashedToken())).thenReturn(token, (StoredToken) null);
 		
 		if (user.getUserName().equals(admin.getUserName())) {
 			when(storage.getUser(admin.getUserName())).thenReturn(admin, user, (AuthUser) null);
@@ -455,6 +442,10 @@ public class AuthenticationGetUserTest {
 		
 		try {
 			final AuthUser gotUser = auth.getUserAsAdmin(t, user.getUserName());
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Admin %s accessed user %s's user data", admin.getUserName().getName(),
+					user.getUserName().getName()), Authentication.class));
 		
 			assertThat("incorrect user", gotUser, is(user));
 		} catch (Throwable th) {
@@ -464,18 +455,6 @@ public class AuthenticationGetUserTest {
 				verify(storage, never()).deleteTokens(admin.getUserName());
 			}
 			throw th;
-		}
-	}
-	
-	private void failGetUserAsAdmin(
-			final AuthUser admin,
-			final AuthUser user,
-			final Exception e) {
-		try {
-			getUserAsAdmin(admin, user);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
 		}
 	}
 	

@@ -7,6 +7,7 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -27,7 +28,7 @@ import us.kbase.common.service.JsonServerSyslog.RpcInfo;
 public class KBaseAuthConfig implements AuthStartupConfig {
 	
 	//TODO JAVADOC
-	//TODO TEST unittests
+	//TODO TEST
 	
 	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
@@ -52,6 +53,9 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			"-login-redirect-url";
 	private static final String KEY_SUFFIX_ID_PROVS_LINK_REDIRECT =
 			"-link-redirect-url";
+	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
+	private static final String TRUE = "true";
+	private static final String KEY_TEST_MODE_ENABLED = "test-mode-enabled";
 	
 	private final SLF4JAutoLogger logger;
 	private final String mongoHost;
@@ -60,6 +64,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
 	private final Set<IdentityProviderConfig> providers;
+	private final boolean isTestModeEnabled;
 
 	public KBaseAuthConfig() throws AuthConfigurationException {
 		this(getConfigPathFromEnv(), false);
@@ -79,6 +84,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 					JsonServerSyslog.LOG_LEVEL_INFO, true));
 		}
 		try {
+			isTestModeEnabled = TRUE.equals(getString(KEY_TEST_MODE_ENABLED, cfg));
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
 			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
@@ -125,9 +131,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final URL api = getURL(pre + KEY_SUFFIX_ID_PROVS_API_URL, cfg);
 			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
 			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
+			final Map<String, String> custom = getCustom(pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
 			try {
-				ips.add(new IdentityProviderConfig(
-						factory, login, api, cliid, clisec, loginRedirect, linkRedirect));
+				ips.add(new IdentityProviderConfig(factory, login, api, cliid, clisec,
+						loginRedirect, linkRedirect, custom));
 			} catch (IdentityProviderConfigurationException e) {
 				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
@@ -139,6 +146,16 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		return Collections.unmodifiableSet(ips);
 	}
 	
+	private Map<String, String> getCustom(final String keyprefix, final Map<String, String> cfg) {
+		final Map<String, String> ret = new HashMap<>();
+		for (final String key: cfg.keySet()) {
+			if (key != null && key.startsWith(keyprefix)) {
+				ret.put(key.replace(keyprefix, ""), cfg.get(key));
+			}
+		}
+		return ret;
+	}
+
 	private URL getURL(final String key, final Map<String, String> cfg)
 			throws AuthConfigurationException {
 		final String url = getString(key, cfg, true);
@@ -165,12 +182,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 	}
 
-	private static class JsonServerSysLogAutoLogger
-			implements SLF4JAutoLogger {
+	private static class JsonServerSysLogAutoLogger implements SLF4JAutoLogger {
+		
 		@SuppressWarnings("unused")
 		private JsonServerSyslog logger; // keep a reference to avoid gc
 
-		private JsonServerSysLogAutoLogger(JsonServerSyslog logger) {
+		private JsonServerSysLogAutoLogger(final JsonServerSyslog logger) {
 			super();
 			this.logger = logger;
 		}
@@ -282,5 +299,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	@Override
 	public String getTokenCookieName() {
 		return cookieName;
+	}
+	
+	@Override
+	public boolean isTestModeEnabled() {
+		return isTestModeEnabled;
 	}
 }

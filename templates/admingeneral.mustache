@@ -3,8 +3,8 @@
 <form action="{{reseturl}}" method="post">
 	<input type="submit" value="Force password reset for all local users"/>
 </form>
-<form action="{{revokeurl}}" method="post">
-	<input type="submit" value="Revoke all tokens for all users and log out"/>
+<form action="{{revokeallurl}}" method="post">
+	<input type="submit" value="Revoke ALL tokens for ALL users and log out"/>
 </form>
 
 <form action="{{tokenurl}}" method="post">
@@ -13,7 +13,7 @@
 </form>
 
 <form action="{{policyurl}}" method="post">
-	Remove policy ID: <input type="text" name="policy_id" /><br/>
+	Remove policy ID: <input type="text" name="policyid" /><br/>
 	<input type="submit" value="Submit" />
 </form>
 
@@ -30,9 +30,9 @@
 	<input type="checkbox" name="CreateAdmin" /> Create admin<br/>
 	<br/>
 	Search on custom roles:<br/>
-	{{#croles}}
-	<input type="checkbox" name="crole_{{ID}}" /> {{ID}}<br/>
-	{{/croles}}
+	{{#customroles}}
+	<input type="checkbox" name="crole_{{id}}" /> {{id}}<br/>
+	{{/customroles}}
 	<input type="submit" value="Search"/>
 </body>
 </html>

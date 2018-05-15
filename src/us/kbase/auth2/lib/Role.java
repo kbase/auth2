@@ -15,16 +15,16 @@ public enum Role {
 	/* first arg is ID, second arg is description. ID CANNOT change
 	 * since that field is stored in the DB.
 	 */
-	/** The root user. */
-	ROOT			("Root", "Root"),
-	/** User can create administrators. */
-	CREATE_ADMIN	("CreateAdmin", "Create administrator"),
 	/** User has administration privileges. */
 	ADMIN			("Admin", "Administrator"),
-	/** User can create server tokens. */
-	SERV_TOKEN		("ServToken", "Create server tokens"),
+	/** User can create administrators. */
+	CREATE_ADMIN	("CreateAdmin", "Create administrator"),
 	/** User can create developer tokens. */
-	DEV_TOKEN		("DevToken", "Create developer tokens");
+	DEV_TOKEN		("DevToken", "Create developer tokens"),
+	/** The root user. */
+	ROOT			("Root", "Root"),
+	/** User can create server tokens. */
+	SERV_TOKEN		("ServToken", "Create server tokens");
 	
 	private static final Map<String, Role> ROLE_MAP = new HashMap<>();
 	static {

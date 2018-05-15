@@ -1,15 +1,18 @@
 package us.kbase.auth2.service.ui;
 
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
-import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIUtils.getRolesFromForm;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 
 import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -24,6 +27,7 @@ import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -37,14 +41,11 @@ import javax.ws.rs.core.UriInfo;
 
 import org.glassfish.jersey.server.mvc.Template;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
-import us.kbase.auth2.lib.AuthConfig;
-import us.kbase.auth2.lib.AuthConfig.ProviderConfig;
-import us.kbase.auth2.lib.AuthConfig.TokenLifetimeType;
-import us.kbase.auth2.lib.AuthConfigSet;
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
@@ -54,6 +55,15 @@ import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
+import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
+import us.kbase.auth2.lib.config.AuthConfigUpdate.ProviderUpdate;
+import us.kbase.auth2.lib.config.ConfigAction.Action;
+import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
+import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
+import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -66,17 +76,20 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.common.Fields;
+import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.ADMIN_ROOT)
 public class Admin {
 
 	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 	
 	private static final String SEP = UIPaths.SEP;
 	
@@ -98,13 +111,13 @@ public class Admin {
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("reseturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
-		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
-		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
-		ret.put("policyurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
-		ret.put("searchurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
-		ret.put("croles", auth.getCustomRoles(getTokenFromCookie(
-						headers, cfg.getTokenCookieName()), true));
+		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_FORCE_RESET_PWD));
+		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.ADMIN_ROOT_REVOKE_ALL));
+		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_TOKEN));
+		ret.put(Fields.URL_POLICY, relativize(uriInfo, UIPaths.ADMIN_ROOT_POLICY_ID));
+		ret.put(Fields.URL_SEARCH, relativize(uriInfo, UIPaths.ADMIN_ROOT_SEARCH));
+		ret.put(Fields.CUSTOM_ROLES, UIUtils.customRolesToList(
+				auth.getCustomRoles(getTokenFromCookie(headers, cfg.getTokenCookieName()), true)));
 		return ret;
 	}
 	
@@ -122,7 +135,7 @@ public class Admin {
 			throws NoTokenProvidedException, InvalidTokenException, UnauthorizedException,
 			AuthStorageException {
 		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
+		return Response.ok().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
 	
 	@POST
@@ -130,18 +143,18 @@ public class Admin {
 	@Template(name = "/admintoken")
 	public Map<String, Object> getUserToken(
 			@Context final UriInfo uriInfo,
-			@FormParam("token") final String token)
+			@FormParam(Fields.TOKEN) final String token)
 			throws MissingParameterException, InvalidTokenException, AuthStorageException {
 		final IncomingToken t;
 		try {
 			t = getToken(token);
 		} catch (NoTokenProvidedException e) {
-			throw new MissingParameterException("token");
+			throw new MissingParameterException(Fields.TOKEN);
 		}
-		final HashedToken ht = auth.getToken(t);
+		final StoredToken ht = auth.getToken(t);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("token", new UIToken(ht));
-		ret.put("revokeurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP +
+		ret.put(Fields.TOKEN, new UIToken(ht));
+		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP +
 				ht.getUserName().getName() + SEP + UIPaths.ADMIN_TOKENS + SEP +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP + ht.getId().toString()));
 		return ret;
@@ -151,7 +164,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_POLICY_ID)
 	public void removePolicyID(
 			@Context final HttpHeaders headers,
-			@FormParam("policy_id") final String policyID)
+			@FormParam(Fields.POLICY_ID) final String policyID)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 				MissingParameterException, IllegalParameterException, AuthStorageException {
 		auth.removePolicyID(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -167,7 +180,7 @@ public class Admin {
 			final MultivaluedMap<String, String> form)
 			throws InvalidTokenException, IllegalParameterException, NoTokenProvidedException,
 			AuthStorageException, UnauthorizedException {
-		final String prefix = form.getFirst("prefix");
+		final String prefix = form.getFirst(Fields.SEARCH_PREFIX);
 		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder().withIncludeDisabled(true)
 				.withIncludeRoot(true); // may want to include option to exclude disabled
 		final boolean hasPrefix;
@@ -178,19 +191,19 @@ public class Admin {
 			hasPrefix = false;
 		}
 		
-		if (hasPrefix && !nullOrEmpty(form.getFirst("username"))) {
+		if (hasPrefix && !nullOrEmpty(form.getFirst(Fields.SEARCH_USER))) {
 			build.withSearchOnUserName(true);
 		}
-		if (hasPrefix && !nullOrEmpty(form.getFirst("displayname"))) {
+		if (hasPrefix && !nullOrEmpty(form.getFirst(Fields.SEARCH_DISPLAY))) {
 			build.withSearchOnDisplayName(true);
 		}
 		for (final Role r: getRolesFromForm(form)) {
 			build.withSearchOnRole(r);
 		}
 		for (final String key: form.keySet()) {
-			if (key.startsWith("crole_")) {
+			if (key.startsWith(Fields.CUSTOM_ROLE_FORM_PREFIX)) {
 				if (!nullOrEmpty(form.getFirst(key))) {
-					build.withSearchOnCustomRole(key.replace("crole_", ""));
+					build.withSearchOnCustomRole(key.replace(Fields.CUSTOM_ROLE_FORM_PREFIX, ""));
 				}
 			}
 		}
@@ -199,12 +212,13 @@ public class Admin {
 		final List<Map<String, String>> uiusers = new LinkedList<>();
 		for (final UserName user: users.keySet()) {
 			final Map<String, String> u = new HashMap<>();
-			u.put("user", user.getName());
-			u.put("display", users.get(user).getName());
-			u.put("url", relativize(uriInfo, UIPaths.ADMIN_ROOT_USER + SEP + user.getName()));
+			u.put(Fields.USER, user.getName());
+			u.put(Fields.DISPLAY, users.get(user).getName());
+			u.put(Fields.URL_USER, relativize(uriInfo,
+					UIPaths.ADMIN_ROOT_USER + SEP + user.getName()));
 			uiusers.add(u);
 		}
-		return ImmutableMap.of("users", uiusers, "hasusers", !uiusers.isEmpty());
+		return ImmutableMap.of(Fields.USERS, uiusers, Fields.HAS_USERS, !uiusers.isEmpty());
 	}
 	
 	@GET
@@ -212,7 +226,8 @@ public class Admin {
 	@Template(name = "/adminlocalaccount")
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, String> createLocalAccountStart(@Context final UriInfo uriInfo) {
-		return ImmutableMap.of("targeturl", relativize(uriInfo, UIPaths.ADMIN_ROOT_LOCAL_CREATE));
+		return ImmutableMap.of(Fields.URL_CREATE,
+				relativize(uriInfo, UIPaths.ADMIN_ROOT_LOCAL_CREATE));
 	}
 	
 	@POST
@@ -222,22 +237,21 @@ public class Admin {
 	@Template(name = "/adminlocalaccountcreated")
 	public Map<String, String> createLocalAccountComplete(
 			@Context final HttpHeaders headers,
-			@FormParam("user") final String userName,
-			@FormParam("display") final String displayName,
-			@FormParam("email") final String email)
+			@FormParam(Fields.USER) final String userName,
+			@FormParam(Fields.DISPLAY) final String displayName,
+			@FormParam(Fields.EMAIL) final String email)
 			throws AuthStorageException, UserExistsException,
 			MissingParameterException, IllegalParameterException,
 			UnauthorizedException, InvalidTokenException,
 			NoTokenProvidedException {
-		//TODO LOG log
 		final Password pwd = auth.createLocalUser(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		final Map<String, String> ret = ImmutableMap.of(
-				"user", userName,
-				"display", displayName,
-				"email", email,
-				"password", new String(pwd.getPassword())); // char[] won't work
+				Fields.USER, userName,
+				Fields.DISPLAY, displayName,
+				Fields.EMAIL, email,
+				Fields.PASSWORD, new String(pwd.getPassword())); // char[] won't work
 		pwd.clear(); // not that this helps much...
 		return ret;
 	}
@@ -248,7 +262,7 @@ public class Admin {
 	@Produces(MediaType.TEXT_HTML)
 	public Map<String, Object> userDisplay(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, NoSuchUserException,
 			MissingParameterException, IllegalParameterException,
@@ -259,28 +273,31 @@ public class Admin {
 		final Set<CustomRole> roles = auth.getCustomRoles(adminToken, true);
 		final String userPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP;
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("custom", setUpCustomRoles(roles, au.getCustomRoles()));
-		ret.put("hascustom", !roles.isEmpty());
-		ret.put("roleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
-		ret.put("customroleurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
-		ret.put("disableurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
-		ret.put("reseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
-		ret.put("forcereseturl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_FORCE_RESET_PWD));
-		ret.put("tokenurl", relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
-		ret.put("user", au.getUserName().getName());
-		ret.put("display", au.getDisplayName().getName());
-		ret.put("email", au.getEmail().getAddress());
-		ret.put("local", au.isLocal());
-		ret.put("created", au.getCreated().toEpochMilli());
+		ret.put(Fields.CUSTOM_ROLES, customRolesToList(roles, au.getCustomRoles()));
+		ret.put(Fields.HAS_CUSTOM_ROLES, !roles.isEmpty());
+		ret.put(Fields.URL_ROLE, relativize(uriInfo, userPrefix + UIPaths.ADMIN_ROLES));
+		ret.put(Fields.URL_CUSTOM_ROLE,
+				relativize(uriInfo, userPrefix + UIPaths.ADMIN_CUSTOM_ROLES));
+		ret.put(Fields.URL_DISABLE, relativize(uriInfo, userPrefix + UIPaths.ADMIN_DISABLE));
+		ret.put(Fields.URL_RESET, relativize(uriInfo, userPrefix + UIPaths.ADMIN_RESET_PWD));
+		ret.put(Fields.URL_FORCE_RESET,
+				relativize(uriInfo, userPrefix + UIPaths.ADMIN_FORCE_RESET_PWD));
+		ret.put(Fields.URL_TOKEN, relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
+		ret.put(Fields.USER, au.getUserName().getName());
+		ret.put(Fields.DISPLAY, au.getDisplayName().getName());
+		ret.put(Fields.EMAIL, au.getEmail().getAddress());
+		ret.put(Fields.LOCAL, au.isLocal());
+		ret.put(Fields.CREATED, au.getCreated().toEpochMilli());
 		final Optional<Instant> lastLogin = au.getLastLogin();
-		ret.put("lastlogin", lastLogin.isPresent() ? lastLogin.get().toEpochMilli() : null);
-		ret.put("disabled", au.isDisabled());
+		ret.put(Fields.LAST_LOGIN, lastLogin.isPresent() ? lastLogin.get().toEpochMilli() : null);
+		ret.put(Fields.DISABLED, au.isDisabled());
 		final Optional<String> dis = au.getReasonForDisabled();
-		ret.put("disabledreason", dis.isPresent() ? au.getReasonForDisabled().get() : null);
+		ret.put(Fields.DISABLED_REASON, dis.isPresent() ? au.getReasonForDisabled().get() : null);
 		final Optional<Instant> disabled = au.getEnableToggleDate();
-		ret.put("enabletoggledate", disabled.isPresent() ? disabled.get().toEpochMilli() : null);
+		ret.put(Fields.ENABLE_TOGGLE_DATE, disabled.isPresent() ?
+				disabled.get().toEpochMilli() : null);
 		final Optional<UserName> admin = au.getAdminThatToggledEnabledState();
-		ret.put("enabledtoggledby", admin.isPresent() ? admin.get().getName() : null);
+		ret.put(Fields.ENABLE_TOGGLED_BY, admin.isPresent() ? admin.get().getName() : null);
 		ret.put(Role.ADMIN.getID(), au.hasRole(Role.ADMIN));
 		ret.put(Role.SERV_TOKEN.getID(), au.hasRole(Role.SERV_TOKEN));
 		ret.put(Role.DEV_TOKEN.getID(), au.hasRole(Role.DEV_TOKEN));
@@ -288,16 +305,15 @@ public class Admin {
 		return ret;
 	}
 	
-	// might make more sense to have separate create and edit methods for roles
-
-	private List<Map<String, Object>> setUpCustomRoles(
-			final Set<CustomRole> roles, final Set<String> set) {
+	private List<Map<String, Object>> customRolesToList(
+			final Set<CustomRole> roles,
+			final Set<String> userHas) {
 		final List<Map<String, Object>> ret = new LinkedList<>();
 		for (final CustomRole r: roles) {
 			ret.add(ImmutableMap.of(
-					"desc", r.getDesc(),
-					"id", r.getID(),
-					"has", set.contains(r.getID())));
+					Fields.DESCRIPTION, r.getDesc(),
+					Fields.ID, r.getID(),
+					Fields.HAS, userHas.contains(r.getID())));
 		}
 		return ret;
 	}
@@ -308,22 +324,22 @@ public class Admin {
 	public Map<String, Object> getUserTokens(
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		
-		final Set<HashedToken> tokens = auth.getTokens(
+		final Set<StoredToken> tokens = auth.getTokens(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()), new UserName(user));
 		final List<UIToken> uitokens = tokens.stream()
 				.map(t -> new UIToken(t)).collect(Collectors.toList());
 		final String urlPrefix = UIPaths.ADMIN_ROOT_USER + SEP + user + SEP +
 				UIPaths.ADMIN_TOKENS + SEP;
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", user);
-		ret.put("tokens", uitokens);
-		ret.put("revokeurl", relativize(uriInfo, urlPrefix +
+		ret.put(Fields.USER, user);
+		ret.put(Fields.TOKENS, uitokens);
+		ret.put(Fields.URL_REVOKE, relativize(uriInfo, urlPrefix +
 				UIPaths.ADMIN_USER_TOKENS_REVOKE + SEP));
-		ret.put("revokeallurl", relativize(uriInfo, urlPrefix + UIPaths.ADMIN_REVOKE_ALL));
+		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, urlPrefix + UIPaths.ADMIN_REVOKE_ALL));
 		return ret;
 	}
 	
@@ -331,8 +347,8 @@ public class Admin {
 	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ID)
 	public void revokeUserToken(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
-			@PathParam("tokenid") final UUID tokenID)
+			@PathParam(UIPaths.USER) final String user,
+			@PathParam(UIPaths.TOKEN_ID) final UUID tokenID)
 			throws InvalidTokenException, NoSuchTokenException, UnauthorizedException,
 			NoTokenProvidedException, MissingParameterException, IllegalParameterException,
 			AuthStorageException {
@@ -344,7 +360,7 @@ public class Admin {
 	@Path(UIPaths.ADMIN_USER_TOKENS_REVOKE_ALL)
 	public void revokeUserToken(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
 			MissingParameterException, IllegalParameterException, AuthStorageException {
 		auth.revokeAllTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -357,15 +373,18 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void disableUser(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
-			@FormParam("disable") final String disableStr,
-			@FormParam("reason") final String reason)
+			@PathParam(UIPaths.USER) final String user,
+			@FormParam(Fields.DISABLED) final String disableStr,
+			@FormParam(Fields.DISABLED_REASON) final String reason)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		final boolean disable = disableStr != null;
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		auth.disableAccount(token, new UserName(user), disable, reason);
+		if (disableStr == null) {
+			auth.enableAccount(token, new UserName(user));
+		} else {
+			auth.disableAccount(token, new UserName(user), reason);
+		}
 	}
 	
 	@POST
@@ -373,7 +392,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void forcePasswordReset(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws MissingParameterException, IllegalParameterException, NoTokenProvidedException,
 			InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
@@ -386,15 +405,15 @@ public class Admin {
 	@Template(name = "/adminpwdreset")
 	public Map<String, Object> resetUserPassword(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user)
+			@PathParam(UIPaths.USER) final String user)
 			throws NoTokenProvidedException, InvalidTokenException, NoSuchUserException,
 			UnauthorizedException, MissingParameterException, IllegalParameterException,
 			AuthStorageException{
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final Password pwd = auth.resetPassword(token, new UserName(user));
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("user", user);
-		ret.put("pwd", new String(pwd.getPassword()));
+		ret.put(Fields.USER, user);
+		ret.put(Fields.PASSWORD, new String(pwd.getPassword()));
 		pwd.clear();
 		return ret;
 	}
@@ -404,12 +423,11 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeRoles(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			final MultivaluedMap<String, String> form)
-			throws NoSuchUserException, AuthStorageException,
-			NoSuchRoleException, MissingParameterException,
-			IllegalParameterException, UnauthorizedException,
-			InvalidTokenException, NoTokenProvidedException {
+			throws NoSuchUserException, AuthStorageException, NoSuchRoleException,
+				MissingParameterException, IllegalParameterException, UnauthorizedException,
+				InvalidTokenException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final UserName userName = new UserName(user);
 		final AuthUser au = auth.getUserAsAdmin(token, userName);
@@ -444,7 +462,7 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void changeCustomRoles(
 			@Context final HttpHeaders headers,
-			@PathParam("user") final String user,
+			@PathParam(UIPaths.USER) final String user,
 			final MultivaluedMap<String, String> form)
 			throws NoSuchUserException, AuthStorageException,
 			NoSuchRoleException, MissingParameterException,
@@ -484,22 +502,24 @@ public class Admin {
 			throws AuthStorageException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException {
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		final Set<CustomRole> roles = auth.getCustomRoles(token, true);
+		final List<Map<String, String>> roles = UIUtils.customRolesToList(
+				auth.getCustomRoles(token, true));
 		return ImmutableMap.of(
-				"custroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET),
-				"delroleurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_DELETE),
-				"roles", roles);
+				Fields.URL_CUSTOM_ROLE, relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_SET),
+				Fields.URL_DELETE_CUSTOM_ROLE,
+					relativize(uriInfo, UIPaths.ADMIN_ROOT_CUSTOM_ROLES_DELETE),
+				Fields.ROLES, roles);
 	}
 	
+	// might make more sense to have separate create and edit methods for roles
 	@POST // should take PUT as well
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES_SET)
 	public void createCustomRole(
 			@Context final HttpHeaders headers,
-			@FormParam("id") final String roleId,
-			@FormParam("desc") final String description)
-			throws MissingParameterException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException, IllegalParameterException {
+			@FormParam(Fields.ID) final String roleId,
+			@FormParam(Fields.DESCRIPTION) final String description)
+			throws MissingParameterException, AuthStorageException, InvalidTokenException,
+				UnauthorizedException, NoTokenProvidedException, IllegalParameterException {
 		auth.setCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 				new CustomRole(roleId, description));
 	}
@@ -508,14 +528,22 @@ public class Admin {
 	@Path(UIPaths.ADMIN_CUSTOM_ROLES_DELETE)
 	public void deleteCustomRole(
 			@Context final HttpHeaders headers,
-			@FormParam("id") final String roleId)
+			@FormParam(Fields.ID) final String roleId)
 			throws MissingParameterException, AuthStorageException,
 			InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, NoSuchRoleException, IllegalParameterException {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
-	//TODO CONFIG reset to defaults
+	@POST
+	@Path(UIPaths.ADMIN_CONFIG_RESET)
+	public void resetConfig(
+			@Context final HttpHeaders headers)
+			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
+			AuthStorageException {
+		auth.resetConfigToDefault(getTokenFromCookie(headers, cfg.getTokenCookieName()));
+	}
+	
 	@GET
 	@Path(UIPaths.ADMIN_CONFIG)
 	@Template(name = "/adminconfig")
@@ -525,7 +553,7 @@ public class Admin {
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
 			NoTokenProvidedException, AuthStorageException {
-		final AuthConfigSet<AuthExternalConfig> cfgset;
+		final AuthConfigSetWithUpdateTime<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					new AuthExternalConfigMapper());
@@ -536,36 +564,52 @@ public class Admin {
 		
 		final Map<String, Object> ret = new HashMap<>();
 		final List<Map<String, Object>> prov = new ArrayList<>();
-		ret.put("providers", prov);
+		ret.put(Fields.PROVIDERS, prov);
 		for (final Entry<String, ProviderConfig> e:
 				cfgset.getCfg().getProviders().entrySet()) {
 			final Map<String, Object> p = new HashMap<>();
-			p.put("name", e.getKey());
-			p.put("enabled", e.getValue().isEnabled());
-			p.put("forcelinkchoice", e.getValue().isForceLinkChoice());
-			p.put("forceloginchoice", e.getValue().isForceLoginChoice());
+			p.put(Fields.PROVIDER, e.getKey());
+			p.put(Fields.CFG_PROV_ENABLED, e.getValue().isEnabled());
+			p.put(Fields.CFG_PROV_FORCE_LINK_CHOICE, e.getValue().isForceLinkChoice());
+			p.put(Fields.CFG_PROV_FORCE_LOGIN_CHOICE, e.getValue().isForceLoginChoice());
 			prov.add(p);
 		}
-		ret.put("showstack", cfgset.getExtcfg().isIncludeStackTraceInResponse());
-		ret.put("ignoreip", cfgset.getExtcfg().isIgnoreIPHeaders());
-		ret.put("allowedloginredirect", cfgset.getExtcfg().getAllowedLoginRedirectPrefix());
-		ret.put("completeloginredirect", cfgset.getExtcfg().getCompleteLoginRedirect());
-		ret.put("postlinkredirect", cfgset.getExtcfg().getPostLinkRedirect());
-		ret.put("completelinkredirect", cfgset.getExtcfg().getCompleteLinkRedirect());
+		ret.put(Fields.CFG_SHOW_STACK_TRACE,
+				cfgset.getExtcfg().isIncludeStackTraceInResponseOrDefault());
+		ret.put(Fields.CFG_IGNORE_IP_HEADERS, cfgset.getExtcfg().isIgnoreIPHeadersOrDefault());
+		final ConfigItem<URL, State> loginallowed =
+				cfgset.getExtcfg().getAllowedLoginRedirectPrefix();
+		ret.put(Fields.CFG_ALLOWED_LOGIN_REDIRECT,
+				loginallowed.hasItem() ? loginallowed.getItem() : null);
+		final ConfigItem<URL, State> logincomplete =
+				cfgset.getExtcfg().getCompleteLoginRedirect();
+		ret.put(Fields.CFG_COMPLETE_LOGIN_REDIRECT,
+				logincomplete.hasItem() ? logincomplete.getItem() : null);
+		final ConfigItem<URL, State> postlink = cfgset.getExtcfg().getPostLinkRedirect();
+		ret.put(Fields.CFG_POST_LINK_REDIRECT, postlink.hasItem() ? postlink.getItem() : null);
+		final ConfigItem<URL, State> completelink =
+				cfgset.getExtcfg().getCompleteLinkRedirect();
+		ret.put(Fields.CFG_COMPLETE_LINK_REDIRECT,
+				completelink.hasItem() ? completelink.getItem() : null);
 		
-		ret.put("allowlogin", cfgset.getCfg().isLoginAllowed());
-		ret.put("tokensugcache", cfgset.getCfg().getTokenLifetimeMS(
+		ret.put(Fields.CFG_ALLOW_LOGIN, cfgset.getCfg().isLoginAllowed());
+		ret.put(Fields.CFG_TOKEN_CACHE_TIME, cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.EXT_CACHE) / MIN_IN_MS);
-		ret.put("tokenlogin", cfgset.getCfg().getTokenLifetimeMS(
+		ret.put(Fields.CFG_TOKEN_LOGIN, cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.LOGIN) / DAY_IN_MS);
-		ret.put("tokendev", cfgset.getCfg().getTokenLifetimeMS(
+		ret.put(Fields.CFG_TOKEN_AGENT, cfgset.getCfg().getTokenLifetimeMS(
+				TokenLifetimeType.AGENT) / DAY_IN_MS);
+		ret.put(Fields.CFG_TOKEN_DEV, cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.DEV) / DAY_IN_MS);
-		ret.put("tokenserv", cfgset.getCfg().getTokenLifetimeMS(
+		ret.put(Fields.CFG_TOKEN_SERV, cfgset.getCfg().getTokenLifetimeMS(
 				TokenLifetimeType.SERV) / DAY_IN_MS);
 
-		ret.put("basicurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
-		ret.put("tokenurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
-		ret.put("providerurl", relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
+		ret.put(Fields.CFG_UPDATE_TIME_SEC, cfgset.getUpdateTimeInMillis() / 1000);
+		
+		ret.put(Fields.URL_CFG_BASIC, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
+		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
+		ret.put(Fields.URL_PROVIDER, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
+		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_RESET));
 		return ret;
 	}
 	
@@ -574,41 +618,176 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void updateBasic(
 			@Context final HttpHeaders headers,
-			@FormParam("allowlogin") final String allowLogin,
-			@FormParam("showstack") final String showstack,
-			@FormParam("ignoreip") final String ignoreip,
-			@FormParam("allowedloginredirect") final String allowedloginredirect,
-			@FormParam("completeloginredirect") final String completeloginredirect,
-			@FormParam("postlinkredirect") final String postlinkredirect,
-			@FormParam("completelinkredirect") final String completelinkredirect)
+			@FormParam(Fields.CFG_ALLOW_LOGIN) final String allowLogin,
+			@FormParam(Fields.CFG_SHOW_STACK_TRACE) final String showstack,
+			@FormParam(Fields.CFG_IGNORE_IP_HEADERS) final String ignoreip,
+			@FormParam(Fields.CFG_ALLOWED_LOGIN_REDIRECT) final String allowedloginredirect,
+			@FormParam(Fields.CFG_COMPLETE_LOGIN_REDIRECT) final String completeloginredirect,
+			@FormParam(Fields.CFG_POST_LINK_REDIRECT) final String postlinkredirect,
+			@FormParam(Fields.CFG_COMPLETE_LINK_REDIRECT) final String completelinkredirect)
 			throws IllegalParameterException, InvalidTokenException,
-			UnauthorizedException, NoTokenProvidedException,
-			AuthStorageException {
-		final URL postlogin = getURL(allowedloginredirect);
-		final URL completelogin = getURL(completeloginredirect);
-		final URL postlink = getURL(postlinkredirect);
-		final URL completelink = getURL(completelinkredirect);
+				UnauthorizedException, NoTokenProvidedException, AuthStorageException {
+		final ConfigItem<URL, Action> postlogin = getURL(allowedloginredirect);
+		final ConfigItem<URL, Action> completelogin = getURL(completeloginredirect);
+		final ConfigItem<URL, Action> postlink = getURL(postlinkredirect);
+		final ConfigItem<URL, Action> completelink = getURL(completelinkredirect);
+		final ConfigItem<Boolean, Action> ignore = ConfigItem.set(!nullOrEmpty(ignoreip));
+		final ConfigItem<Boolean, Action> stack = ConfigItem.set(!nullOrEmpty(showstack));
 		
-		final AuthExternalConfig ext = new AuthExternalConfig(
-				postlogin, completelogin, postlink, completelink,
-				!nullOrEmpty(ignoreip), !nullOrEmpty(showstack));
+		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
+				postlogin, completelogin, postlink, completelink, ignore, stack);
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-					new AuthConfigSet<>(new AuthConfig(!nullOrEmpty(allowLogin), null, null),
-							ext));
+					AuthConfigUpdate.getBuilder().withLoginAllowed(!nullOrEmpty(allowLogin))
+							.withExternalConfig(ext).build());
+		} catch (NoSuchIdentityProviderException e) {
+			throw new RuntimeException("OK, that's not supposed to happen", e);
+		}
+	}
+	
+	private static class SetConfig extends IncomingJSON {
+		
+		//TODO UI CODE include all the config parameters
+		
+		private final Boolean allowLogin;
+		private final Boolean showStack;
+		private final Boolean ignoreIP;
+		
+		private final String allowedLoginURL;
+		private final String completeLoginURL;
+		private final String postLinkURL;
+		private final String completeLinkURL;
+		
+		public final List<String> remove;
+		
+		@JsonCreator
+		public SetConfig(
+				@JsonProperty(Fields.CFG_ALLOW_LOGIN) final Boolean allowLogin,
+				@JsonProperty(Fields.CFG_SHOW_STACK_TRACE) final Boolean showStack,
+				@JsonProperty(Fields.CFG_IGNORE_IP_HEADERS) final Boolean ignoreIP,
+				@JsonProperty(Fields.CFG_ALLOWED_LOGIN_REDIRECT) final String allowedLoginURL,
+				@JsonProperty(Fields.CFG_COMPLETE_LOGIN_REDIRECT) final String completeLoginURL,
+				@JsonProperty(Fields.CFG_POST_LINK_REDIRECT) final String postLinkURL,
+				@JsonProperty(Fields.CFG_COMPLETE_LINK_REDIRECT) final String completeLinkURL,
+				@JsonProperty(Fields.CFG_REMOVE) final List<String> remove) {
+			this.allowLogin = allowLogin;
+			this.showStack = showStack;
+			this.ignoreIP = ignoreIP;
+			this.allowedLoginURL = allowedLoginURL;
+			this.completeLoginURL = completeLoginURL;
+			this.postLinkURL = postLinkURL;
+			this.completeLinkURL = completeLinkURL;
+			this.remove = remove == null ? Collections.emptyList() : remove;
+		}
+		
+		public Boolean getAllowLogin() {
+			return allowLogin;
+		}
+		
+		public ConfigItem<Boolean, Action> getShowStack() {
+			return getBoolean(showStack, Fields.CFG_SHOW_STACK_TRACE);
+		}
+		
+		public ConfigItem<Boolean, Action> getIgnoreIP() {
+			return getBoolean(ignoreIP, Fields.CFG_IGNORE_IP_HEADERS);
+		}
+		
+		public ConfigItem<URL, Action> getAllowedLoginURLPrefix()
+				throws IllegalParameterException {
+			return getURL(allowedLoginURL, Fields.CFG_ALLOWED_LOGIN_REDIRECT);
+		}
+
+		public ConfigItem<URL, Action> getCompleteLoginURL()
+				throws IllegalParameterException {
+			return getURL(completeLoginURL, Fields.CFG_COMPLETE_LOGIN_REDIRECT);
+		}
+		
+		public ConfigItem<URL, Action> getPostLinkURL()
+				throws IllegalParameterException {
+			return getURL(postLinkURL, Fields.CFG_POST_LINK_REDIRECT);
+		}
+		
+		public ConfigItem<URL, Action> getCompleteLinkURL()
+				throws IllegalParameterException {
+			return getURL(completeLinkURL, Fields.CFG_COMPLETE_LINK_REDIRECT);
+		}
+		
+		private ConfigItem<URL, Action> getURL(final String s, final String field)
+				throws IllegalParameterException {
+			final ConfigItem<URL, Action> act = getRemove(field);
+			// may want to throw an error if both remove and set are true in input
+			if (act != null) {
+				return act;
+			}
+			if (nullOrEmpty(s)) {
+				return ConfigItem.noAction();
+			}
+			try {
+				final ConfigItem<URL, Action> item = ConfigItem.set(new URL(s));
+				item.getItem().toURI(); // check for legal URIs
+				return item;
+			} catch (MalformedURLException | URISyntaxException e) {
+				throw new IllegalParameterException("Illegal URL: " + s, e);
+			}
+		}
+
+		private <T> ConfigItem<T, Action> getRemove(final String field) {
+			if (remove.contains(field)) {
+				return ConfigItem.remove();
+			}
+			return null;
+		}
+
+		private ConfigItem<Boolean, Action> getBoolean(final Boolean b, final String field) {
+			final ConfigItem<Boolean, Action> act = getRemove(field);
+			if (act != null) {
+				return act;
+			}
+			if (b == null) {
+				return ConfigItem.noAction();
+			}
+			return ConfigItem.set(b);
+		}
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_CONFIG)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void updateConfig(
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String token,
+			final SetConfig config)
+			throws MissingParameterException, IllegalParameterException, InvalidTokenException,
+				UnauthorizedException, NoTokenProvidedException, AuthStorageException {
+		if (config == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
+		config.exceptOnAdditionalProperties();
+		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
+				config.getAllowedLoginURLPrefix(),
+				config.getCompleteLoginURL(),
+				config.getPostLinkURL(),
+				config.getCompleteLinkURL(),
+				config.getIgnoreIP(),
+				config.getShowStack());
+		try {
+			auth.updateConfig(getToken(token),
+					AuthConfigUpdate.getBuilder().withNullableLoginAllowed(config.getAllowLogin())
+							.withExternalConfig(ext).build());
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
 	}
 
-	private URL getURL(final String putativeURL) throws IllegalParameterException {
-		final URL redirect;
-		if (putativeURL == null || putativeURL.isEmpty()) {
-			redirect = null;
+	private ConfigItem<URL, Action> getURL(final String putativeURL)
+			throws IllegalParameterException {
+		final ConfigItem<URL, Action> redirect;
+		if (nullOrEmpty(putativeURL)) {
+			redirect = ConfigItem.remove();
 		} else {
 			try {
-				redirect = new URL(putativeURL);
-			} catch (MalformedURLException e) {
+				redirect = ConfigItem.set(new URL(putativeURL));
+				redirect.getItem().toURI(); // check for bad URIs
+			} catch (MalformedURLException | URISyntaxException e) {
 				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
 			}
 		}
@@ -620,23 +799,20 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void configProvider(
 			@Context final HttpHeaders headers,
-			@FormParam("provname") final String provname,
-			@FormParam("enabled") final String enabled,
-			@FormParam("forceloginchoice") final String forceLogin,
-			@FormParam("forcelinkchoice") final String forcelink)
+			@FormParam(Fields.PROVIDER) final String provname,
+			@FormParam(Fields.CFG_PROV_ENABLED) final String enabled,
+			@FormParam(Fields.CFG_PROV_FORCE_LOGIN_CHOICE) final String forceLogin,
+			@FormParam(Fields.CFG_PROV_FORCE_LINK_CHOICE) final String forcelink)
 			throws MissingParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		final ProviderConfig pc = new ProviderConfig(
-				!nullOrEmpty(enabled), !nullOrEmpty(forceLogin), !nullOrEmpty(forcelink));
-		if (provname == null || provname.isEmpty()) {
-			throw new MissingParameterException("provname");
+		if (provname == null || provname.trim().isEmpty()) {
+			throw new MissingParameterException(Fields.PROVIDER);
 		}
-		final Map<String, ProviderConfig> provs = new HashMap<>();
-		provs.put(provname, pc);
 		auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new AuthConfigSet<>(new AuthConfig(null, provs, null),
-						AuthExternalConfig.NO_CHANGE));
+				AuthConfigUpdate.getBuilder().withProviderUpdate(provname, new ProviderUpdate(
+						!nullOrEmpty(enabled), !nullOrEmpty(forceLogin), !nullOrEmpty(forcelink)))
+				.build());
 	}
 	
 	@POST
@@ -644,10 +820,11 @@ public class Admin {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public void configTokens(
 			@Context final HttpHeaders headers,
-			@FormParam("tokensugcache") final int sugcache,
-			@FormParam("tokenlogin") final int login,
-			@FormParam("tokendev") final int dev,
-			@FormParam("tokenserv") final long serv)
+			@FormParam(Fields.CFG_TOKEN_CACHE_TIME) final int sugcache,
+			@FormParam(Fields.CFG_TOKEN_LOGIN) final int login,
+			@FormParam(Fields.CFG_TOKEN_AGENT) final int agent,
+			@FormParam(Fields.CFG_TOKEN_DEV) final int dev,
+			@FormParam(Fields.CFG_TOKEN_SERV) final long serv)
 			throws IllegalParameterException, InvalidTokenException,
 			UnauthorizedException, NoTokenProvidedException,
 			AuthStorageException {
@@ -659,6 +836,10 @@ public class Admin {
 			throw new IllegalParameterException(
 					"Login token expiration time must be at least 1");
 		}
+		if (agent < 1) {
+			throw new IllegalParameterException(
+					"Agent token expiration time must be at least 1");
+		}
 		if (dev < 1) {
 			throw new IllegalParameterException(
 					"Developer token expiration time must be at least 1");
@@ -667,15 +848,15 @@ public class Admin {
 			throw new IllegalParameterException(
 					"Server token expiration time must be at least 1");
 		}
-		final Map<TokenLifetimeType, Long> t = new HashMap<>();
-		t.put(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS));
-		t.put(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS));
-		t.put(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS));
-		t.put(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS));
+		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder()
+				.withTokenLifeTime(TokenLifetimeType.EXT_CACHE, safeMult(sugcache, MIN_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.LOGIN, safeMult(login, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.AGENT, safeMult(agent, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.DEV, safeMult(dev, DAY_IN_MS))
+				.withTokenLifeTime(TokenLifetimeType.SERV, safeMult(serv, DAY_IN_MS))
+				.build();
 		try {
-			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-					new AuthConfigSet<>(new AuthConfig(null, null, t),
-							AuthExternalConfig.NO_CHANGE));
+			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()), acu);
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
@@ -688,9 +869,4 @@ public class Admin {
 		}
 		return l1 * l2;
 	}
-
-	private boolean nullOrEmpty(final String s) {
-		return s == null || s.isEmpty();
-	}
-
 }

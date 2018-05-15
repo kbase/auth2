@@ -8,16 +8,22 @@ import org.junit.Test;
 
 import com.google.common.base.Optional;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.UserUpdate;
 import us.kbase.test.auth2.TestCommon;
 
 public class UserUpdateTest {
+	
+	@Test
+	public void equals() {
+		EqualsVerifier.forClass(UserUpdate.class).usingGetClass().verify();
+	}
 
 	@Test
 	public void noUpdates() {
-		final UserUpdate uu = new UserUpdate();
+		final UserUpdate uu = UserUpdate.getBuilder().build();
 		assertThat("incorrect display name", uu.getDisplayName(), is(Optional.absent()));
 		assertThat("incorrect email", uu.getEmail(), is(Optional.absent()));
 		assertThat("incorrect hasUpdates", uu.hasUpdates(), is(false));
@@ -25,7 +31,8 @@ public class UserUpdateTest {
 	
 	@Test
 	public void withDisplay() throws Exception {
-		final UserUpdate uu = new UserUpdate().withDisplayName(new DisplayName("foo"));
+		final UserUpdate uu = UserUpdate.getBuilder()
+				.withDisplayName(new DisplayName("foo")).build();
 		assertThat("incorrect display name", uu.getDisplayName(),
 				is(Optional.of(new DisplayName("foo"))));
 		assertThat("incorrect email", uu.getEmail(), is(Optional.absent()));
@@ -34,7 +41,8 @@ public class UserUpdateTest {
 	
 	@Test
 	public void withEmail() throws Exception {
-		final UserUpdate uu = new UserUpdate().withEmail(new EmailAddress("f@b.com"));
+		final UserUpdate uu = UserUpdate.getBuilder()
+				.withEmail(new EmailAddress("f@b.com")).build();
 		assertThat("incorrect display name", uu.getDisplayName(), is(Optional.absent()));
 		assertThat("incorrect email", uu.getEmail(), is(Optional.of(new EmailAddress("f@b.com"))));
 		assertThat("incorrect hasUpdates", uu.hasUpdates(), is(true));
@@ -42,8 +50,8 @@ public class UserUpdateTest {
 
 	@Test
 	public void withEmailAndDisplay() throws Exception {
-		final UserUpdate uu = new UserUpdate().withEmail(new EmailAddress("f@b.com"))
-				.withDisplayName(new DisplayName("foo"));
+		final UserUpdate uu = UserUpdate.getBuilder().withEmail(new EmailAddress("f@b.com"))
+				.withDisplayName(new DisplayName("foo")).build();
 		assertThat("incorrect display name", uu.getDisplayName(),
 				is(Optional.of(new DisplayName("foo"))));
 		assertThat("incorrect email", uu.getEmail(), is(Optional.of(new EmailAddress("f@b.com"))));
@@ -61,7 +69,7 @@ public class UserUpdateTest {
 			final EmailAddress emailAddress,
 			final Exception e) {
 		try {
-			new UserUpdate().withDisplayName(displayName).withEmail(emailAddress);
+			UserUpdate.getBuilder().withDisplayName(displayName).withEmail(emailAddress);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

@@ -1,0 +1,8 @@
+<html>
+<body>
+Hi whoo - are you sure you want to logout?
+<form action="logout" method="post">
+	<input type="submit" value="Yes, log me out"/>
+</form>
+</body>
+</html>

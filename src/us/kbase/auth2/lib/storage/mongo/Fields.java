@@ -63,6 +63,20 @@ public class Fields {
 	 * Null if the password has never been reset.
 	 */
 	public static final String USER_RESET_PWD_LAST = "lastrst";
+	/** The date the user expires from the system. This is only used for test users and is
+	 * unsafe to enable on real users.
+	 */
+	public static final String USER_EXPIRES = "expires";
+	
+	/* *****************
+	 * Policy ID fields
+	 * *****************
+	 */
+	
+	/** The ID of a policy document to which a user has agreed. */
+	public static final String POLICY_ID = "id";
+	/** The time the user agreed to the document. */
+	public static final String POLICY_AGREED_ON = "agreed";
 	
 	/* ****************
 	 * identity fields
@@ -101,22 +115,48 @@ public class Fields {
 	public static final String TOKEN_NAME = "name";
 	/** The date the token was created. */
 	public static final String TOKEN_CREATION = "create";
+	/** The operating system of the user when the token was created. */
+	public static final String TOKEN_OS = "os";
+	/** The version of the operating system of the user when the token was created. */
+	public static final String TOKEN_OS_VER = "osver";
+	/** The agent of the user when the token was created. */
+	public static final String TOKEN_AGENT = "agent";
+	/** The version of the agent of the user when the token was created. */
+	public static final String TOKEN_AGENT_VER = "agentver";
+	/** The device of the user when the token was created. */
+	public static final String TOKEN_DEVICE = "device";
+	/** The IP address of the user when the token was created. */
+	public static final String TOKEN_IP = "ip";
+	/** Any custom token creation context information supplied by the user. */
+	public static final String TOKEN_CUSTOM_CONTEXT = "custctx";
+	/** A key for a custom context key / value pair. */
+	public static final String TOKEN_CUSTOM_KEY = "k";
+	/** A value for a custom context key / value pair. */
+	public static final String TOKEN_CUSTOM_VALUE = "v";
 	
 	/* ************************
-	 * temporary token fields
+	 * temporary session data fields
 	 * ************************
 	 */
 	
+	/** The operation the temporary session data supports */
+	public static final String TEMP_SESSION_OPERATION = "op";
 	/** The hashed temporary token. */
-	public static final String TOKEN_TEMP_TOKEN = "token";
+	public static final String TEMP_SESSION_TOKEN = "token";
 	/** The date the temporary token expires. */
-	public static final String TOKEN_TEMP_EXPIRY = "expires";
+	public static final String TEMP_SESSION_EXPIRY = "expires";
 	/** The ID of the temporary token. */
-	public static final String TOKEN_TEMP_ID = "id";
+	public static final String TEMP_SESSION_ID = "id";
 	/** The date the temporary token was created. */
-	public static final String TOKEN_TEMP_CREATION = "create";
+	public static final String TEMP_SESSION_CREATION = "create";
+	/** The user associated with the temporary token. */
+	public static final String TEMP_SESSION_USER = "user";
 	/** The remote identities associated with the temporary token. */
-	public static final String TOKEN_TEMP_IDENTITIES = "idents";
+	public static final String TEMP_SESSION_IDENTITIES = "idents";
+	/** The error associated with the temporary token. */
+	public static final String TEMP_SESSION_ERROR = "err";
+	/** The type of the error associated with the temporary token. */
+	public static final String TEMP_SESSION_ERROR_TYPE = "errtype";
 	
 	/* ********************
 	 * custom roles fields
@@ -127,6 +167,10 @@ public class Fields {
 	public static final String ROLES_ID = "id";
 	/** The description of the custom role. */
 	public static final String ROLES_DESC = "desc";
+	/** The date the custom role expires from the system. This is only used for test roles and is
+	 * unsafe to enable on real roles.
+	 */
+	public static final String ROLES_EXPIRES = "expires";
 	
 	/* ***********************
 	 * database schema fields
@@ -171,6 +215,8 @@ public class Fields {
 	public static final String CONFIG_APP_TOKEN_LIFE_CACHE = "tokenlifecache";
 	/** The lifetime of a login token. */
 	public static final String CONFIG_APP_TOKEN_LIFE_LOGIN = "tokenlifelogin";
+	/** The lifetime of an agent token. */
+	public static final String CONFIG_APP_TOKEN_LIFE_AGENT = "tokenlifeagent";
 	/** The lifetime of a developer token. */
 	public static final String CONFIG_APP_TOKEN_LIFE_DEV = "tokenlifedev";
 	/** The lifetime of a server token. */

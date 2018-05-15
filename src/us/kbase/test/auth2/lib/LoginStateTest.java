@@ -7,38 +7,35 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
-import java.util.Collections;
-import java.util.UUID;
+import java.util.Arrays;
+import java.util.LinkedList;
 
 import org.junit.Test;
 
-import us.kbase.auth2.lib.AuthUser;
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
-import us.kbase.auth2.lib.NewUser;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.user.AuthUser;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LoginStateTest {
 	
-	private static final RemoteIdentityWithLocalID REMOTE1 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715c9"),
+	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar"),
 			new RemoteIdentityDetails("user", "full", "email"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE2 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d9"),
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
-	private static final RemoteIdentityWithLocalID REMOTE3 = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c5671539"),
+	private static final RemoteIdentity REMOTE3 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar3"),
 			new RemoteIdentityDetails("user3", "full3", "email3"));
 	
@@ -46,33 +43,51 @@ public class LoginStateTest {
 	private final static AuthUser AUTH_USER2;
 	static {
 		try {
-			AUTH_USER1 = new NewUser(new UserName("foo4"), new EmailAddress("f@g.com"),
-					new DisplayName("bar4"), REMOTE1, Collections.emptySet(), Instant.now(), null);
-			AUTH_USER2 = new AuthUser(new UserName("foo5"),
-					new EmailAddress("f@g5.com"), new DisplayName("bar5"), set(REMOTE2, REMOTE3),
-					set(Role.ADMIN), Collections.emptySet(), Collections.emptySet(),
-					Instant.now(), null, new UserDisabledState());
+			AUTH_USER1 = NewUser.getBuilder(
+					new UserName("foo4"), new DisplayName("bar4"), Instant.now(), REMOTE1)
+					.withEmailAddress(new EmailAddress("f@g.com")).build();
+			AUTH_USER2 = AuthUser.getBuilder(
+					new UserName("foo5"), new DisplayName("bar5"), Instant.now())
+					.withEmailAddress(new EmailAddress("f@g5.com"))
+					.withIdentity(REMOTE2).withIdentity(REMOTE3)
+					.withRole(Role.ADMIN)
+					.build();
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);
 		}
 	}
+	
+	@Test
+	public void equals() throws Exception {
+		EqualsVerifier.forClass(LoginState.class).usingGetClass().verify();
+	}
 
 	@Test
 	public void buildMinimal() throws Exception {
-		final LoginState ls = new LoginState.Builder("foo", false).build();
+		final LoginState ls = LoginState.getBuilder("foo", false, Instant.ofEpochMilli(1000))
+				.build();
 		assertThat("incorrect provider", ls.getProvider(), is("foo"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect num users", ls.getUsers().size(), is(0));
 		assertThat("incorrect num identities", ls.getIdentities().size(), is(0));
-		
-		failStartBuild(null, new IllegalArgumentException("provider cannot be null or empty"));
-		failStartBuild("  \t    \n",
-				new IllegalArgumentException("provider cannot be null or empty"));
+		assertThat("incorrect expires", ls.getExpires(), is(Instant.ofEpochMilli(1000)));
 	}
 	
-	private void failStartBuild(final String provider, final Exception e) {
+	@Test
+	public void buildFailNullsAndEmpties() {
+		failStartBuild(null, Instant.now(),
+				new IllegalArgumentException("provider cannot be null or empty"));
+		failStartBuild("  \t    \n", Instant.now(),
+				new IllegalArgumentException("provider cannot be null or empty"));
+		failStartBuild("p", null, new NullPointerException("expires"));
+	}
+	
+	private void failStartBuild(
+			final String provider,
+			final Instant expires,
+			final Exception e) {
 		try {
-			new LoginState.Builder(null, false);
+			LoginState.getBuilder(provider, false, expires);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -81,17 +96,19 @@ public class LoginStateTest {
 	
 	@Test
 	public void buildWithIdentities() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE1).withIdentity(REMOTE2).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect num users", ls.getUsers().size(), is(0));
 		assertThat("incorrect identities", ls.getIdentities(), is(set(REMOTE2, REMOTE1)));
+		assertThat("incorrect expires", ls.getExpires(),
+				is(Instant.ofEpochMilli(20000)));
 	}
 	
 	@Test
 	public void buildWithUsers() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", true)
+		final LoginState ls = LoginState.getBuilder("prov", true, Instant.ofEpochMilli(5000))
 				.withUser(AUTH_USER1, REMOTE1).withUser(AUTH_USER2, REMOTE3)
 				.withUser(AUTH_USER2, REMOTE2).build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
@@ -116,12 +133,14 @@ public class LoginStateTest {
 		
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo4")), is(false));
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo5")), is(true));
+		assertThat("incorrect expires", ls.getExpires(), is(Instant.ofEpochMilli(5000)));
 	}
 	
 	@Test
 	public void buildWithUsersAndIdentities() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
-				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.ofEpochMilli(10000))
+				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1)
+				.build();
 		assertThat("incorrect provider", ls.getProvider(), is("prov"));
 		assertThat("incorrect non-admin login", ls.isNonAdminLoginAllowed(), is(false));
 		assertThat("incorrect identities", ls.getIdentities(), is(set(REMOTE1)));
@@ -136,11 +155,60 @@ public class LoginStateTest {
 				is(new DisplayName("bar5")));
 		
 		assertThat("incorrect admin", ls.isAdmin(new UserName("foo5")), is(true));
+		assertThat("incorrect expires", ls.getExpires(),
+				is(Instant.ofEpochMilli(10000)));
+	}
+	
+	@Test
+	public void sortedUserNames() throws Exception {
+		final DisplayName dn = new DisplayName("d");
+		final Instant now = Instant.now();
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withUser(AuthUser.getBuilder(new UserName("foo"), dn, now)
+						.withIdentity(REMOTE1).build(), REMOTE1)
+				.withUser(AuthUser.getBuilder(new UserName("bar"), dn, now)
+						.withIdentity(REMOTE2).build(), REMOTE2)
+				.withUser(AuthUser.getBuilder(new UserName("baz"), dn, now)
+						.withIdentity(REMOTE3).build(), REMOTE3)
+				.build();
+		
+		assertThat("user names aren't sorted", new LinkedList<>(ls.getUsers()),
+				is(Arrays.asList(new UserName("bar"), new UserName("baz"), new UserName("foo"))));
+	}
+	
+	@Test
+	public void sortedUnlinkedIdentities() throws Exception {
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withIdentity(REMOTE3) // id is b5bc5fbd0e014aedb8541109a6536eca
+				.withIdentity(REMOTE1) // id is 225fa1634408e1c55c984bd8b199587e
+				.withIdentity(REMOTE2) // id is 589bebde3cf9c926f88420769025677b
+				.build();
+		assertThat("idents aren't sorted", new LinkedList<>(ls.getIdentities()),
+				is(Arrays.asList(REMOTE1, REMOTE2, REMOTE3)));
+	}
+	
+	@Test
+	public void sortedLinkedIdentities() throws Exception {
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("foo"), new DisplayName("dn"), Instant.now())
+				.withIdentity(REMOTE3)
+				.withIdentity(REMOTE1)
+				.withIdentity(REMOTE2)
+				.build();
+		
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
+				.withUser(u, REMOTE3) // id is b5bc5fbd0e014aedb8541109a6536eca
+				.withUser(u, REMOTE1) // id is 225fa1634408e1c55c984bd8b199587e
+				.withUser(u, REMOTE2) // id is 589bebde3cf9c926f88420769025677b
+				.build();
+		assertThat("user idents aren't sorted",
+				new LinkedList<>(ls.getIdentities(new UserName("foo"))),
+						is(Arrays.asList(REMOTE1, REMOTE2, REMOTE3)));
 	}
 	
 	@Test
 	public void unmodifiable() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
 				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
 		
 		try {
@@ -167,7 +235,7 @@ public class LoginStateTest {
 	
 	private void failAddIdentity(
 			final LoginState.Builder b,
-			final RemoteIdentityWithLocalID ri, 
+			final RemoteIdentity ri, 
 			final Exception e) {
 		try {
 			b.withIdentity(ri);
@@ -179,17 +247,18 @@ public class LoginStateTest {
 	
 	@Test
 	public void addIdentityFail() throws Exception {
-		failAddIdentity(new LoginState.Builder("prov", false), null,
+		failAddIdentity(LoginState.getBuilder("prov", false, Instant.now()), null,
 				new NullPointerException("remoteID"));
 		
-		failAddIdentity(new LoginState.Builder("prov1", false), REMOTE1, new IllegalStateException(
-				"Cannot have multiple providers in the same login state"));
+		failAddIdentity(LoginState.getBuilder("prov1", false, Instant.now()), REMOTE1,
+				new IllegalStateException(
+						"Cannot have multiple providers in the same login state"));
 	}
 	
 	private void failAddUser(
 			final LoginState.Builder b,
 			final AuthUser u,
-			final RemoteIdentityWithLocalID ri,
+			final RemoteIdentity ri,
 			final Exception e) {
 		try {
 			b.withUser(u, ri);
@@ -201,54 +270,54 @@ public class LoginStateTest {
 	
 	@Test
 	public void addUserFail() throws Exception {
-		failAddUser(new LoginState.Builder("prov", false), null, REMOTE1,
+		failAddUser(LoginState.getBuilder("prov", false, Instant.now()), null, REMOTE1,
 				new NullPointerException("user"));
 		
-		failAddUser(new LoginState.Builder("prov", false), AUTH_USER1, null,
+		failAddUser(LoginState.getBuilder("prov", false, Instant.now()), AUTH_USER1, null,
 				new NullPointerException("remoteID"));
 		
-		failAddUser(new LoginState.Builder("prov1", false), AUTH_USER1, REMOTE1,
+		failAddUser(LoginState.getBuilder("prov1", false, Instant.now()), AUTH_USER1, REMOTE1,
 				new IllegalStateException(
 						"Cannot have multiple providers in the same login state"));
 		
-		failAddUser(new LoginState.Builder("prov", false), AUTH_USER1, REMOTE2,
+		failAddUser(LoginState.getBuilder("prov", false, Instant.now()), AUTH_USER1, REMOTE2,
 				new IllegalArgumentException("user does not contain remote ID"));
 	}
 	
 	@Test
 	public void noSuchUser() throws Exception {
-		final LoginState ls = new LoginState.Builder("prov", false)
+		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
 				.withUser(AUTH_USER2, REMOTE3).withIdentity(REMOTE1).build();
 		
 		try {
 			ls.getIdentities(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}
 		try {
 			ls.getIdentities(new UserName("foo4"));
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getMessage(), is("No such user: foo4"));
 		}
 		
 		try {
 			ls.getUser(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}
 		try {
 			ls.getUser(new UserName("foo4"));
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (IllegalArgumentException e) {
 			assertThat("correct exception message", e.getMessage(), is("No such user: foo4"));
 		}
 		
 		try {
 			ls.isAdmin(null);
-			fail("excpected exception");
+			fail("expected exception");
 		} catch (NullPointerException e) {
 			assertThat("correct exception message", e.getMessage(), is("name"));
 		}

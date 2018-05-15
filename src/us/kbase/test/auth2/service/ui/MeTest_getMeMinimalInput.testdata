@@ -1,0 +1,25 @@
+<html>
+<body>
+<p>Note that in a proper UI, the provider username, the display name and email should be HTML-escaped.</p>
+
+<h2>User: foobar</h2>
+Created: 20000<br/>
+Last login: <br/>
+Local account<br/>
+<h3>Roles:</h3>
+<h3>Custom roles:</h3>
+<h3>User details</h3>
+<p>
+User name is public.</br>
+Display name is public to other system users.</br>
+Email is only visible to you, software acting on your behalf, and system administrators.
+</p>
+<form action="me" method="post">
+	Display name: <input type="text" name="display" value="bleah"/><br/>
+	Email: <input type="text" name="email" value=""/><br/>
+	<input type="submit" value="Update"/>
+</form>
+<h3>Identities:</h3>
+
+</html>
+</body>

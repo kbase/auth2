@@ -9,37 +9,31 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
-import java.util.UUID;
 
 import org.junit.Test;
 
 import us.kbase.auth2.lib.DisplayName;
-import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.NewUser;
-import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
-import us.kbase.auth2.lib.identity.RemoteIdentityWithLocalID;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageRolesTest extends MongoStorageTester {
 
 	private static final Instant NOW = Instant.now();
 	
-	private static final Set<PolicyID> MTPID = Collections.emptySet();
-	
-	private static final RemoteIdentityWithLocalID REMOTE = new RemoteIdentityWithLocalID(
-			UUID.fromString("ec8a91d3-5923-4639-8d12-0891c56715d8"),
+	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
 	
 	@Test
 	public void addAndRemoveRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.ADMIN), set(Role.SERV_TOKEN));
@@ -54,8 +48,8 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	
 	@Test
 	public void addRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN, Role.ADMIN),
 				Collections.emptySet());
 		assertThat("incorrect roles", storage.getUser(new UserName("foo")).getRoles(),
@@ -64,8 +58,8 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	
 	@Test
 	public void removeRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN), Collections.emptySet());
@@ -77,8 +71,8 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	
 	@Test
 	public void removeNonExistentRoles() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"), Collections.emptySet(),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN));
@@ -88,8 +82,8 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	
 	@Test
 	public void addAndRemoveSameRole() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN), set(Role.DEV_TOKEN));
@@ -99,8 +93,8 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	
 	@Test
 	public void noop() throws Exception {
-		storage.createUser(new NewUser(new UserName("foo"), new EmailAddress("f@g.com"),
-				new DisplayName("bar"), REMOTE, MTPID, NOW, null));
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
 		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN), Collections.emptySet());
 		
 		storage.updateRoles(new UserName("foo"), Collections.emptySet(), Collections.emptySet());

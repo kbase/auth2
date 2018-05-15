@@ -1,10 +1,14 @@
 package us.kbase.auth2.service.ui;
 
+import static us.kbase.auth2.service.common.ServiceCommon.getCustomContextFromString;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
-import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
+import static us.kbase.auth2.service.common.ServiceCommon.getTokenContext;
+import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
+import static us.kbase.auth2.service.ui.UIUtils.removeLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -12,6 +16,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import javax.inject.Inject;
+import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.FormParam;
@@ -32,11 +37,9 @@ import org.glassfish.jersey.server.mvc.Template;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Role;
-import us.kbase.auth2.lib.TokenName;
-import us.kbase.auth2.lib.exceptions.DisabledUserException;
+import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -45,21 +48,28 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenSet;
+import us.kbase.auth2.lib.token.TokenType;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
+import us.kbase.auth2.service.UserAgentParser;
+import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
 @Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
 	
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
 
 	@Inject
 	private Authentication auth;
 	
 	@Inject
 	private AuthAPIStaticConfig cfg;
+	
+	@Inject
+	private UserAgentParser userAgentParser;
 	
 	@GET
 	@Produces(MediaType.TEXT_HTML)
@@ -68,90 +78,100 @@ public class Tokens {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, DisabledUserException {
-		final Map<String, Object> t = getTokens(
-				getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		t.put("user", ((UIToken) t.get("current")).getUser());
-		t.put("createurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_CREATE));
-		t.put("revokeurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
-				UIPaths.SEP));
-		t.put("revokeallurl", relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
-		return t;
+				NoTokenProvidedException, UnauthorizedException {
+		return getTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()), uriInfo);
 	}
 	
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> getTokensJSON(
-			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
+			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
+			@Context final UriInfo uriInfo)
 			throws AuthStorageException, InvalidTokenException,
-			NoTokenProvidedException, DisabledUserException {
-		return getTokens(getToken(headerToken));
+				NoTokenProvidedException, UnauthorizedException {
+		return getTokens(getToken(headerToken), uriInfo);
 	}
 	
 	@POST
-	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.TEXT_HTML)
 	@Template(name = "/tokencreate")
-	public UINewToken createTokenHTML(
+	public NewUIToken createTokenHTML(
+			@Context final HttpServletRequest req,
 			@Context final HttpHeaders headers,
-			@FormParam("tokenname") final String tokenName,
-			@FormParam("tokentype") final String tokenType)
+			@FormParam(Fields.TOKEN_NAME) final String tokenName,
+			@FormParam(Fields.TOKEN_TYPE) final String tokenType,
+			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext)
 			throws AuthStorageException, MissingParameterException,
-			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException, IllegalParameterException {
-		return createtoken(tokenName, tokenType,
-				getTokenFromCookie(headers, cfg.getTokenCookieName()));
+				NoTokenProvidedException, InvalidTokenException,
+				UnauthorizedException, IllegalParameterException {
+		return createtoken(req, tokenName, tokenType,
+				getTokenFromCookie(headers, cfg.getTokenCookieName()),
+				getCustomContextFromString(customContext));
 	}
 	
 	private static class CreateTokenParams extends IncomingJSON {
 
 		public final String name;
 		public final String type;
+		private final Map<String, String> customContext;
 		
 		@JsonCreator
 		private CreateTokenParams(
-				@JsonProperty("name") final String name,
-				@JsonProperty("type") final String type)
+				@JsonProperty(Fields.TOKEN_NAME) final String name,
+				@JsonProperty(Fields.TOKEN_TYPE) final String type,
+				@JsonProperty(Fields.CUSTOM_CONTEXT) final Map<String, String> customContext)
 				throws MissingParameterException {
 			this.name = name;
 			this.type = type;
+			this.customContext = customContext;
+		}
+		
+		public Map<String, String> getCustomContext() {
+			if (customContext == null) {
+				return Collections.emptyMap();
+			}
+			return customContext;
 		}
 	}
 	
 	@POST
-	@Path(UIPaths.TOKENS_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
-	public UINewToken createTokenJSON(
+	public NewUIToken createTokenJSON(
+			@Context final HttpServletRequest req,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken,
 			final CreateTokenParams input)
 			throws AuthStorageException, MissingParameterException,
-			InvalidTokenException, NoTokenProvidedException,
-			UnauthorizedException, IllegalParameterException {
+				InvalidTokenException, NoTokenProvidedException,
+				UnauthorizedException, IllegalParameterException {
+		if (input == null) {
+			throw new MissingParameterException("JSON body missing");
+		}
 		input.exceptOnAdditionalProperties();
-		return createtoken(input.name, input.type, getToken(headerToken));
+		return createtoken(req, input.name, input.type, getToken(headerToken),
+				input.getCustomContext());
 	}
 	
 	@POST
 	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenPOST(
 			@Context final HttpHeaders headers,
-			@PathParam("tokenid") final UUID tokenId)
+			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId)
 			throws AuthStorageException,
-			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException {
+				NoSuchTokenException, NoTokenProvidedException,
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getTokenFromCookie(headers, cfg.getTokenCookieName()), tokenId);
 	}
 	
 	@DELETE
 	@Path(UIPaths.TOKENS_REVOKE_ID)
 	public void revokeTokenDELETE(
-			@PathParam("tokenid") final UUID tokenId,
+			@PathParam(UIPaths.TOKEN_ID) final UUID tokenId,
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException,
-			NoSuchTokenException, NoTokenProvidedException,
-			InvalidTokenException {
+				NoSuchTokenException, NoTokenProvidedException,
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeToken(getToken(headerToken), tokenId);
 	}
 	
@@ -159,9 +179,9 @@ public class Tokens {
 	@Path(UIPaths.TOKENS_REVOKE_ALL)
 	public Response revokeAllAndLogout(@Context final HttpHeaders headers)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getTokenFromCookie(headers, cfg.getTokenCookieName()));
-		return Response.ok().cookie(getLoginCookie(cfg.getTokenCookieName(), null)).build();
+		return Response.noContent().cookie(removeLoginCookie(cfg.getTokenCookieName())).build();
 	}
 	
 	@DELETE
@@ -169,35 +189,43 @@ public class Tokens {
 	public void revokeAll(
 			@HeaderParam(UIConstants.HEADER_TOKEN) final String headerToken)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException {
+				InvalidTokenException, UnauthorizedException {
 		auth.revokeTokens(getToken(headerToken));
 	}
-			
 
-	private UINewToken createtoken(
+	private NewUIToken createtoken(
+			final HttpServletRequest req,
 			final String tokenName,
 			final String tokenType,
-			final IncomingToken userToken)
+			final IncomingToken userToken,
+			final Map<String, String> customContext)
 			throws AuthStorageException, MissingParameterException,
-			NoTokenProvidedException, InvalidTokenException,
-			UnauthorizedException, IllegalParameterException {
-		return new UINewToken(auth.createToken(userToken, new TokenName(tokenName),
-				"server".equals(tokenType)));
+				NoTokenProvidedException, InvalidTokenException,
+				UnauthorizedException, IllegalParameterException {
+		final TokenCreationContext tcc = getTokenContext(
+				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		return new NewUIToken(auth.createToken(userToken, new TokenName(tokenName),
+				Fields.TOKEN_SERVICE.equals(tokenType) ? TokenType.SERV : TokenType.DEV, tcc));
 	}
 
-	private Map<String, Object> getTokens(final IncomingToken token)
+	private Map<String, Object> getTokens(final IncomingToken token, final UriInfo uriInfo)
 			throws AuthStorageException, NoTokenProvidedException,
-			InvalidTokenException, DisabledUserException {
+				InvalidTokenException, UnauthorizedException {
 		final AuthUser au = auth.getUser(token);
 		final TokenSet ts = auth.getTokens(token);
 		final Map<String, Object> ret = new HashMap<>();
-		ret.put("current", new UIToken(ts.getCurrentToken()));
+		ret.put(Fields.CURRENT, new UIToken(ts.getCurrentToken()));
 		
 		final List<UIToken> ats = ts.getTokens().stream()
 				.map(t -> new UIToken(t)).collect(Collectors.toList());
-		ret.put("tokens", ats);
-		ret.put("dev", Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
-		ret.put("serv", Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.TOKENS, ats);
+		ret.put(Fields.TOKEN_DEV, Role.DEV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.TOKEN_SERVICE, Role.SERV_TOKEN.isSatisfiedBy(au.getRoles()));
+		ret.put(Fields.USER, au.getUserName().getName());
+		ret.put(Fields.URL_CREATE, relativize(uriInfo, UIPaths.TOKENS_ROOT));
+		ret.put(Fields.URL_REVOKE, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE +
+				UIPaths.SEP));
+		ret.put(Fields.URL_REVOKE_ALL, relativize(uriInfo, UIPaths.TOKENS_ROOT_REVOKE_ALL));
 		return ret;
 	}
 }

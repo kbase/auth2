@@ -5,63 +5,87 @@ import java.util.Map;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
-import javax.ws.rs.FormParam;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 
-import us.kbase.auth2.lib.AuthUser;
 import us.kbase.auth2.lib.Authentication;
-import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchUserException;
+import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
-import us.kbase.auth2.lib.token.HashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.user.AuthUser;
 
 @Path(APIPaths.LEGACY_KBASE)
 public class LegacyKBase {
 	
 
-	//TODO TEST
-	//TODO JAVADOC
+	//TODO JAVADOC or swagger
+	
+	private Authentication auth;
 	
 	@Inject
-	private Authentication auth;
+	public LegacyKBase(final Authentication auth) {
+		this.auth = auth;
+	}
 	
 	@GET
 	@Produces(MediaType.TEXT_HTML)
-	public Response dummyGetMethod() throws AuthenticationException {
+	public Response dummyGetMethod() {
 		return Response.status(401).entity("This GET method is just here for compatibility with " +
 				"the old java client and does nothing useful. Here's the compatibility part: " +
 				"\"user_id\": null").build();
 	}
 	
-	// this just exists to capture requests when the content-type header isn't
-	// set. It seems to be chosen first repeatably. The method below will throw
-	// an ugly error about the @FormParam otherwise.
-	@POST
-	@Consumes(MediaType.TEXT_PLAIN)
-	@Produces(MediaType.APPLICATION_JSON)
-	public void dummyErrorMethod() throws MissingParameterException {
-		throw new MissingParameterException("token");
+	interface TokenProvider {
+		StoredToken getToken(final Authentication auth, final IncomingToken token)
+				throws InvalidTokenException, AuthStorageException, TestModeException;
 	}
-
+	
+	interface UserProvider {
+		AuthUser getUser(Authentication auth, IncomingToken token)
+				throws AuthStorageException, DisabledUserException, InvalidTokenException,
+					TestModeException, NoSuchUserException;
+	}
+	
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Map<String, Object> kbaseLogin(
-			@FormParam("token") final String token,
-			@FormParam("fields") String fields)
-			throws AuthStorageException,
-			MissingParameterException, InvalidTokenException, DisabledUserException {
-		if (token == null || token.trim().isEmpty()) {
+			@Context final HttpHeaders headers,
+			final MultivaluedMap<String, String> form)
+			throws AuthStorageException, MissingParameterException, InvalidTokenException,
+				DisabledUserException, TestModeException, NoSuchUserException {
+		//TODO CODE get rid of NoSuchUser exception by catching and wrapping in runtime. Can't happen here
+		final MediaType mediaType = headers.getMediaType();
+		return kbaseLogin(auth, (a, t) -> a.getToken(t), (a, t) -> a.getUser(t), form, mediaType);
+	}
+
+	static Map<String, Object> kbaseLogin(
+			final Authentication auth,
+			final TokenProvider tokenProvider,
+			final UserProvider userProvider,
+			final MultivaluedMap<String, String> form,
+			final MediaType mediaType)
+			throws MissingParameterException, InvalidTokenException, AuthStorageException,
+				DisabledUserException, TestModeException, NoSuchUserException {
+		if (!MediaType.APPLICATION_FORM_URLENCODED_TYPE.equals(mediaType)) {
+			// goofy, but matches the behavior of the previous service
 			throw new MissingParameterException("token");
 		}
+		
+		final IncomingToken in = new IncomingToken(form.getFirst("token"));
+		String fields = form.getFirst("fields");
 		if (fields == null) {
 			fields = "";
 		}
@@ -77,13 +101,12 @@ public class LegacyKBase {
 			} else if ("email".equals(field)) {
 				email = true;
 			} else if ("token".equals(field)) {
-				ret.put("token", token);
+				ret.put("token", in.getToken());
 			}
 		}
 
-		final IncomingToken in = new IncomingToken(token.trim());
 		if (name || email) {
-			final AuthUser u = auth.getUser(in);
+			final AuthUser u = userProvider.getUser(auth, in);
 			if (name) {
 				ret.put("name", u.getDisplayName().getName());
 			}
@@ -92,7 +115,7 @@ public class LegacyKBase {
 			}
 			ret.put("user_id", u.getUserName().getName());
 		} else {
-			final HashedToken ht = auth.getToken(in);
+			final StoredToken ht = tokenProvider.getToken(auth, in);
 			ret.put("user_id", ht.getUserName().getName());
 		}
 		return ret;
