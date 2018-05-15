@@ -32,3 +32,5 @@ identity-provider-OrcID-client-id = {{ default .Env.idp_OrcID_client_id "kbaseau
 identity-provider-OrcID-client-secret = {{ default .Env.idp_OrcID_client_secret "mocksecret" }}
 identity-provider-OrcID-login-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/orcid
 identity-provider-OrcID-link-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/orcid
+
+template-dir = {{ default .Env.template_dir "templates" }}
