@@ -240,17 +240,6 @@ local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
 
-Import Globus users
-------------
-Use the `manage_auth` script to import Globus users - run with the `--help`
-option for instructions. You can use https://github.com/kbase/metrics/blob/master/scripts/list_kbase_users.py
-to generate a list of current users (parse the output to only usernames).  Get
-a Nexus token using nexus.api.globusonline.org, and get a Globus API token from
-https://tokens.globus.org.
-
-After importing a provider's users you can enable nonadmin logins and whichever providers you select
-(Globus and Google currently supported).
-
 Start & stop server w/o a pid
 -----------------------------
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
