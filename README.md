@@ -205,6 +205,8 @@ Admin notes
     * email
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
   * Note that the Google+ API must be enabled.
+* Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
+  * Note that only the public API has been tested with the auth server.
 
 Requirements
 ------------
@@ -220,6 +222,7 @@ The two repos above need to be in the same parent folder.
 To start server
 ---------------
 start mongodb  
+if using mongo auth, create a mongo user
 cd into the auth2 repo  
 `ant build`  
 copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  

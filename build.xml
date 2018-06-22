@@ -229,7 +229,7 @@
              splitindex="true"
              use="true"
              version="true">
-      <link href="http://docs.oracle.com/javase/8/docs/api/"/>
+      <link href="https://docs.oracle.com/javase/8/docs/api/"/>
       <link href="http://api.mongodb.com/java/3.3/"/>
       <link href="https://google.github.io/guava/releases/18.0/api/docs/"/>
     </javadoc>
@@ -342,6 +342,7 @@
         <test name="us.kbase.test.auth2.lib.user.NewUserTest"/>
         <test name="us.kbase.test.auth2.providers.GlobusIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.providers.GoogleIdentityProviderTest"/>
+      	<test name="us.kbase.test.auth2.providers.OrcIDIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.service.LoggingFilterTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
