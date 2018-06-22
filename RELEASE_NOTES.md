@@ -1,6 +1,13 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.4
+-----
+* CONFIGURATION CHANGE - the templates directory is now configurable. Add
+  `template-dir = templates` to any existing configuration files to preserve current
+  behavior. This purpose of this change is primarily to allow other applications to
+  test the server with the templates in a non-standard location.
+
 0.2.3
 -----
 * Add an endpoint for getting user display names in test mode.

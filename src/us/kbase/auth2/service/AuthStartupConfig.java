@@ -1,5 +1,6 @@
 package us.kbase.auth2.service;
 
+import java.nio.file.Path;
 import java.util.Set;
 
 import com.google.common.base.Optional;
@@ -18,5 +19,6 @@ public interface AuthStartupConfig {
 	Optional<String> getMongoUser();
 	Optional<char[]> getMongoPwd();
 	String getTokenCookieName();
+	Path getPathToTemplateDirectory();
 	boolean isTestModeEnabled();
 }

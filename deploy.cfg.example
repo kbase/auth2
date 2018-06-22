@@ -17,8 +17,11 @@ mongo-pwd=
 # The name of the cookie in which tokens should be stored in the browser.
 token-cookie-name = kbase_session
 
-# the name of the service to report when logging to syslog.
+# The name of the service to report when logging to syslog.
 log-name=KBaseAuthServ2
+
+# The path to the directory containing the templates.
+template-dir = templates
 
 # A list of enabled identity providers. Each identity provider has a set of configuration variables
 # below that start with identity-provider-<provider name> that must be correctly set.
