@@ -222,7 +222,7 @@ The two repos above need to be in the same parent folder.
 To start server
 ---------------
 start mongodb  
-if using mongo auth, create a mongo user
+if using mongo auth, create a mongo user  
 cd into the auth2 repo  
 `ant build`  
 copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
