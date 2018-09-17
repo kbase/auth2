@@ -185,7 +185,7 @@ public class ServiceTestUtils {
 				"Note that in a proper UI, the error message and exception should " +
 				"be HTML-escaped."));
 		assertThat("incorrect line 2", body.child(1).html(), is(
-				"Gee whiz, I sure am sorry, but an error occurred. Gosh!"));
+				"An error occurred during the operation:"));
 		final String timestamp = breaks.get(2).getWholeText();
 		assertThat("incorrect timestamp prefix", timestamp,
 				RegexMatcher.matches("^\\s*Timestamp: \\d+"));
