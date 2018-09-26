@@ -11,12 +11,18 @@ import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
 
+import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.test.auth2.TestCommon;
 
 public class IdentityProviderConfigTest {
 
+	@Test
+	public void equals() throws Exception {
+		EqualsVerifier.forClass(IdentityProviderConfig.class).usingGetClass().verify();
+	}
+	
 	@Test
 	public void goodInput() throws Exception {
 		final IdentityProviderConfig c = new IdentityProviderConfig(

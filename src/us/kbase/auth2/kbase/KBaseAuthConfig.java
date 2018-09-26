@@ -28,9 +28,11 @@ import us.kbase.common.service.JsonServerSyslog.RpcInfo;
 public class KBaseAuthConfig implements AuthStartupConfig {
 	
 	//TODO JAVADOC
-	//TODO TEST
 	
-	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
+	/** The property name where the config class will look in the environment and the system
+	 * properties for the configuration file location. System properties take precedence.
+	 */
+	public static final String KB_DEPLOY_CFG = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
 	private static final String DEFAULT_LOG_NAME = "KBaseAuthService2";
 	private static final String TEMP_KEY_CFG_FILE = "temp-key-config-file";
@@ -139,11 +141,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				ips.add(new IdentityProviderConfig(factory, login, api, cliid, clisec,
 						loginRedirect, linkRedirect, custom));
 			} catch (IdentityProviderConfigurationException e) {
-				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
 						"Error building configuration for provider %s in " +
 						"section %s of config file %s: %s",
-						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
+						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), e.getMessage()), e);
 			}
 		}
 		return Collections.unmodifiableSet(ips);
@@ -152,7 +153,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private Map<String, String> getCustom(final String keyprefix, final Map<String, String> cfg) {
 		final Map<String, String> ret = new HashMap<>();
 		for (final String key: cfg.keySet()) {
-			if (key != null && key.startsWith(keyprefix)) {
+			if (key.startsWith(keyprefix)) { // no way for a key to be null
 				ret.put(key.replace(keyprefix, ""), cfg.get(key));
 			}
 		}
@@ -239,12 +240,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 
 	private static Path getConfigPathFromEnv()
 			throws AuthConfigurationException {
-		final String file = System.getProperty(KB_DEP) == null ?
-				System.getenv(KB_DEP) : System.getProperty(KB_DEP);
+		final String file = System.getProperty(KB_DEPLOY_CFG) == null ?
+				System.getenv(KB_DEPLOY_CFG) : System.getProperty(KB_DEPLOY_CFG);
 		if (file == null || file.trim().isEmpty()) {
 			throw new AuthConfigurationException(String.format(
 					"Deployment configuration variable %s not in " +
-							"environment or system properties", KB_DEP));
+							"environment or system properties", KB_DEPLOY_CFG));
 		}
 		return Paths.get(file);
 	}
