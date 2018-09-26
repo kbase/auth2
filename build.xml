@@ -98,6 +98,7 @@
   </fileset>
 	
   <fileset dir="${jardir}" id="testlibs">
+    <include name="apache_commons/commons-io-2.4.jar"/>
     <include name="equalsverifier/equalsverifier-2.2.2.jar"/>
     <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
@@ -287,6 +288,7 @@
         <test name="us.kbase.test.auth2.cli.AuthCLITest"/>
         <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
         <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
+        <test name="us.kbase.test.auth2.kbase.KBaseAuthConfigTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationConfigTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>

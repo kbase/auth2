@@ -170,4 +170,91 @@ public class IdentityProviderConfig {
 			super(message, cause);
 		}
 	}
+
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + ((apiURL == null) ? 0 : apiURL.hashCode());
+		result = prime * result + ((clientID == null) ? 0 : clientID.hashCode());
+		result = prime * result + ((clientSecret == null) ? 0 : clientSecret.hashCode());
+		result = prime * result + ((customConfig == null) ? 0 : customConfig.hashCode());
+		result = prime * result
+				+ ((identityProviderFactoryClass == null) ? 0 : identityProviderFactoryClass.hashCode());
+		result = prime * result + ((linkRedirectURL == null) ? 0 : linkRedirectURL.hashCode());
+		result = prime * result + ((loginRedirectURL == null) ? 0 : loginRedirectURL.hashCode());
+		result = prime * result + ((loginURL == null) ? 0 : loginURL.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		IdentityProviderConfig other = (IdentityProviderConfig) obj;
+		if (apiURL == null) {
+			if (other.apiURL != null) {
+				return false;
+			}
+		} else if (!apiURL.equals(other.apiURL)) {
+			return false;
+		}
+		if (clientID == null) {
+			if (other.clientID != null) {
+				return false;
+			}
+		} else if (!clientID.equals(other.clientID)) {
+			return false;
+		}
+		if (clientSecret == null) {
+			if (other.clientSecret != null) {
+				return false;
+			}
+		} else if (!clientSecret.equals(other.clientSecret)) {
+			return false;
+		}
+		if (customConfig == null) {
+			if (other.customConfig != null) {
+				return false;
+			}
+		} else if (!customConfig.equals(other.customConfig)) {
+			return false;
+		}
+		if (identityProviderFactoryClass == null) {
+			if (other.identityProviderFactoryClass != null) {
+				return false;
+			}
+		} else if (!identityProviderFactoryClass.equals(other.identityProviderFactoryClass)) {
+			return false;
+		}
+		if (linkRedirectURL == null) {
+			if (other.linkRedirectURL != null) {
+				return false;
+			}
+		} else if (!linkRedirectURL.equals(other.linkRedirectURL)) {
+			return false;
+		}
+		if (loginRedirectURL == null) {
+			if (other.loginRedirectURL != null) {
+				return false;
+			}
+		} else if (!loginRedirectURL.equals(other.loginRedirectURL)) {
+			return false;
+		}
+		if (loginURL == null) {
+			if (other.loginURL != null) {
+				return false;
+			}
+		} else if (!loginURL.equals(other.loginURL)) {
+			return false;
+		}
+		return true;
+	}
 }
