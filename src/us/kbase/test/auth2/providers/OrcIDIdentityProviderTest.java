@@ -91,15 +91,15 @@ public class OrcIDIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					OrcIDIdentityProviderFactory.class.getName(),
 					new URL("https://ologin.com"),
 					new URL("https://osetapiurl.com"),
 					"ofoo",
 					"obar",
 					new URL("https://ologinredir.com"),
-					new URL("https://olinkredir.com"),
-					Collections.emptyMap());
+					new URL("https://olinkredir.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -144,15 +144,15 @@ public class OrcIDIdentityProviderTest {
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -191,15 +191,15 @@ public class OrcIDIdentityProviderTest {
 	private IdentityProviderConfig getTestIDConfig()
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
-		return new IdentityProviderConfig(
+		return IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"ofoo",
 				"obar",
 				new URL("https://ologinredir.com"),
-				new URL("https://olinkredir.com"),
-				Collections.emptyMap());
+				new URL("https://olinkredir.com"))
+				.build();
 	}
 	
 	@Test
@@ -369,15 +369,15 @@ public class OrcIDIdentityProviderTest {
 	private void getIdentityWithLinkURL(final String email, final Map<String, Object> response)
 			throws Exception {
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",
 				"bar2",
 				new URL("https://ologinredir2.com"),
-				new URL("https://olinkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://olinkredir2.com"))
+				.build();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		

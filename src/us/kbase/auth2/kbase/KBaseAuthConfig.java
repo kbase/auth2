@@ -7,7 +7,6 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
@@ -18,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.SLF4JAutoLogger;
@@ -136,10 +136,11 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final URL api = getURL(pre + KEY_SUFFIX_ID_PROVS_API_URL, cfg);
 			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
 			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
-			final Map<String, String> custom = getCustom(pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
 			try {
-				ips.add(new IdentityProviderConfig(factory, login, api, cliid, clisec,
-						loginRedirect, linkRedirect, custom));
+				final Builder ipcfg = IdentityProviderConfig.getBuilder(
+						factory, login, api, cliid, clisec, loginRedirect, linkRedirect);
+				addCustom(ipcfg, pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
+				ips.add(ipcfg.build());
 			} catch (IdentityProviderConfigurationException e) {
 				throw new AuthConfigurationException(String.format(
 						"Error building configuration for provider %s in " +
@@ -150,14 +151,16 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		return Collections.unmodifiableSet(ips);
 	}
 	
-	private Map<String, String> getCustom(final String keyprefix, final Map<String, String> cfg) {
-		final Map<String, String> ret = new HashMap<>();
+	private void addCustom(
+			final Builder idProviderConfig,
+			final String keyprefix,
+			final Map<String, String> cfg)
+			throws IdentityProviderConfigurationException {
 		for (final String key: cfg.keySet()) {
 			if (key.startsWith(keyprefix)) { // no way for a key to be null
-				ret.put(key.replace(keyprefix, ""), cfg.get(key));
+				idProviderConfig.withCustomConfiguration(key.replace(keyprefix, ""), cfg.get(key));
 			}
 		}
-		return ret;
 	}
 
 	private URL getURL(final String key, final Map<String, String> cfg)

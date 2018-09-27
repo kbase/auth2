@@ -10,7 +10,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Collections;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
@@ -18,7 +17,6 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.base.Optional;
-import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -138,24 +136,26 @@ public class KBaseAuthConfigTest {
 				Arrays.equals(cfg.getMongoPwd().get(), "mpwd".toCharArray()), is(true));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(true));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set(
-				new IdentityProviderConfig(
+				IdentityProviderConfig.getBuilder(
 						"facclass",
 						new URL("https://login.prov1.com"),
 						new URL("https://api.prov1.com"),
 						"clientid",
 						"secret",
 						new URL("https://loginredirect.com"),
-						new URL("https://linkredirect.com"),
-						ImmutableMap.of("foo", "bar", "bat", "baz")),
-				new IdentityProviderConfig(
+						new URL("https://linkredirect.com"))
+						.withCustomConfiguration("foo", "bar")
+						.withCustomConfiguration("bat", "baz")
+						.build(),
+				IdentityProviderConfig.getBuilder(
 						"facclass2",
 						new URL("https://login.prov2.com"),
 						new URL("https://api.prov2.com"),
 						"clientid2",
 						"secret2",
 						new URL("https://loginredirect2.com"),
-						new URL("https://linkredirect2.com"),
-						Collections.emptyMap())
+						new URL("https://linkredirect2.com"))
+						.build()
 				)));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
@@ -252,24 +252,26 @@ public class KBaseAuthConfigTest {
 				Arrays.equals(cfg.getMongoPwd().get(), "mpwd".toCharArray()), is(true));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(true));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set(
-				new IdentityProviderConfig(
+				IdentityProviderConfig.getBuilder(
 						"facclass",
 						new URL("https://login.prov1.com"),
 						new URL("https://api.prov1.com"),
 						"clientid",
 						"secret",
 						new URL("https://loginredirect.com"),
-						new URL("https://linkredirect.com"),
-						ImmutableMap.of("foo", "bar", "bat", "baz")),
-				new IdentityProviderConfig(
+						new URL("https://linkredirect.com"))
+						.withCustomConfiguration("foo", "bar")
+						.withCustomConfiguration("bat", "baz")
+						.build(),
+				IdentityProviderConfig.getBuilder(
 						"facclass2",
 						new URL("https://login.prov2.com"),
 						new URL("https://api.prov2.com"),
 						"clientid2",
 						"secret2",
 						new URL("https://loginredirect2.com"),
-						new URL("https://linkredirect2.com"),
-						Collections.emptyMap())
+						new URL("https://linkredirect2.com"))
+						.build()
 				)));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
@@ -595,15 +597,15 @@ public class KBaseAuthConfigTest {
 		final KBaseAuthConfig cfg = new KBaseAuthConfig(cfgfile, false);
 		
 		try {
-			cfg.getIdentityProviderConfigs().add(new IdentityProviderConfig(
+			cfg.getIdentityProviderConfigs().add(IdentityProviderConfig.getBuilder(
 						"facclass2",
 						new URL("https://login.prov2.com"),
 						new URL("https://api.prov2.com"),
 						"clientid2",
 						"secret2",
 						new URL("https://loginredirect2.com"),
-						new URL("https://linkredirect2.com"),
-						Collections.emptyMap()));
+						new URL("https://linkredirect2.com"))
+						.build());
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passes

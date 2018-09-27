@@ -6,6 +6,9 @@ import static org.junit.Assert.fail;
 
 import java.net.URL;
 import java.util.Collections;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Map.Entry;
 
 import org.junit.Test;
 
@@ -13,8 +16,8 @@ import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
-import us.kbase.test.auth2.TestCommon;
 
 public class IdentityProviderConfigTest {
 
@@ -25,15 +28,17 @@ public class IdentityProviderConfigTest {
 	
 	@Test
 	public void goodInput() throws Exception {
-		final IdentityProviderConfig c = new IdentityProviderConfig(
+		final IdentityProviderConfig c = IdentityProviderConfig.getBuilder(
 				"MyProv",
 				new URL("http://login.com"),
 				new URL("http://api.com"),
 				"foo",
 				"bar",
 				new URL("https://loginredirect.com"),
-				new URL("https://linkredirect.com"),
-				ImmutableMap.of("foo", "bar", "baz", "bat"));
+				new URL("https://linkredirect.com"))
+				.withCustomConfiguration("foo", "bar")
+				.withCustomConfiguration("baz", "bat")
+				.build();
 		assertThat("incorrect api URL", c.getApiURL(), is(new URL("http://api.com")));
 		assertThat("incorrect client id", c.getClientID(), is("foo"));
 		assertThat("incorrect client secret", c.getClientSecret(), is("bar"));
@@ -112,13 +117,15 @@ public class IdentityProviderConfigTest {
 				"not a valid URI: Illegal character in authority at index 7: " +
 				"http://linkredir^foobar.com");
 		
-		try {
-			new IdentityProviderConfig(name, login, api, clientID, clientSecret, loginRedirect,
-					linkRedirect, null);
-			fail("expected NPE");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NullPointerException("customConfig"));
-		}
+		// custom config
+		final Map<String, String> cc = new HashMap<>();
+		cc.put(null, "foo");
+		failCreateConfig(name, login, api, clientID, clientSecret, loginRedirect,
+				linkRedirect, cc, "Custom configuration key" + strexp);
+		cc.clear();
+		cc.put("  \t   ", "foo");
+		failCreateConfig(name, login, api, clientID, clientSecret, loginRedirect,
+				linkRedirect, cc, "Custom configuration key" + strexp);
 	}
 
 	private void failCreateConfig(
@@ -130,12 +137,52 @@ public class IdentityProviderConfigTest {
 			final URL loginRedirect,
 			final URL linkRedirect,
 			final String exception) {
+		failCreateConfig(name, login, api, clientID, clientSecret, loginRedirect, linkRedirect,
+				Collections.emptyMap(), exception);
+	}
+	
+	private void failCreateConfig(
+			final String name,
+			final URL login,
+			final URL api,
+			final String clientID,
+			final String clientSecret,
+			final URL loginRedirect,
+			final URL linkRedirect,
+			final Map<String, String> custom,
+			final String exception) {
+	
 		try {
-			new IdentityProviderConfig(name, login, api, clientID, clientSecret,
-					loginRedirect, linkRedirect, Collections.emptyMap());
+			final Builder cfg = IdentityProviderConfig.getBuilder(
+					name, login, api, clientID, clientSecret, loginRedirect, linkRedirect);
+			for (final Entry<String, String> e: custom.entrySet()) {
+				cfg.withCustomConfiguration(e.getKey(), e.getValue());
+			}
 			fail("created bad id provider config");
 		} catch (IdentityProviderConfigurationException e) {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
+		}
+	}
+	
+	@Test
+	public void immutable() throws Exception {
+		final IdentityProviderConfig c = IdentityProviderConfig.getBuilder(
+				"MyProv",
+				new URL("http://login.com"),
+				new URL("http://api.com"),
+				"foo",
+				"bar",
+				new URL("https://loginredirect.com"),
+				new URL("https://linkredirect.com"))
+				.withCustomConfiguration("foo", "bar")
+				.withCustomConfiguration("baz", "bat")
+				.build();
+		
+		try {
+			c.getCustomConfiguation().put("foo", "bar");
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
 		}
 	}
 	

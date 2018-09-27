@@ -45,6 +45,8 @@ import us.kbase.test.auth2.TestCommon;
 
 public class GlobusIdentityProviderTest {
 	
+	//TODO TEST ignore secondary identities
+	
 	private static final String CONTENT_TYPE = "content-type";
 	private static final String ACCEPT = "accept";
 	private static final String APP_JSON = "application/json";
@@ -94,15 +96,15 @@ public class GlobusIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					GlobusIdentityProviderFactory.class.getName(),
 					new URL("https://login.com"),
 					new URL("https://setapiurl.com"),
 					"foo",
 					"bar",
 					new URL("https://loginredir.com"),
-					new URL("https://linkredir.com"),
-					Collections.emptyMap());
+					new URL("https://linkredir.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -148,15 +150,15 @@ public class GlobusIdentityProviderTest {
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -501,15 +503,15 @@ public class GlobusIdentityProviderTest {
 	
 	private IdentityProviderConfig getTestIDConfig(final Map<String, String> customConfig)
 			throws MalformedURLException, IdentityProviderConfigurationException {
-		return new IdentityProviderConfig(
+		return IdentityProviderConfig.getBuilder(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
 				"bar",
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com"),
-				customConfig);
+				new URL("https://linkredir.com"))
+				.build();
 	}
 
 	private String getBasicAuth(final IdentityProviderConfig idconfig) {
@@ -673,15 +675,15 @@ public class GlobusIdentityProviderTest {
 	public void getIdentityWithoutSecondariesAndLinkURL() throws Exception {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,
 				"bar2",
 				new URL("https://loginredir2.com"),
-				new URL("https://linkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://linkredir2.com"))
+				.build();
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
 		final String bauth = getBasicAuth(idconfig);
 		
