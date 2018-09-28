@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib.identity;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URL;
 import java.util.Collections;
@@ -15,9 +16,11 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.test.auth2.TestCommon;
 
 public class IdentityProviderConfigTest {
 
@@ -38,15 +41,31 @@ public class IdentityProviderConfigTest {
 				new URL("https://linkredirect.com"))
 				.withCustomConfiguration("foo", "bar")
 				.withCustomConfiguration("baz", "bat")
+				.withEnvironment("env1",
+						new URL("https://loginredirect1.com"),
+						new URL("https://linkredirect1.com"))
+				.withEnvironment("env2",
+						new URL("https://loginredirect2.com"),
+						new URL("https://linkredirect2.com"))
 				.build();
 		assertThat("incorrect api URL", c.getApiURL(), is(new URL("http://api.com")));
 		assertThat("incorrect client id", c.getClientID(), is("foo"));
 		assertThat("incorrect client secret", c.getClientSecret(), is("bar"));
-		assertThat("incorrect provider name", c.getIdentityProviderFactoryClassName(), is("MyProv"));
+		assertThat("incorrect provider name", c.getIdentityProviderFactoryClassName(),
+				is("MyProv"));
+		assertThat("incorrect envs", c.getEnvironments(), is(set("env1", "env2")));
 		assertThat("incorrect link redirect URL", c.getLinkRedirectURL(),
 				is(new URL("https://linkredirect.com")));
+		assertThat("incorrect link redirect URL", c.getLinkRedirectURL("env1"),
+				is(new URL("https://linkredirect1.com")));
+		assertThat("incorrect link redirect URL", c.getLinkRedirectURL("env2"),
+				is(new URL("https://linkredirect2.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL(),
 				is(new URL("https://loginredirect.com")));
+		assertThat("incorrect login redirect URL", c.getLoginRedirectURL("env1"),
+				is(new URL("https://loginredirect1.com")));
+		assertThat("incorrect login redirect URL", c.getLoginRedirectURL("env2"),
+				is(new URL("https://loginredirect2.com")));
 		assertThat("incorrect login URL", c.getLoginURL(), is(new URL("http://login.com")));
 		assertThat("incorrect custom config", c.getCustomConfiguation(),
 				is(ImmutableMap.of("foo", "bar", "baz", "bat")));
@@ -165,6 +184,86 @@ public class IdentityProviderConfigTest {
 	}
 	
 	@Test
+	public void addEnvironmentFail() throws Exception {
+		final String e = "s";
+		final URL lo = new URL("https://login.com");
+		final URL li = new URL("https://link.com");
+		
+		failAddEnvironment(null, lo, li, new IdentityProviderConfigurationException(
+				"Environment name for MyProv identity provider cannot be null or empty"));
+		failAddEnvironment("  \t   ", lo, li, new IdentityProviderConfigurationException(
+				"Environment name for MyProv identity provider cannot be null or empty"));
+		
+		failAddEnvironment(e, null, li, new IdentityProviderConfigurationException(
+				"Login redirect URL for environment s for MyProv identity provider cannot " +
+				"be null"));
+		failAddEnvironment(e, new URL("https://foo^.com"), li,
+				new IdentityProviderConfigurationException(
+						"Login redirect URL for environment s https://foo^.com for MyProv " +
+						"identity provider is not a valid URI: Illegal character in authority " +
+						"at index 8: https://foo^.com"));
+		
+		failAddEnvironment(e, lo, null, new IdentityProviderConfigurationException(
+				"Link redirect URL for environment s for MyProv identity provider cannot " +
+				"be null"));
+		failAddEnvironment(e, lo, new URL("https://foo^.com"),
+				new IdentityProviderConfigurationException(
+						"Link redirect URL for environment s https://foo^.com for MyProv " +
+						"identity provider is not a valid URI: Illegal character in authority " +
+						"at index 8: https://foo^.com"));
+	}
+	
+	@Test
+	public void getAlternateURLFail() throws Exception {
+		final IdentityProviderConfig c = IdentityProviderConfig.getBuilder(
+				"MyProv",
+				new URL("http://login.com"),
+				new URL("http://api.com"),
+				"foo",
+				"bar",
+				new URL("https://loginredirect.com"),
+				new URL("https://linkredirect.com"))
+				.withEnvironment("e", new URL("http://foo.com"), new URL("http://foo.com"))
+				.build();
+		
+		try {
+			c.getLinkRedirectURL("b");
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NoSuchEnvironmentException("b"));
+		}
+		
+		try {
+			c.getLoginRedirectURL("f");
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NoSuchEnvironmentException("f"));
+		}
+	}
+	
+	private void failAddEnvironment(
+			final String env,
+			final URL login,
+			final URL link,
+			final Exception expected)
+			throws Exception {
+		final Builder c = IdentityProviderConfig.getBuilder(
+				"MyProv",
+				new URL("http://login.com"),
+				new URL("http://api.com"),
+				"foo",
+				"bar",
+				new URL("https://loginredirect.com"),
+				new URL("https://linkredirect.com"));
+		try {
+			c.withEnvironment(env, login, link);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void immutable() throws Exception {
 		final IdentityProviderConfig c = IdentityProviderConfig.getBuilder(
 				"MyProv",
@@ -176,10 +275,18 @@ public class IdentityProviderConfigTest {
 				new URL("https://linkredirect.com"))
 				.withCustomConfiguration("foo", "bar")
 				.withCustomConfiguration("baz", "bat")
+				.withEnvironment("e", new URL("http://foo.com"), new URL("http://foo.com"))
 				.build();
 		
 		try {
 			c.getCustomConfiguation().put("foo", "bar");
+			fail("expected exception");
+		} catch (UnsupportedOperationException e) {
+			// test passed
+		}
+		
+		try {
+			c.getEnvironments().add("whee");
 			fail("expected exception");
 		} catch (UnsupportedOperationException e) {
 			// test passed
