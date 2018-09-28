@@ -1,7 +1,5 @@
 package us.kbase.auth2.lib.identity;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
-
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
@@ -25,24 +23,7 @@ public class IdentityProviderConfig {
 	private final URL linkRedirectURL;
 	private final Map<String, String> customConfig;
 	
-	// a builder would be nice, but there's only 1 optional item...
-	
-	/** Create a configuration for an identity provider.
-	 * @param identityProviderFactoryClass the class name of the identity provider factory for this
-	 * configuration.
-	 * @param loginURL the login url for the identity provider; where users should be redirected.
-	 * @param apiURL the api url for the identity provider; where server to server requests should
-	 * be directed.
-	 * @param clientID the client ID for the identity provider.
-	 * @param clientSecret the client secret for the identity provider.
-	 * @param loginRedirectURL the url to which the provider should redirect in the process of a
-	 * login.
-	 * @param linkRedirectURL the url to which the provider should redirect in the process of
-	 * linking accounts.
-	 * @param customConfig any custom configuration to be provided to the identity provider.
-	 * @throws IdentityProviderConfigurationException if any of the inputs were unacceptable.
-	 */
-	public IdentityProviderConfig(
+	private IdentityProviderConfig(
 			final String identityProviderFactoryClass,
 			final URL loginURL,
 			final URL apiURL,
@@ -50,14 +31,7 @@ public class IdentityProviderConfig {
 			final String clientSecret,
 			final URL loginRedirectURL,
 			final URL linkRedirectURL,
-			final Map<String, String> customConfig)
-			throws IdentityProviderConfigurationException {
-		nonNull(customConfig, "customConfig");
-		notNullOrEmpty(identityProviderFactoryClass, "Identity provider name");
-		notNullOrEmpty(clientID, "Client ID for " + identityProviderFactoryClass +
-				" identity provider");
-		notNullOrEmpty(clientSecret, "Client secret for " + identityProviderFactoryClass + 
-				" identity provider");
+			final Map<String, String> customConfig) {
 		this.identityProviderFactoryClass = identityProviderFactoryClass.trim();
 		this.clientID = clientID.trim();
 		this.clientSecret = clientSecret.trim();
@@ -66,34 +40,6 @@ public class IdentityProviderConfig {
 		this.loginRedirectURL = loginRedirectURL;
 		this.linkRedirectURL = linkRedirectURL;
 		this.customConfig = Collections.unmodifiableMap(new HashMap<>(customConfig));
-
-		checkValidURI(this.loginURL, "Login URL");
-		checkValidURI(this.apiURL, "API URL");
-		checkValidURI(this.loginRedirectURL, "Login redirect URL");
-		checkValidURI(this.linkRedirectURL, "Link redirect URL");
-	}
-
-	private void checkValidURI(final URL url, final String name)
-			throws IdentityProviderConfigurationException {
-		if (url == null) {
-			throw new IdentityProviderConfigurationException(String.format(
-					"%s for %s identity provider cannot be null", name,
-					identityProviderFactoryClass));
-		}
-		try {
-			url.toURI();
-		} catch (URISyntaxException e) {
-			throw new IdentityProviderConfigurationException(String.format(
-					"%s %s for %s identity provider is not a valid URI: %s",
-					name, url, identityProviderFactoryClass, e.getMessage()), e);
-		}
-	}
-	
-	private void notNullOrEmpty(final String s, final String name)
-			throws IdentityProviderConfigurationException {
-		if (s == null || s.trim().isEmpty()) {
-			throw new IdentityProviderConfigurationException(name + " cannot be null or empty");
-		}
 	}
 
 	/** Get the class name of the identity provider factory for this configuration.
@@ -256,5 +202,138 @@ public class IdentityProviderConfig {
 			return false;
 		}
 		return true;
+	}
+	
+	// may want to separate these into stages so we don't have a 7 item method sig. Later.
+	/** Get a builder for the configuration.
+	 * @param identityProviderFactoryClass the class name of the identity provider factory for this
+	 * configuration.
+	 * @param loginURL the login url for the identity provider; where users should be redirected.
+	 * @param apiURL the api url for the identity provider; where server to server requests should
+	 * be directed.
+	 * @param clientID the client ID for the identity provider.
+	 * @param clientSecret the client secret for the identity provider.
+	 * @param loginRedirectURL the url to which the provider should redirect in the process of a
+	 * login.
+	 * @param linkRedirectURL the url to which the provider should redirect in the process of
+	 * linking accounts.
+	 * @return the builder.
+	 * @throws IdentityProviderConfigurationException if any of the inputs were unacceptable.
+	 */
+	public static Builder getBuilder(
+			final String identityProviderFactoryClass,
+			final URL loginURL,
+			final URL apiURL,
+			final String clientID,
+			final String clientSecret,
+			final URL loginRedirectURL,
+			final URL linkRedirectURL)
+			throws IdentityProviderConfigurationException {
+		return new Builder(
+				identityProviderFactoryClass,
+				loginURL,
+				apiURL,
+				clientID,
+				clientSecret,
+				loginRedirectURL,
+				linkRedirectURL);
+	}
+	
+	/** A builder for a {@link IdentityProviderConfig}.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
+	public static class Builder {
+
+		private final String identityProviderFactoryClass;
+		private final String clientID;
+		private final String clientSecret;
+		private final URL loginURL;
+		private final URL apiURL;
+		private final URL loginRedirectURL;
+		private final URL linkRedirectURL;
+		private final Map<String, String> customConfig = new HashMap<>();
+
+		private Builder(
+				final String identityProviderFactoryClass,
+				final URL loginURL,
+				final URL apiURL,
+				final String clientID,
+				final String clientSecret,
+				final URL loginRedirectURL,
+				final URL linkRedirectURL)
+				throws IdentityProviderConfigurationException {
+			notNullOrEmpty(identityProviderFactoryClass, "Identity provider name");
+			notNullOrEmpty(clientID, "Client ID for " + identityProviderFactoryClass +
+					" identity provider");
+			notNullOrEmpty(clientSecret, "Client secret for " + identityProviderFactoryClass + 
+					" identity provider");
+			this.identityProviderFactoryClass = identityProviderFactoryClass.trim();
+			this.clientID = clientID.trim();
+			this.clientSecret = clientSecret.trim();
+			this.loginURL = loginURL;
+			this.apiURL = apiURL;
+			this.loginRedirectURL = loginRedirectURL;
+			this.linkRedirectURL = linkRedirectURL;
+
+			checkValidURI(this.loginURL, "Login URL");
+			checkValidURI(this.apiURL, "API URL");
+			checkValidURI(this.loginRedirectURL, "Login redirect URL");
+			checkValidURI(this.linkRedirectURL, "Link redirect URL");
+		}
+		
+		private void checkValidURI(final URL url, final String name)
+				throws IdentityProviderConfigurationException {
+			if (url == null) {
+				throw new IdentityProviderConfigurationException(String.format(
+						"%s for %s identity provider cannot be null", name,
+						identityProviderFactoryClass));
+			}
+			try {
+				url.toURI();
+			} catch (URISyntaxException e) {
+				throw new IdentityProviderConfigurationException(String.format(
+						"%s %s for %s identity provider is not a valid URI: %s",
+						name, url, identityProviderFactoryClass, e.getMessage()), e);
+			}
+		}
+		
+		private void notNullOrEmpty(final String s, final String name)
+				throws IdentityProviderConfigurationException {
+			if (s == null || s.trim().isEmpty()) {
+				throw new IdentityProviderConfigurationException(
+						name + " cannot be null or empty");
+			}
+		}
+		
+		/** Add a custom configuration item to the configuration.
+		 * @param key the configuration key. May not be null or whitespace only.
+		 * @param value the configuration value.
+		 * @return this builder.
+		 * @throws IdentityProviderConfigurationException if the key is null or whitespace only.
+		 */
+		public Builder withCustomConfiguration(final String key, final String value)
+				throws IdentityProviderConfigurationException {
+			notNullOrEmpty(key, "Custom configuration key for " + identityProviderFactoryClass +
+					" identity provider");
+			customConfig.put(key, value);
+			return this;
+		}
+		
+		/** Build the configuration.
+		 * @return the configuration.
+		 */
+		public IdentityProviderConfig build() {
+			return new IdentityProviderConfig(
+					identityProviderFactoryClass,
+					loginURL,
+					apiURL,
+					clientID,
+					clientSecret,
+					loginRedirectURL,
+					linkRedirectURL,
+					customConfig);
+		}
+
 	}
 }

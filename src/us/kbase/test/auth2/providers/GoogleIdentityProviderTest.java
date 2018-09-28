@@ -9,7 +9,6 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -92,15 +91,15 @@ public class GoogleIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					GoogleIdentityProviderFactory.class.getName(),
 					new URL("https://glogin.com"),
 					new URL("https://gsetapiurl.com"),
 					"gfoo",
 					"gbar",
 					new URL("https://gloginredir.com"),
-					new URL("https://glinkredir.com"),
-					Collections.emptyMap());
+					new URL("https://glinkredir.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -145,15 +144,15 @@ public class GoogleIdentityProviderTest {
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -192,15 +191,15 @@ public class GoogleIdentityProviderTest {
 	private IdentityProviderConfig getTestIDConfig()
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
-		return new IdentityProviderConfig(
+		return IdentityProviderConfig.getBuilder(
 				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"gfoo",
 				"gbar",
 				new URL("https://gloginredir.com"),
-				new URL("https://glinkredir.com"),
-				Collections.emptyMap());
+				new URL("https://glinkredir.com"))
+				.build();
 	}
 	
 	@Test
@@ -388,15 +387,15 @@ public class GoogleIdentityProviderTest {
 	@Test
 	public void getIdentityWithLinkURL() throws Exception {
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",
 				"bar2",
 				new URL("https://gloginredir2.com"),
-				new URL("https://glinkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://glinkredir2.com"))
+				.build();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
 		setUpCallAuthToken(authCode, "footoken2", "https://glinkredir2.com",
