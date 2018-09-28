@@ -54,6 +54,8 @@ public enum ErrorType {
 	NO_SUCH_IDENTITY		(50030, "No such identity"),
 	/** The requested role does not exist. */
 	NO_SUCH_ROLE			(50040, "No such role"),
+	/** The requested environment does not exist. */
+	NO_SUCH_ENVIRONMENT		(50040, "No such environment"),
 	/** The attempt to link one account to another failed. */
 	LINK_FAILED				(60000, "Account linkage failed"),
 	/** The attempt to unlink one account from another failed. */

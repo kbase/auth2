@@ -5,6 +5,9 @@ import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 
 /** A configuration for an identity provider.
  * @author gaprice@lbl.gov
@@ -19,9 +22,11 @@ public class IdentityProviderConfig {
 	private final String clientSecret;
 	private final URL loginURL;
 	private final URL apiURL;
-	private final URL loginRedirectURL;
-	private final URL linkRedirectURL;
+	private final URL defaultLoginRedirectURL;
+	private final URL defaultLinkRedirectURL;
 	private final Map<String, String> customConfig;
+	private final Map<String, URL> envLoginRedirectURL;
+	private final Map<String, URL> envLinkRedirectURL;
 	
 	private IdentityProviderConfig(
 			final String identityProviderFactoryClass,
@@ -29,17 +34,21 @@ public class IdentityProviderConfig {
 			final URL apiURL,
 			final String clientID,
 			final String clientSecret,
-			final URL loginRedirectURL,
-			final URL linkRedirectURL,
-			final Map<String, String> customConfig) {
+			final URL defaultLoginRedirectURL,
+			final URL defaultLinkRedirectURL,
+			final Map<String, String> customConfig,
+			final Map<String, URL> envLoginRedirectURL,
+			final Map<String, URL> envLinkRedirectURL) {
 		this.identityProviderFactoryClass = identityProviderFactoryClass.trim();
 		this.clientID = clientID.trim();
 		this.clientSecret = clientSecret.trim();
 		this.loginURL = loginURL;
 		this.apiURL = apiURL;
-		this.loginRedirectURL = loginRedirectURL;
-		this.linkRedirectURL = linkRedirectURL;
-		this.customConfig = Collections.unmodifiableMap(new HashMap<>(customConfig));
+		this.defaultLoginRedirectURL = defaultLoginRedirectURL;
+		this.defaultLinkRedirectURL = defaultLinkRedirectURL;
+		this.customConfig = Collections.unmodifiableMap(customConfig);
+		this.envLoginRedirectURL = Collections.unmodifiableMap(envLoginRedirectURL);
+		this.envLinkRedirectURL = Collections.unmodifiableMap(envLinkRedirectURL);
 	}
 
 	/** Get the class name of the identity provider factory for this configuration.
@@ -76,20 +85,53 @@ public class IdentityProviderConfig {
 	public String getClientSecret() {
 		return clientSecret;
 	}
+	
+	/** Get the environments in the configuration.
+	 * See {@link Builder#withEnvironment(String, URL, URL)}.
+	 * @return the environements.
+	 */
+	public Set<String> getEnvironments() {
+		return envLoginRedirectURL.keySet();
+	}
 
-	/** Get the URL to which the identity provider should redirect when a login is in process.
+	/** Get the default URL to which the identity provider should redirect when a login is in
+	 * process.
 	 * @return the login redirect url.
 	 */
 	public URL getLoginRedirectURL() {
-		return loginRedirectURL;
+		return defaultLoginRedirectURL;
 	}
 	
-	/** Get the URL to which the identity provider should redirect when an account link is in
-	 * process.
+	/** Get the login redirect url for a specific environment.
+	 * @param environment the environment name.
+	 * @return the login redirect url.
+	 * @throws NoSuchEnvironmentException if no such environment is configured.
+	 */
+	public URL getLoginRedirectURL(final String environment) throws NoSuchEnvironmentException {
+		if (!envLoginRedirectURL.containsKey(environment)) {
+			throw new NoSuchEnvironmentException(environment);
+		}
+		return envLoginRedirectURL.get(environment);
+	}
+	
+	/** Get the defalt URL to which the identity provider should redirect when an account link is
+	 * in process.
 	 * @return the link url.
 	 */
 	public URL getLinkRedirectURL() {
-		return linkRedirectURL;
+		return defaultLinkRedirectURL;
+	}
+	
+	/** Get the link redirect url for a specific environment.
+	 * @param environment the environment name.
+	 * @return the link redirect url.
+	 * @throws NoSuchEnvironmentException if no such environment is configured.
+	 */
+	public URL getLinkRedirectURL(final String environment) throws NoSuchEnvironmentException {
+		if (!envLoginRedirectURL.containsKey(environment)) {
+			throw new NoSuchEnvironmentException(environment);
+		}
+		return envLinkRedirectURL.get(environment);
 	}
 	
 	/** Get any custom configuration options that have been provided for the identity provider.
@@ -125,10 +167,12 @@ public class IdentityProviderConfig {
 		result = prime * result + ((clientID == null) ? 0 : clientID.hashCode());
 		result = prime * result + ((clientSecret == null) ? 0 : clientSecret.hashCode());
 		result = prime * result + ((customConfig == null) ? 0 : customConfig.hashCode());
+		result = prime * result + ((defaultLinkRedirectURL == null) ? 0 : defaultLinkRedirectURL.hashCode());
+		result = prime * result + ((defaultLoginRedirectURL == null) ? 0 : defaultLoginRedirectURL.hashCode());
+		result = prime * result + ((envLinkRedirectURL == null) ? 0 : envLinkRedirectURL.hashCode());
+		result = prime * result + ((envLoginRedirectURL == null) ? 0 : envLoginRedirectURL.hashCode());
 		result = prime * result
 				+ ((identityProviderFactoryClass == null) ? 0 : identityProviderFactoryClass.hashCode());
-		result = prime * result + ((linkRedirectURL == null) ? 0 : linkRedirectURL.hashCode());
-		result = prime * result + ((loginRedirectURL == null) ? 0 : loginRedirectURL.hashCode());
 		result = prime * result + ((loginURL == null) ? 0 : loginURL.hashCode());
 		return result;
 	}
@@ -173,25 +217,39 @@ public class IdentityProviderConfig {
 		} else if (!customConfig.equals(other.customConfig)) {
 			return false;
 		}
+		if (defaultLinkRedirectURL == null) {
+			if (other.defaultLinkRedirectURL != null) {
+				return false;
+			}
+		} else if (!defaultLinkRedirectURL.equals(other.defaultLinkRedirectURL)) {
+			return false;
+		}
+		if (defaultLoginRedirectURL == null) {
+			if (other.defaultLoginRedirectURL != null) {
+				return false;
+			}
+		} else if (!defaultLoginRedirectURL.equals(other.defaultLoginRedirectURL)) {
+			return false;
+		}
+		if (envLinkRedirectURL == null) {
+			if (other.envLinkRedirectURL != null) {
+				return false;
+			}
+		} else if (!envLinkRedirectURL.equals(other.envLinkRedirectURL)) {
+			return false;
+		}
+		if (envLoginRedirectURL == null) {
+			if (other.envLoginRedirectURL != null) {
+				return false;
+			}
+		} else if (!envLoginRedirectURL.equals(other.envLoginRedirectURL)) {
+			return false;
+		}
 		if (identityProviderFactoryClass == null) {
 			if (other.identityProviderFactoryClass != null) {
 				return false;
 			}
 		} else if (!identityProviderFactoryClass.equals(other.identityProviderFactoryClass)) {
-			return false;
-		}
-		if (linkRedirectURL == null) {
-			if (other.linkRedirectURL != null) {
-				return false;
-			}
-		} else if (!linkRedirectURL.equals(other.linkRedirectURL)) {
-			return false;
-		}
-		if (loginRedirectURL == null) {
-			if (other.loginRedirectURL != null) {
-				return false;
-			}
-		} else if (!loginRedirectURL.equals(other.loginRedirectURL)) {
 			return false;
 		}
 		if (loginURL == null) {
@@ -213,10 +271,10 @@ public class IdentityProviderConfig {
 	 * be directed.
 	 * @param clientID the client ID for the identity provider.
 	 * @param clientSecret the client secret for the identity provider.
-	 * @param loginRedirectURL the url to which the provider should redirect in the process of a
-	 * login.
-	 * @param linkRedirectURL the url to which the provider should redirect in the process of
-	 * linking accounts.
+	 * @param defaultLoginRedirectURL the default url to which the provider should redirect in the
+	 * process of a login.
+	 * @param defaultLinkRedirectURL the default url to which the provider should redirect in the
+	 * process of linking accounts.
 	 * @return the builder.
 	 * @throws IdentityProviderConfigurationException if any of the inputs were unacceptable.
 	 */
@@ -226,8 +284,8 @@ public class IdentityProviderConfig {
 			final URL apiURL,
 			final String clientID,
 			final String clientSecret,
-			final URL loginRedirectURL,
-			final URL linkRedirectURL)
+			final URL defaultLoginRedirectURL,
+			final URL defaultLinkRedirectURL)
 			throws IdentityProviderConfigurationException {
 		return new Builder(
 				identityProviderFactoryClass,
@@ -235,8 +293,8 @@ public class IdentityProviderConfig {
 				apiURL,
 				clientID,
 				clientSecret,
-				loginRedirectURL,
-				linkRedirectURL);
+				defaultLoginRedirectURL,
+				defaultLinkRedirectURL);
 	}
 	
 	/** A builder for a {@link IdentityProviderConfig}.
@@ -250,9 +308,11 @@ public class IdentityProviderConfig {
 		private final String clientSecret;
 		private final URL loginURL;
 		private final URL apiURL;
-		private final URL loginRedirectURL;
-		private final URL linkRedirectURL;
+		private final URL defaultLoginRedirectURL;
+		private final URL defaultLinkRedirectURL;
 		private final Map<String, String> customConfig = new HashMap<>();
+		private final Map<String, URL> envLoginRedirectURL = new HashMap<>();
+		private final Map<String, URL> envLinkRedirectURL = new HashMap<>();
 
 		private Builder(
 				final String identityProviderFactoryClass,
@@ -273,13 +333,13 @@ public class IdentityProviderConfig {
 			this.clientSecret = clientSecret.trim();
 			this.loginURL = loginURL;
 			this.apiURL = apiURL;
-			this.loginRedirectURL = loginRedirectURL;
-			this.linkRedirectURL = linkRedirectURL;
+			this.defaultLoginRedirectURL = loginRedirectURL;
+			this.defaultLinkRedirectURL = linkRedirectURL;
 
 			checkValidURI(this.loginURL, "Login URL");
 			checkValidURI(this.apiURL, "API URL");
-			checkValidURI(this.loginRedirectURL, "Login redirect URL");
-			checkValidURI(this.linkRedirectURL, "Link redirect URL");
+			checkValidURI(this.defaultLoginRedirectURL, "Login redirect URL");
+			checkValidURI(this.defaultLinkRedirectURL, "Link redirect URL");
 		}
 		
 		private void checkValidURI(final URL url, final String name)
@@ -320,6 +380,29 @@ public class IdentityProviderConfig {
 			return this;
 		}
 		
+		/** Add an alternate environment to the configuration. An alternate environment allows
+		 * specifying a different set of redirect urls than the default so an identity provider
+		 * (e.g. Google) can be directed to redirect to the correct environment.
+		 * @param envName the name of the environment.
+		 * @param loginRedirectURL the login redirect url.
+		 * @param linkRedirectURL the link redirect url.
+		 * @return this builder.
+		 * @throws IdentityProviderConfigurationException if any of the arguments are invalid.
+		 */
+		public Builder withEnvironment(
+				final String envName,
+				final URL loginRedirectURL,
+				final URL linkRedirectURL)
+				throws IdentityProviderConfigurationException {
+			notNullOrEmpty(envName, "Environment name for " + identityProviderFactoryClass +
+					" identity provider");
+			checkValidURI(loginRedirectURL, "Login redirect URL for environment " + envName);
+			checkValidURI(linkRedirectURL, "Link redirect URL for environment " + envName);
+			envLoginRedirectURL.put(envName, loginRedirectURL);
+			envLinkRedirectURL.put(envName, linkRedirectURL);
+			return this;
+		}
+		
 		/** Build the configuration.
 		 * @return the configuration.
 		 */
@@ -330,9 +413,11 @@ public class IdentityProviderConfig {
 					apiURL,
 					clientID,
 					clientSecret,
-					loginRedirectURL,
-					linkRedirectURL,
-					customConfig);
+					defaultLoginRedirectURL,
+					defaultLinkRedirectURL,
+					customConfig,
+					envLoginRedirectURL,
+					envLinkRedirectURL);
 		}
 
 	}
