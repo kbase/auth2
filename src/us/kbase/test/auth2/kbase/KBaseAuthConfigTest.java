@@ -119,7 +119,12 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov2-client-id = clientid2",
 				"identity-provider-prov2-client-secret = secret2",
 				"identity-provider-prov2-login-redirect-url = https://loginredirect2.com",
-				"identity-provider-prov2-link-redirect-url = https://linkredirect2.com"
+				"identity-provider-prov2-link-redirect-url = https://linkredirect2.com",
+				"identity-provider-prov2-envs =   env1  \t   ,    , env2    ",
+				"identity-provider-prov2-env-env1-login-redirect-url = https://lor2-1.com",
+				"identity-provider-prov2-env-env1-link-redirect-url = https://lir2-1.com",
+				"identity-provider-prov2-env-env2-login-redirect-url = https://lor2-2.com",
+				"identity-provider-prov2-env-env2-link-redirect-url = https://lir2-2.com"
 				);
 		final KBaseAuthConfig cfg;
 		try {
@@ -155,6 +160,10 @@ public class KBaseAuthConfigTest {
 						"secret2",
 						new URL("https://loginredirect2.com"),
 						new URL("https://linkredirect2.com"))
+						.withEnvironment("env1",
+								new URL("https://lor2-1.com"), new URL("https://lir2-1.com"))
+						.withEnvironment("env2",
+								new URL("https://lor2-2.com"), new URL("https://lir2-2.com"))
 						.build()
 				)));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
@@ -196,7 +205,8 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"test-mode-enabled = false",
-				"token-cookie-name=cookiename"
+				"token-cookie-name=cookiename",
+				"identity-providers =      \t    "
 				);
 		final KBaseAuthConfig cfg = new KBaseAuthConfig(cfgfile, true);
 		
@@ -234,6 +244,7 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
 				"identity-provider-prov1-custom-foo = bar",
 				"identity-provider-prov1-custom-bat = baz",
+				"identity-provider-prov1-envs =        ",
 				
 				"identity-provider-prov2-factory = facclass2",
 				"identity-provider-prov2-login-url = https://login.prov2.com",
@@ -553,6 +564,83 @@ public class KBaseAuthConfigTest {
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
 				"Required parameter identity-provider-prov1-link-redirect-url not provided in " +
 				"configuration file %s, section authserv2", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailNullEnvLoginRedirectURL() throws Exception {
+		final Path cfgfile = writeTempFile(
+				"[authserv2]",
+				"mongo-host=  localhost:50000    ",
+				"mongo-db   =     mydb   ",
+				"template-dir = somedir",
+				"token-cookie-name=cookiename",
+				"identity-providers = prov1",
+				"identity-provider-prov1-factory = facclass",
+				"identity-provider-prov1-login-url = https://login.prov1.com",
+				"identity-provider-prov1-api-url  = https://api.prov1.com",
+				"identity-provider-prov1-client-id = clientid",
+				"identity-provider-prov1-client-secret = secret",
+				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
+				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
+				"identity-provider-prov1-envs=foo",
+				"identity-provider-prov1-env-foo-link-redirect-url=https://lir2.com"
+				);
+		failConstruct(cfgfile, new AuthConfigurationException(String.format(
+				"Required parameter identity-provider-prov1-env-foo-login-redirect-url not " +
+				"provided in configuration file %s, section authserv2", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailBadEnvLoginRedirectURL() throws Exception {
+		final Path cfgfile = writeTempFile(
+				"[authserv2]",
+				"mongo-host=  localhost:50000    ",
+				"mongo-db   =     mydb   ",
+				"template-dir = somedir",
+				"token-cookie-name=cookiename",
+				"identity-providers = prov1",
+				"identity-provider-prov1-factory = facclass",
+				"identity-provider-prov1-login-url = https://login.prov1.com",
+				"identity-provider-prov1-api-url  = https://api.prov1.com",
+				"identity-provider-prov1-client-id = clientid",
+				"identity-provider-prov1-client-secret = secret",
+				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
+				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
+				"identity-provider-prov1-envs=foo",
+				"identity-provider-prov1-env-foo-login-redirect-url=htps://lor2.com",
+				"identity-provider-prov1-env-foo-link-redirect-url=https://lir2.com"
+				);
+		failConstruct(cfgfile, new AuthConfigurationException(String.format(
+				"Value htps://lor2.com of parameter " +
+				"identity-provider-prov1-env-foo-login-redirect-url in section authserv2 of " +
+				"config file %s is not a valid URL", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailBadEnvLinkRedirectURL() throws Exception {
+		final Path cfgfile = writeTempFile(
+				"[authserv2]",
+				"mongo-host=  localhost:50000    ",
+				"mongo-db   =     mydb   ",
+				"template-dir = somedir",
+				"token-cookie-name=cookiename",
+				"identity-providers = prov1",
+				"identity-provider-prov1-factory = facclass",
+				"identity-provider-prov1-login-url = https://login.prov1.com",
+				"identity-provider-prov1-api-url  = https://api.prov1.com",
+				"identity-provider-prov1-client-id = clientid",
+				"identity-provider-prov1-client-secret = secret",
+				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
+				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
+				"identity-provider-prov1-envs=foo",
+				"identity-provider-prov1-env-foo-login-redirect-url=https://lor2.com",
+				"identity-provider-prov1-env-foo-link-redirect-url=https://li^r2.com"
+				);
+		failConstruct(cfgfile, new AuthConfigurationException(String.format(
+				"Error building configuration for provider prov1 in section authserv2 of " +
+				"config file %s: Link redirect URL for environment foo https://li^r2.com " +
+				"for facclass identity provider is not a valid URI: Illegal character in " +
+				"authority at index 8: https://li^r2.com", cfgfile)));
 	}
 	
 	private void failConstruct(final Path cfgfile, final Exception expected) {

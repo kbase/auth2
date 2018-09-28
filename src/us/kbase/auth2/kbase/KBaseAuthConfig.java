@@ -56,6 +56,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			"-login-redirect-url";
 	private static final String KEY_SUFFIX_ID_PROVS_LINK_REDIRECT =
 			"-link-redirect-url";
+	private static final String KEY_SUFFIX_ID_PROVS_ENVS = "-envs";
+	private static final String KEY_SUFFIX_ID_PROVS_ENV = "-env-";
 	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
 	private static final String TRUE = "true";
 	private static final String KEY_TEST_MODE_ENABLED = "test-mode-enabled";
@@ -140,6 +142,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 				final Builder ipcfg = IdentityProviderConfig.getBuilder(
 						factory, login, api, cliid, clisec, loginRedirect, linkRedirect);
 				addCustom(ipcfg, pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
+				addEnvs(ipcfg, pre, cfg);
 				ips.add(ipcfg.build());
 			} catch (IdentityProviderConfigurationException e) {
 				throw new AuthConfigurationException(String.format(
@@ -151,6 +154,27 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		return Collections.unmodifiableSet(ips);
 	}
 	
+	private void addEnvs(
+			final Builder idProviderConfig,
+			final String prefix,
+			final Map<String, String> cfg)
+			throws AuthConfigurationException, IdentityProviderConfigurationException {
+		final String envs = getString(prefix + KEY_SUFFIX_ID_PROVS_ENVS, cfg);
+		if (envs == null) {
+			return;
+		}
+		for (String e: envs.split(",")) {
+			e = e.trim();
+			if (e.isEmpty()) {
+				continue;
+			}
+			final String pre = prefix + KEY_SUFFIX_ID_PROVS_ENV + e;
+			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
+			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
+			idProviderConfig.withEnvironment(e, loginRedirect, linkRedirect);
+		}
+	}
+
 	private void addCustom(
 			final Builder idProviderConfig,
 			final String keyprefix,
