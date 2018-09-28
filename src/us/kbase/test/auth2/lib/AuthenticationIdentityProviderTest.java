@@ -121,7 +121,7 @@ public class AuthenticationIdentityProviderTest {
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getLoginURL("foobarbaz", true)).thenReturn(new URL("https://test.com"));
+		when(idp.getLoginURL("foobarbaz", true, null)).thenReturn(new URL("https://test.com"));
 		
 		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true),
 				is(new URL("https://test.com")));

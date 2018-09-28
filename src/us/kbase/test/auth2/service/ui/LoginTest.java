@@ -242,7 +242,8 @@ public class LoginTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(false))).thenReturn(new URL(url));
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(null)))
+				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
 		final Response res = wt.request().post(

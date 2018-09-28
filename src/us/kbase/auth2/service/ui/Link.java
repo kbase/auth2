@@ -58,6 +58,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -123,7 +124,7 @@ public class Link {
 			@FormParam(Fields.TOKEN) final String formToken)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 				MissingParameterException, NoTokenProvidedException, InvalidTokenException,
-				UnauthorizedException, LinkFailedException {
+				UnauthorizedException, LinkFailedException, NoSuchEnvironmentException {
 		
 		Utils.checkString(provider, Fields.PROVIDER);
 		
