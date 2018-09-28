@@ -121,11 +121,15 @@ public class Link {
 	public Response linkStart(
 			@Context final HttpHeaders headers,
 			@FormParam(Fields.PROVIDER) final String provider,
-			@FormParam(Fields.TOKEN) final String formToken)
+			@FormParam(Fields.TOKEN) final String formToken,
+			@FormParam(Fields.ENVIRONMENT) String environment)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 				MissingParameterException, NoTokenProvidedException, InvalidTokenException,
 				UnauthorizedException, LinkFailedException, NoSuchEnvironmentException {
 		
+		if (environment != null && environment.trim().isEmpty()) {
+			environment = null;
+		}
 		Utils.checkString(provider, Fields.PROVIDER);
 		
 		final IncomingToken token;
@@ -136,7 +140,7 @@ public class Link {
 		}
 		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
+		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true, environment));
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
 				/* the link in process token must be a session token so that if a user closes the

@@ -123,11 +123,18 @@ public class AuthenticationIdentityProviderTest {
 		
 		when(idp.getLoginURL("foobarbaz", true, null)).thenReturn(new URL("https://test.com"));
 		
-		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true),
+		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true, null),
 				is(new URL("https://test.com")));
 		//test with alternate case
-		assertThat("incorrect url", auth.getIdentityProviderURL("Prov", "foobarbaz", true),
+		assertThat("incorrect url", auth.getIdentityProviderURL("Prov", "foobarbaz", true, null),
 				is(new URL("https://test.com")));
+		
+		// test with environment
+		when(idp.getLoginURL("foobarbaz", false, "env1")).thenReturn(new URL("https://test2.com"));
+		assertThat("incorrect url",
+				auth.getIdentityProviderURL("prov", "foobarbaz", false, "env1"),
+				is(new URL("https://test2.com")));
+		
 	}
 	
 	@Test
@@ -212,7 +219,7 @@ public class AuthenticationIdentityProviderTest {
 			final Exception e)
 			throws Exception {
 		try {
-			auth.getIdentityProviderURL(provider, state, true);
+			auth.getIdentityProviderURL(provider, state, true, null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

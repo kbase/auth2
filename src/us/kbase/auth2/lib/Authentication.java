@@ -1607,6 +1607,9 @@ public class Authentication {
 	 * @param provider the name of the provider that will service the OAuth2 request.
 	 * @param state the OAuth2 state variable to send with the request.
 	 * @param link true if the action is a link request rather than a login request.
+	 * @param environment the name of the current environment. This determines which set of
+	 * redirect urls will be used to redirect back to the auth service from the identity
+	 * provider.
 	 * @return the redirect url.
 	 * @throws NoSuchIdentityProviderException if the provider does not exist or is not enabled.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
@@ -1615,14 +1618,14 @@ public class Authentication {
 	public URL getIdentityProviderURL(
 			final String provider,
 			final String state,
-			final boolean link)
+			final boolean link,
+			final String environment)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 			NoSuchEnvironmentException {
 		if (state == null || state.trim().isEmpty()) {
 			throw new IllegalArgumentException("state cannot be null or empty");
 		}
-		//TODO NOW pass environment
-		return getIdentityProvider(provider).getLoginURL(state, link, null);
+		return getIdentityProvider(provider).getLoginURL(state, link, environment);
 	}
 	
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party

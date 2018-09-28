@@ -151,15 +151,19 @@ public class Login {
 	public Response loginStart(
 			@FormParam(Fields.PROVIDER) final String provider,
 			@FormParam(Fields.URL_REDIRECT) final String redirect,
-			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn)
+			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn,
+			@FormParam(Fields.ENVIRONMENT) String environment)
 			throws IllegalParameterException, AuthStorageException, NoSuchEnvironmentException,
-			NoSuchIdentityProviderException, MissingParameterException {
+				NoSuchIdentityProviderException, MissingParameterException {
 		
+		if (environment != null && environment.trim().isEmpty()) {
+			environment = null;
+		}
 		Utils.checkString(provider, Fields.PROVIDER);
 		
 		getRedirectURL(redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false));
+		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false, environment));
 		
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
