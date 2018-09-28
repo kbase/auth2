@@ -50,7 +50,7 @@ identity-providers = Globus, Google, OrcID
 # options will be provided to the identity provider as a set of keys and values where X is the key
 # any Y is the value.
 
-# identity-provider-<provider name>-envs - a comma separated list of names of alternate
+# identity-provider-envs - a comma separated list of names of alternate
 # environments in which the service operates in addition to the environment served by the default
 # login and link redirect urls. Each environment must specify its own login and link redirect
 # urls. These URLs must be registered with the identity provider as usual. The environment
@@ -58,7 +58,7 @@ identity-providers = Globus, Google, OrcID
 # login or link start time.
 
 # Alternate environment configuration variables:
-# <env> is the environment name as specified in the identity-provider-<provider name>-envs
+# <env> is the environment name as specified in the identity-provider-envs
 # configuration variable.
 #
 # identity-provider-<provider name>-env-<env>-link-redirect - the alternate link redirect url.

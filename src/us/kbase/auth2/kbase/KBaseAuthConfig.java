@@ -45,6 +45,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
 	private static final String KEY_TEMPLATE_DIR = "template-dir";
 	private static final String KEY_ID_PROV = "identity-providers";
+	private static final String KEY_ID_PROV_ENVS = "identity-provider-envs";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
 	private static final String KEY_SUFFIX_ID_PROVS_FACTORY = "-factory";
 	private static final String KEY_SUFFIX_ID_PROVS_LOGIN_URL = "-login-url";
@@ -56,7 +57,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			"-login-redirect-url";
 	private static final String KEY_SUFFIX_ID_PROVS_LINK_REDIRECT =
 			"-link-redirect-url";
-	private static final String KEY_SUFFIX_ID_PROVS_ENVS = "-envs";
 	private static final String KEY_SUFFIX_ID_PROVS_ENV = "-env-";
 	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
 	private static final String TRUE = "true";
@@ -159,7 +159,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final String prefix,
 			final Map<String, String> cfg)
 			throws AuthConfigurationException, IdentityProviderConfigurationException {
-		final String envs = getString(prefix + KEY_SUFFIX_ID_PROVS_ENVS, cfg);
+		final String envs = getString(KEY_ID_PROV_ENVS, cfg);
 		if (envs == null) {
 			return;
 		}
