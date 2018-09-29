@@ -267,7 +267,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true))).thenReturn(new URL(url));
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
+				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Response res = wt.request().post(
@@ -309,7 +310,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true))).thenReturn(new URL(url));
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
+				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Response res = wt.request()
@@ -357,7 +359,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true))).thenReturn(new URL(url));
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
+				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Response res = wt.request()

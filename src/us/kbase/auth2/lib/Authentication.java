@@ -62,6 +62,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
@@ -1609,16 +1610,19 @@ public class Authentication {
 	 * @return the redirect url.
 	 * @throws NoSuchIdentityProviderException if the provider does not exist or is not enabled.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider.
 	 */
 	public URL getIdentityProviderURL(
 			final String provider,
 			final String state,
 			final boolean link)
-			throws NoSuchIdentityProviderException, AuthStorageException {
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			NoSuchEnvironmentException {
 		if (state == null || state.trim().isEmpty()) {
 			throw new IllegalArgumentException("state cannot be null or empty");
 		}
-		return getIdentityProvider(provider).getLoginURL(state, link);
+		//TODO NOW pass environment
+		return getIdentityProvider(provider).getLoginURL(state, link, null);
 	}
 	
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party

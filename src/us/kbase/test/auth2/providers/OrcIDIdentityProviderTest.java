@@ -99,6 +99,8 @@ public class OrcIDIdentityProviderTest {
 					"obar",
 					new URL("https://ologinredir.com"),
 					new URL("https://olinkredir.com"))
+					.withEnvironment("myenv",
+							new URL("https://myologinred.com"), new URL("https://myolinkred.com"))
 					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -111,15 +113,26 @@ public class OrcIDIdentityProviderTest {
 		
 		final IdentityProvider oip = gc.configure(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false),
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true),
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
+						"&response_type=code&client_id=ofoo")));
+		
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
+						"&response_type=code&client_id=ofoo")));
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 	}
 	
@@ -128,15 +141,26 @@ public class OrcIDIdentityProviderTest {
 		
 		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
-		assertThat("incorrect login url", oip.getLoginURL("foo5", false),
+		assertThat("incorrect login url", oip.getLoginURL("foo5", false, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo6", true),
+		assertThat("incorrect link url", oip.getLoginURL("foo6", true, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
+						"&response_type=code&client_id=ofoo")));
+		
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
+						"&response_type=code&client_id=ofoo")));
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 		
 	}

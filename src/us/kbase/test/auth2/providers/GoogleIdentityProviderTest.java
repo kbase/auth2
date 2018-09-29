@@ -99,6 +99,8 @@ public class GoogleIdentityProviderTest {
 					"gbar",
 					new URL("https://gloginredir.com"),
 					new URL("https://glinkredir.com"))
+					.withEnvironment("myenv",
+							new URL("https://mygloginred.com"), new URL("https://myglinkred.com"))
 					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
@@ -111,15 +113,26 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect login url", gip.getLoginURL("foo3", false),
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo4", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fglinkredir.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 	}
 	
@@ -128,15 +141,26 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect login url", gip.getLoginURL("foo5", false),
+		assertThat("incorrect login url", gip.getLoginURL("foo5", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo6", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo6", true, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Fglinkredir.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 		
 	}

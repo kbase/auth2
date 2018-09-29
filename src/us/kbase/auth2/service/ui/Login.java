@@ -73,6 +73,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -151,7 +152,7 @@ public class Login {
 			@FormParam(Fields.PROVIDER) final String provider,
 			@FormParam(Fields.URL_REDIRECT) final String redirect,
 			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn)
-			throws IllegalParameterException, AuthStorageException,
+			throws IllegalParameterException, AuthStorageException, NoSuchEnvironmentException,
 			NoSuchIdentityProviderException, MissingParameterException {
 		
 		Utils.checkString(provider, Fields.PROVIDER);

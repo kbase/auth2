@@ -31,6 +31,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
@@ -98,17 +99,26 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		
 		// state will be url encoded.
 		@Override
-		public URL getLoginURL(final String state, final boolean link) {
+		public URL getLoginURL(final String state, final boolean link, final String environment)
+				throws NoSuchEnvironmentException {
 			final URI target = UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
-					.queryParam("redirect_uri", link ? cfg.getLinkRedirectURL() :
-						cfg.getLoginRedirectURL())
+					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
 					.build();
 			return toURL(target);
+		}
+		
+		private URL getRedirectURL(final boolean link, final String environment)
+				throws NoSuchEnvironmentException {
+			if (environment == null) {
+				return link ? cfg.getLinkRedirectURL() : cfg.getLoginRedirectURL();
+			}
+			return link ? cfg.getLinkRedirectURL(environment) :
+				cfg.getLoginRedirectURL(environment);
 		}
 		
 		//Assumes valid URL in URI form

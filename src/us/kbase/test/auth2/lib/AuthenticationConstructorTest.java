@@ -133,11 +133,9 @@ public class AuthenticationConstructorTest {
 	private static class NullIdProv implements IdentityProvider {
 
 		private final String name;
-		private final IdentityProviderConfig cfg;
 		
 		public NullIdProv(final String name, final IdentityProviderConfig cfg) {
 			this.name = name;
-			this.cfg = cfg;
 		}
 		
 		@Override
@@ -146,8 +144,8 @@ public class AuthenticationConstructorTest {
 		}
 
 		@Override
-		public URL getLoginURL(final String state, final boolean link) {
-			return cfg.getLoginRedirectURL();
+		public URL getLoginURL(final String state, final boolean link, final String environment) {
+			return null;
 		}
 
 		@Override
