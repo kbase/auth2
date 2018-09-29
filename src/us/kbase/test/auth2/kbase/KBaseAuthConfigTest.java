@@ -102,6 +102,7 @@ public class KBaseAuthConfigTest {
 				"log-name = logname", // this is annoying to test
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"identity-provider-envs =   env1  \t   ,    , env2    ",
 				"identity-providers = prov1   \t   ,    \t , prov2   ",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -112,6 +113,10 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
 				"identity-provider-prov1-custom-foo = bar",
 				"identity-provider-prov1-custom-bat = baz",
+				"identity-provider-prov1-env-env1-login-redirect-url = https://lor1-1.com",
+				"identity-provider-prov1-env-env1-link-redirect-url = https://lir1-1.com",
+				"identity-provider-prov1-env-env2-login-redirect-url = https://lor1-2.com",
+				"identity-provider-prov1-env-env2-link-redirect-url = https://lir1-2.com",
 				
 				"identity-provider-prov2-factory = facclass2",
 				"identity-provider-prov2-login-url = https://login.prov2.com",
@@ -120,7 +125,6 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov2-client-secret = secret2",
 				"identity-provider-prov2-login-redirect-url = https://loginredirect2.com",
 				"identity-provider-prov2-link-redirect-url = https://linkredirect2.com",
-				"identity-provider-prov2-envs =   env1  \t   ,    , env2    ",
 				"identity-provider-prov2-env-env1-login-redirect-url = https://lor2-1.com",
 				"identity-provider-prov2-env-env1-link-redirect-url = https://lir2-1.com",
 				"identity-provider-prov2-env-env2-login-redirect-url = https://lor2-2.com",
@@ -151,6 +155,10 @@ public class KBaseAuthConfigTest {
 						new URL("https://linkredirect.com"))
 						.withCustomConfiguration("foo", "bar")
 						.withCustomConfiguration("bat", "baz")
+						.withEnvironment("env1",
+								new URL("https://lor1-1.com"), new URL("https://lir1-1.com"))
+						.withEnvironment("env2",
+								new URL("https://lor1-2.com"), new URL("https://lir1-2.com"))
 						.build(),
 				IdentityProviderConfig.getBuilder(
 						"facclass2",
@@ -234,6 +242,7 @@ public class KBaseAuthConfigTest {
 				"log-name = logname", // this is annoying to test
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"identity-provider-envs =        ",
 				"identity-providers = prov1   \t   ,    \t , prov2   ",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -244,7 +253,6 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
 				"identity-provider-prov1-custom-foo = bar",
 				"identity-provider-prov1-custom-bat = baz",
-				"identity-provider-prov1-envs =        ",
 				
 				"identity-provider-prov2-factory = facclass2",
 				"identity-provider-prov2-login-url = https://login.prov2.com",
@@ -575,6 +583,7 @@ public class KBaseAuthConfigTest {
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
 				"identity-providers = prov1",
+				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
 				"identity-provider-prov1-api-url  = https://api.prov1.com",
@@ -582,7 +591,6 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-client-secret = secret",
 				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
-				"identity-provider-prov1-envs=foo",
 				"identity-provider-prov1-env-foo-link-redirect-url=https://lir2.com"
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -599,6 +607,7 @@ public class KBaseAuthConfigTest {
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
 				"identity-providers = prov1",
+				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
 				"identity-provider-prov1-api-url  = https://api.prov1.com",
@@ -606,7 +615,6 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-client-secret = secret",
 				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
-				"identity-provider-prov1-envs=foo",
 				"identity-provider-prov1-env-foo-login-redirect-url=htps://lor2.com",
 				"identity-provider-prov1-env-foo-link-redirect-url=https://lir2.com"
 				);
@@ -625,6 +633,7 @@ public class KBaseAuthConfigTest {
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
 				"identity-providers = prov1",
+				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
 				"identity-provider-prov1-api-url  = https://api.prov1.com",
@@ -632,7 +641,6 @@ public class KBaseAuthConfigTest {
 				"identity-provider-prov1-client-secret = secret",
 				"identity-provider-prov1-login-redirect-url = https://loginredirect.com",
 				"identity-provider-prov1-link-redirect-url = https://linkredirect.com",
-				"identity-provider-prov1-envs=foo",
 				"identity-provider-prov1-env-foo-login-redirect-url=https://lor2.com",
 				"identity-provider-prov1-env-foo-link-redirect-url=https://li^r2.com"
 				);
