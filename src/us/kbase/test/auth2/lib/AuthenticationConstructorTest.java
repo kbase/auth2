@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.lib;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
@@ -257,10 +258,12 @@ public class AuthenticationConstructorTest {
 			new Authentication(storage, ids, new TestExternalConfig<>(SET_THINGY), false);
 			fail("expected exception");
 		} catch (IllegalArgumentException got) {
-			// lower case because whether Prov2 or prov2 is returned can change
 			assertThat("incorrect exception", got.getMessage(),
-					is("Provider Prov2 environments [mye2] do not match provider Prov1 " +
-							"environments [mye1]"));
+					anyOf(
+							is("Provider Prov2 environments [mye2] do not match provider Prov1 " +
+									"environments [mye1]"),
+							is("Provider Prov1 environments [mye1] do not match provider Prov2 " +
+									"environments [mye2]")));
 		}
 	}
 	
