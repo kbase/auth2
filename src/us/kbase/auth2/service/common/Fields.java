@@ -56,6 +56,8 @@ public class Fields {
 	
 	/** When the temporary token associated with the login or linking process expires. */
 	public static final String CHOICE_EXPIRES = "expires";
+	/** The environment in which the login or linking operation is taking place. */
+	public static final String ENVIRONMENT = "environment";
 	
 	/* policy ids */
 	

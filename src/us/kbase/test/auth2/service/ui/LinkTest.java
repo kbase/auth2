@@ -295,11 +295,12 @@ public class LinkTest {
 	}
 	
 	@Test
-	public void linkStartWithTokenInCookie() throws Exception {
+	public void linkStartWithTokenInCookieAndAlternateEnvironment() throws Exception {
 		final NewToken nt = setUpLinkUserAndToken();
 
 		final Form form = new Form();
 		form.param("provider", "prov1");
+		form.param("environment", "myenv");
 
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");
@@ -310,7 +311,7 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq("myenv")))
 				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
@@ -341,7 +342,7 @@ public class LinkTest {
 	//TODO CODE try and merge these 3 link start tests a bit rather than duping code
 	
 	@Test
-	public void linkStartWithTokenInBoth() throws Exception {
+	public void linkStartWithTokenInBothAndWhitespaceEnvironment() throws Exception {
 		/* tests that form is preferred */
 		
 		final NewToken nt = setUpLinkUserAndToken();
@@ -349,6 +350,7 @@ public class LinkTest {
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("token", nt.getToken());
+		form.param("environment", "   \t   ");
 
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");

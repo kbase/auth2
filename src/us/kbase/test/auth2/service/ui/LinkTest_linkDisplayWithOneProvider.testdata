@@ -14,6 +14,7 @@ provider and logout <strong>before</strong> starting the linking process.
 
 <form action="link/start" method="post">
 	<input type="radio" name="provider" value="prov1"/>prov1<br/>
+	Environment: <input type="text" name="environment"/><br/>
 	<input type="submit" value="Submit"/>
 </form>
 

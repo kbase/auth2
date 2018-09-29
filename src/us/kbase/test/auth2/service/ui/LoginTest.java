@@ -195,42 +195,46 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, expectedsession, expectedredirect, null);
 	}
 	
 	@Test
-	public void loginStartEmptyStrings() throws Exception {
+	public void loginStartEmptyStringsWithEnvironment() throws Exception {
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("redirecturl", "  \t   \n   ");
 		form.param("stayloggedin", "  \t   \n   ");
+		form.param("environment", "myenv");
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
 				"/login", null, "session choice", 30 * 60, false);
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, expectedsession, expectedredirect, "myenv");
 	}
 	
 	@Test
-	public void loginStartWithRedirectAndNonSessionCookie() throws Exception {
+	public void loginStartWithRedirectAndNonSessionCookieWithWhitespaceEnvironment()
+			throws Exception {
 		final String redirect = "https://foobar.com/thingy/stuff";
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("redirecturl", redirect);
 		form.param("stayloggedin", "f");
+		form.param("environment", "   \t  ");
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "false",
 				"/login", null, "session choice", 30 * 60, false);
 		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
 				"/login", null, "redirect url", 30 * 60, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, expectedsession, expectedredirect, null);
 	}
 
 	private void loginStart(
 			final Form form,
 			final NewCookie expectedsession,
-			final NewCookie expectedredirect)
+			final NewCookie expectedredirect,
+			final String environment)
 			throws Exception {
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.mocks.get("prov1");
@@ -242,7 +246,7 @@ public class LoginTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(null)))
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(environment)))
 				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
