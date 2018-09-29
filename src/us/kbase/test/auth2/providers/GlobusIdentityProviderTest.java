@@ -3,6 +3,7 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -118,6 +119,7 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
@@ -147,6 +149,7 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = new GlobusIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +

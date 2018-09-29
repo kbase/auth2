@@ -91,6 +91,11 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			return NAME;
 		}
 		
+		@Override
+		public Set<String> getEnvironments() {
+			return cfg.getEnvironments();
+		}
+
 		// state will be url encoded
 		@Override
 		public URL getLoginURL(final String state, final boolean link, final String environment)

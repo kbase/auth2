@@ -74,6 +74,7 @@ public class AuthenticationConstructorTest {
 		assertThat("incorrect external config", t, is(new TestExternalConfig<>(STATE_FOO)));
 		assertThat("incorrect providers", auth.getIdentityProviders(),
 				is(Collections.emptyList()));
+		assertThat("incorrect environments", auth.getEnvironments(), is(Collections.emptySet()));
 	}
 	
 	@Test
@@ -133,9 +134,11 @@ public class AuthenticationConstructorTest {
 	private static class NullIdProv implements IdentityProvider {
 
 		private final String name;
+		private final IdentityProviderConfig cfg;
 		
 		public NullIdProv(final String name, final IdentityProviderConfig cfg) {
 			this.name = name;
+			this.cfg = cfg;
 		}
 		
 		@Override
@@ -153,6 +156,11 @@ public class AuthenticationConstructorTest {
 				throws IdentityRetrievalException {
 			return Collections.emptySet();
 		}
+
+		@Override
+		public Set<String> getEnvironments() {
+			return cfg.getEnvironments();
+		}
 		
 	}
 	
@@ -163,10 +171,14 @@ public class AuthenticationConstructorTest {
 		final IdentityProviderConfig cfg1 = IdentityProviderConfig.getBuilder(
 				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
 				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"))
+				.withEnvironment("mye1", new URL("http://logre.com"), new URL("http://linre.com"))
+				.withEnvironment("mye2", new URL("http://logre.com"), new URL("http://linre.com"))
 				.build();
 		final IdentityProviderConfig cfg2 = IdentityProviderConfig.getBuilder(
 				"prov2", new URL("https://login2.com"), new URL("https://link2.com"),
 				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"))
+				.withEnvironment("mye1", new URL("http://logre.com"), new URL("http://linre.com"))
+				.withEnvironment("mye2", new URL("http://logr2.com"), new URL("http://linr2.com"))
 				.build();
 		
 		final Set<IdentityProvider> ids = new HashSet<>();
@@ -194,6 +206,7 @@ public class AuthenticationConstructorTest {
 		
 		assertThat("incorrect providers", auth.getIdentityProviders(),
 				is(Collections.emptyList())); //since no providers are enabled
+		assertThat("incorrect environments", auth.getEnvironments(), is(set("mye1", "mye2")));
 	}
 	
 	@Test
@@ -220,6 +233,34 @@ public class AuthenticationConstructorTest {
 			// lower case because whether Prov2 or prov2 is returned can change
 			assertThat("incorrect exception", got.getMessage().toLowerCase(), is(
 					"duplicate provider name: prov2"));
+		}
+	}
+	@Test
+	public void withIDsFailDifferentEnvironments() throws Exception {
+		final AuthStorage storage = mock(AuthStorage.class);
+		final IdentityProviderConfig cfg1 = IdentityProviderConfig.getBuilder(
+				"prov1", new URL("https://login1.com"), new URL("https://link1.com"),
+				"cli1", "sec1", new URL("https://loginre1.com"), new URL("https://linkre1.com"))
+				.withEnvironment("mye1", new URL("http://logre.com"), new URL("http://linre.com"))
+				.build();
+		final IdentityProviderConfig cfg2 = IdentityProviderConfig.getBuilder(
+				"prov2", new URL("https://login2.com"), new URL("https://link2.com"),
+				"cli2", "sec2", new URL("https://loginre2.com"), new URL("https://linkre2.com"))
+				.withEnvironment("mye2", new URL("http://logre.com"), new URL("http://linre.com"))
+				.build();
+		
+		final Set<IdentityProvider> ids = new HashSet<>();
+		ids.add(new NullIdProv("Prov1", cfg1));
+		ids.add(new NullIdProv("Prov2", cfg2));
+		
+		try {
+			new Authentication(storage, ids, new TestExternalConfig<>(SET_THINGY), false);
+			fail("expected exception");
+		} catch (IllegalArgumentException got) {
+			// lower case because whether Prov2 or prov2 is returned can change
+			assertThat("incorrect exception", got.getMessage(),
+					is("Provider Prov2 environments [mye2] do not match provider Prov1 " +
+							"environments [mye1]"));
 		}
 	}
 	

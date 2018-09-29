@@ -44,4 +44,10 @@ public interface IdentityProvider {
 	 */
 	Set<RemoteIdentity> getIdentities(String authcode, boolean link)
 			throws IdentityRetrievalException;
+	
+	/** Get the names of the additional environments beyond the default environment that are
+	 * configured. See {@link #getLoginURL(String, boolean, String)}.
+	 * @return the environments.
+	 */
+	Set<String> getEnvironments();
 }
