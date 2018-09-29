@@ -88,7 +88,8 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		try {
 			url.getItem().toURI();
 		} catch (URISyntaxException e) {
-			throw new IllegalParameterException("Illegal URL " + url + ":" + e.getMessage(), e);
+			throw new IllegalParameterException("Illegal URL " + url.getItem().toString() + ": " +
+					e.getMessage(), e);
 		}
 	}
 
@@ -168,6 +169,78 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		// otherwise do nothing
 	}
 	
+	@Override
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result
+				+ ((allowedPostLoginRedirectPrefix == null) ? 0 : allowedPostLoginRedirectPrefix.hashCode());
+		result = prime * result + ((completeLinkRedirect == null) ? 0 : completeLinkRedirect.hashCode());
+		result = prime * result + ((completeLoginRedirect == null) ? 0 : completeLoginRedirect.hashCode());
+		result = prime * result + ((ignoreIPHeaders == null) ? 0 : ignoreIPHeaders.hashCode());
+		result = prime * result + ((includeStackTraceInResponse == null) ? 0 : includeStackTraceInResponse.hashCode());
+		result = prime * result + ((postLinkRedirect == null) ? 0 : postLinkRedirect.hashCode());
+		return result;
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj) {
+			return true;
+		}
+		if (obj == null) {
+			return false;
+		}
+		if (getClass() != obj.getClass()) {
+			return false;
+		}
+		@SuppressWarnings("unchecked")
+		AuthExternalConfig<T> other = (AuthExternalConfig<T>) obj;
+		if (allowedPostLoginRedirectPrefix == null) {
+			if (other.allowedPostLoginRedirectPrefix != null) {
+				return false;
+			}
+		} else if (!allowedPostLoginRedirectPrefix.equals(other.allowedPostLoginRedirectPrefix)) {
+			return false;
+		}
+		if (completeLinkRedirect == null) {
+			if (other.completeLinkRedirect != null) {
+				return false;
+			}
+		} else if (!completeLinkRedirect.equals(other.completeLinkRedirect)) {
+			return false;
+		}
+		if (completeLoginRedirect == null) {
+			if (other.completeLoginRedirect != null) {
+				return false;
+			}
+		} else if (!completeLoginRedirect.equals(other.completeLoginRedirect)) {
+			return false;
+		}
+		if (ignoreIPHeaders == null) {
+			if (other.ignoreIPHeaders != null) {
+				return false;
+			}
+		} else if (!ignoreIPHeaders.equals(other.ignoreIPHeaders)) {
+			return false;
+		}
+		if (includeStackTraceInResponse == null) {
+			if (other.includeStackTraceInResponse != null) {
+				return false;
+			}
+		} else if (!includeStackTraceInResponse.equals(other.includeStackTraceInResponse)) {
+			return false;
+		}
+		if (postLinkRedirect == null) {
+			if (other.postLinkRedirect != null) {
+				return false;
+			}
+		} else if (!postLinkRedirect.equals(other.postLinkRedirect)) {
+			return false;
+		}
+		return true;
+	}
+
 	public static class AuthExternalConfigMapper implements
 			ExternalConfigMapper<AuthExternalConfig<State>> {
 

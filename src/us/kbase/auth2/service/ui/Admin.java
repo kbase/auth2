@@ -96,12 +96,19 @@ public class Admin {
 	private static final int MIN_IN_MS = 60 * 1000;
 
 	private static final int DAY_IN_MS = 24 * 60 * MIN_IN_MS;
+
+	private final Authentication auth;
+	private final AuthAPIStaticConfig cfg;
 	
+	/** Construct the admin endpoint handler. This is typically done by the Jersey framework.
+	 * @param ah an instance of the core authentication class.
+	 * @param cfg the static configuration for the authentication service.
+	 */
 	@Inject
-	private Authentication auth;
-	
-	@Inject
-	private AuthAPIStaticConfig cfg;
+	public Admin(final Authentication auth, final AuthAPIStaticConfig cfg) {
+		this.auth = auth;
+		this.cfg = cfg;
+	}
 	
 	@GET
 	@Template(name = "/admingeneral")
