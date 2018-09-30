@@ -264,8 +264,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 				return new AuthExternalConfig<State>(allowedPostLogin, completeLogin,
 						postLink, completeLink, ignoreIPs, includeStack);
 			} catch (IllegalParameterException e) {
-				throw new ExternalConfigMappingException(
-						"Error in incoming config: " + e.getMessage(), e);
+				throw new RuntimeException("This should be impossible", e);
 			}
 		}
 
@@ -283,8 +282,8 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 					check.toURI();
 					allowed = ConfigItem.state(check);
 				} catch (MalformedURLException | URISyntaxException e) {
-					throw new ExternalConfigMappingException(
-							"Bad URL: " + e.getMessage(), e);
+					throw new ExternalConfigMappingException(String.format(
+							"Bad URL for parameter %s: %s", key, e.getMessage()), e);
 				}
 			}
 			return allowed;

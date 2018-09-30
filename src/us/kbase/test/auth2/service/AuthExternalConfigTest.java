@@ -6,16 +6,21 @@ import static org.junit.Assert.fail;
 
 import java.net.URL;
 import java.util.Collections;
+import java.util.Map;
 
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.config.ConfigAction;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
+import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
@@ -290,4 +295,121 @@ public class AuthExternalConfigTest {
 		}
 		
 	}
+	
+	@Test
+	public void fromMapEmpty() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper()
+				.fromMap(Collections.emptyMap());
+		
+		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState())));
+	}
+	
+	@Test
+	public void fromMapMinimal() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper()
+				.fromMap(MapBuilder.<String, ConfigItem<String, State>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.emptyState())
+						.with("completeLoginRedirect", ConfigItem.emptyState())
+						.with("postLinkRedirect", ConfigItem.emptyState())
+						.with("completeLinkRedirect", ConfigItem.emptyState())
+						.with("ignoreIPHeaders", ConfigItem.emptyState())
+						.with("includeStackTraceInResponse", ConfigItem.emptyState())
+						.build());
+		
+		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState())));
+	}
+	
+	@Test
+	public void fromMapMaximal() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper()
+				.fromMap(MapBuilder.<String, ConfigItem<String, State>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.state("http://u1.com"))
+						.with("completeLoginRedirect", ConfigItem.state("http://u2.com"))
+						.with("postLinkRedirect", ConfigItem.state("http://u3.com"))
+						.with("completeLinkRedirect", ConfigItem.state("http://u4.com"))
+						.with("ignoreIPHeaders", ConfigItem.state("true"))
+						.with("includeStackTraceInResponse", ConfigItem.state("false"))
+						.build());
+		
+		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+				ConfigItem.state(new URL("http://u1.com")),
+				ConfigItem.state(new URL("http://u2.com")),
+				ConfigItem.state(new URL("http://u3.com")),
+				ConfigItem.state(new URL("http://u4.com")),
+				ConfigItem.state(true),
+				ConfigItem.state(false))));
+	}
+	
+	@Test
+	public void fromMapFailBadURL() {
+		failFromMap(ImmutableMap.of("allowedPostLoginRedirectPrefix",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter allowedPostLoginRedirectPrefix: " +
+						"unknown protocol: htp"));
+		failFromMap(ImmutableMap.of("completeLoginRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter completeLoginRedirect: unknown protocol: htp"));
+		failFromMap(ImmutableMap.of("postLinkRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter postLinkRedirect: unknown protocol: htp"));
+		failFromMap(ImmutableMap.of("completeLinkRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter completeLinkRedirect: unknown protocol: htp"));
+	}
+	
+	@Test
+	public void fromMapFailBadURI() {
+		failFromMap(ImmutableMap.of("allowedPostLoginRedirectPrefix",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter allowedPostLoginRedirectPrefix: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(ImmutableMap.of("completeLoginRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter completeLoginRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(ImmutableMap.of("postLinkRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter postLinkRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(ImmutableMap.of("completeLinkRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter completeLinkRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+	}
+	
+	@Test
+	public void fromMapFilBadBoolean() {
+		failFromMap(ImmutableMap.of("ignoreIPHeaders", ConfigItem.state("foo")),
+				new ExternalConfigMappingException(
+						"Expected value of true or false for parameter ignoreIPHeaders"));
+		failFromMap(ImmutableMap.of("includeStackTraceInResponse", ConfigItem.state("foo")),
+				new ExternalConfigMappingException(
+						"Expected value of true or false for parameter " +
+						"includeStackTraceInResponse"));
+	}
+	
+	private void failFromMap(
+			final Map<String, ConfigItem<String, State>> map,
+			final Exception expected) {
+		try {
+			new AuthExternalConfigMapper().fromMap(map);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
+	}
+	
 }
