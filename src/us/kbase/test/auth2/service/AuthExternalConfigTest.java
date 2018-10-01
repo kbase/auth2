@@ -43,12 +43,12 @@ public class AuthExternalConfigTest {
 		
 		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
 				is(ConfigItem.noAction()));
-		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
-				is(ConfigItem.remove()));
 		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
 				is(ConfigItem.remove()));
 		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
 				is(ConfigItem.set(new URL("http://u.com"))));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.remove()));
 	}
 	
 	@Test
@@ -61,12 +61,12 @@ public class AuthExternalConfigTest {
 		
 		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
 				is(ConfigItem.emptyState()));
-		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
-				is(ConfigItem.emptyState()));
 		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
 				is(ConfigItem.state(new URL("http://u2.com"))));
 		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
 				is(ConfigItem.state(new URL("http://u.com"))));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.emptyState()));
 	}
 	
 	@Test
