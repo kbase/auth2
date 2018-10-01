@@ -1,5 +1,6 @@
 package us.kbase.test.auth2.service.ui;
 
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -32,6 +33,7 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
+import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -40,6 +42,7 @@ import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.ui.Admin;
+import us.kbase.auth2.service.ui.Admin.SetConfig;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
@@ -426,5 +429,272 @@ public class AdminTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void updateConfigNulls() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		admin.updateConfig("token", new SetConfig(null, null, null, null, null, null, null, null));
+		
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withNullableLoginAllowed(null)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction()
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateConfigWhitespace() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final String ws = "  \t    ";
+		admin.updateConfig("token", new SetConfig(null, null, null, ws, ws, ws, ws, null));
+		
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withNullableLoginAllowed(null)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction()
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateConfigRemove() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		admin.updateConfig("token", new SetConfig(null, null, null, null, null, null, null,
+				Arrays.asList(
+						"allowedloginredirect",
+						"completeloginredirect",
+						"completelinkredirect",
+						"postlinkredirect",
+						"ignoreip",
+						"showstack"
+						)));
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withNullableLoginAllowed(null)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove()
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateConfigSetTrue() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		admin.updateConfig("token", new SetConfig(true, true, true,
+				"http://u1.com", "http://u2.com", "http://u3.com", "http://u4.com", null));
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(true)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.set(new URL("http://u1.com")),
+								ConfigItem.set(new URL("http://u2.com")),
+								ConfigItem.set(new URL("http://u3.com")),
+								ConfigItem.set(new URL("http://u4.com")),
+								ConfigItem.set(true),
+								ConfigItem.set(true)
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateConfigSetFalse() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		admin.updateConfig("token", new SetConfig(false, false, false,
+				"http://u1.com", "http://u2.com", "http://u3.com", "http://u4.com", null));
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(false)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.set(new URL("http://u1.com")),
+								ConfigItem.set(new URL("http://u2.com")),
+								ConfigItem.set(new URL("http://u3.com")),
+								ConfigItem.set(new URL("http://u4.com")),
+								ConfigItem.set(false),
+								ConfigItem.set(false)
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateConfigFailNullBody() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		failUpdateConfig(admin, "t", null, new MissingParameterException("JSON body missing"));
+	}
+	
+	@Test
+	public void updateConfigFailUnexpectedProperties() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final Boolean n = null;
+		final String s = null;
+		final SetConfig sc = new SetConfig(n, n, n, s, s, s, s, null);
+		sc.setAdditionalProperties("foo", "bar");
+		sc.setAdditionalProperties("baz", "bat");
+		
+		try {
+			admin.updateConfig("t", sc);
+			fail("expected exception");
+		} catch (IllegalParameterException got) {
+			final String e = "30001 Illegal input parameter: Unexpected parameters in request: ";
+			assertThat("incorrect exception", got.getMessage(), anyOf(
+					is(e + "foo, baz"),
+					is(e + "baz, foo")));
+		}
+	}
+	
+	@Test
+	public void updateConfigFailBadURL() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final String g = "http://u.com";
+		final String b = "htp://u.com";
+		final Boolean n = null;
+		
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, b, g, g, g, null),
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, b, g, g, null),
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, g, b, g, null),
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, g, g, b, null),
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+	}
+	
+	@Test
+	public void updateConfigFailBadURI() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final String g = "http://u.com";
+		final String b = "http://u^u.com";
+		final Boolean n = null;
+		
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, b, g, g, g, null),
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, b, g, g, null),
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, g, b, g, null),
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateConfig(admin, "t", new SetConfig(n, n, n, g, g, g, b, null),
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+	}
+	
+	@Test
+	public void updateConfigFailNoToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final Boolean n = null;
+		final String s = null;
+		final SetConfig sc = new SetConfig(n, n, n, s, s, s, s, null);
+		
+		failUpdateConfig(admin, null, sc,
+				new NoTokenProvidedException("No user token provided"));
+		failUpdateConfig(admin, "   \t  ", sc,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void updateConfigFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		doThrow(new InvalidTokenException()).when(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withNullableLoginAllowed(null)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction(),
+								ConfigItem.noAction()))
+						.build());
+		
+		final Boolean n = null;
+		final String s = null;
+		final SetConfig sc = new SetConfig(n, n, n, s, s, s, s, null);
+		
+		failUpdateConfig(admin, "token", sc, new InvalidTokenException());
+	}
+	
+	private void failUpdateConfig(
+			final Admin admin,
+			final String token,
+			final SetConfig cfg,
+			final Exception expected) {
+		try {
+			admin.updateConfig(token, cfg);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 }
