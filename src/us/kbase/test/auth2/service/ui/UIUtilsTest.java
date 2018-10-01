@@ -49,6 +49,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.URLSet;
 import us.kbase.auth2.service.ui.UIUtils;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
@@ -602,12 +603,17 @@ public class UIUtilsTest {
 	public void getExternalURI() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(ConfigItem.state(new URL("http://whee/whoo")),
-						ConfigItem.emptyState(), ConfigItem.emptyState(), ConfigItem.emptyState(),
-						ConfigItem.state(false), ConfigItem.state(false)));
+				.thenReturn(new AuthExternalConfig<>(
+						new URLSet<>(
+								ConfigItem.state(new URL("http://whee/whoo")),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()),
+						ConfigItem.state(false),
+						ConfigItem.state(false)));
 		
-		final URI ret = UIUtils.getExternalConfigURI(auth, e -> e.getAllowedLoginRedirectPrefix(),
-				"/foo");
+		final URI ret = UIUtils.getExternalConfigURI(
+				auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "/foo");
 		
 		assertThat("incorrect uri", ret, is(new URI("http://whee/whoo")));
 	}
@@ -616,13 +622,17 @@ public class UIUtilsTest {
 	public void getExternalURIDefault() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(ConfigItem.emptyState(),
-						ConfigItem.state(new URL("http://whee/whoo")),
-						ConfigItem.emptyState(), ConfigItem.emptyState(),
-						ConfigItem.state(false), ConfigItem.state(false)));
+				.thenReturn(new AuthExternalConfig<>(
+						new URLSet<>(
+								ConfigItem.emptyState(),
+								ConfigItem.state(new URL("http://whee/whoo")),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()),
+						ConfigItem.state(false),
+						ConfigItem.state(false)));
 		
-		final URI ret = UIUtils.getExternalConfigURI(auth, e -> e.getAllowedLoginRedirectPrefix(),
-				"https://foo");
+		final URI ret = UIUtils.getExternalConfigURI(
+				auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "https://foo");
 		
 		assertThat("incorrect uri", ret, is(new URI("https://foo")));
 	}
@@ -632,14 +642,15 @@ public class UIUtilsTest {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
 				.thenThrow(new ExternalConfigMappingException("foo"));
-		failGetExternalURIDefault(auth, e -> e.getAllowedLoginRedirectPrefix(), "/foo",
+		failGetExternalURIDefault(auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "/foo",
 				new RuntimeException("Dude, like, what just happened?"));
 	}
 	
 	@Test
 	public void getExternalURIFailBadArgs() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final UIUtils.ExteralConfigURLSelector selector = e -> e.getAllowedLoginRedirectPrefix();
+		final UIUtils.ExteralConfigURLSelector selector =
+				e -> e.getURLSet().getAllowedLoginRedirectPrefix();
 		final String deflt = "https://foo";
 		
 		failGetExternalURIDefault(null, selector, deflt, new NullPointerException("auth"));

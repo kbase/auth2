@@ -196,14 +196,18 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (tt.isPresent()) {
-			final URI completeURL = getExternalConfigURI(auth,
-					cfg -> cfg.getCompleteLinkRedirect(), UIPaths.LINK_ROOT_CHOICE);
+			final URI completeURL = getExternalConfigURI(
+					auth,
+					cfg -> cfg.getURLSet().getCompleteLinkRedirect(),
+					UIPaths.LINK_ROOT_CHOICE);
 			r = Response.seeOther(completeURL)
 					.cookie(getLinkInProcessCookie(tt.get()))
 					.cookie(getStateCookie(null))
 					.build();
 		} else {
-			final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+			final URI postLinkURI = getExternalConfigURI(
+					auth,
+					cfg-> cfg.getURLSet().getPostLinkRedirect(),
 					UIPaths.ME_ROOT);
 			r = Response.seeOther(postLinkURI)
 					.cookie(getStateCookie(null))
@@ -327,7 +331,9 @@ public class Link {
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		pickAccount(token, linktoken, Optional.fromNullable(identityID));
-		final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+		final URI postLinkURI = getExternalConfigURI(
+				auth,
+				cfg-> cfg.getURLSet().getPostLinkRedirect(),
 				UIPaths.ME_ROOT);
 		return Response.seeOther(postLinkURI)
 				.cookie(getLinkInProcessCookie(null)).build();

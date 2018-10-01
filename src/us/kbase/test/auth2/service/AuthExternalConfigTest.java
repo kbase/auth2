@@ -21,6 +21,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.AuthExternalConfig.URLSet;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.TestCommon;
 
@@ -29,15 +30,103 @@ public class AuthExternalConfigTest {
 	@Test
 	public void equals() {
 		EqualsVerifier.forClass(AuthExternalConfig.class).usingGetClass().verify();
+		EqualsVerifier.forClass(URLSet.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void constructURLSetAction() throws Exception {
+		final URLSet<Action> urlSet = new URLSet<>(
+				ConfigItem.noAction(),
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u.com")),
+				ConfigItem.remove());
+		
+		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
+				is(ConfigItem.noAction()));
+		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
+				is(ConfigItem.remove()));
+		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
+				is(ConfigItem.set(new URL("http://u.com"))));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.remove()));
+	}
+	
+	@Test
+	public void constructURLSetState() throws Exception {
+		final URLSet<State> urlSet = new URLSet<>(
+				ConfigItem.emptyState(),
+				ConfigItem.state(new URL("http://u2.com")),
+				ConfigItem.state(new URL("http://u.com")),
+				ConfigItem.emptyState());
+		
+		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
+				is(ConfigItem.emptyState()));
+		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
+				is(ConfigItem.state(new URL("http://u2.com"))));
+		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
+				is(ConfigItem.state(new URL("http://u.com"))));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.emptyState()));
+	}
+	
+	@Test
+	public void constructURLSetFail() throws Exception {
+		final ConfigItem<URL, Action> setU = ConfigItem.set(new URL("http://f.com"));
+		final ConfigItem<URL, State> staU = ConfigItem.state(new URL("http://f.com"));
+		
+		failConstruct(null, setU, setU, setU,
+				new NullPointerException("allowedPostLoginRedirectPrefix"));
+		failConstruct(staU, null, staU, staU,
+				new NullPointerException("completeLoginRedirect"));
+		failConstruct(setU, setU, null, setU,
+				new NullPointerException("postLinkRedirect"));
+		failConstruct(staU, staU, staU, null,
+				new NullPointerException("completeLinkRedirect"));
+		
+		final ConfigItem<URL, Action> setUB = ConfigItem.set(new URL("http://f^.com"));
+		final ConfigItem<URL, State> staUB = ConfigItem.state(new URL("http://g^.com"));
+		
+		failConstruct(setUB, setU, setU, setU,
+				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
+						"in authority at index 7: http://f^.com"));
+		failConstruct(staU, staUB, staU, staU,
+				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
+						"in authority at index 7: http://g^.com"));
+		failConstruct(setU, setU, setUB, setU,
+				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
+						"in authority at index 7: http://f^.com"));
+		failConstruct(staU, staU, staU, staUB,
+				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
+						"in authority at index 7: http://g^.com"));
+	}
+	
+	private <T extends ConfigAction> void failConstruct(
+			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
+			final ConfigItem<URL, T> completeLoginRedirect,
+			final ConfigItem<URL, T> postLinkRedirect,
+			final ConfigItem<URL, T> completeLinkRedirect,
+			final Exception expected) {
+		try {
+			new URLSet<>(
+					allowedPostLoginRedirectPrefix,
+					completeLoginRedirect,
+					postLinkRedirect,
+					completeLinkRedirect);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
 	}
 	
 	@Test
 	public void constructNoAction() throws Exception {
 		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
-				ConfigItem.noAction(),
-				ConfigItem.noAction(),
-				ConfigItem.noAction(),
-				ConfigItem.noAction(),
+				new URLSet<>(
+						ConfigItem.noAction(),
+						ConfigItem.noAction(),
+						ConfigItem.noAction(),
+						ConfigItem.noAction()),
 				ConfigItem.noAction(),
 				ConfigItem.noAction());
 		
@@ -47,25 +136,22 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(),
 				is(ConfigItem.noAction()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.noAction()));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.noAction()));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.noAction()));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.noAction()));
-		
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.noAction(),
+				ConfigItem.noAction(),
+				ConfigItem.noAction(),
+				ConfigItem.noAction())));
 		assertThat("incorrect toMap", cfg.toMap(), is(Collections.emptyMap()));
 	}
 	
 	@Test
 	public void constructRemove() throws Exception {
 		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
-				ConfigItem.remove(),
-				ConfigItem.remove(),
-				ConfigItem.remove(),
-				ConfigItem.remove(),
+				new URLSet<>(
+						ConfigItem.remove(),
+						ConfigItem.remove(),
+						ConfigItem.remove(),
+						ConfigItem.remove()),
 				ConfigItem.remove(),
 				ConfigItem.remove());
 		
@@ -75,14 +161,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(),
 				is(ConfigItem.remove()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.remove()));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove())));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -98,10 +181,11 @@ public class AuthExternalConfigTest {
 	@Test
 	public void constructSet() throws Exception {
 		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
-				ConfigItem.set(new URL("http://u1.com")),
-				ConfigItem.set(new URL("http://u2.com")),
-				ConfigItem.set(new URL("http://u3.com")),
-				ConfigItem.set(new URL("http://u4.com")),
+				new URLSet<>(
+						ConfigItem.set(new URL("http://u1.com")),
+						ConfigItem.set(new URL("http://u2.com")),
+						ConfigItem.set(new URL("http://u3.com")),
+						ConfigItem.set(new URL("http://u4.com"))),
 				ConfigItem.set(true),
 				ConfigItem.set(false));
 		
@@ -111,14 +195,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(),
 				is(ConfigItem.set(true)));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.set(new URL("http://u1.com"))));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.set(new URL("http://u4.com"))));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.set(new URL("http://u2.com"))));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.set(new URL("http://u3.com"))));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.set(new URL("http://u1.com")),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.set(new URL("http://u3.com")),
+				ConfigItem.set(new URL("http://u4.com")))));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -134,10 +215,10 @@ public class AuthExternalConfigTest {
 	@Test
 	public void constructState() throws Exception {
 		final AuthExternalConfig<State> cfg = new AuthExternalConfig<>(
-				ConfigItem.emptyState(),
-				ConfigItem.state(new URL("http://u2.com")),
-				ConfigItem.state(new URL("http://u3.com")),
-				ConfigItem.emptyState(),
+				new URLSet<>(ConfigItem.emptyState(),
+						ConfigItem.state(new URL("http://u2.com")),
+						ConfigItem.state(new URL("http://u3.com")),
+						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
 				ConfigItem.state(true));
 		
@@ -146,23 +227,21 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(true));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.emptyState()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.emptyState()));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.emptyState()));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.state(new URL("http://u2.com"))));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.state(new URL("http://u3.com"))));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.emptyState(),
+				ConfigItem.state(new URL("http://u2.com")),
+				ConfigItem.state(new URL("http://u3.com")),
+				ConfigItem.emptyState())));
 		
 		assertThat("incorrect toMap", cfg.toMap(), is(Collections.emptyMap()));
 		
 		// swap the boolean states
 		final AuthExternalConfig<State> cfg2 = new AuthExternalConfig<>(
-				ConfigItem.emptyState(),
-				ConfigItem.state(new URL("http://u2.com")),
-				ConfigItem.state(new URL("http://u3.com")),
-				ConfigItem.emptyState(),
+				new URLSet<>(
+						ConfigItem.emptyState(),
+						ConfigItem.state(new URL("http://u2.com")),
+						ConfigItem.state(new URL("http://u3.com")),
+						ConfigItem.emptyState()),
 				ConfigItem.state(true),
 				ConfigItem.emptyState());
 		
@@ -176,10 +255,11 @@ public class AuthExternalConfigTest {
 	@Test
 	public void constructMixed() throws Exception {
 		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
-				ConfigItem.remove(),
-				ConfigItem.set(new URL("http://u2.com")),
-				ConfigItem.noAction(),
-				ConfigItem.set(new URL("http://u4.com")),
+				new URLSet<>(
+						ConfigItem.remove(),
+						ConfigItem.set(new URL("http://u2.com")),
+						ConfigItem.noAction(),
+						ConfigItem.set(new URL("http://u4.com"))),
 				ConfigItem.remove(),
 				ConfigItem.set(false));
 		
@@ -188,14 +268,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.remove()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.set(new URL("http://u4.com"))));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.set(new URL("http://u2.com"))));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.noAction()));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u4.com")))));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -208,7 +285,7 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
-	public void defaultConfig() {
+	public void defaultConfig() throws Exception{
 		final AuthExternalConfig<Action> cfg = AuthExternalConfig.SET_DEFAULT;
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
@@ -216,14 +293,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.set(false)));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
-		assertThat("incorrect log prefix", cfg.getAllowedLoginRedirectPrefix(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect link redirect", cfg.getCompleteLinkRedirect(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect login redirect", cfg.getCompleteLoginRedirect(),
-				is(ConfigItem.remove()));
-		assertThat("incorrect post link redirect", cfg.getPostLinkRedirect(),
-				is(ConfigItem.remove()));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove())));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -243,52 +317,24 @@ public class AuthExternalConfigTest {
 		final ConfigItem<Boolean, Action> setB = ConfigItem.set(true);
 		final ConfigItem<Boolean, State> staB = ConfigItem.state(true);
 		
-		failConstruct(null, setU, setU, setU, setB, setB,
-				new NullPointerException("allowedPostLoginRedirectPrefix"));
-		failConstruct(staU, null, staU, staU, staB, staB,
-				new NullPointerException("completeLoginRedirect"));
-		failConstruct(setU, setU, null, setU, setB, setB,
-				new NullPointerException("postLinkRedirect"));
-		failConstruct(staU, staU, staU, null, staB, staB,
-				new NullPointerException("completeLinkRedirect"));
-		failConstruct(setU, setU, setU, setU, null, setB,
+		final URLSet<Action> setURL = new URLSet<>(setU, setU, setU, setU);
+		final URLSet<State> staURL = new URLSet<>(staU, staU, staU, staU);
+		
+		failConstruct(null, setB, setB,
+				new NullPointerException("urlSet"));
+		failConstruct(setURL, null, setB,
 				new NullPointerException("ignoreIPHeaders"));
-		failConstruct(staU, staU, staU, staU, staB, null,
+		failConstruct(staURL, staB, null,
 				new NullPointerException("includeStackTraceInResponse"));
-		
-		final ConfigItem<URL, Action> setUB = ConfigItem.set(new URL("http://f^.com"));
-		final ConfigItem<URL, State> staUB = ConfigItem.state(new URL("http://g^.com"));
-		
-		failConstruct(setUB, setU, setU, setU, setB, setB,
-				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
-						"in authority at index 7: http://f^.com"));
-		failConstruct(staU, staUB, staU, staU, staB, staB,
-				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
-						"in authority at index 7: http://g^.com"));
-		failConstruct(setU, setU, setUB, setU, setB, setB,
-				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
-						"in authority at index 7: http://f^.com"));
-		failConstruct(staU, staU, staU, staUB, staB, staB,
-				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
-						"in authority at index 7: http://g^.com"));
 	}
 	
 	private <T extends ConfigAction> void failConstruct(
-			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
-			final ConfigItem<URL, T> completeLoginRedirect,
-			final ConfigItem<URL, T> postLinkRedirect,
-			final ConfigItem<URL, T> completeLinkRedirect,
+			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
 			final ConfigItem<Boolean, T> includeStackTraceInResponse,
 			final Exception expected) {
 		try {
-			new AuthExternalConfig<>(
-					allowedPostLoginRedirectPrefix,
-					completeLoginRedirect,
-					postLinkRedirect,
-					completeLinkRedirect,
-					ignoreIPHeaders,
-					includeStackTraceInResponse);
+			new AuthExternalConfig<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -302,10 +348,11 @@ public class AuthExternalConfigTest {
 				.fromMap(Collections.emptyMap());
 		
 		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
+				new URLSet<>(
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
 				ConfigItem.emptyState())));
 	}
@@ -323,10 +370,11 @@ public class AuthExternalConfigTest {
 						.build());
 		
 		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
-				ConfigItem.emptyState(),
+				new URLSet<>(
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
 				ConfigItem.emptyState())));
 	}
@@ -344,10 +392,11 @@ public class AuthExternalConfigTest {
 						.build());
 		
 		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
-				ConfigItem.state(new URL("http://u1.com")),
-				ConfigItem.state(new URL("http://u2.com")),
-				ConfigItem.state(new URL("http://u3.com")),
-				ConfigItem.state(new URL("http://u4.com")),
+				new URLSet<>(
+						ConfigItem.state(new URL("http://u1.com")),
+						ConfigItem.state(new URL("http://u2.com")),
+						ConfigItem.state(new URL("http://u3.com")),
+						ConfigItem.state(new URL("http://u4.com"))),
 				ConfigItem.state(true),
 				ConfigItem.state(false))));
 	}
