@@ -3,6 +3,7 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -113,6 +114,7 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", gip.getLoginURL("foo3", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
@@ -141,6 +143,7 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", gip.getLoginURL("foo5", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +

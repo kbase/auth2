@@ -222,19 +222,10 @@ public class Authentication {
 			throw new RuntimeException("This should be impossible", e);
 		}
 		nonNull(storage, "storage");
-		nonNull(identityProviderSet, "identityProviderSet");
-		noNulls(identityProviderSet, "Null identity provider in set");
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.defaultExternalConfig = defaultExternalConfig;
 		this.storage = storage;
-		for (final IdentityProvider idp: identityProviderSet) {
-			nonNull(idp.getProviderName(), "provider name");
-			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
-				throw new IllegalArgumentException("Duplicate provider name: " +
-						idp.getProviderName());
-			}
-			idProviderSet.put(idp.getProviderName(), idp);
-		}
+		setUpIdentityProviders(identityProviderSet);
 		final AuthConfigUpdate<ExternalConfig> acu = buildDefaultConfig();
 		try {
 			storage.updateConfig(acu, false);
@@ -247,6 +238,29 @@ public class Authentication {
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to initialize config manager: " +
 					e.getMessage(), e);
+		}
+	}
+
+	private void setUpIdentityProviders(final Set<IdentityProvider> identityProviderSet) {
+		nonNull(identityProviderSet, "identityProviderSet");
+		noNulls(identityProviderSet, "Null identity provider in set");
+		if (identityProviderSet.isEmpty()) {
+			return;
+		}
+		final IdentityProvider prov = identityProviderSet.iterator().next();
+		for (final IdentityProvider idp: identityProviderSet) {
+			nonNull(idp.getProviderName(), "provider name");
+			if (!idp.getEnvironments().equals(prov.getEnvironments())) {
+				throw new IllegalArgumentException(String.format(
+						"Provider %s environments %s do not match provider %s environments %s",
+						prov.getProviderName(), prov.getEnvironments(),
+						idp.getProviderName(), idp.getEnvironments()));
+			}
+			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
+				throw new IllegalArgumentException("Duplicate provider name: " +
+						idp.getProviderName());
+			}
+			idProviderSet.put(idp.getProviderName(), idp);
 		}
 	}
 	
@@ -1586,6 +1600,18 @@ public class Authentication {
 			}
 		}
 		return provs;
+	}
+	
+	
+	/** Get any alternative environments that are configured for the identity providers. This
+	 * method will return the list even if no identity providers are enabled.
+	 * @return the alternative environment names.
+	 */
+	public Set<String> getEnvironments() {
+		if (idProviderSet.isEmpty()) {
+			return Collections.emptySet();
+		}
+		return idProviderSet.values().iterator().next().getEnvironments();
 	}
 	
 	// looks up the provider, case insensitive 
