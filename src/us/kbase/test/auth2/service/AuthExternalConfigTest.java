@@ -70,6 +70,56 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
+	public void constructURLSetFail() throws Exception {
+		final ConfigItem<URL, Action> setU = ConfigItem.set(new URL("http://f.com"));
+		final ConfigItem<URL, State> staU = ConfigItem.state(new URL("http://f.com"));
+		
+		failConstruct(null, setU, setU, setU,
+				new NullPointerException("allowedPostLoginRedirectPrefix"));
+		failConstruct(staU, null, staU, staU,
+				new NullPointerException("completeLoginRedirect"));
+		failConstruct(setU, setU, null, setU,
+				new NullPointerException("postLinkRedirect"));
+		failConstruct(staU, staU, staU, null,
+				new NullPointerException("completeLinkRedirect"));
+		
+		final ConfigItem<URL, Action> setUB = ConfigItem.set(new URL("http://f^.com"));
+		final ConfigItem<URL, State> staUB = ConfigItem.state(new URL("http://g^.com"));
+		
+		failConstruct(setUB, setU, setU, setU,
+				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
+						"in authority at index 7: http://f^.com"));
+		failConstruct(staU, staUB, staU, staU,
+				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
+						"in authority at index 7: http://g^.com"));
+		failConstruct(setU, setU, setUB, setU,
+				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
+						"in authority at index 7: http://f^.com"));
+		failConstruct(staU, staU, staU, staUB,
+				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
+						"in authority at index 7: http://g^.com"));
+	}
+	
+	private <T extends ConfigAction> void failConstruct(
+			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
+			final ConfigItem<URL, T> completeLoginRedirect,
+			final ConfigItem<URL, T> postLinkRedirect,
+			final ConfigItem<URL, T> completeLinkRedirect,
+			final Exception expected) {
+		try {
+			new URLSet<>(
+					allowedPostLoginRedirectPrefix,
+					completeLoginRedirect,
+					postLinkRedirect,
+					completeLinkRedirect);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+		
+	}
+	
+	@Test
 	public void constructNoAction() throws Exception {
 		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
 				new URLSet<>(
@@ -267,53 +317,24 @@ public class AuthExternalConfigTest {
 		final ConfigItem<Boolean, Action> setB = ConfigItem.set(true);
 		final ConfigItem<Boolean, State> staB = ConfigItem.state(true);
 		
-		failConstruct(null, setU, setU, setU, setB, setB,
-				new NullPointerException("allowedPostLoginRedirectPrefix"));
-		failConstruct(staU, null, staU, staU, staB, staB,
-				new NullPointerException("completeLoginRedirect"));
-		failConstruct(setU, setU, null, setU, setB, setB,
-				new NullPointerException("postLinkRedirect"));
-		failConstruct(staU, staU, staU, null, staB, staB,
-				new NullPointerException("completeLinkRedirect"));
-		failConstruct(setU, setU, setU, setU, null, setB,
+		final URLSet<Action> setURL = new URLSet<>(setU, setU, setU, setU);
+		final URLSet<State> staURL = new URLSet<>(staU, staU, staU, staU);
+		
+		failConstruct(null, setB, setB,
+				new NullPointerException("urlSet"));
+		failConstruct(setURL, null, setB,
 				new NullPointerException("ignoreIPHeaders"));
-		failConstruct(staU, staU, staU, staU, staB, null,
+		failConstruct(staURL, staB, null,
 				new NullPointerException("includeStackTraceInResponse"));
-		
-		final ConfigItem<URL, Action> setUB = ConfigItem.set(new URL("http://f^.com"));
-		final ConfigItem<URL, State> staUB = ConfigItem.state(new URL("http://g^.com"));
-		
-		failConstruct(setUB, setU, setU, setU, setB, setB,
-				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
-						"in authority at index 7: http://f^.com"));
-		failConstruct(staU, staUB, staU, staU, staB, staB,
-				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
-						"in authority at index 7: http://g^.com"));
-		failConstruct(setU, setU, setUB, setU, setB, setB,
-				new IllegalParameterException("Illegal URL http://f^.com: Illegal character " +
-						"in authority at index 7: http://f^.com"));
-		failConstruct(staU, staU, staU, staUB, staB, staB,
-				new IllegalParameterException("Illegal URL http://g^.com: Illegal character " +
-						"in authority at index 7: http://g^.com"));
 	}
 	
 	private <T extends ConfigAction> void failConstruct(
-			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
-			final ConfigItem<URL, T> completeLoginRedirect,
-			final ConfigItem<URL, T> postLinkRedirect,
-			final ConfigItem<URL, T> completeLinkRedirect,
+			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
 			final ConfigItem<Boolean, T> includeStackTraceInResponse,
 			final Exception expected) {
 		try {
-			new AuthExternalConfig<>(
-					new URLSet<>(
-							allowedPostLoginRedirectPrefix,
-							completeLoginRedirect,
-							postLinkRedirect,
-							completeLinkRedirect),
-					ignoreIPHeaders,
-					includeStackTraceInResponse);
+			new AuthExternalConfig<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
