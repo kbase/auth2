@@ -30,9 +30,9 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 	 */
 	public static class ProviderUpdate {
 	
-		final Optional<Boolean> enabled;
-		final Optional<Boolean> forceLoginChoice;
-		final Optional<Boolean> forceLinkChoice;
+		private final Optional<Boolean> enabled;
+		private final Optional<Boolean> forceLoginChoice;
+		private final Optional<Boolean> forceLinkChoice;
 		
 		/** Create an update to a provider configuration.
 		 * @param enabled true to enable the provider, false to disable, absent to make no change
