@@ -18,9 +18,9 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.stream.Collectors;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.UUID;
 
 import javax.inject.Inject;
@@ -537,8 +537,8 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@FormParam(Fields.ID) final String roleId)
 			throws MissingParameterException, AuthStorageException,
-			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException, NoSuchRoleException, IllegalParameterException {
+				InvalidTokenException, UnauthorizedException,
+				NoTokenProvidedException, NoSuchRoleException, IllegalParameterException {
 		auth.deleteCustomRole(getTokenFromCookie(headers, cfg.getTokenCookieName()), roleId);
 	}
 	
@@ -547,7 +547,7 @@ public class Admin {
 	public void resetConfig(
 			@Context final HttpHeaders headers)
 			throws InvalidTokenException, UnauthorizedException, NoTokenProvidedException,
-			AuthStorageException {
+				AuthStorageException {
 		auth.resetConfigToDefault(getTokenFromCookie(headers, cfg.getTokenCookieName()));
 	}
 	
@@ -559,7 +559,7 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException, AuthStorageException {
+				NoTokenProvidedException, AuthStorageException {
 		final AuthConfigSetWithUpdateTime<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -572,13 +572,13 @@ public class Admin {
 		final Map<String, Object> ret = new HashMap<>();
 		final List<Map<String, Object>> prov = new ArrayList<>();
 		ret.put(Fields.PROVIDERS, prov);
-		for (final Entry<String, ProviderConfig> e:
-				cfgset.getCfg().getProviders().entrySet()) {
+		for (final String pname: new TreeSet<>(cfgset.getCfg().getProviders().keySet())) {
 			final Map<String, Object> p = new HashMap<>();
-			p.put(Fields.PROVIDER, e.getKey());
-			p.put(Fields.CFG_PROV_ENABLED, e.getValue().isEnabled());
-			p.put(Fields.CFG_PROV_FORCE_LINK_CHOICE, e.getValue().isForceLinkChoice());
-			p.put(Fields.CFG_PROV_FORCE_LOGIN_CHOICE, e.getValue().isForceLoginChoice());
+			final ProviderConfig pcfg = cfgset.getCfg().getProviders().get(pname);
+			p.put(Fields.PROVIDER, pname);
+			p.put(Fields.CFG_PROV_ENABLED, pcfg.isEnabled());
+			p.put(Fields.CFG_PROV_FORCE_LINK_CHOICE, pcfg.isForceLinkChoice());
+			p.put(Fields.CFG_PROV_FORCE_LOGIN_CHOICE, pcfg.isForceLoginChoice());
 			prov.add(p);
 		}
 		ret.put(Fields.CFG_SHOW_STACK_TRACE,
