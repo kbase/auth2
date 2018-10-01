@@ -19,7 +19,6 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 
 public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfig {
 
-	//TODO TEST
 	//TODO JAVADOC
 	
 	private static final String ALLOWED_POST_LOGIN_REDIRECT_PREFIX =
@@ -37,7 +36,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	static {
 		try {
 			SET_DEFAULT = new AuthExternalConfig<>(
-					MT_URL, MT_URL, MT_URL, MT_URL, SET_FALSE, SET_FALSE);
+					new URLSet<>(MT_URL, MT_URL, MT_URL, MT_URL), SET_FALSE, SET_FALSE);
 		} catch (IllegalParameterException e) {
 			throw new RuntimeException("this should be impossible", e);
 		}
@@ -46,69 +45,27 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
 	
-	private final ConfigItem<URL, T> allowedPostLoginRedirectPrefix;
-	private final ConfigItem<URL, T> completeLoginRedirect;
-	private final ConfigItem<URL, T> postLinkRedirect;
-	private final ConfigItem<URL, T> completeLinkRedirect;
+	private final URLSet<T> urlSet;
 	private final ConfigItem<Boolean, T> ignoreIPHeaders;
 	private final ConfigItem<Boolean, T> includeStackTraceInResponse;
 	
 	public AuthExternalConfig(
-			final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
-			final ConfigItem<URL, T> completeLoginRedirect,
-			final ConfigItem<URL, T> postLinkRedirect,
-			final ConfigItem<URL, T> completeLinkRedirect,
+			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
 			final ConfigItem<Boolean, T> includeStackTraceInResponse)
 			throws IllegalParameterException {
-		// nulls indicate no value or no change depending on context
-		nonNull(allowedPostLoginRedirectPrefix, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
-		checkURI(allowedPostLoginRedirectPrefix);
-		this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix; //null ok
-		nonNull(completeLoginRedirect, COMPLETE_LOGIN_REDIRECT);
-		checkURI(completeLoginRedirect);
-		this.completeLoginRedirect = completeLoginRedirect;
-		nonNull(postLinkRedirect, POST_LINK_REDIRECT);
-		checkURI(postLinkRedirect);
-		this.postLinkRedirect = postLinkRedirect;
-		nonNull(completeLinkRedirect, COMPLETE_LINK_REDIRECT);
-		checkURI(completeLinkRedirect);
-		this.completeLinkRedirect = completeLinkRedirect;
+		nonNull(urlSet, "urlSet");
+		this.urlSet = urlSet;
 		nonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
 		this.ignoreIPHeaders = ignoreIPHeaders;
 		nonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
 	}
 
-	private void checkURI(final ConfigItem<URL, T> url)
-			throws IllegalParameterException {
-		if (!url.hasItem()) {
-			return;
-		}
-		try {
-			url.getItem().toURI();
-		} catch (URISyntaxException e) {
-			throw new IllegalParameterException("Illegal URL " + url.getItem().toString() + ": " +
-					e.getMessage(), e);
-		}
-	}
-
-	public ConfigItem<URL, T> getAllowedLoginRedirectPrefix() {
-		return allowedPostLoginRedirectPrefix;
+	public URLSet<T> getURLSet() {
+		return urlSet;
 	}
 	
-	public ConfigItem<URL, T> getCompleteLoginRedirect() {
-		return completeLoginRedirect;
-	}
-	
-	public ConfigItem<URL, T> getPostLinkRedirect() {
-		return postLinkRedirect;
-	}
-	
-	public ConfigItem<URL, T> getCompleteLinkRedirect() {
-		return completeLinkRedirect;
-	}
-
 	public ConfigItem<Boolean, T> isIgnoreIPHeaders() {
 		return ignoreIPHeaders;
 	}
@@ -135,10 +92,11 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	@Override
 	public Map<String, ConfigItem<String, Action>> toMap() {
 		final Map<String, ConfigItem<String, Action>> ret = new HashMap<>();
-		processURL(ret, ALLOWED_POST_LOGIN_REDIRECT_PREFIX, allowedPostLoginRedirectPrefix);
-		processURL(ret, COMPLETE_LOGIN_REDIRECT, completeLoginRedirect);
-		processURL(ret, POST_LINK_REDIRECT, postLinkRedirect);
-		processURL(ret, COMPLETE_LINK_REDIRECT, completeLinkRedirect);
+		processURL(ret, ALLOWED_POST_LOGIN_REDIRECT_PREFIX,
+				urlSet.getAllowedLoginRedirectPrefix());
+		processURL(ret, COMPLETE_LOGIN_REDIRECT, urlSet.getCompleteLoginRedirect());
+		processURL(ret, POST_LINK_REDIRECT, urlSet.getPostLinkRedirect());
+		processURL(ret, COMPLETE_LINK_REDIRECT, urlSet.getCompleteLinkRedirect());
 		processBool(ret, IGNORE_IP_HEADERS, ignoreIPHeaders);
 		processBool(ret, INCLUDE_STACK_TRACE_IN_RESPONSE, includeStackTraceInResponse);
 		return ret;
@@ -173,13 +131,9 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
-		result = prime * result
-				+ ((allowedPostLoginRedirectPrefix == null) ? 0 : allowedPostLoginRedirectPrefix.hashCode());
-		result = prime * result + ((completeLinkRedirect == null) ? 0 : completeLinkRedirect.hashCode());
-		result = prime * result + ((completeLoginRedirect == null) ? 0 : completeLoginRedirect.hashCode());
 		result = prime * result + ((ignoreIPHeaders == null) ? 0 : ignoreIPHeaders.hashCode());
 		result = prime * result + ((includeStackTraceInResponse == null) ? 0 : includeStackTraceInResponse.hashCode());
-		result = prime * result + ((postLinkRedirect == null) ? 0 : postLinkRedirect.hashCode());
+		result = prime * result + ((urlSet == null) ? 0 : urlSet.hashCode());
 		return result;
 	}
 
@@ -196,27 +150,6 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 		@SuppressWarnings("unchecked")
 		AuthExternalConfig<T> other = (AuthExternalConfig<T>) obj;
-		if (allowedPostLoginRedirectPrefix == null) {
-			if (other.allowedPostLoginRedirectPrefix != null) {
-				return false;
-			}
-		} else if (!allowedPostLoginRedirectPrefix.equals(other.allowedPostLoginRedirectPrefix)) {
-			return false;
-		}
-		if (completeLinkRedirect == null) {
-			if (other.completeLinkRedirect != null) {
-				return false;
-			}
-		} else if (!completeLinkRedirect.equals(other.completeLinkRedirect)) {
-			return false;
-		}
-		if (completeLoginRedirect == null) {
-			if (other.completeLoginRedirect != null) {
-				return false;
-			}
-		} else if (!completeLoginRedirect.equals(other.completeLoginRedirect)) {
-			return false;
-		}
 		if (ignoreIPHeaders == null) {
 			if (other.ignoreIPHeaders != null) {
 				return false;
@@ -231,14 +164,126 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		} else if (!includeStackTraceInResponse.equals(other.includeStackTraceInResponse)) {
 			return false;
 		}
-		if (postLinkRedirect == null) {
-			if (other.postLinkRedirect != null) {
+		if (urlSet == null) {
+			if (other.urlSet != null) {
 				return false;
 			}
-		} else if (!postLinkRedirect.equals(other.postLinkRedirect)) {
+		} else if (!urlSet.equals(other.urlSet)) {
 			return false;
 		}
 		return true;
+	}
+	
+	public static class URLSet<T extends ConfigAction> {
+		
+		private final ConfigItem<URL, T> allowedPostLoginRedirectPrefix;
+		private final ConfigItem<URL, T> completeLoginRedirect;
+		private final ConfigItem<URL, T> postLinkRedirect;
+		private final ConfigItem<URL, T> completeLinkRedirect;
+
+		public URLSet(
+				final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
+				final ConfigItem<URL, T> completeLoginRedirect,
+				final ConfigItem<URL, T> postLinkRedirect,
+				final ConfigItem<URL, T> completeLinkRedirect)
+				throws IllegalParameterException {
+			nonNull(allowedPostLoginRedirectPrefix, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
+			checkURI(allowedPostLoginRedirectPrefix);
+			this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix;
+			nonNull(completeLoginRedirect, COMPLETE_LOGIN_REDIRECT);
+			checkURI(completeLoginRedirect);
+			this.completeLoginRedirect = completeLoginRedirect;
+			nonNull(postLinkRedirect, POST_LINK_REDIRECT);
+			checkURI(postLinkRedirect);
+			this.postLinkRedirect = postLinkRedirect;
+			nonNull(completeLinkRedirect, COMPLETE_LINK_REDIRECT);
+			checkURI(completeLinkRedirect);
+			this.completeLinkRedirect = completeLinkRedirect;
+		}
+
+		private void checkURI(final ConfigItem<URL, T> url) throws IllegalParameterException {
+			if (!url.hasItem()) {
+				return;
+			}
+			try {
+				url.getItem().toURI();
+			} catch (URISyntaxException e) {
+				throw new IllegalParameterException("Illegal URL " + url.getItem().toString() +
+						": " + e.getMessage(), e);
+			}
+		}
+		
+		public ConfigItem<URL, T> getAllowedLoginRedirectPrefix() {
+			return allowedPostLoginRedirectPrefix;
+		}
+		
+		public ConfigItem<URL, T> getCompleteLoginRedirect() {
+			return completeLoginRedirect;
+		}
+		
+		public ConfigItem<URL, T> getPostLinkRedirect() {
+			return postLinkRedirect;
+		}
+		
+		public ConfigItem<URL, T> getCompleteLinkRedirect() {
+			return completeLinkRedirect;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result
+					+ ((allowedPostLoginRedirectPrefix == null) ? 0 : allowedPostLoginRedirectPrefix.hashCode());
+			result = prime * result + ((completeLinkRedirect == null) ? 0 : completeLinkRedirect.hashCode());
+			result = prime * result + ((completeLoginRedirect == null) ? 0 : completeLoginRedirect.hashCode());
+			result = prime * result + ((postLinkRedirect == null) ? 0 : postLinkRedirect.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			@SuppressWarnings("unchecked")
+			URLSet<T> other = (URLSet<T>) obj;
+			if (allowedPostLoginRedirectPrefix == null) {
+				if (other.allowedPostLoginRedirectPrefix != null) {
+					return false;
+				}
+			} else if (!allowedPostLoginRedirectPrefix.equals(other.allowedPostLoginRedirectPrefix)) {
+				return false;
+			}
+			if (completeLinkRedirect == null) {
+				if (other.completeLinkRedirect != null) {
+					return false;
+				}
+			} else if (!completeLinkRedirect.equals(other.completeLinkRedirect)) {
+				return false;
+			}
+			if (completeLoginRedirect == null) {
+				if (other.completeLoginRedirect != null) {
+					return false;
+				}
+			} else if (!completeLoginRedirect.equals(other.completeLoginRedirect)) {
+				return false;
+			}
+			if (postLinkRedirect == null) {
+				if (other.postLinkRedirect != null) {
+					return false;
+				}
+			} else if (!postLinkRedirect.equals(other.postLinkRedirect)) {
+				return false;
+			}
+			return true;
+		}
 	}
 
 	public static class AuthExternalConfigMapper implements
@@ -261,8 +306,9 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			final ConfigItem<Boolean, State> includeStack =
 					getBoolean(config, INCLUDE_STACK_TRACE_IN_RESPONSE);
 			try {
-				return new AuthExternalConfig<State>(allowedPostLogin, completeLogin,
-						postLink, completeLink, ignoreIPs, includeStack);
+				return new AuthExternalConfig<State>(
+						new URLSet<>(allowedPostLogin, completeLogin, postLink, completeLink),
+						ignoreIPs, includeStack);
 			} catch (IllegalParameterException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}

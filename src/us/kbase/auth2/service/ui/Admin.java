@@ -82,6 +82,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
+import us.kbase.auth2.service.AuthExternalConfig.URLSet;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
@@ -581,21 +582,19 @@ public class Admin {
 			p.put(Fields.CFG_PROV_FORCE_LOGIN_CHOICE, pcfg.isForceLoginChoice());
 			prov.add(p);
 		}
+		final URLSet<State> urlSet = cfgset.getExtcfg().getURLSet();
 		ret.put(Fields.CFG_SHOW_STACK_TRACE,
 				cfgset.getExtcfg().isIncludeStackTraceInResponseOrDefault());
 		ret.put(Fields.CFG_IGNORE_IP_HEADERS, cfgset.getExtcfg().isIgnoreIPHeadersOrDefault());
-		final ConfigItem<URL, State> loginallowed =
-				cfgset.getExtcfg().getAllowedLoginRedirectPrefix();
+		final ConfigItem<URL, State> loginallowed = urlSet.getAllowedLoginRedirectPrefix();
 		ret.put(Fields.CFG_ALLOWED_LOGIN_REDIRECT,
 				loginallowed.hasItem() ? loginallowed.getItem() : null);
-		final ConfigItem<URL, State> logincomplete =
-				cfgset.getExtcfg().getCompleteLoginRedirect();
+		final ConfigItem<URL, State> logincomplete = urlSet.getCompleteLoginRedirect();
 		ret.put(Fields.CFG_COMPLETE_LOGIN_REDIRECT,
 				logincomplete.hasItem() ? logincomplete.getItem() : null);
-		final ConfigItem<URL, State> postlink = cfgset.getExtcfg().getPostLinkRedirect();
+		final ConfigItem<URL, State> postlink = urlSet.getPostLinkRedirect();
 		ret.put(Fields.CFG_POST_LINK_REDIRECT, postlink.hasItem() ? postlink.getItem() : null);
-		final ConfigItem<URL, State> completelink =
-				cfgset.getExtcfg().getCompleteLinkRedirect();
+		final ConfigItem<URL, State> completelink = urlSet.getCompleteLinkRedirect();
 		ret.put(Fields.CFG_COMPLETE_LINK_REDIRECT,
 				completelink.hasItem() ? completelink.getItem() : null);
 		
@@ -642,7 +641,7 @@ public class Admin {
 		final ConfigItem<Boolean, Action> stack = ConfigItem.set(!nullOrEmpty(showstack));
 		
 		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
-				postlogin, completelogin, postlink, completelink, ignore, stack);
+				new URLSet<>(postlogin, completelogin, postlink, completelink), ignore, stack);
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					AuthConfigUpdate.getBuilder().withLoginAllowed(!nullOrEmpty(allowLogin))
@@ -786,10 +785,11 @@ public class Admin {
 		}
 		config.exceptOnAdditionalProperties();
 		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
-				config.getAllowedLoginURLPrefix(),
-				config.getCompleteLoginURL(),
-				config.getPostLinkURL(),
-				config.getCompleteLinkURL(),
+				new URLSet<>(
+						config.getAllowedLoginURLPrefix(),
+						config.getCompleteLoginURL(),
+						config.getPostLinkURL(),
+						config.getCompleteLinkURL()),
 				config.getIgnoreIP(),
 				config.getShowStack());
 		try {

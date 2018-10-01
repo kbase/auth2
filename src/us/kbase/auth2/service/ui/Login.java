@@ -193,9 +193,9 @@ public class Login {
 			} catch (MalformedURLException | URISyntaxException e) {
 				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
 			}
-			if (ext.getAllowedLoginRedirectPrefix().hasItem()) {
+			if (ext.getURLSet().getAllowedLoginRedirectPrefix().hasItem()) {
 				if (!redirect.startsWith(
-						ext.getAllowedLoginRedirectPrefix().getItem().toString())) {
+						ext.getURLSet().getAllowedLoginRedirectPrefix().getItem().toString())) {
 					throw new IllegalParameterException(
 							"Illegal redirect URL: " + redirect);
 				}
@@ -280,7 +280,7 @@ public class Login {
 		} else {
 			final int age = getMaxCookieAge(lr.getTemporaryToken().get());
 			final URI completeURI = getExternalConfigURI(auth,
-					cfg -> cfg.getCompleteLoginRedirect(), UIPaths.LOGIN_ROOT_CHOICE);
+					cfg -> cfg.getURLSet().getCompleteLoginRedirect(), UIPaths.LOGIN_ROOT_CHOICE);
 			r = Response.seeOther(completeURI)
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken().get()))
 					.cookie(getStateCookie(null))
