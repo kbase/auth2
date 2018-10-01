@@ -652,6 +652,22 @@ public class Admin {
 		}
 	}
 	
+	private ConfigItem<URL, Action> getURL(final String putativeURL)
+			throws IllegalParameterException {
+		final ConfigItem<URL, Action> redirect;
+		if (nullOrEmpty(putativeURL)) {
+			redirect = ConfigItem.remove();
+		} else {
+			try {
+				redirect = ConfigItem.set(new URL(putativeURL));
+				redirect.getItem().toURI(); // check for bad URIs
+			} catch (MalformedURLException | URISyntaxException e) {
+				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
+			}
+		}
+		return redirect;
+	}
+	
 	private static class SetConfig extends IncomingJSON {
 		
 		//TODO UI CODE include all the config parameters
@@ -785,22 +801,6 @@ public class Admin {
 		}
 	}
 
-	private ConfigItem<URL, Action> getURL(final String putativeURL)
-			throws IllegalParameterException {
-		final ConfigItem<URL, Action> redirect;
-		if (nullOrEmpty(putativeURL)) {
-			redirect = ConfigItem.remove();
-		} else {
-			try {
-				redirect = ConfigItem.set(new URL(putativeURL));
-				redirect.getItem().toURI(); // check for bad URIs
-			} catch (MalformedURLException | URISyntaxException e) {
-				throw new IllegalParameterException("Illegal URL: " + putativeURL, e);
-			}
-		}
-		return redirect;
-	}
-	
 	@POST
 	@Path(UIPaths.ADMIN_CONFIG_PROVIDER)
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)

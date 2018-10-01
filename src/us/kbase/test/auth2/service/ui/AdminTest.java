@@ -4,9 +4,11 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -25,8 +27,11 @@ import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -233,4 +238,193 @@ public class AdminTest {
 		}
 	}
 	
+	@Test
+	public void updateBasicNulls() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		admin.updateBasic(headers, null, null,  null, null, null, null, null);
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(false)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.set(false),
+								ConfigItem.set(false)
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateBasicWhitespace() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		admin.updateBasic(headers, "   \t  ", "   \t  ", "   \t  ", "   \t  ", "   \t  ",
+				"   \t  ", "   \t  ");
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(false)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.set(false),
+								ConfigItem.set(false)
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateBasicMaximal() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		admin.updateBasic(headers, "stuff", "s1", "s2", "http://u1.com", "http://u2.com",
+				"http://u3.com", "http://u4.com");
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(true)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.set(new URL("http://u1.com")),
+								ConfigItem.set(new URL("http://u2.com")),
+								ConfigItem.set(new URL("http://u3.com")),
+								ConfigItem.set(new URL("http://u4.com")),
+								ConfigItem.set(true),
+								ConfigItem.set(true)
+								))
+						.build());
+	}
+	
+	@Test
+	public void updateBasicBadURL() throws Exception {
+		final String g = "http://u.com";
+		final String b = "htp://u.com";
+		
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		failUpdateBasic(admin, headers, b, g, g, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateBasic(admin, headers, g, b, g, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateBasic(admin, headers, g, g, b, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failUpdateBasic(admin, headers, g, g, g, b,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+	}
+	
+	@Test
+	public void updateBasicBadURI() throws Exception {
+		final String g = "http://u.com";
+		final String b = "http://u^u.com";
+		
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		failUpdateBasic(admin, headers, b, g, g, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateBasic(admin, headers, g, b, g, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateBasic(admin, headers, g, g, b, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failUpdateBasic(admin, headers, g, g, g, b,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+	}
+	
+	@Test
+	public void updateBasicFailNoTokenProvided() {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie2", new Cookie("kbcookie", "token")));
+		
+		final String g = "http://u.com";
+		
+		failUpdateBasic(admin, headers, g, g, g, g,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void updateBasicFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		doThrow(new InvalidTokenException()).when(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withLoginAllowed(false)
+						.withExternalConfig(new AuthExternalConfig<>(
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.remove(),
+								ConfigItem.set(false),
+								ConfigItem.set(false)))
+						.build());
+		
+		failUpdateBasic(admin, headers, "", "", "", "", new InvalidTokenException());
+	}
+		
+	private void failUpdateBasic(
+			final Admin admin,
+			final HttpHeaders headers,
+			final String allowedloginredirect,
+			final String completeloginredirect,
+			final String postlinkredirect,
+			final String completelinkredirect,
+			final Exception expected) {
+		
+		try {
+			admin.updateBasic(headers, "", "", "", allowedloginredirect, completeloginredirect,
+					postlinkredirect, completelinkredirect);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
 }
