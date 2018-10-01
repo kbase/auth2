@@ -668,7 +668,7 @@ public class Admin {
 		return redirect;
 	}
 	
-	private static class SetConfig extends IncomingJSON {
+	public static class SetConfig extends IncomingJSON {
 		
 		//TODO UI CODE include all the config parameters
 		
@@ -681,7 +681,7 @@ public class Admin {
 		private final String postLinkURL;
 		private final String completeLinkURL;
 		
-		public final List<String> remove;
+		private final List<String> remove;
 		
 		@JsonCreator
 		public SetConfig(
