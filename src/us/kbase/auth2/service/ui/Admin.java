@@ -640,8 +640,9 @@ public class Admin {
 		final ConfigItem<Boolean, Action> ignore = ConfigItem.set(!nullOrEmpty(ignoreip));
 		final ConfigItem<Boolean, Action> stack = ConfigItem.set(!nullOrEmpty(showstack));
 		
-		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
-				new URLSet<>(postlogin, completelogin, postlink, completelink), ignore, stack);
+		final AuthExternalConfig<Action> ext = AuthExternalConfig.getBuilder(
+				new URLSet<>(postlogin, completelogin, postlink, completelink), ignore, stack)
+				.build();
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
 					AuthConfigUpdate.getBuilder().withLoginAllowed(!nullOrEmpty(allowLogin))
@@ -784,14 +785,15 @@ public class Admin {
 			throw new MissingParameterException("JSON body missing");
 		}
 		config.exceptOnAdditionalProperties();
-		final AuthExternalConfig<Action> ext = new AuthExternalConfig<>(
+		final AuthExternalConfig<Action> ext = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						config.getAllowedLoginURLPrefix(),
 						config.getCompleteLoginURL(),
 						config.getPostLinkURL(),
 						config.getCompleteLinkURL()),
 				config.getIgnoreIP(),
-				config.getShowStack());
+				config.getShowStack())
+				.build();
 		try {
 			auth.updateConfig(getToken(token),
 					AuthConfigUpdate.getBuilder().withNullableLoginAllowed(config.getAllowLogin())

@@ -29,18 +29,10 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	private static final String IGNORE_IP_HEADERS = "ignoreIPHeaders";
 	private static final String INCLUDE_STACK_TRACE_IN_RESPONSE = "includeStackTraceInResponse";
 
-	private static final ConfigItem<URL, Action> MT_URL = ConfigItem.remove();
 	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
 
-	public static final AuthExternalConfig<Action> SET_DEFAULT;
-	static {
-		try {
-			SET_DEFAULT = new AuthExternalConfig<>(
-					new URLSet<>(MT_URL, MT_URL, MT_URL, MT_URL), SET_FALSE, SET_FALSE);
-		} catch (IllegalParameterException e) {
-			throw new RuntimeException("this should be impossible", e);
-		}
-	}
+	public static final AuthExternalConfig<Action> SET_DEFAULT = AuthExternalConfig.getBuilder(
+			URLSet.remove(), SET_FALSE, SET_FALSE).build();
 	
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
@@ -49,16 +41,12 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	private final ConfigItem<Boolean, T> ignoreIPHeaders;
 	private final ConfigItem<Boolean, T> includeStackTraceInResponse;
 	
-	public AuthExternalConfig(
+	private AuthExternalConfig(
 			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
-			final ConfigItem<Boolean, T> includeStackTraceInResponse)
-			throws IllegalParameterException {
-		nonNull(urlSet, "urlSet");
+			final ConfigItem<Boolean, T> includeStackTraceInResponse) {
 		this.urlSet = urlSet;
-		nonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
 		this.ignoreIPHeaders = ignoreIPHeaders;
-		nonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
 	}
 
@@ -174,6 +162,37 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return true;
 	}
 	
+	public static <T extends ConfigAction> Builder<T> getBuilder(
+			final URLSet<T> urlSet,
+			final ConfigItem<Boolean, T> ignoreIPHeaders,
+			final ConfigItem<Boolean, T> includeStackTraceInResponse) {
+		return new Builder<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
+	}
+	
+	public static class Builder<T extends ConfigAction> {
+		
+		private final URLSet<T> urlSet;
+		private final ConfigItem<Boolean, T> ignoreIPHeaders;
+		private final ConfigItem<Boolean, T> includeStackTraceInResponse;
+		
+		private Builder(
+				final URLSet<T> urlSet,
+				final ConfigItem<Boolean, T> ignoreIPHeaders,
+				final ConfigItem<Boolean, T> includeStackTraceInResponse) {
+			nonNull(urlSet, "urlSet");
+			this.urlSet = urlSet;
+			nonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
+			this.ignoreIPHeaders = ignoreIPHeaders;
+			nonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
+			this.includeStackTraceInResponse = includeStackTraceInResponse;
+		}
+		
+		public AuthExternalConfig<T> build() {
+			return new AuthExternalConfig<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
+		}
+		
+	}
+	
 	public static class URLSet<T extends ConfigAction> {
 		
 		private final ConfigItem<URL, T> allowedPostLoginRedirectPrefix;
@@ -227,6 +246,27 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		
 		public ConfigItem<URL, T> getCompleteLinkRedirect() {
 			return completeLinkRedirect;
+		}
+		
+		private static final URLSet<Action> NO_ACTION;
+		private static final URLSet<Action> REMOVE;
+		static {
+			final ConfigItem<URL, Action> na = ConfigItem.noAction();
+			final ConfigItem<URL, Action> r = ConfigItem.remove();
+			try {
+				NO_ACTION = new URLSet<>(na, na, na, na);
+				REMOVE = new URLSet<>(r, r, r, r);
+			} catch (IllegalParameterException e) {
+				throw new RuntimeException("Programming error: ", e);
+			}
+		}
+		
+		public static URLSet<Action> noAction() {
+			return NO_ACTION;
+		}
+		
+		public static URLSet<Action> remove() {
+			return REMOVE;
 		}
 
 		@Override
@@ -306,9 +346,9 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			final ConfigItem<Boolean, State> includeStack =
 					getBoolean(config, INCLUDE_STACK_TRACE_IN_RESPONSE);
 			try {
-				return new AuthExternalConfig<State>(
+				return AuthExternalConfig.getBuilder(
 						new URLSet<>(allowedPostLogin, completeLogin, postLink, completeLink),
-						ignoreIPs, includeStack);
+						ignoreIPs, includeStack).build();
 			} catch (IllegalParameterException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}

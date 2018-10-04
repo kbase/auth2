@@ -74,14 +74,15 @@ public class AdminTest {
 		when(auth.getConfig(eq(new IncomingToken("token")), any(AuthExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSetWithUpdateTime<AuthExternalConfig<State>>(
 						new AuthConfig(false, null, null),
-						new AuthExternalConfig<>(
+						AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.emptyState(),
 										ConfigItem.emptyState(),
 										ConfigItem.emptyState(),
 										ConfigItem.emptyState()),
 								ConfigItem.emptyState(),
-								ConfigItem.emptyState()),
+								ConfigItem.emptyState())
+						.build(),
 						45000));
 		
 		assertThat("incorrect config", admin.getConfig(headers, uriInfo), is(MapBuilder.newHashMap()
@@ -122,7 +123,7 @@ public class AdminTest {
 		when(uriInfo.getPath()).thenReturn("/admin/config/token/");
 		
 		when(auth.getConfig(eq(new IncomingToken("token")), any(AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSetWithUpdateTime<AuthExternalConfig<State>>(
+				.thenReturn(new AuthConfigSetWithUpdateTime<>(
 						new AuthConfig(
 								true,
 								ImmutableMap.of(
@@ -135,14 +136,15 @@ public class AdminTest {
 										TokenLifetimeType.LOGIN, 1000 * 24 * 3600 * 84L,
 										TokenLifetimeType.SERV, 1000 * 24 * 3600 * 2L
 								)),
-						new AuthExternalConfig<>(
+						AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.state(new URL("http://u1.com")),
 										ConfigItem.state(new URL("http://u2.com")),
 										ConfigItem.state(new URL("http://u3.com")),
 										ConfigItem.state(new URL("http://u4.com"))),
 								ConfigItem.state(true),
-								ConfigItem.state(true)),
+								ConfigItem.state(true))
+						.build(),
 						52000));
 		
 		assertThat("incorrect config", admin.getConfig(headers, uriInfo), is(MapBuilder.newHashMap()
@@ -261,7 +263,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(false)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.remove(),
 										ConfigItem.remove(),
@@ -269,7 +271,7 @@ public class AdminTest {
 										ConfigItem.remove()),
 								ConfigItem.set(false),
 								ConfigItem.set(false)
-								))
+								).build())
 						.build());
 	}
 	
@@ -291,7 +293,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(false)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.remove(),
 										ConfigItem.remove(),
@@ -299,7 +301,7 @@ public class AdminTest {
 										ConfigItem.remove()),
 								ConfigItem.set(false),
 								ConfigItem.set(false)
-								))
+								).build())
 						.build());
 	}
 	
@@ -321,7 +323,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(true)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.set(new URL("http://u1.com")),
 										ConfigItem.set(new URL("http://u2.com")),
@@ -329,7 +331,7 @@ public class AdminTest {
 										ConfigItem.set(new URL("http://u4.com"))),
 								ConfigItem.set(true),
 								ConfigItem.set(true)
-								))
+								).build())
 						.build());
 	}
 	
@@ -407,14 +409,15 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(false)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.remove(),
 										ConfigItem.remove(),
 										ConfigItem.remove(),
 										ConfigItem.remove()),
 								ConfigItem.set(false),
-								ConfigItem.set(false)))
+								ConfigItem.set(false)
+								).build())
 						.build());
 		
 		failUpdateBasic(admin, headers, "", "", "", "", new InvalidTokenException());
@@ -452,7 +455,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withNullableLoginAllowed(null)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.noAction(),
 										ConfigItem.noAction(),
@@ -460,7 +463,7 @@ public class AdminTest {
 										ConfigItem.noAction()),
 								ConfigItem.noAction(),
 								ConfigItem.noAction()
-								))
+								).build())
 						.build());
 	}
 	
@@ -479,7 +482,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withNullableLoginAllowed(null)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.noAction(),
 										ConfigItem.noAction(),
@@ -487,7 +490,7 @@ public class AdminTest {
 										ConfigItem.noAction()),
 								ConfigItem.noAction(),
 								ConfigItem.noAction()
-								))
+								).build())
 						.build());
 	}
 	
@@ -512,7 +515,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withNullableLoginAllowed(null)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.remove(),
 										ConfigItem.remove(),
@@ -520,7 +523,7 @@ public class AdminTest {
 										ConfigItem.remove()),
 								ConfigItem.remove(),
 								ConfigItem.remove()
-								))
+								).build())
 						.build());
 	}
 	
@@ -538,7 +541,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(true)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.set(new URL("http://u1.com")),
 										ConfigItem.set(new URL("http://u2.com")),
@@ -546,7 +549,7 @@ public class AdminTest {
 										ConfigItem.set(new URL("http://u4.com"))),
 								ConfigItem.set(true),
 								ConfigItem.set(true)
-								))
+								).build())
 						.build());
 	}
 	
@@ -564,7 +567,7 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withLoginAllowed(false)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.set(new URL("http://u1.com")),
 										ConfigItem.set(new URL("http://u2.com")),
@@ -572,7 +575,7 @@ public class AdminTest {
 										ConfigItem.set(new URL("http://u4.com"))),
 								ConfigItem.set(false),
 								ConfigItem.set(false)
-								))
+								).build())
 						.build());
 	}
 	
@@ -680,14 +683,15 @@ public class AdminTest {
 				new IncomingToken("token"),
 				AuthConfigUpdate.getBuilder()
 						.withNullableLoginAllowed(null)
-						.withExternalConfig(new AuthExternalConfig<>(
+						.withExternalConfig(AuthExternalConfig.getBuilder(
 								new URLSet<>(
 										ConfigItem.noAction(),
 										ConfigItem.noAction(),
 										ConfigItem.noAction(),
 										ConfigItem.noAction()),
 								ConfigItem.noAction(),
-								ConfigItem.noAction()))
+								ConfigItem.noAction()
+								).build())
 						.build());
 		
 		final Boolean n = null;
