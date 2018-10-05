@@ -10,6 +10,7 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URL;
 import java.util.Arrays;
@@ -34,6 +35,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.config.ConfigItem;
@@ -69,6 +71,8 @@ public class AdminTest {
 		when(headers.getCookies()).thenReturn(
 				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
 		
+		when(auth.getEnvironments()).thenReturn(Collections.emptySet());
+		
 		when(uriInfo.getPath()).thenReturn("/admin/config/");
 		
 		when(auth.getConfig(eq(new IncomingToken("token")), any(AuthExternalConfigMapper.class)))
@@ -85,26 +89,29 @@ public class AdminTest {
 						.build(),
 						45000));
 		
-		assertThat("incorrect config", admin.getConfig(headers, uriInfo), is(MapBuilder.newHashMap()
-				.with("updatetimesec", 45)
-				.with("allowlogin", false)
-				.with("allowedloginredirect", null)
-				.with("completeloginredirect", null)
-				.with("completelinkredirect", null)
-				.with("postlinkredirect", null)
-				.with("ignoreip", false)
-				.with("showstack", false)
-				.with("tokenlogin", 14L)
-				.with("tokenagent", 7L)
-				.with("tokendev", 90L)
-				.with("tokenserv", 100000000L)
-				.with("tokensugcache", 5L)
-				.with("providers", Collections.emptyList())
-				.with("tokenurl", "token")
-				.with("cfgbasicurl", "basic")
-				.with("providerurl", "provider")
-				.with("reseturl", "reset")
-				.build()));
+		assertThat("incorrect config", admin.getConfig(headers, uriInfo),
+				is(MapBuilder.newHashMap()
+						.with("updatetimesec", 45)
+						.with("allowlogin", false)
+						.with("allowedloginredirect", null)
+						.with("completeloginredirect", null)
+						.with("completelinkredirect", null)
+						.with("postlinkredirect", null)
+						.with("ignoreip", false)
+						.with("showstack", false)
+						.with("tokenlogin", 14L)
+						.with("tokenagent", 7L)
+						.with("tokendev", 90L)
+						.with("tokenserv", 100000000L)
+						.with("tokensugcache", 5L)
+						.with("environments", Collections.emptyList())
+						.with("providers", Collections.emptyList())
+						.with("tokenurl", "token")
+						.with("cfgbasicurl", "basic")
+						.with("providerurl", "provider")
+						.with("reseturl", "reset")
+						.with("environmenturl", "environment")
+						.build()));
 	}
 	
 	@Test
@@ -118,6 +125,8 @@ public class AdminTest {
 		
 		when(headers.getCookies()).thenReturn(
 				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		when(auth.getEnvironments()).thenReturn(set("someenv", "otherenv"));
 		
 		 // this should never actually happen, but why not test it
 		when(uriInfo.getPath()).thenReturn("/admin/config/token/");
@@ -144,40 +153,67 @@ public class AdminTest {
 										ConfigItem.state(new URL("http://u4.com"))),
 								ConfigItem.state(true),
 								ConfigItem.state(true))
+						.withEnvironment("someenv", new URLSet<>(
+								ConfigItem.state(new URL("http://u5.com")),
+								ConfigItem.emptyState(),
+								ConfigItem.state(new URL("http://u7.com")),
+								ConfigItem.state(new URL("http://u8.com"))))
+						.withEnvironment("otherenv", new URLSet<>(
+								ConfigItem.state(new URL("http://u9.com")),
+								ConfigItem.state(new URL("http://u10.com")),
+								ConfigItem.emptyState(),
+								ConfigItem.state(new URL("http://u12.com"))))
 						.build(),
 						52000));
 		
-		assertThat("incorrect config", admin.getConfig(headers, uriInfo), is(MapBuilder.newHashMap()
-				.with("updatetimesec", 52)
-				.with("allowlogin", true)
-				.with("allowedloginredirect", new URL("http://u1.com"))
-				.with("completeloginredirect", new URL("http://u2.com"))
-				.with("completelinkredirect", new URL("http://u4.com"))
-				.with("postlinkredirect", new URL("http://u3.com"))
-				.with("ignoreip", true)
-				.with("showstack", true)
-				.with("tokenlogin", 84L)
-				.with("tokenagent", 8L)
-				.with("tokendev", 42L)
-				.with("tokenserv", 2L)
-				.with("tokensugcache", 7L)
-				.with("providers", Arrays.asList(
-						ImmutableMap.of(
-								"provider", "prov1",
-								"enabled", false,
-								"forceloginchoice", false,
-								"forcelinkchoice", false),
-						ImmutableMap.of(
-								"provider", "prov2",
-								"enabled", true,
-								"forceloginchoice", true,
-								"forcelinkchoice", true)
-						))
-				.with("tokenurl", "")
-				.with("cfgbasicurl", "../basic")
-				.with("providerurl", "../provider")
-				.with("reseturl", "../reset")
-				.build()));
+		assertThat("incorrect config", admin.getConfig(headers, uriInfo),
+				is(MapBuilder.newHashMap()
+						.with("updatetimesec", 52)
+						.with("allowlogin", true)
+						.with("allowedloginredirect", new URL("http://u1.com"))
+						.with("completeloginredirect", new URL("http://u2.com"))
+						.with("completelinkredirect", new URL("http://u4.com"))
+						.with("postlinkredirect", new URL("http://u3.com"))
+						.with("ignoreip", true)
+						.with("showstack", true)
+						.with("tokenlogin", 84L)
+						.with("tokenagent", 8L)
+						.with("tokendev", 42L)
+						.with("tokenserv", 2L)
+						.with("tokensugcache", 7L)
+						.with("environments", Arrays.asList(
+								MapBuilder.newHashMap()
+										.with("environment", "otherenv")
+										.with("allowedloginredirect", new URL("http://u9.com"))
+										.with("completeloginredirect", new URL("http://u10.com"))
+										.with("completelinkredirect", new URL("http://u12.com"))
+										.with("postlinkredirect", null)
+										.build(),
+								MapBuilder.newHashMap()
+										.with("environment", "someenv")
+										.with("allowedloginredirect", new URL("http://u5.com"))
+										.with("completeloginredirect", null)
+										.with("completelinkredirect", new URL("http://u8.com"))
+										.with("postlinkredirect", new URL("http://u7.com"))
+										.build()))
+						.with("providers", Arrays.asList(
+								ImmutableMap.of(
+										"provider", "prov1",
+										"enabled", false,
+										"forceloginchoice", false,
+										"forcelinkchoice", false),
+								ImmutableMap.of(
+										"provider", "prov2",
+										"enabled", true,
+										"forceloginchoice", true,
+										"forcelinkchoice", true)
+								))
+						.with("tokenurl", "")
+						.with("cfgbasicurl", "../basic")
+						.with("providerurl", "../provider")
+						.with("reseturl", "../reset")
+						.with("environmenturl", "../environment")
+						.build()));
 	}
 	
 	@Test
@@ -712,6 +748,213 @@ public class AdminTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
-		
 	}
+	
+	@Test
+	public void configEnvironmentNulls() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		when(auth.getEnvironments()).thenReturn(set("env"));
+		
+		admin.configEnvironment(headers, "env", null, null, null, null);
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withExternalConfig(AuthExternalConfig.getBuilder(
+								URLSet.noAction(), ConfigItem.noAction(), ConfigItem.noAction())
+								.withEnvironment("env", URLSet.remove())
+								.build())
+						.build());
+	}
+	
+	@Test
+	public void configEnvironmentWhitespace() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(auth.getEnvironments()).thenReturn(set("env"));
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		admin.configEnvironment(headers, "env", "   \t   ", "   \t   ", "   \t   ", "   \t   ");
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withExternalConfig(AuthExternalConfig.getBuilder(
+								URLSet.noAction(), ConfigItem.noAction(), ConfigItem.noAction())
+								.withEnvironment("env", URLSet.remove())
+								.build())
+						.build());
+	}
+	
+	@Test
+	public void configEnvironmentMaximal() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(auth.getEnvironments()).thenReturn(set("env"));
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		admin.configEnvironment(headers, "env", "http://u1.com", "http://u2.com",
+				"http://u3.com", "http://u4.com");
+		
+		verify(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withExternalConfig(AuthExternalConfig.getBuilder(
+								URLSet.noAction(), ConfigItem.noAction(), ConfigItem.noAction())
+								.withEnvironment("env", new URLSet<>(
+										ConfigItem.set(new URL("http://u1.com")),
+										ConfigItem.set(new URL("http://u2.com")),
+										ConfigItem.set(new URL("http://u3.com")),
+										ConfigItem.set(new URL("http://u4.com"))))
+								.build())
+						.build());;
+	}
+	
+	@Test
+	public void configEnvBadURL() throws Exception {
+		final String g = "http://u.com";
+		final String b = "htp://u.com";
+		
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(auth.getEnvironments()).thenReturn(set("e"));
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		failConfigEnvironment(admin, headers, "e", b, g, g, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failConfigEnvironment(admin, headers, "e", g, b, g, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failConfigEnvironment(admin, headers, "e", g, g, b, g,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+		failConfigEnvironment(admin, headers, "e", g, g, g, b,
+				new IllegalParameterException("Illegal URL: htp://u.com"));
+	}
+	
+	@Test
+	public void configEnvBadURI() throws Exception {
+		final String g = "http://u.com";
+		final String b = "http://u^u.com";
+		
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		when(auth.getEnvironments()).thenReturn(set("e"));
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		failConfigEnvironment(admin, headers, "e", b, g, g, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failConfigEnvironment(admin, headers, "e", g, b, g, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failConfigEnvironment(admin, headers, "e", g, g, b, g,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+		failConfigEnvironment(admin, headers, "e", g, g, g, b,
+				new IllegalParameterException("Illegal URL: http://u^u.com"));
+	}
+
+	@Test
+	public void configEnvBadEnvironment() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(auth.getEnvironments()).thenReturn(set("foo"));
+		
+		final String g = "http://u.com";
+		failConfigEnvironment(admin, headers, null, g, g, g, g, new NoSuchEnvironmentException(
+				null));
+		failConfigEnvironment(admin, headers, "    \t    ", g, g, g, g,
+				new NoSuchEnvironmentException("    \t    "));
+		failConfigEnvironment(admin, headers, "bar", g, g, g, g,
+				new NoSuchEnvironmentException("bar"));
+	}
+	
+	@Test
+	public void configEnvironmentFailNoTokenProvided() {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(auth.getEnvironments()).thenReturn(set("e"));
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie2", new Cookie("kbcookie", "token")));
+		
+		final String g = "http://u.com";
+		
+		failConfigEnvironment(admin, headers, "e", g, g, g, g,
+				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void configEnvironmentFailInvalidToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(auth.getEnvironments()).thenReturn(set("e"));
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		doThrow(new InvalidTokenException()).when(auth).updateConfig(
+				new IncomingToken("token"),
+				AuthConfigUpdate.getBuilder()
+						.withExternalConfig(AuthExternalConfig.getBuilder(
+								URLSet.noAction(), ConfigItem.noAction(), ConfigItem.noAction())
+								.withEnvironment("e", URLSet.remove())
+								.build())
+						.build());
+		
+		failConfigEnvironment(admin, headers, "e", "", "", "", "", new InvalidTokenException());
+	}
+	
+	private void failConfigEnvironment(
+		final Admin admin,
+		final HttpHeaders headers,
+		final String environment,
+		final String allowedloginredirect,
+		final String completeloginredirect,
+		final String postlinkredirect,
+		final String completelinkredirect,
+		final Exception expected) {
+	
+	try {
+		admin.configEnvironment(headers, environment, allowedloginredirect, completeloginredirect,
+				postlinkredirect, completelinkredirect);
+		fail("expected exception");
+	} catch (Exception got) {
+		TestCommon.assertExceptionCorrect(got, expected);
+	}
+}
 }

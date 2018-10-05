@@ -155,6 +155,9 @@ public class UIPaths {
 	public static final String ADMIN_CONFIG = "config";
 	/** A portion of a path designating the administration of the basic configuration. */
 	public static final String ADMIN_CONFIG_BASIC = ADMIN_CONFIG + SEP + "basic";
+	/** A portion of a path designating the administration of the configuration of an environment.
+	 */
+	public static final String ADMIN_CONFIG_ENVIRONMENT = ADMIN_CONFIG + SEP + "environment";
 	/** A portion of a path designating the administration of the configuration of an identity
 	 * provider.
 	 */
@@ -168,6 +171,9 @@ public class UIPaths {
 	/** The identity provider configuration endpoint location. */
 	public static final String ADMIN_ROOT_CONFIG_PROVIDER = ADMIN_ROOT + SEP +
 			ADMIN_CONFIG_PROVIDER;
+	/** The environment configuration endpoint location. */
+	public static final String ADMIN_ROOT_CONFIG_ENVIRONMENT = ADMIN_ROOT + SEP +
+			ADMIN_CONFIG_ENVIRONMENT;
 	/** The configuration reset endpoint location. */
 	public static final String ADMIN_ROOT_CONFIG_RESET = ADMIN_ROOT + SEP + ADMIN_CONFIG_RESET;
 	/** The token configuration endpoint location. */
