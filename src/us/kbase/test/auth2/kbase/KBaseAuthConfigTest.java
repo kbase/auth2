@@ -84,6 +84,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set()));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
@@ -174,6 +175,7 @@ public class KBaseAuthConfigTest {
 								new URL("https://lor2-2.com"), new URL("https://lir2-2.com"))
 						.build()
 				)));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set("env1", "env2")));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
@@ -224,6 +226,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set()));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
@@ -292,6 +295,7 @@ public class KBaseAuthConfigTest {
 						new URL("https://linkredirect2.com"))
 						.build()
 				)));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));

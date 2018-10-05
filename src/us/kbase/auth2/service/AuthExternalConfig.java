@@ -1,12 +1,15 @@
 package us.kbase.auth2.service;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 import us.kbase.auth2.lib.config.ConfigAction;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
@@ -16,6 +19,7 @@ import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 
 public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfig {
 
@@ -31,8 +35,16 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 
 	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
 
-	public static final AuthExternalConfig<Action> SET_DEFAULT = AuthExternalConfig.getBuilder(
-			URLSet.remove(), SET_FALSE, SET_FALSE).build();
+	public static AuthExternalConfig<Action> getDefaultConfig(final Set<String> environments) {
+		nonNull(environments, "environments");
+		noNulls(environments, "null item in environments");
+		final Builder<Action> b = AuthExternalConfig.getBuilder(
+				URLSet.remove(), SET_FALSE, SET_FALSE);
+		for (final String e: environments) {
+			b.withEnvironment(e, URLSet.remove());
+		}
+		return b.build();
+	}
 	
 	private final static String TRUE = "true";
 	private final static String FALSE = "false";
@@ -40,18 +52,32 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	private final URLSet<T> urlSet;
 	private final ConfigItem<Boolean, T> ignoreIPHeaders;
 	private final ConfigItem<Boolean, T> includeStackTraceInResponse;
+	private final Map<String, URLSet<T>> environments;
 	
 	private AuthExternalConfig(
 			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
-			final ConfigItem<Boolean, T> includeStackTraceInResponse) {
+			final ConfigItem<Boolean, T> includeStackTraceInResponse,
+			final Map<String, URLSet<T>> environments) {
 		this.urlSet = urlSet;
 		this.ignoreIPHeaders = ignoreIPHeaders;
 		this.includeStackTraceInResponse = includeStackTraceInResponse;
+		this.environments = Collections.unmodifiableMap(environments);
 	}
 
 	public URLSet<T> getURLSet() {
 		return urlSet;
+	}
+	
+	public Set<String> getEnvironments() {
+		return environments.keySet();
+	}
+	
+	public URLSet<T> getURLSet(final String environment) throws NoSuchEnvironmentException {
+		if (!environments.containsKey(environment)) {
+			throw new NoSuchEnvironmentException(environment);
+		}
+		return environments.get(environment);
 	}
 	
 	public ConfigItem<Boolean, T> isIgnoreIPHeaders() {
@@ -62,7 +88,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		if (ignoreIPHeaders.getAction().isState() && ignoreIPHeaders.hasItem()) {
 			return ignoreIPHeaders.getItem();
 		}
-		return SET_DEFAULT.isIgnoreIPHeaders().getItem();
+		return SET_FALSE.getItem();
 	}
 
 	public ConfigItem<Boolean, T> isIncludeStackTraceInResponse() {
@@ -74,20 +100,35 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 				includeStackTraceInResponse.hasItem()) {
 			return includeStackTraceInResponse.getItem();
 		}
-		return SET_DEFAULT.isIncludeStackTraceInResponse().getItem();
+		return SET_FALSE.getItem();
 	}
 
 	@Override
 	public Map<String, ConfigItem<String, Action>> toMap() {
 		final Map<String, ConfigItem<String, Action>> ret = new HashMap<>();
-		processURL(ret, ALLOWED_POST_LOGIN_REDIRECT_PREFIX,
-				urlSet.getAllowedLoginRedirectPrefix());
-		processURL(ret, COMPLETE_LOGIN_REDIRECT, urlSet.getCompleteLoginRedirect());
-		processURL(ret, POST_LINK_REDIRECT, urlSet.getPostLinkRedirect());
-		processURL(ret, COMPLETE_LINK_REDIRECT, urlSet.getCompleteLinkRedirect());
+		processURLSet(null, urlSet, ret);
+		for (final String e: environments.keySet()) {
+			processURLSet(e, environments.get(e), ret);
+		}
 		processBool(ret, IGNORE_IP_HEADERS, ignoreIPHeaders);
 		processBool(ret, INCLUDE_STACK_TRACE_IN_RESPONSE, includeStackTraceInResponse);
 		return ret;
+	}
+
+	private void processURLSet(
+			String prefix,
+			final URLSet<T> urlSet,
+			final Map<String, ConfigItem<String, Action>> map) {
+		if (prefix == null) {
+			prefix = "";
+		} else {
+			prefix = prefix + "-";
+		}
+		processURL(map, prefix + ALLOWED_POST_LOGIN_REDIRECT_PREFIX,
+				urlSet.getAllowedLoginRedirectPrefix());
+		processURL(map, prefix + COMPLETE_LOGIN_REDIRECT, urlSet.getCompleteLoginRedirect());
+		processURL(map, prefix + POST_LINK_REDIRECT, urlSet.getPostLinkRedirect());
+		processURL(map, prefix + COMPLETE_LINK_REDIRECT, urlSet.getCompleteLinkRedirect());
 	}
 	
 
@@ -119,6 +160,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	public int hashCode() {
 		final int prime = 31;
 		int result = 1;
+		result = prime * result + ((environments == null) ? 0 : environments.hashCode());
 		result = prime * result + ((ignoreIPHeaders == null) ? 0 : ignoreIPHeaders.hashCode());
 		result = prime * result + ((includeStackTraceInResponse == null) ? 0 : includeStackTraceInResponse.hashCode());
 		result = prime * result + ((urlSet == null) ? 0 : urlSet.hashCode());
@@ -138,6 +180,13 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 		@SuppressWarnings("unchecked")
 		AuthExternalConfig<T> other = (AuthExternalConfig<T>) obj;
+		if (environments == null) {
+			if (other.environments != null) {
+				return false;
+			}
+		} else if (!environments.equals(other.environments)) {
+			return false;
+		}
 		if (ignoreIPHeaders == null) {
 			if (other.ignoreIPHeaders != null) {
 				return false;
@@ -174,6 +223,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		private final URLSet<T> urlSet;
 		private final ConfigItem<Boolean, T> ignoreIPHeaders;
 		private final ConfigItem<Boolean, T> includeStackTraceInResponse;
+		private final Map<String, URLSet<T>> environments = new HashMap<>();
 		
 		private Builder(
 				final URLSet<T> urlSet,
@@ -187,8 +237,18 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			this.includeStackTraceInResponse = includeStackTraceInResponse;
 		}
 		
+		public Builder<T> withEnvironment(final String environment, final URLSet<T> urlSet) {
+			if (environment == null || environment.trim().isEmpty()) {
+				throw new IllegalArgumentException("environment cannot be null or empty");
+			}
+			nonNull(urlSet, "urlSet");
+			this.environments.put(environment, urlSet);
+			return this;
+		}
+		
 		public AuthExternalConfig<T> build() {
-			return new AuthExternalConfig<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
+			return new AuthExternalConfig<>(
+					urlSet, ignoreIPHeaders, includeStackTraceInResponse, environments);
 		}
 		
 	}
@@ -250,12 +310,15 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		
 		private static final URLSet<Action> NO_ACTION;
 		private static final URLSet<Action> REMOVE;
+		private static final URLSet<State> EMPTY_STATE;
 		static {
 			final ConfigItem<URL, Action> na = ConfigItem.noAction();
 			final ConfigItem<URL, Action> r = ConfigItem.remove();
+			final ConfigItem<URL, State> es = ConfigItem.emptyState();
 			try {
 				NO_ACTION = new URLSet<>(na, na, na, na);
 				REMOVE = new URLSet<>(r, r, r, r);
+				EMPTY_STATE = new URLSet<>(es, es, es, es);
 			} catch (IllegalParameterException e) {
 				throw new RuntimeException("Programming error: ", e);
 			}
@@ -267,6 +330,10 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		
 		public static URLSet<Action> remove() {
 			return REMOVE;
+		}
+		
+		public static URLSet<State> emptyState() {
+			return EMPTY_STATE;
 		}
 
 		@Override
@@ -328,27 +395,54 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 
 	public static class AuthExternalConfigMapper implements
 			ExternalConfigMapper<AuthExternalConfig<State>> {
+		
+		private final Set<String> environments;
+		
+		public AuthExternalConfigMapper() {
+			environments = Collections.emptySet();
+		}
+		
+		public AuthExternalConfigMapper(final Set<String> environments) {
+			nonNull(environments, "environments");
+			noNulls(environments, "null item in environments");
+			this.environments = environments;
+		}
 
 		@Override
 		public AuthExternalConfig<State> fromMap(
 				final Map<String, ConfigItem<String, State>> config)
 				throws ExternalConfigMappingException {
-			final ConfigItem<URL, State> allowedPostLogin =
-					getURL(config, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
-			final ConfigItem<URL, State> completeLogin =
-					getURL(config, COMPLETE_LOGIN_REDIRECT);
-			final ConfigItem<URL, State> postLink =
-					getURL(config, POST_LINK_REDIRECT);
-			final ConfigItem<URL, State> completeLink =
-					getURL(config, COMPLETE_LINK_REDIRECT);
 			final ConfigItem<Boolean, State> ignoreIPs =
 					getBoolean(config, IGNORE_IP_HEADERS);
 			final ConfigItem<Boolean, State> includeStack =
 					getBoolean(config, INCLUDE_STACK_TRACE_IN_RESPONSE);
+			final Builder<State> b = AuthExternalConfig.getBuilder(
+					getURLSet(null, config), ignoreIPs, includeStack);
+			for (final String e: environments) {
+				b.withEnvironment(e, getURLSet(e, config));
+			}
+			return b.build();
+		}
+
+		private URLSet<State> getURLSet(
+				String prefix,
+				final Map<String, ConfigItem<String, State>> config)
+				throws ExternalConfigMappingException {
+			if (prefix == null) {
+				prefix = "";
+			} else {
+				prefix = prefix + "-";
+			}
+			final ConfigItem<URL, State> allowedPostLogin =
+					getURL(config, prefix + ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
+			final ConfigItem<URL, State> completeLogin =
+					getURL(config, prefix + COMPLETE_LOGIN_REDIRECT);
+			final ConfigItem<URL, State> postLink =
+					getURL(config, prefix + POST_LINK_REDIRECT);
+			final ConfigItem<URL, State> completeLink =
+					getURL(config, prefix + COMPLETE_LINK_REDIRECT);
 			try {
-				return AuthExternalConfig.getBuilder(
-						new URLSet<>(allowedPostLogin, completeLogin, postLink, completeLink),
-						ignoreIPs, includeStack).build();
+				return new URLSet<>(allowedPostLogin, completeLogin, postLink, completeLink);
 			} catch (IllegalParameterException e) {
 				throw new RuntimeException("This should be impossible", e);
 			}

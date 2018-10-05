@@ -21,4 +21,5 @@ public interface AuthStartupConfig {
 	String getTokenCookieName();
 	Path getPathToTemplateDirectory();
 	boolean isTestModeEnabled();
+	Set<String> getEnvironments();
 }
