@@ -11,6 +11,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.net.URI;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
@@ -111,6 +112,11 @@ public class LoggingFilterTest {
 		@Override
 		public Path getPathToTemplateDirectory() {
 			return Paths.get("templates");
+		}
+
+		@Override
+		public Set<String> getEnvironments() {
+			return Collections.emptySet();
 		}
 	}
 	

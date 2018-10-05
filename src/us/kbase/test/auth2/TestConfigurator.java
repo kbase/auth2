@@ -138,4 +138,9 @@ public class TestConfigurator implements AuthStartupConfig {
 				System.getProperty("AUTH2_TEST_TEMPLATE_DIR") : templatesDir);
 	}
 
+	@Override
+	public Set<String> getEnvironments() {
+		return Collections.emptySet();
+	}
+
 }

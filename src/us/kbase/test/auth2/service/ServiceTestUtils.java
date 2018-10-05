@@ -76,7 +76,7 @@ public class ServiceTestUtils {
 		final String rootpwd = "foobarwhoowhee";
 		when(manager.mockClock.instant()).thenReturn(Instant.now());
 		final Authentication auth = new Authentication(
-				manager.storage, set(), AuthExternalConfig.SET_DEFAULT, false);
+				manager.storage, set(), AuthExternalConfig.getDefaultConfig(set()), false);
 		auth.createRoot(new Password(rootpwd.toCharArray()));
 		final String roottoken = auth.localLogin(UserName.ROOT,
 				new Password(rootpwd.toCharArray()),
@@ -365,8 +365,8 @@ public class ServiceTestUtils {
 		final IdentityProvider prov2 = mock(IdentityProvider.class);
 		when(prov1.getProviderName()).thenReturn("prov1");
 		when(prov2.getProviderName()).thenReturn("prov2");
-		new Authentication(manager.storage, set(prov1, prov2), AuthExternalConfig.SET_DEFAULT,
-				false);
+		new Authentication(manager.storage, set(prov1, prov2),
+				AuthExternalConfig.getDefaultConfig(set()), false);
 	}
 	
 	public static Path generateTempConfigFile(

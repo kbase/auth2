@@ -3,10 +3,12 @@ package us.kbase.test.auth2.service;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URL;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Set;
 
 import org.junit.Test;
 
@@ -19,6 +21,7 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.AuthExternalConfig.URLSet;
@@ -59,6 +62,20 @@ public class AuthExternalConfigTest {
 				is(ConfigItem.remove()));
 		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
 				is(ConfigItem.remove()));
+	}
+	
+	@Test
+	public void URLSetEmptyState() {
+		final URLSet<State> urlSet = URLSet.emptyState();
+		
+		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
+				is(ConfigItem.emptyState()));
+		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
+				is(ConfigItem.emptyState()));
+		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
+				is(ConfigItem.emptyState()));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.emptyState()));
 	}
 	
 	@Test
@@ -170,6 +187,7 @@ public class AuthExternalConfigTest {
 				ConfigItem.noAction(),
 				ConfigItem.noAction(),
 				ConfigItem.noAction())));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect toMap", cfg.toMap(), is(Collections.emptyMap()));
 	}
 	
@@ -191,6 +209,7 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(),
 				is(ConfigItem.remove()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
 				ConfigItem.remove(),
 				ConfigItem.remove(),
@@ -226,6 +245,7 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(),
 				is(ConfigItem.set(true)));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
 				ConfigItem.set(new URL("http://u1.com")),
 				ConfigItem.set(new URL("http://u2.com")),
@@ -259,6 +279,7 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(true));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.emptyState()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
 				ConfigItem.emptyState(),
 				ConfigItem.state(new URL("http://u2.com")),
@@ -302,6 +323,7 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.remove()));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
 				ConfigItem.remove(),
 				ConfigItem.set(new URL("http://u2.com")),
@@ -319,14 +341,79 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
-	public void defaultConfig() throws Exception{
-		final AuthExternalConfig<Action> cfg = AuthExternalConfig.SET_DEFAULT;
+	public void constructWithEnvironments() throws Exception {
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
+				new URLSet<>(
+						ConfigItem.remove(),
+						ConfigItem.set(new URL("http://u2.com")),
+						ConfigItem.noAction(),
+						ConfigItem.set(new URL("http://u4.com"))),
+				ConfigItem.remove(),
+				ConfigItem.set(false))
+				.withEnvironment("e1", new URLSet<>(
+						ConfigItem.noAction(),
+						ConfigItem.set(new URL("http://u6.com")),
+						ConfigItem.remove(),
+						ConfigItem.set(new URL("http://u8.com"))))
+				.withEnvironment("e2", new URLSet<>(
+						ConfigItem.set(new URL("http://u10.com")),
+						ConfigItem.remove(),
+						ConfigItem.set(new URL("http://u16.com")),
+						ConfigItem.noAction()))
+				.build();
+		
+		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
+				is(ConfigItem.set(false)));
+		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
+		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.remove()));
+		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set("e1", "e2")));
+		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u4.com")))));
+		assertThat("incorrect url set", cfg.getURLSet("e1"), is(new URLSet<>(
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u6.com")),
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u8.com")))));
+		assertThat("incorrect url set", cfg.getURLSet("e2"), is(new URLSet<>(
+				ConfigItem.set(new URL("http://u10.com")),
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u16.com")),
+				ConfigItem.noAction())));
+		
+		assertThat("incorrect toMap", cfg.toMap(),
+				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.remove())
+						.with("completeLoginRedirect", ConfigItem.set("http://u2.com"))
+						.with("completeLinkRedirect", ConfigItem.set("http://u4.com"))
+						
+						.with("e1-completeLoginRedirect", ConfigItem.set("http://u6.com"))
+						.with("e1-postLinkRedirect", ConfigItem.remove())
+						.with("e1-completeLinkRedirect", ConfigItem.set("http://u8.com"))
+						
+						.with("e2-allowedPostLoginRedirectPrefix",
+								ConfigItem.set("http://u10.com"))
+						.with("e2-completeLoginRedirect", ConfigItem.remove())
+						.with("e2-postLinkRedirect", ConfigItem.set("http://u16.com"))
+
+						.with("ignoreIPHeaders", ConfigItem.remove())
+						.with("includeStackTraceInResponse", ConfigItem.set("false"))
+						.build()));
+	}
+	
+	@Test
+	public void defaultConfig() throws Exception {
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getDefaultConfig(set());
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.set(false)));
 		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.set(false)));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
 				ConfigItem.remove(),
 				ConfigItem.remove(),
@@ -345,7 +432,46 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
-	public void constructFail() throws Exception {
+	public void defaultConfigWithEnvironments() throws Exception {
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getDefaultConfig(
+				set("env1", "env2"));
+		
+		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
+				is(ConfigItem.set(false)));
+		assertThat("incorrect def trace", cfg.isIncludeStackTraceInResponseOrDefault(), is(false));
+		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.set(false)));
+		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
+		assertThat("incorrect envs", cfg.getEnvironments(), is(set("env1", "env2")));
+		final URLSet<Action> remove = new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove(),
+				ConfigItem.remove());
+		assertThat("incorrect url set", cfg.getURLSet(), is(remove));
+		assertThat("incorrect url set", cfg.getURLSet("env1"), is(remove));
+		assertThat("incorrect url set", cfg.getURLSet("env2"), is(remove));
+		
+		assertThat("incorrect toMap", cfg.toMap(),
+				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.remove())
+						.with("completeLoginRedirect", ConfigItem.remove())
+						.with("postLinkRedirect", ConfigItem.remove())
+						.with("completeLinkRedirect", ConfigItem.remove())
+						.with("env1-allowedPostLoginRedirectPrefix", ConfigItem.remove())
+						.with("env1-completeLoginRedirect", ConfigItem.remove())
+						.with("env1-postLinkRedirect", ConfigItem.remove())
+						.with("env1-completeLinkRedirect", ConfigItem.remove())
+						.with("env2-allowedPostLoginRedirectPrefix", ConfigItem.remove())
+						.with("env2-completeLoginRedirect", ConfigItem.remove())
+						.with("env2-postLinkRedirect", ConfigItem.remove())
+						.with("env2-completeLinkRedirect", ConfigItem.remove())
+						.with("ignoreIPHeaders", ConfigItem.set("false"))
+						.with("includeStackTraceInResponse", ConfigItem.set("false"))
+						.build()));
+	}
+	
+	@Test
+	public void startBuildFail() throws Exception {
 		final ConfigItem<URL, Action> setU = ConfigItem.set(new URL("http://f.com"));
 		final ConfigItem<URL, State> staU = ConfigItem.state(new URL("http://f.com"));
 		final ConfigItem<Boolean, Action> setB = ConfigItem.set(true);
@@ -354,15 +480,15 @@ public class AuthExternalConfigTest {
 		final URLSet<Action> setURL = new URLSet<>(setU, setU, setU, setU);
 		final URLSet<State> staURL = new URLSet<>(staU, staU, staU, staU);
 		
-		failBuild(null, setB, setB,
+		failStartBuild(null, setB, setB,
 				new NullPointerException("urlSet"));
-		failBuild(setURL, null, setB,
+		failStartBuild(setURL, null, setB,
 				new NullPointerException("ignoreIPHeaders"));
-		failBuild(staURL, staB, null,
+		failStartBuild(staURL, staB, null,
 				new NullPointerException("includeStackTraceInResponse"));
 	}
 	
-	private <T extends ConfigAction> void failBuild(
+	private <T extends ConfigAction> void failStartBuild(
 			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
 			final ConfigItem<Boolean, T> includeStackTraceInResponse,
@@ -373,7 +499,59 @@ public class AuthExternalConfigTest {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
 		}
+	}
+	
+	@Test
+	public void withEnvironmentFail() throws Exception {
+		failWithEnvironment(null, URLSet.remove(), new IllegalArgumentException(
+				"environment cannot be null or empty"));
+		failWithEnvironment("   \t   ", URLSet.remove(), new IllegalArgumentException(
+				"environment cannot be null or empty"));
+		failWithEnvironment("e", null, new NullPointerException("urlSet"));
+	}
+	
+	private void failWithEnvironment(
+			final String env,
+			final URLSet<Action> urlSet,
+			final Exception expected) {
+		try {
+			AuthExternalConfig.getBuilder(
+					URLSet.remove(), ConfigItem.remove(), ConfigItem.remove())
+					.withEnvironment(env, urlSet);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
+	public void getURLSetFail() throws Exception {
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
+				URLSet.remove(), ConfigItem.remove(), ConfigItem.remove())
+				.withEnvironment("e", URLSet.noAction())
+				.build();
 		
+		try {
+			cfg.getURLSet("f");
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new NoSuchEnvironmentException("f"));
+		}
+	}
+	
+	@Test
+	public void getDefaultFail() {
+		failDefault(null, new NullPointerException("environments"));
+		failDefault(set("e", null), new NullPointerException("null item in environments"));
+	}
+	
+	private void failDefault(final Set<String> envs, final Exception expected) {
+		try {
+			AuthExternalConfig.getDefaultConfig(envs);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
 	
 	@Test
@@ -389,6 +567,24 @@ public class AuthExternalConfigTest {
 						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
 				ConfigItem.emptyState())
+				.build()));
+	}
+	
+	@Test
+	public void fromMapEmptyWithEnvironments() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper(set("e1", "e2"))
+				.fromMap(Collections.emptyMap());
+		
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
+				new URLSet<>(
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState()),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState())
+				.withEnvironment("e1", URLSet.emptyState())
+				.withEnvironment("e2", URLSet.emptyState())
 				.build()));
 	}
 	
@@ -416,6 +612,42 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
+	public void fromMapMinimalWithEnvironments() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper(set("e1", "e3"))
+				.fromMap(MapBuilder.<String, ConfigItem<String, State>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.emptyState())
+						.with("completeLoginRedirect", ConfigItem.emptyState())
+						.with("postLinkRedirect", ConfigItem.emptyState())
+						.with("completeLinkRedirect", ConfigItem.emptyState())
+						
+						.with("e1-allowedPostLoginRedirectPrefix", ConfigItem.emptyState())
+						.with("e1-completeLoginRedirect", ConfigItem.emptyState())
+						.with("e1-postLinkRedirect", ConfigItem.emptyState())
+						.with("e1-completeLinkRedirect", ConfigItem.emptyState())
+						
+						.with("e3-allowedPostLoginRedirectPrefix", ConfigItem.emptyState())
+						.with("e3-completeLoginRedirect", ConfigItem.emptyState())
+						.with("e3-postLinkRedirect", ConfigItem.emptyState())
+						.with("e3-completeLinkRedirect", ConfigItem.emptyState())
+						
+						.with("ignoreIPHeaders", ConfigItem.emptyState())
+						.with("includeStackTraceInResponse", ConfigItem.emptyState())
+						.build());
+		
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
+				new URLSet<>(
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState(),
+						ConfigItem.emptyState()),
+				ConfigItem.emptyState(),
+				ConfigItem.emptyState())
+				.withEnvironment("e1", URLSet.emptyState())
+				.withEnvironment("e3", URLSet.emptyState())
+				.build()));
+	}
+	
+	@Test
 	public void fromMapMaximal() throws Exception {
 		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper()
 				.fromMap(MapBuilder.<String, ConfigItem<String, State>>newHashMap()
@@ -439,6 +671,67 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
+	public void fromMapMaximalWithEnvironments() throws Exception {
+		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper(set("e2", "e4"))
+				.fromMap(MapBuilder.<String, ConfigItem<String, State>>newHashMap()
+						.with("allowedPostLoginRedirectPrefix", ConfigItem.state("http://u1.com"))
+						.with("completeLoginRedirect", ConfigItem.state("http://u2.com"))
+						.with("postLinkRedirect", ConfigItem.state("http://u3.com"))
+						.with("completeLinkRedirect", ConfigItem.state("http://u4.com"))
+						
+						.with("e2-allowedPostLoginRedirectPrefix",
+								ConfigItem.state("http://u5.com"))
+						.with("e2-completeLoginRedirect", ConfigItem.state("http://u6.com"))
+						.with("e2-postLinkRedirect", ConfigItem.state("http://u7.com"))
+						.with("e2-completeLinkRedirect", ConfigItem.state("http://u8.com"))
+						
+						.with("e4-allowedPostLoginRedirectPrefix",
+								ConfigItem.state("http://u9.com"))
+						.with("e4-completeLoginRedirect", ConfigItem.state("http://u10.com"))
+						.with("e4-postLinkRedirect", ConfigItem.state("http://u11.com"))
+						.with("e4-completeLinkRedirect", ConfigItem.state("http://u12.com"))
+						
+						.with("ignoreIPHeaders", ConfigItem.state("true"))
+						.with("includeStackTraceInResponse", ConfigItem.state("false"))
+						.build());
+		
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
+				new URLSet<>(
+						ConfigItem.state(new URL("http://u1.com")),
+						ConfigItem.state(new URL("http://u2.com")),
+						ConfigItem.state(new URL("http://u3.com")),
+						ConfigItem.state(new URL("http://u4.com"))),
+				ConfigItem.state(true),
+				ConfigItem.state(false))
+				.withEnvironment("e2", new URLSet<>(
+						ConfigItem.state(new URL("http://u5.com")),
+						ConfigItem.state(new URL("http://u6.com")),
+						ConfigItem.state(new URL("http://u7.com")),
+						ConfigItem.state(new URL("http://u8.com"))))
+				.withEnvironment("e4", new URLSet<>(
+						ConfigItem.state(new URL("http://u9.com")),
+						ConfigItem.state(new URL("http://u10.com")),
+						ConfigItem.state(new URL("http://u11.com")),
+						ConfigItem.state(new URL("http://u12.com"))))
+				.build()));
+	}
+	
+	@Test
+	public void constructMapperFail() {
+		failConstructMapper(null, new NullPointerException("environments"));
+		failConstructMapper(set("e", null), new NullPointerException("null item in environments"));
+	}
+	
+	private void failConstructMapper(final Set<String> envs, final Exception expected) {
+		try {
+			new AuthExternalConfigMapper(envs);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void fromMapFailBadURL() {
 		failFromMap(ImmutableMap.of("allowedPostLoginRedirectPrefix",
 				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
@@ -453,6 +746,20 @@ public class AuthExternalConfigTest {
 		failFromMap(ImmutableMap.of("completeLinkRedirect",
 				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
 						"Bad URL for parameter completeLinkRedirect: unknown protocol: htp"));
+		
+		failFromMap(set("e1"), ImmutableMap.of("e1-allowedPostLoginRedirectPrefix",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-allowedPostLoginRedirectPrefix: " +
+						"unknown protocol: htp"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-completeLoginRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-completeLoginRedirect: unknown protocol: htp"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-postLinkRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-postLinkRedirect: unknown protocol: htp"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-completeLinkRedirect",
+				ConfigItem.state("htp://u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-completeLinkRedirect: unknown protocol: htp"));
 	}
 	
 	@Test
@@ -473,10 +780,27 @@ public class AuthExternalConfigTest {
 				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
 						"Bad URL for parameter completeLinkRedirect: Illegal " +
 						"character in authority at index 7: http://u^u.com"));
+		
+		failFromMap(set("e1"), ImmutableMap.of("e1-allowedPostLoginRedirectPrefix",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-allowedPostLoginRedirectPrefix: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-completeLoginRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-completeLoginRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-postLinkRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-postLinkRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
+		failFromMap(set("e1"), ImmutableMap.of("e1-completeLinkRedirect",
+				ConfigItem.state("http://u^u.com")), new ExternalConfigMappingException(
+						"Bad URL for parameter e1-completeLinkRedirect: Illegal " +
+						"character in authority at index 7: http://u^u.com"));
 	}
 	
 	@Test
-	public void fromMapFilBadBoolean() {
+	public void fromMapFailBadBoolean() {
 		failFromMap(ImmutableMap.of("ignoreIPHeaders", ConfigItem.state("foo")),
 				new ExternalConfigMappingException(
 						"Expected value of true or false for parameter ignoreIPHeaders"));
@@ -489,8 +813,19 @@ public class AuthExternalConfigTest {
 	private void failFromMap(
 			final Map<String, ConfigItem<String, State>> map,
 			final Exception expected) {
+		failFromMap(null, map, expected);
+	}
+	
+	private void failFromMap(
+			final Set<String> envs,
+			final Map<String, ConfigItem<String, State>> map,
+			final Exception expected) {
 		try {
-			new AuthExternalConfigMapper().fromMap(map);
+			if (envs == null) {
+				new AuthExternalConfigMapper().fromMap(map);
+			} else {
+				new AuthExternalConfigMapper(envs).fromMap(map);
+			}
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

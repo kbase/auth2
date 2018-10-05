@@ -306,6 +306,14 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	public Set<IdentityProviderConfig> getIdentityProviderConfigs() {
 		return providers;
 	}
+	
+	@Override
+	public Set<String> getEnvironments() {
+		if (providers.isEmpty()) {
+			return Collections.emptySet();
+		}
+		return providers.iterator().next().getEnvironments();
+	}
 
 	@Override
 	public String getMongoHost() {
