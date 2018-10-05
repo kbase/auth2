@@ -603,14 +603,15 @@ public class UIUtilsTest {
 	public void getExternalURI() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(
+				.thenReturn(AuthExternalConfig.getBuilder(
 						new URLSet<>(
 								ConfigItem.state(new URL("http://whee/whoo")),
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState()),
 						ConfigItem.state(false),
-						ConfigItem.state(false)));
+						ConfigItem.state(false))
+						.build());
 		
 		final URI ret = UIUtils.getExternalConfigURI(
 				auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "/foo");
@@ -622,14 +623,15 @@ public class UIUtilsTest {
 	public void getExternalURIDefault() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(
+				.thenReturn(AuthExternalConfig.getBuilder(
 						new URLSet<>(
 								ConfigItem.emptyState(),
 								ConfigItem.state(new URL("http://whee/whoo")),
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState()),
 						ConfigItem.state(false),
-						ConfigItem.state(false)));
+						ConfigItem.state(false))
+						.build());
 		
 		final URI ret = UIUtils.getExternalConfigURI(
 				auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "https://foo");

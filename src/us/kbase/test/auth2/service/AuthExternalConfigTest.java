@@ -34,6 +34,34 @@ public class AuthExternalConfigTest {
 	}
 	
 	@Test
+	public void URLSetNoAction() {
+		final URLSet<Action> urlSet = URLSet.noAction();
+		
+		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
+				is(ConfigItem.noAction()));
+		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
+				is(ConfigItem.noAction()));
+		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
+				is(ConfigItem.noAction()));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.noAction()));
+	}
+	
+	@Test
+	public void URLSetRemove() {
+		final URLSet<Action> urlSet = URLSet.remove();
+		
+		assertThat("incorrect log prefix", urlSet.getAllowedLoginRedirectPrefix(),
+				is(ConfigItem.remove()));
+		assertThat("incorrect login redirect", urlSet.getCompleteLoginRedirect(),
+				is(ConfigItem.remove()));
+		assertThat("incorrect post link redirect", urlSet.getPostLinkRedirect(),
+				is(ConfigItem.remove()));
+		assertThat("incorrect link redirect", urlSet.getCompleteLinkRedirect(),
+				is(ConfigItem.remove()));
+	}
+	
+	@Test
 	public void constructURLSetAction() throws Exception {
 		final URLSet<Action> urlSet = new URLSet<>(
 				ConfigItem.noAction(),
@@ -121,14 +149,15 @@ public class AuthExternalConfigTest {
 	
 	@Test
 	public void constructNoAction() throws Exception {
-		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.noAction(),
 						ConfigItem.noAction(),
 						ConfigItem.noAction(),
 						ConfigItem.noAction()),
 				ConfigItem.noAction(),
-				ConfigItem.noAction());
+				ConfigItem.noAction())
+				.build();
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.noAction()));
@@ -146,14 +175,15 @@ public class AuthExternalConfigTest {
 	
 	@Test
 	public void constructRemove() throws Exception {
-		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.remove(),
 						ConfigItem.remove(),
 						ConfigItem.remove(),
 						ConfigItem.remove()),
 				ConfigItem.remove(),
-				ConfigItem.remove());
+				ConfigItem.remove())
+				.build();
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.remove()));
@@ -180,14 +210,15 @@ public class AuthExternalConfigTest {
 	
 	@Test
 	public void constructSet() throws Exception {
-		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.set(new URL("http://u1.com")),
 						ConfigItem.set(new URL("http://u2.com")),
 						ConfigItem.set(new URL("http://u3.com")),
 						ConfigItem.set(new URL("http://u4.com"))),
 				ConfigItem.set(true),
-				ConfigItem.set(false));
+				ConfigItem.set(false))
+				.build();
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.set(false)));
@@ -214,13 +245,14 @@ public class AuthExternalConfigTest {
 	
 	@Test
 	public void constructState() throws Exception {
-		final AuthExternalConfig<State> cfg = new AuthExternalConfig<>(
+		final AuthExternalConfig<State> cfg = AuthExternalConfig.getBuilder(
 				new URLSet<>(ConfigItem.emptyState(),
 						ConfigItem.state(new URL("http://u2.com")),
 						ConfigItem.state(new URL("http://u3.com")),
 						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
-				ConfigItem.state(true));
+				ConfigItem.state(true))
+				.build();
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.state(true)));
@@ -236,14 +268,15 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect toMap", cfg.toMap(), is(Collections.emptyMap()));
 		
 		// swap the boolean states
-		final AuthExternalConfig<State> cfg2 = new AuthExternalConfig<>(
+		final AuthExternalConfig<State> cfg2 = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.emptyState(),
 						ConfigItem.state(new URL("http://u2.com")),
 						ConfigItem.state(new URL("http://u3.com")),
 						ConfigItem.emptyState()),
 				ConfigItem.state(true),
-				ConfigItem.emptyState());
+				ConfigItem.emptyState())
+				.build();
 		
 		assertThat("incorrect trace", cfg2.isIncludeStackTraceInResponse(),
 				is(ConfigItem.emptyState()));
@@ -254,14 +287,15 @@ public class AuthExternalConfigTest {
 	
 	@Test
 	public void constructMixed() throws Exception {
-		final AuthExternalConfig<Action> cfg = new AuthExternalConfig<>(
+		final AuthExternalConfig<Action> cfg = AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.remove(),
 						ConfigItem.set(new URL("http://u2.com")),
 						ConfigItem.noAction(),
 						ConfigItem.set(new URL("http://u4.com"))),
 				ConfigItem.remove(),
-				ConfigItem.set(false));
+				ConfigItem.set(false))
+				.build();
 		
 		assertThat("incorrect trace", cfg.isIncludeStackTraceInResponse(),
 				is(ConfigItem.set(false)));
@@ -320,21 +354,21 @@ public class AuthExternalConfigTest {
 		final URLSet<Action> setURL = new URLSet<>(setU, setU, setU, setU);
 		final URLSet<State> staURL = new URLSet<>(staU, staU, staU, staU);
 		
-		failConstruct(null, setB, setB,
+		failBuild(null, setB, setB,
 				new NullPointerException("urlSet"));
-		failConstruct(setURL, null, setB,
+		failBuild(setURL, null, setB,
 				new NullPointerException("ignoreIPHeaders"));
-		failConstruct(staURL, staB, null,
+		failBuild(staURL, staB, null,
 				new NullPointerException("includeStackTraceInResponse"));
 	}
 	
-	private <T extends ConfigAction> void failConstruct(
+	private <T extends ConfigAction> void failBuild(
 			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
 			final ConfigItem<Boolean, T> includeStackTraceInResponse,
 			final Exception expected) {
 		try {
-			new AuthExternalConfig<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
+			AuthExternalConfig.getBuilder(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -347,14 +381,15 @@ public class AuthExternalConfigTest {
 		final AuthExternalConfig<State> cfg = new AuthExternalConfigMapper()
 				.fromMap(Collections.emptyMap());
 		
-		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
-				ConfigItem.emptyState())));
+				ConfigItem.emptyState())
+				.build()));
 	}
 	
 	@Test
@@ -369,14 +404,15 @@ public class AuthExternalConfigTest {
 						.with("includeStackTraceInResponse", ConfigItem.emptyState())
 						.build());
 		
-		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState(),
 						ConfigItem.emptyState()),
 				ConfigItem.emptyState(),
-				ConfigItem.emptyState())));
+				ConfigItem.emptyState())
+				.build()));
 	}
 	
 	@Test
@@ -391,14 +427,15 @@ public class AuthExternalConfigTest {
 						.with("includeStackTraceInResponse", ConfigItem.state("false"))
 						.build());
 		
-		assertThat("incorrect config", cfg, is(new AuthExternalConfig<>(
+		assertThat("incorrect config", cfg, is(AuthExternalConfig.getBuilder(
 				new URLSet<>(
 						ConfigItem.state(new URL("http://u1.com")),
 						ConfigItem.state(new URL("http://u2.com")),
 						ConfigItem.state(new URL("http://u3.com")),
 						ConfigItem.state(new URL("http://u4.com"))),
 				ConfigItem.state(true),
-				ConfigItem.state(false))));
+				ConfigItem.state(false))
+				.build()));
 	}
 	
 	@Test

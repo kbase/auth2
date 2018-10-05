@@ -352,14 +352,15 @@ public class ServiceCommonTest {
 	public void isIgnoreIPsInHeaders() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(
+				.thenReturn(AuthExternalConfig.getBuilder(
 						new URLSet<>(
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState(),
 								ConfigItem.emptyState()),
 						ConfigItem.state(false),
-						ConfigItem.state(false)));
+						ConfigItem.state(false))
+						.build());
 		assertThat("incorrect ignore IPs setting", ServiceCommon.isIgnoreIPsInHeaders(auth),
 				is(false));
 	}
