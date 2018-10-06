@@ -209,6 +209,8 @@ public class Fields {
 	public static final String URL_FORCE_RESET = "forcereseturl";
 	/** A url for modifying the basic service configuration. */
 	public static final String URL_CFG_BASIC = "cfgbasicurl";
+	/** A url for modifying an environment configuration. */
+	public static final String URL_ENVIRONMENT = "environmenturl";
 	/** A url for modifying a provider configuration. */
 	public static final String URL_PROVIDER = "providerurl";
 	/** A url for starting the OAuth2 process. */
@@ -261,6 +263,10 @@ public class Fields {
 	
 	/* other */
 	
+	/** The environments */
+	public static final String CFG_ENVIROMENTS = "environments";
+	/** The environment */
+	public static final String CFG_ENVIRONMENT = "environment";
 	/** Whether returned errors should include a stack trace */
 	public static final String CFG_SHOW_STACK_TRACE = "showstack";
 	/** Whether the x-forward-for and x-real-ip headers should be ignored. */

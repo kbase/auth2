@@ -68,6 +68,7 @@ import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -560,11 +561,11 @@ public class Admin {
 			@Context final HttpHeaders headers,
 			@Context final UriInfo uriInfo)
 			throws InvalidTokenException, UnauthorizedException,
-				NoTokenProvidedException, AuthStorageException {
+				NoTokenProvidedException, AuthStorageException, NoSuchEnvironmentException {
 		final AuthConfigSetWithUpdateTime<AuthExternalConfig<State>> cfgset;
 		try {
 			cfgset = auth.getConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
-					new AuthExternalConfigMapper());
+					new AuthExternalConfigMapper(auth.getEnvironments()));
 		} catch (ExternalConfigMappingException e) {
 			throw new RuntimeException(
 					"There's something very wrong in the database config", e);
@@ -582,21 +583,19 @@ public class Admin {
 			p.put(Fields.CFG_PROV_FORCE_LOGIN_CHOICE, pcfg.isForceLoginChoice());
 			prov.add(p);
 		}
+		final List<Map<String, Object>> envs = new ArrayList<>();
+		ret.put(Fields.CFG_ENVIROMENTS, envs);
+		for (final String e: new TreeSet<>(cfgset.getExtcfg().getEnvironments())) {
+			final URLSet<State> urls = cfgset.getExtcfg().getURLSet(e);
+			final Map<String, Object> env = toURLConfigMap(urls);
+			env.put(Fields.ENVIRONMENT, e);
+			envs.add(env);
+		}
 		final URLSet<State> urlSet = cfgset.getExtcfg().getURLSet();
 		ret.put(Fields.CFG_SHOW_STACK_TRACE,
 				cfgset.getExtcfg().isIncludeStackTraceInResponseOrDefault());
 		ret.put(Fields.CFG_IGNORE_IP_HEADERS, cfgset.getExtcfg().isIgnoreIPHeadersOrDefault());
-		final ConfigItem<URL, State> loginallowed = urlSet.getAllowedLoginRedirectPrefix();
-		ret.put(Fields.CFG_ALLOWED_LOGIN_REDIRECT,
-				loginallowed.hasItem() ? loginallowed.getItem() : null);
-		final ConfigItem<URL, State> logincomplete = urlSet.getCompleteLoginRedirect();
-		ret.put(Fields.CFG_COMPLETE_LOGIN_REDIRECT,
-				logincomplete.hasItem() ? logincomplete.getItem() : null);
-		final ConfigItem<URL, State> postlink = urlSet.getPostLinkRedirect();
-		ret.put(Fields.CFG_POST_LINK_REDIRECT, postlink.hasItem() ? postlink.getItem() : null);
-		final ConfigItem<URL, State> completelink = urlSet.getCompleteLinkRedirect();
-		ret.put(Fields.CFG_COMPLETE_LINK_REDIRECT,
-				completelink.hasItem() ? completelink.getItem() : null);
+		ret.putAll(toURLConfigMap(urlSet));
 		
 		ret.put(Fields.CFG_ALLOW_LOGIN, cfgset.getCfg().isLoginAllowed());
 		ret.put(Fields.CFG_TOKEN_CACHE_TIME, cfgset.getCfg().getTokenLifetimeMS(
@@ -614,9 +613,27 @@ public class Admin {
 		
 		ret.put(Fields.URL_CFG_BASIC, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_BASIC));
 		ret.put(Fields.URL_TOKEN, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_TOKEN));
+		ret.put(Fields.URL_ENVIRONMENT, relativize(uriInfo,
+				UIPaths.ADMIN_ROOT_CONFIG_ENVIRONMENT));
 		ret.put(Fields.URL_PROVIDER, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_PROVIDER));
 		ret.put(Fields.URL_RESET, relativize(uriInfo, UIPaths.ADMIN_ROOT_CONFIG_RESET));
 		return ret;
+	}
+
+	private Map<String, Object> toURLConfigMap(final URLSet<State> urlSet) {
+		final Map<String, Object> env = new HashMap<>();
+		final ConfigItem<URL, State> loginAllowed = urlSet.getAllowedLoginRedirectPrefix();
+		env.put(Fields.CFG_ALLOWED_LOGIN_REDIRECT,
+				loginAllowed.hasItem() ? loginAllowed.getItem() : null);
+		final ConfigItem<URL, State> logincomplete = urlSet.getCompleteLoginRedirect();
+		env.put(Fields.CFG_COMPLETE_LOGIN_REDIRECT,
+				logincomplete.hasItem() ? logincomplete.getItem() : null);
+		final ConfigItem<URL, State> postlink = urlSet.getPostLinkRedirect();
+		env.put(Fields.CFG_POST_LINK_REDIRECT, postlink.hasItem() ? postlink.getItem() : null);
+		final ConfigItem<URL, State> completelink = urlSet.getCompleteLinkRedirect();
+		env.put(Fields.CFG_COMPLETE_LINK_REDIRECT,
+				completelink.hasItem() ? completelink.getItem() : null);
+		return env;
 	}
 	
 	@POST
@@ -633,15 +650,13 @@ public class Admin {
 			@FormParam(Fields.CFG_COMPLETE_LINK_REDIRECT) final String completelinkredirect)
 			throws IllegalParameterException, InvalidTokenException,
 				UnauthorizedException, NoTokenProvidedException, AuthStorageException {
-		final ConfigItem<URL, Action> postlogin = getURL(allowedloginredirect);
-		final ConfigItem<URL, Action> completelogin = getURL(completeloginredirect);
-		final ConfigItem<URL, Action> postlink = getURL(postlinkredirect);
-		final ConfigItem<URL, Action> completelink = getURL(completelinkredirect);
+		final URLSet<Action> urlSet = getURLSet(
+				allowedloginredirect, completeloginredirect, postlinkredirect,
+				completelinkredirect);
 		final ConfigItem<Boolean, Action> ignore = ConfigItem.set(!nullOrEmpty(ignoreip));
 		final ConfigItem<Boolean, Action> stack = ConfigItem.set(!nullOrEmpty(showstack));
 		
-		final AuthExternalConfig<Action> ext = AuthExternalConfig.getBuilder(
-				new URLSet<>(postlogin, completelogin, postlink, completelink), ignore, stack)
+		final AuthExternalConfig<Action> ext = AuthExternalConfig.getBuilder(urlSet, ignore, stack)
 				.build();
 		try {
 			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
@@ -650,6 +665,19 @@ public class Admin {
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
+	}
+
+	private URLSet<Action> getURLSet(
+			final String allowedloginredirect,
+			final String completeloginredirect,
+			final String postlinkredirect,
+			final String completelinkredirect)
+			throws IllegalParameterException {
+		final ConfigItem<URL, Action> postlogin = getURL(allowedloginredirect);
+		final ConfigItem<URL, Action> completelogin = getURL(completeloginredirect);
+		final ConfigItem<URL, Action> postlink = getURL(postlinkredirect);
+		final ConfigItem<URL, Action> completelink = getURL(completelinkredirect);
+		return new URLSet<>(postlogin, completelogin, postlink, completelink);
 	}
 	
 	private ConfigItem<URL, Action> getURL(final String putativeURL)
@@ -798,6 +826,39 @@ public class Admin {
 			auth.updateConfig(getToken(token),
 					AuthConfigUpdate.getBuilder().withNullableLoginAllowed(config.getAllowLogin())
 							.withExternalConfig(ext).build());
+		} catch (NoSuchIdentityProviderException e) {
+			throw new RuntimeException("OK, that's not supposed to happen", e);
+		}
+	}
+	
+	@POST
+	@Path(UIPaths.ADMIN_CONFIG_ENVIRONMENT)
+	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
+	public void configEnvironment(
+			@Context final HttpHeaders headers,
+			@FormParam(Fields.CFG_ENVIRONMENT) final String environment,
+			@FormParam(Fields.CFG_ALLOWED_LOGIN_REDIRECT) final String allowedloginredirect,
+			@FormParam(Fields.CFG_COMPLETE_LOGIN_REDIRECT) final String completeloginredirect,
+			@FormParam(Fields.CFG_POST_LINK_REDIRECT) final String postlinkredirect,
+			@FormParam(Fields.CFG_COMPLETE_LINK_REDIRECT) final String completelinkredirect)
+			throws IllegalParameterException, InvalidTokenException, UnauthorizedException,
+				NoTokenProvidedException, AuthStorageException, NoSuchEnvironmentException {
+		
+		if (!auth.getEnvironments().contains(environment)) {
+			throw new NoSuchEnvironmentException(environment);
+		}
+		
+		final URLSet<Action> urlSet = getURLSet(
+				allowedloginredirect, completeloginredirect, postlinkredirect,
+				completelinkredirect);
+		
+		final AuthExternalConfig<Action> ext = AuthExternalConfig.getBuilder(
+				URLSet.noAction(), ConfigItem.noAction(), ConfigItem.noAction())
+				.withEnvironment(environment, urlSet)
+				.build();
+		try {
+			auth.updateConfig(getTokenFromCookie(headers, cfg.getTokenCookieName()),
+					AuthConfigUpdate.getBuilder().withExternalConfig(ext).build());
 		} catch (NoSuchIdentityProviderException e) {
 			throw new RuntimeException("OK, that's not supposed to happen", e);
 		}
