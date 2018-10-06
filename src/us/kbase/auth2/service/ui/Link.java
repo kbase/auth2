@@ -171,7 +171,7 @@ public class Link {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException, NoSuchProviderException,
 				AuthStorageException, LinkFailedException, UnauthorizedException,
-				NoTokenProvidedException {
+				NoTokenProvidedException, NoSuchEnvironmentException {
 		
 		//provider cannot be null or empty here since it's a path param
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -184,7 +184,7 @@ public class Link {
 		} else {
 			checkState(state, retstate);
 			final IncomingToken token = getLinkInProcessToken(userCookie);
-			final LinkToken lt = auth.link(token, provider, authcode);
+			final LinkToken lt = auth.link(token, provider, authcode, null); //TODO NOW pass env
 			if (lt.isLinked()) {
 				tt = Optional.absent();
 			} else {

@@ -59,7 +59,6 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
-import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -726,13 +725,13 @@ public class LoginTest {
 	}
 
 	private RemoteIdentity loginCompleteSetUpProviderMock(final String authcode)
-			throws IdentityRetrievalException {
+			throws Exception {
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
 		final RemoteIdentity remoteIdentity = new RemoteIdentity(
 				new RemoteIdentityID("prov1", "prov1id"),
 				new RemoteIdentityDetails("user", "full", "email@email.com"));
-		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		when(provmock.getIdentities(authcode, false, null)).thenReturn(set(remoteIdentity));
 		return remoteIdentity;
 	}
 	

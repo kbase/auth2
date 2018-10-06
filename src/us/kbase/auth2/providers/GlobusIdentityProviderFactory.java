@@ -156,15 +156,18 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		}
 		
 		@Override
-		public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
-				throws IdentityRetrievalException {
+		public Set<RemoteIdentity> getIdentities(
+				final String authcode,
+				final boolean link,
+				final String environment)
+				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			/* Note authcode only works once. After that globus returns
 			 * {error=invalid_grant}
 			 */
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
-			final String accessToken = getAccessToken(authcode, link);
+			final String accessToken = getAccessToken(authcode, link, environment);
 			final Idents idents = getPrimaryIdentity(accessToken, ignoreSecondaries);
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 					accessToken, idents.secondaryIDs);
@@ -287,14 +290,15 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			return ret;
 		}
 	
-		private String getAccessToken(final String authcode, final boolean link)
-				throws IdentityRetrievalException {
+		private String getAccessToken(
+				final String authcode,
+				final boolean link,
+				final String environment)
+				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			
 			final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
-			formParameters.add("redirect_uri", link ?
-					cfg.getLinkRedirectURL().toString() :
-					cfg.getLoginRedirectURL().toString());
+			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			
 			final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();

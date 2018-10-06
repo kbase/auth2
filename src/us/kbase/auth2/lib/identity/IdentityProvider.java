@@ -39,11 +39,14 @@ public interface IdentityProvider {
 	 * @param authcode the authcode returned from the identity provider on the redirect after
 	 * login.
 	 * @param link whether the authcode was associated with a login or link url.
+	 * @param environment the name of the environment that was used when configuring the redirect
+	 * url. Pass null for the default environment.
 	 * @return the set of identities returned from the provider.
 	 * @throws IdentityRetrievalException if getting the idenities failed.
+	 * @throws NoSuchEnvironmentException if there is no such environment configured. 
 	 */
-	Set<RemoteIdentity> getIdentities(String authcode, boolean link)
-			throws IdentityRetrievalException;
+	Set<RemoteIdentity> getIdentities(String authcode, boolean link, String environment)
+			throws IdentityRetrievalException, NoSuchEnvironmentException;
 	
 	/** Get the names of the additional environments beyond the default environment that are
 	 * configured. See {@link #getLoginURL(String, boolean, String)}.

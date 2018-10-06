@@ -35,6 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
@@ -205,6 +206,14 @@ public class GlobusIdentityProviderTest {
 				"authcode cannot be null or empty"));
 		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
+	}
+	
+	@Test
+	public void noSuchEnvironment() throws Exception {
+		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
+		
+		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	@Test
@@ -502,8 +511,7 @@ public class GlobusIdentityProviderTest {
 					.withPath("/v2/oauth2/token/introspect")
 					.withHeader(ACCEPT, APP_JSON)
 					.withHeader("Authorization", bauth)
-					.withBody(parameterBody
-					),
+					.withBody(parameterBody),
 				Times.exactly(1)
 			).respond(
 				resp
@@ -515,8 +523,17 @@ public class GlobusIdentityProviderTest {
 			final String authcode,
 			final boolean link,
 			final Exception exception) throws Exception {
+		failGetIdentities(idp, authcode, link, null, exception);
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final String env,
+			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link);
+			idp.getIdentities(authcode, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -538,7 +555,8 @@ public class GlobusIdentityProviderTest {
 				"foo",
 				"bar",
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com"));
+				new URL("https://linkredir.com"))
+				.withEnvironment("myenv", new URL("https://lor2.com"), new URL("https://li2.com"));
 		for (final String k: customConfig.keySet()) {
 			b.withCustomConfiguration(k, customConfig.get(k));
 		}
@@ -605,7 +623,7 @@ public class GlobusIdentityProviderTest {
 	}
 	
 	@Test
-	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
+	public void getIdentityWithSecondariesAndLoginURLAndEnvironment() throws Exception {
 		final String authCode = "authcode";
 		final IdentityProviderConfig testIDConfig = getTestIDConfig(
 				ImmutableMap.of("ignore-secondary-identities", "ntrue"));
@@ -614,7 +632,7 @@ public class GlobusIdentityProviderTest {
 		final String token = "footoken";
 		final int respCode = 200;
 
-		setUpCallAuthToken(authCode, token, "https://loginredir.com", bauth);
+		setUpCallAuthToken(authCode, token, "https://lor2.com", bauth);
 		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 						.put("aud", Arrays.asList(testIDConfig.getClientID()))
@@ -633,7 +651,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, "myenv");
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -673,7 +691,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, null);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -704,6 +722,16 @@ public class GlobusIdentityProviderTest {
 
 	@Test
 	public void getIdentityWithoutSecondariesAndLinkURL() throws Exception {
+		getIdentityWithoutSecondariesAndLinkURL(null, "https://linkredir2.com");
+	}
+	
+	@Test
+	public void getIdentityWithoutSecondariesAndLinkURLAndEnvironment() throws Exception {
+		getIdentityWithoutSecondariesAndLinkURL("e1", "https://li.com");
+	}
+
+	private void getIdentityWithoutSecondariesAndLinkURL(final String env, final String linkURL)
+			throws Exception {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
@@ -714,11 +742,12 @@ public class GlobusIdentityProviderTest {
 				"bar2",
 				new URL("https://loginredir2.com"),
 				new URL("https://linkredir2.com"))
+				.withEnvironment("e1", new URL("http://foo.com"), new URL("https://li.com"))
 				.build();
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
 		final String bauth = getBasicAuth(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://linkredir2.com", bauth);
+		setUpCallAuthToken(authCode, "footoken2", linkURL, bauth);
 		setUpCallPrimaryID("footoken2", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("aud", Arrays.asList(clientID),
 					"sub", "anID2",
@@ -726,7 +755,7 @@ public class GlobusIdentityProviderTest {
 					"name", null,
 					"email", null,
 					"identities_set", Arrays.asList("anID2  \n"))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
 				new RemoteIdentityDetails("aUsername2", null, null)));

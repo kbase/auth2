@@ -153,7 +153,10 @@ public class AuthenticationConstructorTest {
 		}
 
 		@Override
-		public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
+		public Set<RemoteIdentity> getIdentities(
+				final String authcode,
+				final boolean link,
+				final String environment)
 				throws IdentityRetrievalException {
 			return Collections.emptySet();
 		}
