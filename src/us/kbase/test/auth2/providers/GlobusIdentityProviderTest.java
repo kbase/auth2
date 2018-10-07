@@ -3,6 +3,7 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockserver.model.NottableString.not;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
@@ -36,6 +37,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory.GlobusIdentityProvider;
@@ -45,8 +47,6 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.test.auth2.TestCommon;
 
 public class GlobusIdentityProviderTest {
-	
-	//TODO TEST ignore secondary identities
 	
 	private static final String CONTENT_TYPE = "content-type";
 	private static final String ACCEPT = "accept";
@@ -492,7 +492,9 @@ public class GlobusIdentityProviderTest {
 					new Parameter("include", "identities_set"),
 					new Parameter("token", authtoken));
 		} else {
-			parameterBody = new ParameterBody(new Parameter("token", authtoken));
+			parameterBody = new ParameterBody(
+					new Parameter("token", authtoken),
+					new Parameter(not("include"), not("identities_set")));
 		}
 		mockClientAndServer.when(
 				new HttpRequest()
@@ -529,15 +531,18 @@ public class GlobusIdentityProviderTest {
 	
 	private IdentityProviderConfig getTestIDConfig(final Map<String, String> customConfig)
 			throws MalformedURLException, IdentityProviderConfigurationException {
-		return IdentityProviderConfig.getBuilder(
+		final Builder b =  IdentityProviderConfig.getBuilder(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
 				"bar",
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com"))
-				.build();
+				new URL("https://linkredir.com"));
+		for (final String k: customConfig.keySet()) {
+			b.withCustomConfiguration(k, customConfig.get(k));
+		}
+		return b.build();
 	}
 
 	private String getBasicAuth(final IdentityProviderConfig idconfig) {
