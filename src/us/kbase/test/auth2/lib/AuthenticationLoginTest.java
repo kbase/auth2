@@ -60,6 +60,7 @@ import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -137,7 +138,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(allowLogin, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(new RemoteIdentity(
+		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
 				.thenReturn(null);
@@ -160,7 +161,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(Instant.ofEpochMilli(30000)).thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", TokenCreationContext.getBuilder()
+		final LoginToken lt = auth.login("prov", "foobar", null, TokenCreationContext.getBuilder()
 				.withNullableAgent("a", "v").build());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
@@ -225,7 +226,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(allowLogin, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(new RemoteIdentity(
+		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
 				.thenReturn(null);
@@ -252,7 +253,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", CTX);
+		final LoginToken lt = auth.login("prov", "foobar", null, CTX);
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000).login(set(storageRemoteID)),
@@ -269,7 +270,8 @@ public class AuthenticationLoginTest {
 	}
 	
 	@Test
-	public void storeUnlinkedIdentity() throws Exception {
+	public void storeUnlinkedIdentityWithEnvironment() throws Exception {
+		// tests non standard environment
 		final IdentityProvider idp = mock(IdentityProvider.class);
 
 		when(idp.getProviderName()).thenReturn("prov");
@@ -290,7 +292,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(new RemoteIdentity(
+		when(idp.getIdentities("foobar", false, "env2")).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
 				.thenReturn(null);
@@ -309,7 +311,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", CTX);
+		final LoginToken lt = auth.login("prov", "foobar", "env2", CTX);
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000).login(set(storageRemoteID)),
@@ -347,7 +349,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(new RemoteIdentity(
+		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -378,7 +380,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", CTX);
+		final LoginToken lt = auth.login("prov", "foobar", null, CTX);
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
@@ -417,7 +419,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(
+		when(idp.getIdentities("foobar", false, null)).thenReturn(set(
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -464,7 +466,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", CTX);
+		final LoginToken lt = auth.login("prov", "foobar", null, CTX);
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
@@ -503,7 +505,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenReturn(set(
+		when(idp.getIdentities("foobar", false, null)).thenReturn(set(
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@g.com")),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -539,7 +541,7 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 			.thenReturn(null);
 		
-		final LoginToken lt = auth.login("prov", "foobar", CTX);
+		final LoginToken lt = auth.login("prov", "foobar", null, CTX);
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
@@ -564,14 +566,14 @@ public class AuthenticationLoginTest {
 		
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
-		failLogin(auth, null, "foo", CTX, new NullPointerException("provider"));
-		failLogin(auth, "   \t  \n   ", "foo", CTX,
+		failLogin(auth, null, "foo", null, CTX, new NullPointerException("provider"));
+		failLogin(auth, "   \t  \n   ", "foo", null, CTX,
 				new NoSuchIdentityProviderException("   \t  \n   "));
-		failLogin(auth, "prov", null, CTX,
+		failLogin(auth, "prov", null, null, CTX,
 				new MissingParameterException("authorization code"));
-		failLogin(auth, "prov", "    \t \n   ", CTX,
+		failLogin(auth, "prov", "    \t \n   ", null, CTX,
 				new MissingParameterException("authorization code"));
-		failLogin(auth, "prov", "foo", null, new NullPointerException("tokenCtx"));
+		failLogin(auth, "prov", "foo", null, null, new NullPointerException("tokenCtx"));
 	}
 	
 	@Test
@@ -582,7 +584,7 @@ public class AuthenticationLoginTest {
 		
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
-		failLogin(auth, "prov1", "foo", CTX, new NoSuchIdentityProviderException("prov1"));
+		failLogin(auth, "prov1", "foo", null, CTX, new NoSuchIdentityProviderException("prov1"));
 	}
 	
 	@Test
@@ -605,7 +607,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		failLogin(auth, "prov", "foo", CTX, new NoSuchIdentityProviderException("prov"));
+		failLogin(auth, "prov", "foo", null, CTX, new NoSuchIdentityProviderException("prov"));
 	}
 	
 	@Test
@@ -628,19 +630,47 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		when(idp.getIdentities("foobar", false)).thenThrow(new IdentityRetrievalException("foo"));
+		when(idp.getIdentities("foobar", false, null)).thenThrow(
+				new IdentityRetrievalException("foo"));
 		
-		failLogin(auth, "prov", "foobar", CTX, new IdentityRetrievalException("foo"));
+		failLogin(auth, "prov", "foobar", null, CTX, new IdentityRetrievalException("foo"));
+	}
+	
+	@Test
+	public void failLoginNoSuchEnvironment() throws Exception {
+		final IdentityProvider idp = mock(IdentityProvider.class);
+
+		when(idp.getProviderName()).thenReturn("prov");
+		
+		final TestMocks testauth = initTestMocks(set(idp));
+		final AuthStorage storage = testauth.storageMock;
+		final Authentication auth = testauth.auth;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"prov", new ProviderConfig(true, false, false));
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(true, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(idp.getIdentities("foobar", false, "env1")).thenThrow(
+				new NoSuchEnvironmentException("env1"));
+		
+		failLogin(auth, "prov", "foobar", "env1", CTX, new NoSuchEnvironmentException("env1"));
 	}
 	
 	private void failLogin(
 			final Authentication auth,
 			final String provider,
 			final String authcode,
+			final String env,
 			final TokenCreationContext ctx,
 			final Exception e) {
 		try {
-			auth.login(provider, authcode, ctx);
+			auth.login(provider, authcode, env, ctx);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

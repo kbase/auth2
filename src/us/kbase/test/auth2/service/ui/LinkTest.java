@@ -444,7 +444,7 @@ public class LinkTest {
 		final String state = "foobarstate";
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true)).thenReturn(set(REMOTE1, REMOTE2));
+		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1, REMOTE2));
 		
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -482,7 +482,7 @@ public class LinkTest {
 		final String state = "foobarstate";
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true)).thenReturn(set(REMOTE1, REMOTE3));
+		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1, REMOTE3));
 		
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -519,7 +519,7 @@ public class LinkTest {
 		final String state = "foobarstate";
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true)).thenReturn(set(REMOTE1));
+		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1));
 		
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -559,7 +559,8 @@ public class LinkTest {
 		final String state = "foobarstate";
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true)).thenReturn(set(REMOTE1, REMOTE2, REMOTE3));
+		when(provmock.getIdentities(authcode, true, null)).thenReturn(
+				set(REMOTE1, REMOTE2, REMOTE3));
 		
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(

@@ -254,7 +254,7 @@ public class Login {
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
 				IllegalParameterException, UnauthorizedException, NoSuchIdentityProviderException,
-				IdentityRetrievalException, AuthenticationException{
+				IdentityRetrievalException, AuthenticationException, NoSuchEnvironmentException{
 		
 		// provider cannot be null or empty since it's a path param
 		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
@@ -269,7 +269,7 @@ public class Login {
 			checkState(state, retstate);
 			final TokenCreationContext tcc = getTokenContext(
 					userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
-			lr = auth.login(provider, authcode, tcc);
+			lr = auth.login(provider, authcode, null, tcc); //TODO NOW pass environment
 		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar

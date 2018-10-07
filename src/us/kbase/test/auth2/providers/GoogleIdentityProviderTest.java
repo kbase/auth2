@@ -29,6 +29,7 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -202,13 +203,30 @@ public class GoogleIdentityProviderTest {
 				"authcode cannot be null or empty"));
 	}
 	
+	@Test
+	public void noSuchEnvironment() throws Exception {
+		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
+		
+		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+	}
+	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
 			final boolean link,
 			final Exception exception) throws Exception {
+		failGetIdentities(idp, authcode, link, null, exception);
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final String env,
+			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link);
+			idp.getIdentities(authcode, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -226,6 +244,7 @@ public class GoogleIdentityProviderTest {
 				"gbar",
 				new URL("https://gloginredir.com"),
 				new URL("https://glinkredir.com"))
+				.withEnvironment("e2", new URL("http://lo.com"), new URL("http://li.com"))
 				.build();
 	}
 	
@@ -394,16 +413,25 @@ public class GoogleIdentityProviderTest {
 	
 	@Test
 	public void getIdentityWithLoginURL() throws Exception {
+		getIdentityWithLoginURL(null, "https://gloginredir.com");
+	}
+
+	@Test
+	public void getIdentityWithLoginURLAndEnvironment() throws Exception {
+		getIdentityWithLoginURL("e2", "http://lo.com");
+	}
+	
+	private void getIdentityWithLoginURL(final String env, final String url) throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken3", "https://gloginredir.com",
+		setUpCallAuthToken(authCode, "footoken3", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
 		setupCallID("footoken3", APP_JSON, 200, MAPPER.writeValueAsString(
 				map("id", "id7", "displayName", null, "emails", Arrays.asList(
 						map("value", "email3")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
@@ -413,6 +441,15 @@ public class GoogleIdentityProviderTest {
 	
 	@Test
 	public void getIdentityWithLinkURL() throws Exception {
+		getIdentityWithLinkURL(null, "https://glinkredir2.com");
+	}
+
+	@Test
+	public void getIdentityWithLinkURLAndEnvironment() throws Exception {
+		getIdentityWithLinkURL("e2", "http://li2.com");
+	}
+
+	private void getIdentityWithLinkURL(final String env, final String url) throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				GoogleIdentityProviderFactory.class.getName(),
@@ -422,15 +459,16 @@ public class GoogleIdentityProviderTest {
 				"bar2",
 				new URL("https://gloginredir2.com"),
 				new URL("https://glinkredir2.com"))
+				.withEnvironment("e2", new URL("http://lo.com"), new URL("http://li2.com"))
 				.build();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://glinkredir2.com",
+		setUpCallAuthToken(authCode, "footoken2", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
 		setupCallID("footoken2", APP_JSON, 200, MAPPER.writeValueAsString(
 				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
 						map("value", "email1")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),

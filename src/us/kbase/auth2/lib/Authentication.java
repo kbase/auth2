@@ -1689,6 +1689,8 @@ public class Authentication {
 	 * 
 	 * @param provider the name of the identity provider that is servicing the login request.
 	 * @param authcode the authcode provided by the provider.
+	 * @param environment the environment in which the login request is occurring. Null for the
+	 * default environment.
 	 * @param tokenCtx the context under which the token will be created.
 	 * @return either a login token or temporary token.
 	 * @throws MissingParameterException if the authcode is missing.
@@ -1696,19 +1698,21 @@ public class Authentication {
 	 * from the provider.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
+	 * @throws NoSuchEnvironmentException if no such environment is configured. 
 	 */
 	public LoginToken login(
 			final String provider,
 			final String authcode,
+			final String environment,
 			final TokenCreationContext tokenCtx)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException {
+			AuthStorageException, NoSuchIdentityProviderException, NoSuchEnvironmentException {
 		nonNull(tokenCtx, "tokenCtx");
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false, environment);
 		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken token;
@@ -2356,17 +2360,6 @@ public class Authentication {
 		return storeTemporarySessionData(data);
 	}
 	
-	private Set<RemoteIdentity> getLinkCandidates(
-			final IdentityProvider idp,
-			final String authcode)
-			throws NoSuchIdentityProviderException, AuthStorageException,
-			MissingParameterException, IdentityRetrievalException {
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
-		return idp.getIdentities(authcode, true);
-	}
-	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider.
 	 * If the information returned from the identity provider allows the link to occur
@@ -2388,6 +2381,8 @@ public class Authentication {
 	 * {@link #linkStart(IncomingToken, int)}.
 	 * @param provider the name of the identity provider that is servicing the link request.
 	 * @param authcode the authcode provided by the provider.
+	 * @param environment the environment in which the link request is proceeding. Null for the
+	 * default environment.
 	 * @return a temporary token if required.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws MissingParameterException if the authcode is missing.
@@ -2400,15 +2395,20 @@ public class Authentication {
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws IdentityProviderErrorException if the incoming token is associated with an
 	 * identity provider error.
+	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider. 
 	 */
 	public LinkToken link(
 			final IncomingToken token,
 			final String provider,
-			final String authcode)
+			final String authcode,
+			final String environment)
 			throws InvalidTokenException, AuthStorageException,
 				MissingParameterException, IdentityRetrievalException,
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
-				UnauthorizedException, IdentityProviderErrorException {
+				UnauthorizedException, IdentityProviderErrorException, NoSuchEnvironmentException {
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new MissingParameterException("authorization code");
+		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final TemporarySessionData tids = getTemporaryIdentities(
 				Optional.absent(), Operation.LINKSTART, token);
@@ -2420,7 +2420,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
+		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true, environment);
 		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
 		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
