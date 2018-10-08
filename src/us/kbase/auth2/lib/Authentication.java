@@ -1660,7 +1660,7 @@ public class Authentication {
 	 * @return A login token. In this case the token will always be a temporary token so the
 	 * control flow can be returned to the UI before returning an error.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @see #login(String, String, TokenCreationContext)
+	 * @see #login(String, String, String, TokenCreationContext)
 	 */
 	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
@@ -1769,7 +1769,7 @@ public class Authentication {
 
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after
-	 * {@link #login(String, String, TokenCreationContext)}.
+	 * {@link #login(String, String, String, TokenCreationContext)}.
 	 * After user interaction is completed, a new user can be created via
 	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, TokenCreationContext, boolean)}
 	 * or the login can complete via
@@ -2502,7 +2502,8 @@ public class Authentication {
 	}
 	
 	/** Get the current state of a linking process associated with a temporary token.
-	 * This method is expected to be called after {@link #link(IncomingToken, String, String)}.
+	 * This method is expected to be called after
+	 * {@link #link(IncomingToken, String, String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, String)} or
 	 * {@link #linkAll(IncomingToken, IncomingToken)}.
