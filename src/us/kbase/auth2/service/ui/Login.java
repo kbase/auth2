@@ -181,37 +181,34 @@ public class Login {
 	
 	private URL getRedirectURL(final String environment, final String redirect)
 			throws AuthStorageException, IllegalParameterException, NoSuchEnvironmentException {
-		final URL retRedirect;
 		if (nullOrEmpty(redirect)) {
-			retRedirect = null;
-		} else {
-			final URL url;
-			try {
-				url = new URL(redirect);
-				url.toURI();
-			} catch (MalformedURLException | URISyntaxException e) {
-				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
-			}
-			final AuthExternalConfig<State> ext;
-			try {
-				ext = auth.getExternalConfig(new AuthExternalConfigMapper(auth.getEnvironments()));
-			} catch (ExternalConfigMappingException e) {
-				throw new RuntimeException("Dude, like, what just happened?", e);
-			}
-			final ConfigItem<URL, State> login = ext.getURLSetOrDefault(environment)
-					.getAllowedLoginRedirectPrefix();
-			if (login.hasItem()) {
-				if (!redirect.startsWith(login.getItem().toString())) {
-					throw new IllegalParameterException(
-							"Illegal redirect URL: " + redirect);
-				}
-			} else {
-				throw new IllegalParameterException("Post-login redirects are not enabled" +
-						(environment == null ? "" : " for environment " + environment));
-			}
-			retRedirect = url;
+			return null;
 		}
-		return retRedirect;
+		final URL url;
+		try {
+			url = new URL(redirect);
+			url.toURI();
+		} catch (MalformedURLException | URISyntaxException e) {
+			throw new IllegalParameterException("Illegal redirect URL: " + redirect);
+		}
+		final AuthExternalConfig<State> ext;
+		try {
+			ext = auth.getExternalConfig(new AuthExternalConfigMapper(auth.getEnvironments()));
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		final ConfigItem<URL, State> login = ext.getURLSetOrDefault(environment)
+				.getAllowedLoginRedirectPrefix();
+		if (login.hasItem()) {
+			if (!redirect.startsWith(login.getItem().toString())) {
+				throw new IllegalParameterException(
+						"Illegal redirect URL: " + redirect);
+			}
+		} else {
+			throw new IllegalParameterException("Post-login redirects are not enabled" +
+					(environment == null ? "" : " for environment " + environment));
+		}
+		return url;
 	}
 
 	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
