@@ -37,7 +37,7 @@ import us.kbase.auth2.lib.token.IncomingToken;
  * configuration (when parameterized with {@link Action}.
  * 
  * The configuration supports sets of redirect urls for multiple environments - see
- * {@link Builder#withEnvironment(String, us.kbase.auth2.service.AuthExternalConfig.URLSet)}
+ * {@link Builder#withEnvironment(String, AuthExternalConfig.URLSet)}
  * 
  * @author gaprice@lbl.gov
  *
@@ -91,7 +91,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		this.environments = Collections.unmodifiableMap(environments);
 	}
 
-	/** Get the set of URLs for the default enviroments.
+	/** Get the set of URLs for the default environment.
 	 * @return the URL set.
 	 */
 	public URLSet<T> getURLSet() {
@@ -531,7 +531,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 	}
 
-	/** Get a mapper that maps a string -> {@link ConfigItem} map to an {@link AuthExternalConfig}.
+	/** A mapper that maps a string -> {@link ConfigItem} map to an {@link AuthExternalConfig}.
 	 * Reverses the effects of {@link AuthExternalConfig#toMap()}.
 	 * @author gaprice@lbl.gov
 	 *
