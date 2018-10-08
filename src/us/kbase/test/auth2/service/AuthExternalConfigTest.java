@@ -33,6 +33,7 @@ public class AuthExternalConfigTest {
 	@Test
 	public void equals() {
 		EqualsVerifier.forClass(AuthExternalConfig.class).usingGetClass().verify();
+		EqualsVerifier.forClass(AuthExternalConfigMapper.class).usingGetClass().verify();
 		EqualsVerifier.forClass(URLSet.class).usingGetClass().verify();
 	}
 	
@@ -187,6 +188,7 @@ public class AuthExternalConfigTest {
 				ConfigItem.noAction(),
 				ConfigItem.noAction(),
 				ConfigItem.noAction())));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(URLSet.noAction()));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect toMap", cfg.toMap(), is(Collections.emptyMap()));
 	}
@@ -215,6 +217,7 @@ public class AuthExternalConfigTest {
 				ConfigItem.remove(),
 				ConfigItem.remove(),
 				ConfigItem.remove())));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(URLSet.remove()));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -251,6 +254,11 @@ public class AuthExternalConfigTest {
 				ConfigItem.set(new URL("http://u2.com")),
 				ConfigItem.set(new URL("http://u3.com")),
 				ConfigItem.set(new URL("http://u4.com")))));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(new URLSet<>(
+				ConfigItem.set(new URL("http://u1.com")),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.set(new URL("http://u3.com")),
+				ConfigItem.set(new URL("http://u4.com")))));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -281,6 +289,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.emptyState(),
+				ConfigItem.state(new URL("http://u2.com")),
+				ConfigItem.state(new URL("http://u3.com")),
+				ConfigItem.emptyState())));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(new URLSet<>(
 				ConfigItem.emptyState(),
 				ConfigItem.state(new URL("http://u2.com")),
 				ConfigItem.state(new URL("http://u3.com")),
@@ -325,6 +338,11 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
 		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u4.com")))));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(new URLSet<>(
 				ConfigItem.remove(),
 				ConfigItem.set(new URL("http://u2.com")),
 				ConfigItem.noAction(),
@@ -383,6 +401,21 @@ public class AuthExternalConfigTest {
 				ConfigItem.remove(),
 				ConfigItem.set(new URL("http://u16.com")),
 				ConfigItem.noAction())));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(new URLSet<>(
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u2.com")),
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u4.com")))));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault("e1"), is(new URLSet<>(
+				ConfigItem.noAction(),
+				ConfigItem.set(new URL("http://u6.com")),
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u8.com")))));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault("e2"), is(new URLSet<>(
+				ConfigItem.set(new URL("http://u10.com")),
+				ConfigItem.remove(),
+				ConfigItem.set(new URL("http://u16.com")),
+				ConfigItem.noAction())));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -414,11 +447,8 @@ public class AuthExternalConfigTest {
 		assertThat("incorrect headers", cfg.isIgnoreIPHeaders(), is(ConfigItem.set(false)));
 		assertThat("incorrect def headers", cfg.isIgnoreIPHeadersOrDefault(), is(false));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
-		assertThat("incorrect url set", cfg.getURLSet(), is(new URLSet<>(
-				ConfigItem.remove(),
-				ConfigItem.remove(),
-				ConfigItem.remove(),
-				ConfigItem.remove())));
+		assertThat("incorrect url set", cfg.getURLSet(), is(URLSet.remove()));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(URLSet.remove()));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -448,8 +478,11 @@ public class AuthExternalConfigTest {
 				ConfigItem.remove(),
 				ConfigItem.remove());
 		assertThat("incorrect url set", cfg.getURLSet(), is(remove));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault(null), is(URLSet.remove()));
 		assertThat("incorrect url set", cfg.getURLSet("env1"), is(remove));
 		assertThat("incorrect url set", cfg.getURLSet("env2"), is(remove));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault("env1"), is(URLSet.remove()));
+		assertThat("incorrect url set", cfg.getURLSetOrDefault("env2"), is(URLSet.remove()));
 		
 		assertThat("incorrect toMap", cfg.toMap(),
 				is(MapBuilder.<String, ConfigItem<String, Action>>newHashMap()
@@ -530,12 +563,36 @@ public class AuthExternalConfigTest {
 				URLSet.remove(), ConfigItem.remove(), ConfigItem.remove())
 				.withEnvironment("e", URLSet.noAction())
 				.build();
+
+		failGetURLSet(cfg, null, new NoSuchEnvironmentException(null));
+		failGetURLSet(cfg, "   \t  ", new NoSuchEnvironmentException("   \t  "));
+		failGetURLSet(cfg, "f", new NoSuchEnvironmentException("f"));
 		
+		failGetURLSetOrDefault(cfg, "   \t  ", new NoSuchEnvironmentException("   \t  "));
+		failGetURLSetOrDefault(cfg, "f", new NoSuchEnvironmentException("f"));
+	}
+	
+	private void failGetURLSet(
+			final AuthExternalConfig<Action> cfg,
+			final String environment,
+			final Exception expected) {
 		try {
-			cfg.getURLSet("f");
+			cfg.getURLSet(environment);
 			fail("expected exception");
 		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, new NoSuchEnvironmentException("f"));
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	private void failGetURLSetOrDefault(
+			final AuthExternalConfig<Action> cfg,
+			final String environment,
+			final Exception expected) {
+		try {
+			cfg.getURLSetOrDefault(environment);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 	
