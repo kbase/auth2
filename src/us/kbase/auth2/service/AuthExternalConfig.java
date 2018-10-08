@@ -363,7 +363,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		 * the redirect URL to used when the login flow cannot be completed immediately after
 		 * return from the 3rd party identity provider and control must be returned to the UI
 		 * for user input.
-		 * @param postLinkRedirect either the state of a change action for the redirect URL to
+		 * @param postLinkRedirect either the state or a change action for the redirect URL to
 		 * be used after the linking process is complete.
 		 * @param completeLinkRedirect either the state or a change action for
 		 * the redirect URL to used when the link flow cannot be completed immediately after
