@@ -4,6 +4,7 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Collections;
@@ -11,6 +12,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ConfigAction;
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
@@ -20,11 +23,29 @@ import us.kbase.auth2.lib.config.ExternalConfigMapper;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
+import us.kbase.auth2.lib.token.IncomingToken;
 
+/** Configuration items for the auth service UI.
+ * 
+ * The core auth code does not use these configuration items - only the UI is aware of and cares
+ * about them. The UI can retrieve the state via
+ * {@link Authentication#getExternalConfig(ExternalConfigMapper)} and modify the state via
+ * {@link Authentication#updateConfig(IncomingToken, AuthConfigUpdate)}
+ * 
+ * This class can represent either the state of the configuration (when parameterized with
+ * {@link State} or actions to be taken to modify the
+ * configuration (when parameterized with {@link Action}.
+ * 
+ * The configuration supports sets of redirect urls for multiple environments - see
+ * {@link Builder#withEnvironment(String, us.kbase.auth2.service.AuthExternalConfig.URLSet)}
+ * 
+ * @author gaprice@lbl.gov
+ *
+ * @param <T> Either {@link State} for the state of the configuration, or {@link Action} to
+ * specify a change to the configuration.
+ */
 public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfig {
 
-	//TODO JAVADOC
-	
 	private static final String ALLOWED_POST_LOGIN_REDIRECT_PREFIX =
 			"allowedPostLoginRedirectPrefix";
 	private static final String COMPLETE_LOGIN_REDIRECT = "completeLoginRedirect";
@@ -35,6 +56,11 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 
 	private static final ConfigItem<Boolean, Action> SET_FALSE = ConfigItem.set(false);
 
+	/** Get a default configuration. The default is that no URL are configured, and all 
+	 * boolean parameters are set to false.
+	 * @param environments the environments to configure.
+	 * @return the configuration.
+	 */
 	public static AuthExternalConfig<Action> getDefaultConfig(final Set<String> environments) {
 		nonNull(environments, "environments");
 		noNulls(environments, "null item in environments");
@@ -65,14 +91,25 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		this.environments = Collections.unmodifiableMap(environments);
 	}
 
+	/** Get the set of URLs for the default enviroments.
+	 * @return the URL set.
+	 */
 	public URLSet<T> getURLSet() {
 		return urlSet;
 	}
 	
+	/** Get the set of environments for this configuration.
+	 * @return the environments.
+	 */
 	public Set<String> getEnvironments() {
 		return environments.keySet();
 	}
 	
+	/** Get the set of URLs for a specific environment.
+	 * @param environment the environment name.
+	 * @return the URLs.
+	 * @throws NoSuchEnvironmentException if no such environment exists.
+	 */
 	public URLSet<T> getURLSet(final String environment) throws NoSuchEnvironmentException {
 		if (!environments.containsKey(environment)) {
 			throw new NoSuchEnvironmentException(environment);
@@ -80,7 +117,12 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return environments.get(environment);
 	}
 	
-	// null == return default
+	/** Get the set of URLs for a specific environment, or the default environment if null is
+	 * passed.
+	 * @param environment the environment name or null for the default environment.
+	 * @return the URLs.
+	 * @throws NoSuchEnvironmentException if no such environment exists.
+	 */
 	public URLSet<T> getURLSetOrDefault(final String environment)
 			throws NoSuchEnvironmentException {
 		if (environment == null) {
@@ -89,10 +131,18 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return getURLSet(environment);
 	}
 	
+	/** Get the state or a configuration change action for whether the X-Real-IP and
+	 * X-Forwarded-For headers should be ignored when determining a requests's IP address.
+	 * @return the state or action.
+	 */
 	public ConfigItem<Boolean, T> isIgnoreIPHeaders() {
 		return ignoreIPHeaders;
 	}
 	
+	/** If the configuration class is state-parameterized and the ignore IP headers configuration
+	 * item is present, returns its value. Otherwise returns false.
+	 * @return the value of the ignore IP headers configuration item.
+	 */
 	public boolean isIgnoreIPHeadersOrDefault() {
 		if (ignoreIPHeaders.getAction().isState() && ignoreIPHeaders.hasItem()) {
 			return ignoreIPHeaders.getItem();
@@ -100,10 +150,18 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return SET_FALSE.getItem();
 	}
 
+	/** Get the state or a configuration change action for whether the full stack trace should
+	 * be returned to users on error in the service response.
+	 * @return the state or action.
+	 */
 	public ConfigItem<Boolean, T> isIncludeStackTraceInResponse() {
 		return includeStackTraceInResponse;
 	}
-	
+
+	/** If the configuration class is state-parameterized and the include stack trace configuration
+	 * item is present, returns its value. Otherwise returns false.
+	 * @return the value of the ignore IP headers configuration item.
+	 */
 	public boolean isIncludeStackTraceInResponseOrDefault() {
 		if (includeStackTraceInResponse.getAction().isState() &&
 				includeStackTraceInResponse.hasItem()) {
@@ -220,6 +278,14 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return true;
 	}
 	
+	/** Get a builder for an {@link AuthExternalConfig}.
+	 * @param urlSet the set of urls for the default environment.
+	 * @param ignoreIPHeaders either the state or a change action for the ignore IP headers
+	 * configuration item (see {@link #isIgnoreIPHeaders()}).
+	 * @param includeStackTraceInResponse either the state or a change action for the include
+	 * stack trace configuration item (see {@link #isIncludeStackTraceInResponse()}).
+	 * @return a new builder.
+	 */
 	public static <T extends ConfigAction> Builder<T> getBuilder(
 			final URLSet<T> urlSet,
 			final ConfigItem<Boolean, T> ignoreIPHeaders,
@@ -227,6 +293,12 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return new Builder<>(urlSet, ignoreIPHeaders, includeStackTraceInResponse);
 	}
 	
+	/** A builder for an {@link AuthExternalConfig}.
+	 * @author gaprice@lbl.gov
+	 *
+	 * @param <T> Either {@link State} for the state of the configuration, or {@link Action} to
+	 * specify a change to the configuration.
+	 */
 	public static class Builder<T extends ConfigAction> {
 		
 		private final URLSet<T> urlSet;
@@ -246,6 +318,11 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			this.includeStackTraceInResponse = includeStackTraceInResponse;
 		}
 		
+		/** Add an environment to the builder.
+		 * @param environment the name of the environment.
+		 * @param urlSet the url set for the environment.
+		 * @return this builder.
+		 */
 		public Builder<T> withEnvironment(final String environment, final URLSet<T> urlSet) {
 			if (environment == null || environment.trim().isEmpty()) {
 				throw new IllegalArgumentException("environment cannot be null or empty");
@@ -255,6 +332,9 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			return this;
 		}
 		
+		/** Build the {@link AuthExternalConfig}.
+		 * @return the config.
+		 */
 		public AuthExternalConfig<T> build() {
 			return new AuthExternalConfig<>(
 					urlSet, ignoreIPHeaders, includeStackTraceInResponse, environments);
@@ -262,6 +342,12 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		
 	}
 	
+	/** A set of redirect URLs for the authentication service UI. 
+	 * @author gaprice@lbl.gov
+	 *
+	 * @param <T> Either {@link State} for the state of the URLs, or {@link Action} to
+	 * specify a change to the URLs.
+	 */
 	public static class URLSet<T extends ConfigAction> {
 		
 		private final ConfigItem<URL, T> allowedPostLoginRedirectPrefix;
@@ -269,6 +355,22 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		private final ConfigItem<URL, T> postLinkRedirect;
 		private final ConfigItem<URL, T> completeLinkRedirect;
 
+		/** Create the URL set.
+		 * @param allowedPostLoginRedirectPrefix either the state or a change action for
+		 * what prefix is required for the user-specified redirect URL to be used after the 
+		 * login process is complete.
+		 * @param completeLoginRedirect either the state or a change action for
+		 * the redirect URL to used when the login flow cannot be completed immediately after
+		 * return from the 3rd party identity provider and control must be returned to the UI
+		 * for user input.
+		 * @param postLinkRedirect either the state of a change action for the redirect URL to
+		 * be used after the linking process is complete.
+		 * @param completeLinkRedirect either the state or a change action for
+		 * the redirect URL to used when the link flow cannot be completed immediately after
+		 * return from the 3rd party identity provider and control must be returned to the UI
+		 * for user input.
+		 * @throws IllegalParameterException if any of the URLs are invalid {@link URI}s.
+		 */
 		public URLSet(
 				final ConfigItem<URL, T> allowedPostLoginRedirectPrefix,
 				final ConfigItem<URL, T> completeLoginRedirect,
@@ -301,18 +403,36 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			}
 		}
 		
+		/** Get the state or change action for the allowed prefix for the user supplied
+		 * login redirect URL.
+		 * @return the state or change action for the prefix.
+		 */
 		public ConfigItem<URL, T> getAllowedLoginRedirectPrefix() {
 			return allowedPostLoginRedirectPrefix;
 		}
 		
+		/** Get the state or change action for the redirect URL to be used when the login flow
+		 * cannot be completed immediately after return from the 3rd party identity provider
+		 * and control must be returned to the UI for user input.
+		 * @return the state or change action for the redirect url.
+		 */
 		public ConfigItem<URL, T> getCompleteLoginRedirect() {
 			return completeLoginRedirect;
 		}
 		
+		/** Get the state or change action for the redirect URL to
+		 * be used after the linking process is complete.
+		 * @return the state or change action for the redirect url.
+		 */
 		public ConfigItem<URL, T> getPostLinkRedirect() {
 			return postLinkRedirect;
 		}
 		
+		/** Get the state or change action for the redirect URL to be used when the link flow
+		 * cannot be completed immediately after return from the 3rd party identity provider
+		 * and control must be returned to the UI for user input.
+		 * @return the state or change action for the redirect url.
+		 */
 		public ConfigItem<URL, T> getCompleteLinkRedirect() {
 			return completeLinkRedirect;
 		}
@@ -333,14 +453,23 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			}
 		}
 		
+		/** Get a URL change set where no action will be taken for any of the URLs.
+		 * @return the URL set.
+		 */
 		public static URLSet<Action> noAction() {
 			return NO_ACTION;
 		}
 		
+		/** Get a URL change set where all the URLs will be removed.
+		 * @return the URL set.
+		 */
 		public static URLSet<Action> remove() {
 			return REMOVE;
 		}
 		
+		/** Get a URL set state where all the URls are empty.
+		 * @return the URL set.
+		 */
 		public static URLSet<State> emptyState() {
 			return EMPTY_STATE;
 		}
@@ -402,15 +531,26 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 	}
 
+	/** Get a mapper that maps a string -> {@link ConfigItem} map to an {@link AuthExternalConfig}.
+	 * Reverses the effects of {@link AuthExternalConfig#toMap()}.
+	 * @author gaprice@lbl.gov
+	 *
+	 */
 	public static class AuthExternalConfigMapper implements
 			ExternalConfigMapper<AuthExternalConfig<State>> {
 		
 		private final Set<String> environments;
 		
+		/** Create a mapper that ignores any configuration items that are not part of the
+		 * default environment.
+		 */
 		public AuthExternalConfigMapper() {
 			environments = Collections.emptySet();
 		}
 		
+		/** Create a mapper.
+		 * @param environments the environments the mapper will include in the configuration.
+		 */
 		public AuthExternalConfigMapper(final Set<String> environments) {
 			nonNull(environments, "environments");
 			noNulls(environments, "null item in environments");

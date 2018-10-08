@@ -103,7 +103,7 @@ public class Admin {
 	private final AuthAPIStaticConfig cfg;
 	
 	/** Construct the admin endpoint handler. This is typically done by the Jersey framework.
-	 * @param ah an instance of the core authentication class.
+	 * @param auth an instance of the core authentication class.
 	 * @param cfg the static configuration for the authentication service.
 	 */
 	@Inject
