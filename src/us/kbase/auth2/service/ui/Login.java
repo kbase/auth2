@@ -6,7 +6,9 @@ import static us.kbase.auth2.service.common.ServiceCommon.isIgnoreIPsInHeaders;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LOGIN_COOKIE;
+import static us.kbase.auth2.service.ui.UIUtils.ENVIRONMENT_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
+import static us.kbase.auth2.service.ui.UIUtils.getEnvironmentCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginInProcessCookie;
@@ -64,6 +66,7 @@ import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
@@ -161,7 +164,7 @@ public class Login {
 		}
 		Utils.checkString(provider, Fields.PROVIDER);
 		
-		getRedirectURL(redirect); // check redirect url is ok
+		getRedirectURL(environment, redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false, environment));
 		
@@ -171,40 +174,41 @@ public class Login {
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
+				.cookie(getEnvironmentCookie(environment, UIPaths.LOGIN_ROOT,
+						PROVIDER_RETURN_EXPIRATION_SEC))
 				.build();
 	}
 	
-	private URL getRedirectURL(final String redirect)
-			throws AuthStorageException, IllegalParameterException {
-		final URL retRedirect;
+	private URL getRedirectURL(final String environment, final String redirect)
+			throws AuthStorageException, IllegalParameterException, NoSuchEnvironmentException {
 		if (nullOrEmpty(redirect)) {
-			retRedirect = null;
-		} else {
-			final AuthExternalConfig<State> ext;
-			try {
-				ext = auth.getExternalConfig(new AuthExternalConfigMapper());
-			} catch (ExternalConfigMappingException e) {
-				throw new RuntimeException("Dude, like, what just happened?", e);
-			}
-			final URL url;
-			try {
-				url = new URL(redirect);
-				url.toURI();
-			} catch (MalformedURLException | URISyntaxException e) {
-				throw new IllegalParameterException("Illegal redirect URL: " + redirect);
-			}
-			if (ext.getURLSet().getAllowedLoginRedirectPrefix().hasItem()) {
-				if (!redirect.startsWith(
-						ext.getURLSet().getAllowedLoginRedirectPrefix().getItem().toString())) {
-					throw new IllegalParameterException(
-							"Illegal redirect URL: " + redirect);
-				}
-			} else {
-				throw new IllegalParameterException("Post-login redirects are not enabled");
-			}
-			retRedirect = url;
+			return null;
 		}
-		return retRedirect;
+		final URL url;
+		try {
+			url = new URL(redirect);
+			url.toURI();
+		} catch (MalformedURLException | URISyntaxException e) {
+			throw new IllegalParameterException("Illegal redirect URL: " + redirect);
+		}
+		final AuthExternalConfig<State> ext;
+		try {
+			ext = auth.getExternalConfig(new AuthExternalConfigMapper(auth.getEnvironments()));
+		} catch (ExternalConfigMappingException e) {
+			throw new RuntimeException("Dude, like, what just happened?", e);
+		}
+		final ConfigItem<URL, State> login = ext.getURLSetOrDefault(environment)
+				.getAllowedLoginRedirectPrefix();
+		if (login.hasItem()) {
+			if (!redirect.startsWith(login.getItem().toString())) {
+				throw new IllegalParameterException(
+						"Illegal redirect URL: " + redirect);
+			}
+		} else {
+			throw new IllegalParameterException("Post-login redirects are not enabled" +
+					(environment == null ? "" : " for environment " + environment));
+		}
+		return url;
 	}
 
 	private NewCookie getRedirectCookie(final String redirect, final int expirationTimeSec) {
@@ -251,13 +255,15 @@ public class Login {
 			@CookieParam(LOGIN_STATE_COOKIE) final String state,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
 				IllegalParameterException, UnauthorizedException, NoSuchIdentityProviderException,
-				IdentityRetrievalException, AuthenticationException, NoSuchEnvironmentException{
+				IdentityRetrievalException, AuthenticationException, NoSuchEnvironmentException {
 		
 		// provider cannot be null or empty since it's a path param
-		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
+		// fail early
+		final URI redirectURI = getPostLoginRedirectURI(environment, redirect, UIPaths.ME_ROOT);
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
 		final String authcode = qps.getFirst(Fields.PROVIDER_CODE); //may need to be configurable
 		final String retstate = qps.getFirst(Fields.PROVIDER_STATE); //may need to be configurable
@@ -269,7 +275,7 @@ public class Login {
 			checkState(state, retstate);
 			final TokenCreationContext tcc = getTokenContext(
 					userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
-			lr = auth.login(provider, authcode, null, tcc); //TODO NOW pass environment
+			lr = auth.login(provider, authcode, environment, tcc);
 		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
@@ -279,13 +285,16 @@ public class Login {
 			r = createLoginResponse(redirectURI, lr.getToken().get(), !FALSE.equals(session));
 		} else {
 			final int age = getMaxCookieAge(lr.getTemporaryToken().get());
-			final URI completeURI = getExternalConfigURI(auth,
-					cfg -> cfg.getURLSet().getCompleteLoginRedirect(), UIPaths.LOGIN_ROOT_CHOICE);
+			final URI completeURI = getExternalConfigURI(
+					auth,
+					cfg -> cfg.getURLSetOrDefault(environment).getCompleteLoginRedirect(),
+					UIPaths.LOGIN_ROOT_CHOICE);
 			r = Response.seeOther(completeURI)
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken().get()))
 					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(redirect, age))
 					.cookie(getSessionChoiceCookie(session, age))
+					.cookie(getEnvironmentCookie(environment, UIPaths.LOGIN_ROOT, age))
 					.build();
 		}
 		return r;
@@ -310,6 +319,7 @@ public class Login {
 	
 	private ResponseBuilder removeLoginProcessCookies(final ResponseBuilder resp) {
 		return resp.cookie(getSessionChoiceCookie((Boolean) null, 0))
+				.cookie(getEnvironmentCookie(null, UIPaths.LOGIN_ROOT, 0))
 				.cookie(getLoginInProcessCookie(null))
 				.cookie(getStateCookie(null))
 				.cookie(getRedirectCookie(null, 0));
@@ -327,9 +337,12 @@ public class Login {
 		return removeLoginProcessCookies(Response.status(status)).entity(ret).build();
 	}
 	
-	private URI getPostLoginRedirectURI(final String redirect, final String deflt)
-			throws IllegalParameterException, AuthStorageException {
-		final URL redirURL = getRedirectURL(redirect);
+	private URI getPostLoginRedirectURI(
+			final String environment,
+			final String redirect,
+			final String deflt)
+			throws IllegalParameterException, AuthStorageException, NoSuchEnvironmentException {
+		final URL redirURL = getRedirectURL(environment, redirect);
 		if (redirURL != null) {
 			return toURI(redirURL);
 		}
@@ -343,10 +356,12 @@ public class Login {
 	public Map<String, Object> loginChoiceHTML(
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
-		return loginChoice(token, uriInfo, redirect);
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException,
+				NoSuchEnvironmentException {
+		return loginChoice(token, uriInfo, redirect, environment);
 	}
 
 	@GET
@@ -355,19 +370,23 @@ public class Login {
 	public Map<String, Object> loginChoiceJSON(
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
-		return loginChoice(token, uriInfo, redirect);
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException,
+				NoSuchEnvironmentException {
+		return loginChoice(token, uriInfo, redirect, environment);
 	}
 	
 	private Map<String, Object> loginChoice(
 			final String token,
 			final UriInfo uriInfo,
-			final String redirect)
+			final String redirect,
+			final String environment)
 			throws NoTokenProvidedException, AuthStorageException, InvalidTokenException,
-				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException {
-		final URL redirectURL = getRedirectURL(redirect); // fail early
+				IllegalParameterException, IdentityProviderErrorException, UnauthorizedException,
+				NoSuchEnvironmentException {
+		final URL redirectURL = getRedirectURL(environment, redirect); // fail early
 		final LoginState loginState = auth.getLoginState(getLoginInProcessToken(token));
 		
 		final Map<String, Object> ret = new HashMap<>();
@@ -473,15 +492,17 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@FormParam(Fields.ID) final String identityID,
 			@FormParam(Fields.POLICY_IDS) final String policyIDs,
 			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext,
 			@FormParam(Fields.LINK_ALL) final String linkAll)
 			throws NoTokenProvidedException, AuthenticationException,
-			AuthStorageException, UnauthorizedException, IllegalParameterException,
-			LinkFailedException, MissingParameterException {
+				AuthStorageException, UnauthorizedException, IllegalParameterException,
+				LinkFailedException, MissingParameterException, NoSuchEnvironmentException {
 		
-		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
+		// fail early
+		final URI redirectURI = getPostLoginRedirectURI(environment, redirect, UIPaths.ME_ROOT);
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
@@ -565,16 +586,17 @@ public class Login {
 			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			final PickChoice pick)
 			throws AuthenticationException, UnauthorizedException, NoTokenProvidedException,
-			AuthStorageException, IllegalParameterException, MissingParameterException,
-			LinkFailedException {
+				AuthStorageException, IllegalParameterException, MissingParameterException,
+				LinkFailedException, NoSuchEnvironmentException {
 		if (pick == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
 		pick.exceptOnAdditionalProperties();
 		
-		final URL redirectURI = getRedirectURL(redirect); // fail early
+		final URL redirectURI = getRedirectURL(environment, redirect); // fail early
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), pick.getCustomContext());
 		final NewToken newtoken = auth.login(getLoginInProcessToken(token),
@@ -590,6 +612,7 @@ public class Login {
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@FormParam(Fields.ID) final String identityID,
 			@FormParam(Fields.USER) final String userName,
 			@FormParam(Fields.DISPLAY) final String displayName,
@@ -597,12 +620,13 @@ public class Login {
 			@FormParam(Fields.POLICY_IDS) final String policyIDs,
 			@FormParam(Fields.CUSTOM_CONTEXT) final String customContext,
 			@FormParam(Fields.LINK_ALL) final String linkAll)
-			throws AuthenticationException, AuthStorageException,
-				UserExistsException, NoTokenProvidedException,
-				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException, LinkFailedException {
+			throws AuthenticationException, AuthStorageException, UserExistsException,
+				NoTokenProvidedException, MissingParameterException, IllegalParameterException,
+				UnauthorizedException, IdentityLinkedException, LinkFailedException,
+				NoSuchEnvironmentException {
 	
-		final URI redirectURI = getPostLoginRedirectURI(redirect, UIPaths.ME_ROOT); // fail early
+		// fail early
+		final URI redirectURI = getPostLoginRedirectURI(environment, redirect, UIPaths.ME_ROOT);
 		final TokenCreationContext tcc = getTokenContext(userAgentParser, req,
 				isIgnoreIPsInHeaders(auth), getCustomContextFromString(customContext));
 
@@ -649,17 +673,18 @@ public class Login {
 			@Context final HttpServletRequest req,
 			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String token,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			final CreateChoice create)
-			throws AuthenticationException, AuthStorageException,
-				UserExistsException, NoTokenProvidedException,
-				MissingParameterException, IllegalParameterException,
-				UnauthorizedException, IdentityLinkedException, LinkFailedException {
+			throws AuthenticationException, AuthStorageException, UserExistsException,
+				NoTokenProvidedException, MissingParameterException, IllegalParameterException,
+				UnauthorizedException, IdentityLinkedException, LinkFailedException,
+				NoSuchEnvironmentException {
 		if (create == null) {
 			throw new MissingParameterException("JSON body missing");
 		}
 		create.exceptOnAdditionalProperties();
 		
-		final URL redirectURI = getRedirectURL(redirect); // fail early
+		final URL redirectURI = getRedirectURL(environment, redirect); // fail early
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), create.getCustomContext());
 		

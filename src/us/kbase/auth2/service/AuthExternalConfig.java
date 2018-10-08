@@ -80,6 +80,15 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		return environments.get(environment);
 	}
 	
+	// null == return default
+	public URLSet<T> getURLSetOrDefault(final String environment)
+			throws NoSuchEnvironmentException {
+		if (environment == null) {
+			return urlSet;
+		}
+		return getURLSet(environment);
+	}
+	
 	public ConfigItem<Boolean, T> isIgnoreIPHeaders() {
 		return ignoreIPHeaders;
 	}
@@ -487,6 +496,36 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 						TRUE, FALSE, key));
 			}
 			return ret;
+		}
+
+		@Override
+		public int hashCode() {
+			final int prime = 31;
+			int result = 1;
+			result = prime * result + ((environments == null) ? 0 : environments.hashCode());
+			return result;
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj) {
+				return true;
+			}
+			if (obj == null) {
+				return false;
+			}
+			if (getClass() != obj.getClass()) {
+				return false;
+			}
+			AuthExternalConfigMapper other = (AuthExternalConfigMapper) obj;
+			if (environments == null) {
+				if (other.environments != null) {
+					return false;
+				}
+			} else if (!environments.equals(other.environments)) {
+				return false;
+			}
+			return true;
 		}
 	}
 

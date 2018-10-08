@@ -3,7 +3,6 @@ package us.kbase.test.auth2.service.ui;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-import static org.mockito.ArgumentMatchers.isA;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
@@ -42,6 +41,7 @@ import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -49,6 +49,7 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.AuthExternalConfig.URLSet;
 import us.kbase.auth2.service.ui.UIUtils;
 import us.kbase.test.auth2.MapBuilder;
@@ -331,6 +332,20 @@ public class UIUtilsTest {
 	}
 	
 	@Test
+	public void getEnvironmentToken() throws Exception {
+		final NewCookie nc = UIUtils.getEnvironmentCookie("env1", "/foo", 340);
+		assertThat("incorrect cookie", nc, is(new NewCookie("environment", "env1",
+				"/foo", null, "environment", 340, false)));
+	}
+	
+	@Test
+	public void getEnvironmentRemove() throws Exception {
+		final NewCookie nc = UIUtils.getEnvironmentCookie(null, "/foo", 340);
+		assertThat("incorrect cookie", nc, is(new NewCookie("environment", "no env",
+				"/foo", null, "environment", 0, false)));
+	}
+	
+	@Test
 	public void getMaxCookieAge() throws Exception {
 		final TemporaryToken tt = tempToken(
 				UUID.randomUUID(), Instant.ofEpochMilli(10000),
@@ -602,7 +617,8 @@ public class UIUtilsTest {
 	@Test
 	public void getExternalURI() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+		when(auth.getEnvironments()).thenReturn(set("foo", "bar"));
+		when(auth.getExternalConfig(new AuthExternalConfigMapper(set("foo", "bar"))))
 				.thenReturn(AuthExternalConfig.getBuilder(
 						new URLSet<>(
 								ConfigItem.state(new URL("http://whee/whoo")),
@@ -620,9 +636,35 @@ public class UIUtilsTest {
 	}
 	
 	@Test
+	public void getExternalURIEnvironment() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		when(auth.getEnvironments()).thenReturn(set("foo"));
+		when(auth.getExternalConfig(new AuthExternalConfigMapper(set("foo"))))
+				.thenReturn(AuthExternalConfig.getBuilder(
+						new URLSet<>(
+								ConfigItem.state(new URL("http://whee/whoo")),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()),
+						ConfigItem.state(false),
+						ConfigItem.state(false))
+						.withEnvironment("foo", new URLSet<>(
+								ConfigItem.emptyState(),
+								ConfigItem.state(new URL("http://whee/whoa")),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()))
+						.build());
+		
+		final URI ret = UIUtils.getExternalConfigURI(
+				auth, e -> e.getURLSet("foo").getCompleteLoginRedirect(), "/foo");
+		
+		assertThat("incorrect uri", ret, is(new URI("http://whee/whoa")));
+	}
+	
+	@Test
 	public void getExternalURIDefault() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+		when(auth.getExternalConfig(new AuthExternalConfigMapper()))
 				.thenReturn(AuthExternalConfig.getBuilder(
 						new URLSet<>(
 								ConfigItem.emptyState(),
@@ -642,10 +684,31 @@ public class UIUtilsTest {
 	@Test
 	public void getExternalURIFailBadMap() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
+		when(auth.getExternalConfig(new AuthExternalConfigMapper()))
 				.thenThrow(new ExternalConfigMappingException("foo"));
 		failGetExternalURIDefault(auth, e -> e.getURLSet().getAllowedLoginRedirectPrefix(), "/foo",
 				new RuntimeException("Dude, like, what just happened?"));
+	}
+	
+	@Test
+	public void getExternalURIFailNoSuchEnvironment() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		when(auth.getEnvironments()).thenReturn(set("foo", "bar"));
+		when(auth.getExternalConfig(new AuthExternalConfigMapper(set("foo", "bar"))))
+				.thenReturn(AuthExternalConfig.getBuilder(
+						new URLSet<>(
+								ConfigItem.state(new URL("http://whee/whoo")),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()),
+						ConfigItem.state(false),
+						ConfigItem.state(false))
+						.withEnvironment("foo", URLSet.emptyState())
+						.withEnvironment("bar", URLSet.emptyState())
+						.build());
+		
+		failGetExternalURIDefault(auth, e -> e.getURLSet("baz").getAllowedLoginRedirectPrefix(),
+				"/foo", new NoSuchEnvironmentException("baz"));
 	}
 	
 	@Test

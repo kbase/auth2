@@ -80,6 +80,8 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LinkTest {
 	
+	//TODO TEST convert most of these to unit tests
+	
 	private static final String DB_NAME = "test_link_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -104,7 +106,6 @@ public class LinkTest {
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
-		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
 		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
@@ -252,14 +253,25 @@ public class LinkTest {
 	
 	@Test
 	public void linkStartWithTokenInForm() throws Exception {
-		final NewToken nt = setUpLinkUserAndToken();
+		linkStartWithTokenInForm(null);
+	}
 
+	@Test
+	public void linkStartWithTokenInFormAndEnvironment() throws Exception {
+		linkStartWithTokenInForm("env1");
+	}
+
+	private void linkStartWithTokenInForm(final String env) throws Exception {
+		final NewToken nt = setUpLinkUserAndToken();
+		
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("token", nt.getToken());
-
-		final IdentityProvider provmock = MockIdentityProviderFactory
-				.mocks.get("prov1");
+		if (env != null) {
+			form.param("environment", "env1");
+		}
+		
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -267,7 +279,7 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(env)))
 				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
@@ -280,6 +292,8 @@ public class LinkTest {
 		final NewCookie expectedstate = new NewCookie("linkstatevar", stateMatcher.capturedState,
 				"/link/complete", null, "linkstate", 30 * 60, false);
 		assertThat("incorrect state cookie", state, is(expectedstate));
+		
+		assertEnvironmentCookieCorrect(res, env, 30 * 60);
 		
 		final NewCookie process = res.getCookies().get("in-process-link-token");
 		final NewCookie expectedprocess = new NewCookie("in-process-link-token",
@@ -302,8 +316,7 @@ public class LinkTest {
 		form.param("provider", "prov1");
 		form.param("environment", "myenv");
 
-		final IdentityProvider provmock = MockIdentityProviderFactory
-				.mocks.get("prov1");
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -352,8 +365,7 @@ public class LinkTest {
 		form.param("token", nt.getToken());
 		form.param("environment", "   \t   ");
 
-		final IdentityProvider provmock = MockIdentityProviderFactory
-				.mocks.get("prov1");
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -435,7 +447,15 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteImmediateLinkDefaultRedirect() throws Exception {
-		
+		linkCompleteImmediateLinkDefaultRedirect(null);
+	}
+	
+	@Test
+	public void linkCompleteImmediateLinkDefaultRedirectWithEnvironment() throws Exception {
+		linkCompleteImmediateLinkDefaultRedirect("env2");
+	}
+
+	private void linkCompleteImmediateLinkDefaultRedirect(final String env) throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -443,8 +463,8 @@ public class LinkTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1, REMOTE2));
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1, REMOTE2));
 		
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -453,17 +473,20 @@ public class LinkTest {
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("linkstatevar", state)
 				.cookie(COOKIE_NAME, nt.getToken())
-				.cookie("in-process-link-token", "foobartoken")
-				.get();
-		
+				.cookie("in-process-link-token", "foobartoken");
+		if (env != null) {
+				b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
 		assertLinkStateCookieRemoved(res);
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -472,17 +495,27 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteImmediateLinkCustomRedirect() throws Exception {
-		
+		linkCompleteImmediateLinkCustomRedirect(null, "https://foobar.com/baz");
+	}
+	
+	@Test
+	public void linkCompleteImmediateLinkCustomRedirectWithEnvironment() throws Exception {
+		linkCompleteImmediateLinkCustomRedirect("env1", "https://foobar.com/bat");
+	}
+
+	private void linkCompleteImmediateLinkCustomRedirect(final String env, final String url)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		setPostLinkRedirect(host, admintoken, "https://foobar.com/baz");
+		setPostLinkRedirect(host, COOKIE_NAME, admintoken, "https://foobar.com/bat", "env1");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1, REMOTE3));
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1, REMOTE3));
 		
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -491,18 +524,21 @@ public class LinkTest {
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("linkstatevar", state)
 				.cookie(COOKIE_NAME, nt.getToken())
-				.cookie("in-process-link-token", "foobartoken")
-				.get();
+				.cookie("in-process-link-token", "foobartoken");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://foobar.com/baz")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		assertLinkStateCookieRemoved(res);
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -511,6 +547,15 @@ public class LinkTest {
 	
 	@Test
 	public void linkCompleteDelayedDefaultRedirect() throws Exception {
+		linkCompleteDelayedDefaultRedirect(null);
+	}
+
+	@Test
+	public void linkCompleteDelayedDefaultRedirectWithEnvironment() throws Exception {
+		linkCompleteDelayedDefaultRedirect("env1");
+	}
+	
+	private void linkCompleteDelayedDefaultRedirect(final String env) throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
@@ -518,8 +563,8 @@ public class LinkTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true, null)).thenReturn(set(REMOTE1));
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1));
 		
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
@@ -528,15 +573,19 @@ public class LinkTest {
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("linkstatevar", state)
-				.cookie("in-process-link-token", "foobartoken")
-				.get();
+				.cookie("in-process-link-token", "foobartoken");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/link/choice")));
 		
 		assertLinkStateCookieRemoved(res);
+		assertEnvironmentCookieCorrect(res, env, 10 * 60);
 		
 		final String token = assertLinkTempTokenCorrect(res);
 		
@@ -547,19 +596,48 @@ public class LinkTest {
 		assertThat("incorrect remote ids", tis.getIdentities().get(), is(set(REMOTE1)));
 		assertThat("incorrect user", tis.getUser().get(), is(new UserName("u1")));
 	}
+
+	private void assertEnvironmentCookieCorrect(
+			final Response res,
+			final String env,
+			final int lifetime) {
+		if (env != null) {
+			final NewCookie envcookie = res.getCookies().get("environment");
+			final NewCookie expectedenv = new NewCookie("environment", env,
+					"/link", null, "environment", envcookie.getMaxAge(), false);
+			assertThat("incorrect env cookie", envcookie, is(expectedenv));
+			TestCommon.assertCloseTo(envcookie.getMaxAge(), lifetime, 10);
+		} else {
+			assertEnvironmentCookieRemoved(res);
+		}
+	}
 	
 	@Test
 	public void linkCompleteDelayedMultipleIdentsAndCustomRedirect() throws Exception {
+		linkCompleteDelayedMultipleIdentsAndCustomRedirect(null, "https://foobar.com/baz");
+	}
+	
+	@Test
+	public void linkCompleteDelayedMultipleIdentsAndCustomRedirectWithEnvironment()
+			throws Exception {
+		linkCompleteDelayedMultipleIdentsAndCustomRedirect("env2", "https://foobar.com/bat");
+	}
+
+	private void linkCompleteDelayedMultipleIdentsAndCustomRedirect(
+			final String env,
+			final String url)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		setLinkCompleteRedirect(host, admintoken, "https://foobar.com/baz");
+		setLinkCompleteRedirect(host, COOKIE_NAME, admintoken, "https://foobar.com/bat", "env2");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
-		when(provmock.getIdentities(authcode, true, null)).thenReturn(
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, true, env)).thenReturn(
 				set(REMOTE1, REMOTE2, REMOTE3));
 		
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
@@ -569,16 +647,19 @@ public class LinkTest {
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("linkstatevar", state)
-				.cookie("in-process-link-token", "foobartoken")
-				.get();
+				.cookie("in-process-link-token", "foobartoken");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://foobar.com/baz")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		assertLinkStateCookieRemoved(res);
+		assertEnvironmentCookieCorrect(res, env, 10 * 60);
 		
 		final String token = assertLinkTempTokenCorrect(res);
 		
@@ -743,6 +824,13 @@ public class LinkTest {
 				"/link", null, "linktoken", 0, false);
 		final NewCookie inprocess = res.getCookies().get("in-process-link-token");
 		assertThat("incorrect redirect cookie", inprocess, is(expectedinprocess));
+	}
+	
+	private void assertEnvironmentCookieRemoved(final Response res) {
+		final NewCookie expectedenv = new NewCookie("environment", "no env",
+				"/link", null, "environment", 0, false);
+		final NewCookie envcookie = res.getCookies().get("environment");
+		assertThat("incorrect state cookie", envcookie, is(expectedenv));
 	}
 	
 	@Test
@@ -1057,6 +1145,7 @@ public class LinkTest {
 		
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
 	}
 	
@@ -1079,6 +1168,7 @@ public class LinkTest {
 		
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
 	}
 	
@@ -1110,12 +1200,25 @@ public class LinkTest {
 	
 	@Test
 	public void linkPickOneForm() throws Exception {
+		linkPickOneForm(null);
+	}
+
+	@Test
+	public void linkPickOneFormWithEnvironment() throws Exception {
+		// since there's no link configured for the environment, should still return default url
+		linkPickOneForm("env1");
+	}
+
+	private void linkPickOneForm(final String env) throws Exception {
 		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
 		final String tt = linkPickSetup(nt.getStoredToken().getUserName());
 		
 		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
 		final Builder req = linkPickRequestBuilder(nt, tt, target)
 				.cookie(COOKIE_NAME, nt.getToken());
+		if (env != null) {
+			req.cookie("environment", env);
+		}
 		final Form form = new Form();
 		form.param("id", "de0702aa7927b562e0d6be5b6527cfb2");
 		
@@ -1125,6 +1228,7 @@ public class LinkTest {
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -1146,6 +1250,7 @@ public class LinkTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -1154,9 +1259,20 @@ public class LinkTest {
 	
 	@Test
 	public void linkPickAllWithAltRedirectForm() throws Exception {
+		linkPickAllWithAltRedirectForm(null, "https://foo.com/baz");
+	}
+	
+	@Test
+	public void linkPickAllWithAltRedirectFormWithEnvironment() throws Exception {
+		linkPickAllWithAltRedirectForm("env2", "https://foo.com/bar");
+	}
+
+	private void linkPickAllWithAltRedirectForm(final String env, final String url)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		setPostLinkRedirect(host, admintoken, "https://foo.com/baz");
+		setPostLinkRedirect(host, COOKIE_NAME, admintoken, "https://foo.com/bar", "env2");
 		
 		final NewToken nt = setUpLinkUserAndToken(); // uses remote1
 		final String tt = linkPickSetup(nt.getStoredToken().getUserName());
@@ -1164,14 +1280,18 @@ public class LinkTest {
 		final URI target = UriBuilder.fromUri(host).path("/link/pick").build();
 		final Builder req = linkPickRequestBuilder(nt, tt, target)
 				.cookie(COOKIE_NAME, nt.getToken());
+		if (env != null) {
+			req.cookie("environment", env);
+		}
 		final Form form = new Form();
 		
 		final Response res = req.post(Entity.form(form));
 		
 		assertThat("incorrect response code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(), is(new URI("https://foo.com/baz")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -1192,6 +1312,7 @@ public class LinkTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -1215,6 +1336,7 @@ public class LinkTest {
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
@@ -1236,6 +1358,7 @@ public class LinkTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertLinkProcessTokenRemoved(res);
+		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken(tt);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));

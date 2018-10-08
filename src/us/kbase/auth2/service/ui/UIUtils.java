@@ -37,6 +37,7 @@ import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -52,6 +53,11 @@ import us.kbase.auth2.service.common.Fields;
  *
  */
 public class UIUtils {
+	
+	/** The name of the cookie in which the name of the environment in which the server is
+	 * operating for the current login or link request is stored.
+	 */
+	public static final String ENVIRONMENT_COOKIE = "environment";
 
 	// attempts to deal with the mess of returning a relative path to the
 	// target from the current location that makes Jersey happy.
@@ -155,6 +161,30 @@ public class UIUtils {
 				token == null ? 0 : NewCookie.DEFAULT_MAX_AGE,
 				UIConstants.SECURE_COOKIES);
 	}
+	
+	/** Get an environment cookie. The environment name tells the service which environment
+	 * a login or link process is operating in, and therefore which redirect URLs to use.
+	 * @param environment the name of the environment. Pass null to make a cookie that will
+	 * be deleted immediately.
+	 * @param path the path where the cookie is active, for example /login or /link.
+	 * @param expirationTimeSec the expiration time of the cookie.
+	 * @return the new cookie.
+	 */
+	public static NewCookie getEnvironmentCookie(
+			final String environment,
+			final String path,
+			final int expirationTimeSec) {
+		return new NewCookie(
+				new Cookie(
+						ENVIRONMENT_COOKIE,
+						environment == null ? "no env" : environment,
+						path,
+						null),
+				"environment",
+				environment == null ? 0 : expirationTimeSec,
+				UIConstants.SECURE_COOKIES);
+	}
+	
 
 	/** Get the maximum age for a cookie given a temporary token.
 	 * @param token the token.
@@ -271,9 +301,12 @@ public class UIUtils {
 		/** Get a URL from an Authentication external configuration.
 		 * @param externalConfig the external configuration.
 		 * @return the requested URL.
+		 * @throws NoSuchEnvironmentException if a configuration for the requested environment
+		 * does not exist.
 		 */
 		ConfigItem<URL, State> getExternalConfigURL(
-				final AuthExternalConfig<State> externalConfig);
+				final AuthExternalConfig<State> externalConfig)
+				throws NoSuchEnvironmentException;
 	}
 	
 	/** Get an externally configured URI from an Authentication instance.
@@ -283,19 +316,21 @@ public class UIUtils {
 	 * if not a runtime exception will be thrown.
 	 * @return the requested URI.
 	 * @throws AuthStorageException if an error occurred contacting the auth storage system.
+	 * @throws NoSuchEnvironmentException if a configuration for the requested environment
+	 * does not exist.
 	 */
 	public static URI getExternalConfigURI(
 			final Authentication auth,
 			final ExteralConfigURLSelector selector,
 			final String deflt)
-			throws AuthStorageException {
+			throws AuthStorageException, NoSuchEnvironmentException {
 		nonNull(auth, "auth");
 		nonNull(selector, "selector");
 		checkStringNoCheckedException(deflt, "deflt");
 		final ConfigItem<URL, State> url;
 		try {
 			final AuthExternalConfig<State> externalConfig =
-					auth.getExternalConfig(new AuthExternalConfigMapper());
+					auth.getExternalConfig(new AuthExternalConfigMapper(auth.getEnvironments()));
 			url = selector.getExternalConfigURL(externalConfig);
 		} catch (ExternalConfigMappingException e) {
 			throw new RuntimeException("Dude, like, what just happened?", e);

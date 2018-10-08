@@ -27,6 +27,13 @@ template-dir = templates
 # below that start with identity-provider-<provider name> that must be correctly set.
 identity-providers = Globus, Google, OrcID
 
+# A comma separated list of names of alternate environments in which the service operates in
+# addition to the environment served by the default login and link redirect urls.
+# Each environment must specify its own login and link redirect urls. These URLs must be
+# registered with the identity provider as usual. The environment to use for a particular login
+# or link request can be specified via the service interface at login or link start time.
+identity-provider-envs=
+
 # Below are the list of configuration variables for each identity provider. The keys are:
 
 # identity-provider-<provider name>-factory - the java class for the factory that builds the
@@ -50,20 +57,12 @@ identity-providers = Globus, Google, OrcID
 # options will be provided to the identity provider as a set of keys and values where X is the key
 # any Y is the value.
 
-# identity-provider-envs - a comma separated list of names of alternate
-# environments in which the service operates in addition to the environment served by the default
-# login and link redirect urls. Each environment must specify its own login and link redirect
-# urls. These URLs must be registered with the identity provider as usual. The environment
-# to use for a particular login or link request can be specified via the service interface at
-# login or link start time.
-
 # Alternate environment configuration variables:
 # <env> is the environment name as specified in the identity-provider-envs
 # configuration variable.
 #
 # identity-provider-<provider name>-env-<env>-link-redirect - the alternate link redirect url.
 # identity-provider-<provider name>-env-<env>-login-redirect - the alternate login redirect url.
-
 
 identity-provider-Globus-factory = us.kbase.auth2.providers.GlobusIdentityProviderFactory
 identity-provider-Globus-login-url = https://auth.globus.org
