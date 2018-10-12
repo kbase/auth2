@@ -129,7 +129,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private String getEnvironmentHeader(final Map<String, String> cfg)
 			throws AuthConfigurationException {
 		final String eh = getString(KEY_ENVIRONMENT_HEADER, cfg, true);
-		if (!eh.startsWith("X-")) {
+		if (!eh.startsWith(ENVIRONMENT_HEADER_PREFIX)) {
 			throw new AuthConfigurationException(String.format(
 					"Parameter %s must start with %s in configuration file %s, section %s",
 					KEY_ENVIRONMENT_HEADER, ENVIRONMENT_HEADER_PREFIX,
