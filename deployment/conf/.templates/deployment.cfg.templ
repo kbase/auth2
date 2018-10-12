@@ -5,6 +5,7 @@ mongo-user={{ default .Env.mongo_user "" }}
 mongo-pwd={{ default .Env.mongo_pwd "" }}
 # The name of the cookie in which tokens should be stored in the browser.
 token-cookie-name = {{ default .Env.token_cookie_name "kbase_session" }}
+environment-header={{ default .Env.environment_header "X-DOEKBASE-ENVIRONMENT" }}
 # the name of the service to report when logging to syslog.
 log-name={{ default .Env.log_name "KBaseAuthServ2" }}
 test-mode-enabled={{ .Env.test_mode_enabled }}

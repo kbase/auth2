@@ -62,7 +62,7 @@ public class AdminTest {
 	@Test
 	public void getConfigMinimal() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		final UriInfo uriInfo = mock(UriInfo.class);
 		
@@ -117,7 +117,7 @@ public class AdminTest {
 	@Test
 	public void getConfigMaximal() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		final UriInfo uriInfo = mock(UriInfo.class);
 		
@@ -219,7 +219,7 @@ public class AdminTest {
 	@Test
 	public void getConfigFailNoTokenProvided() {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		final UriInfo uriInfo = mock(UriInfo.class);
 		
@@ -235,7 +235,7 @@ public class AdminTest {
 	@Test
 	public void getConfigFailMapping() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		final UriInfo uriInfo = mock(UriInfo.class);
 		
@@ -254,7 +254,7 @@ public class AdminTest {
 	@Test
 	public void getConfigFailUnauthorized() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		final UriInfo uriInfo = mock(UriInfo.class);
 		
@@ -285,7 +285,7 @@ public class AdminTest {
 	@Test
 	public void updateBasicNulls() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -314,7 +314,7 @@ public class AdminTest {
 	@Test
 	public void updateBasicWhitespace() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -344,7 +344,7 @@ public class AdminTest {
 	@Test
 	public void updateBasicMaximal() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -377,7 +377,7 @@ public class AdminTest {
 		final String b = "htp://u.com";
 		
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -398,7 +398,7 @@ public class AdminTest {
 		final String b = "http://u^u.com";
 		
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -416,7 +416,7 @@ public class AdminTest {
 	@Test
 	public void updateBasicFailNoTokenProvided() {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -433,7 +433,7 @@ public class AdminTest {
 	@Test
 	public void updateBasicFailInvalidToken() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -480,7 +480,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigNulls() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -506,7 +506,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigWhitespace() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -533,7 +533,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigRemove() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -566,7 +566,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigSetTrue() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -592,7 +592,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigSetFalse() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -618,7 +618,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailNullBody() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -628,7 +628,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailUnexpectedProperties() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -652,7 +652,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailBadURL() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -673,7 +673,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailBadURI() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -694,7 +694,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailNoToken() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -711,7 +711,7 @@ public class AdminTest {
 	@Test
 	public void updateConfigFailInvalidToken() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		
 		final Admin admin = new Admin(auth, cfg);
 		
@@ -753,7 +753,7 @@ public class AdminTest {
 	@Test
 	public void configEnvironmentNulls() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -778,7 +778,7 @@ public class AdminTest {
 	@Test
 	public void configEnvironmentWhitespace() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -803,7 +803,7 @@ public class AdminTest {
 	@Test
 	public void configEnvironmentMaximal() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -836,7 +836,7 @@ public class AdminTest {
 		final String b = "htp://u.com";
 		
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		when(auth.getEnvironments()).thenReturn(set("e"));
@@ -859,7 +859,7 @@ public class AdminTest {
 		final String b = "http://u^u.com";
 		
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		when(auth.getEnvironments()).thenReturn(set("e"));
@@ -879,7 +879,7 @@ public class AdminTest {
 	@Test
 	public void configEnvBadEnvironment() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -898,7 +898,7 @@ public class AdminTest {
 	@Test
 	public void configEnvironmentFailNoTokenProvided() {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);
@@ -917,7 +917,7 @@ public class AdminTest {
 	@Test
 	public void configEnvironmentFailInvalidToken() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie");
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		
 		final Admin admin = new Admin(auth, cfg);

@@ -10,6 +10,8 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
@@ -43,6 +45,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
+	private static final String KEY_ENVIRONMENT_HEADER = "environment-header";
 	private static final String KEY_TEMPLATE_DIR = "template-dir";
 	private static final String KEY_ID_PROV = "identity-providers";
 	private static final String KEY_ID_PROV_ENVS = "identity-provider-envs";
@@ -60,6 +63,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_SUFFIX_ID_PROVS_ENV = "-env-";
 	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
 	private static final String TRUE = "true";
+	private static final String ENVIRONMENT_HEADER_PREFIX = "X-";
 	private static final String KEY_TEST_MODE_ENABLED = "test-mode-enabled";
 	
 	private final SLF4JAutoLogger logger;
@@ -68,6 +72,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final Optional<String> mongoUser;
 	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
+	private final String environmentHeader;
 	private final Set<IdentityProviderConfig> providers;
 	private final boolean isTestModeEnabled;
 	private final Path templateDir;
@@ -107,6 +112,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 					Optional.of(mongop.get().toCharArray()) : Optional.absent();
 			mongop = null; //GC
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
+			environmentHeader = getEnvironmentHeader(cfg);
 			providers = getProviders(cfg);
 		} catch (AuthConfigurationException e) {
 			if (!nullLogger) {
@@ -117,6 +123,28 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 	}
 	
+	private static final String INVALID_CHARS_REGEX = "[^A-Z-]+";
+	private static final Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
+	
+	private String getEnvironmentHeader(final Map<String, String> cfg)
+			throws AuthConfigurationException {
+		final String eh = getString(KEY_ENVIRONMENT_HEADER, cfg, true);
+		if (!eh.startsWith(ENVIRONMENT_HEADER_PREFIX)) {
+			throw new AuthConfigurationException(String.format(
+					"Parameter %s must start with %s in configuration file %s, section %s",
+					KEY_ENVIRONMENT_HEADER, ENVIRONMENT_HEADER_PREFIX,
+					cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
+		}
+		final Matcher m = INVALID_CHARS.matcher(eh);
+		if (m.find()) {
+			throw new AuthConfigurationException(String.format(
+					"Illegal character in %s %s in configuration file %s, section %s: %s",
+					KEY_ENVIRONMENT_HEADER, eh, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC,
+					m.group()));
+		}
+		return eh;
+	}
+
 	private Set<IdentityProviderConfig> getProviders(
 			final Map<String, String> cfg)
 			throws AuthConfigurationException {
@@ -338,6 +366,11 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	@Override
 	public String getTokenCookieName() {
 		return cookieName;
+	}
+	
+	@Override
+	public String getEnvironmentHeaderName() {
+		return environmentHeader;
 	}
 	
 	@Override

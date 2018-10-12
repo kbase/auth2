@@ -17,6 +17,12 @@ mongo-pwd =
 # The name of the cookie in which tokens should be stored in the browser.
 token-cookie-name = kbase_session
 
+# The name of the header to be used to pass the environment name (see below) to the server at the 
+# /login/start and /link/start endpoints. The header takes precedence over form submission
+# of the environment name.
+# The header must start with 'X-' and consist of only capital letters and hyphens.
+environment-header=X-AUTH2-ENVIRONMENT
+
 # The name of the service to report when logging to syslog.
 log-name = KBaseAuthServ2
 

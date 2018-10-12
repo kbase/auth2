@@ -392,6 +392,7 @@ public class ServiceTestUtils {
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
 		sec.add("token-cookie-name", cookieName);
+		sec.add("environment-header", "X-DOEKBASE-ENVIRONMENT");
 		sec.add("template-dir", "templates");
 		// don't bother with logger name
 		
