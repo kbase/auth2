@@ -95,7 +95,7 @@ public class AuthenticationService extends ResourceConfig {
 				bind(new MustacheProcessor(c.getPathToTemplateDirectory().toAbsolutePath()))
 					.to(TemplateProcessor.class);
 				bind(c.getLogger()).to(SLF4JAutoLogger.class);
-				bind(new AuthAPIStaticConfig(c.getTokenCookieName()))
+				bind(new AuthAPIStaticConfig(c.getTokenCookieName(), c.getEnvironmentHeaderName()))
 						.to(AuthAPIStaticConfig.class);
 				bind(new UserAgentParser()).to(UserAgentParser.class);
 			}

@@ -105,6 +105,11 @@ public class LoggingFilterTest {
 		}
 		
 		@Override
+		public String getEnvironmentHeaderName() {
+			return "X-SUPERFAKEHEADER";
+		}
+		
+		@Override
 		public boolean isTestModeEnabled() {
 			return false;
 		}

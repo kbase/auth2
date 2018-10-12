@@ -66,6 +66,7 @@ public class KBaseAuthConfigTest {
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
+				"environment-header=    X-FOO-BAR     ",
 				"token-cookie-name=cookiename"
 				);
 		final KBaseAuthConfig cfg;
@@ -88,6 +89,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
+		assertThat("incorrect env header", cfg.getEnvironmentHeaderName(), is("X-FOO-BAR"));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -103,6 +105,7 @@ public class KBaseAuthConfigTest {
 				"log-name = logname", // this is annoying to test
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=    X-FOO-BAR     ",
 				"identity-provider-envs =   env1  \t   ,    , env2    ",
 				"identity-providers = prov1   \t   ,    \t , prov2   ",
 				"identity-provider-prov1-factory = facclass",
@@ -179,6 +182,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
+		assertThat("incorrect env header", cfg.getEnvironmentHeaderName(), is("X-FOO-BAR"));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -216,6 +220,7 @@ public class KBaseAuthConfigTest {
 				"template-dir = somedir",
 				"test-mode-enabled = false",
 				"token-cookie-name=cookiename",
+				"environment-header=    X-FOO-BAR-BAZ     ",
 				"identity-providers =      \t    "
 				);
 		final KBaseAuthConfig cfg = new KBaseAuthConfig(cfgfile, true);
@@ -230,6 +235,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
+		assertThat("incorrect env header", cfg.getEnvironmentHeaderName(), is("X-FOO-BAR-BAZ"));
 		testLogger(cfg.getLogger(), true);
 	}
 	
@@ -245,6 +251,7 @@ public class KBaseAuthConfigTest {
 				"log-name = logname", // this is annoying to test
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-provider-envs =        ",
 				"identity-providers = prov1   \t   ,    \t , prov2   ",
 				"identity-provider-prov1-factory = facclass",
@@ -299,6 +306,7 @@ public class KBaseAuthConfigTest {
 		assertThat("incorrect template dir", cfg.getPathToTemplateDirectory(),
 				is(Paths.get("somedir")));
 		assertThat("incorrect cookie name", cfg.getTokenCookieName(), is("cookiename"));
+		assertThat("incorrect env header", cfg.getEnvironmentHeaderName(), is("X-FOO-BAR"));
 		testLogger(cfg.getLogger(), false);
 	}
 	
@@ -324,6 +332,7 @@ public class KBaseAuthConfigTest {
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=cookiename"
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -341,6 +350,7 @@ public class KBaseAuthConfigTest {
 				"[authserv2]",
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=cookiename"
 				);
 		failConstruct(cfgfile, false, new AuthConfigurationException(String.format(
@@ -355,6 +365,7 @@ public class KBaseAuthConfigTest {
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     \t   ",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=cookiename"
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -369,6 +380,7 @@ public class KBaseAuthConfigTest {
 				"[authserv2]",
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     db   ",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=cookiename"
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -384,11 +396,60 @@ public class KBaseAuthConfigTest {
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     db   ",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=     \t  "
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
 				"Required parameter token-cookie-name not provided in configuration file %s, " +
 				"section authserv2", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailWhitespaceEnvHeader() throws Exception {
+		final Path cfgfile = writeTempFile(
+				"[authserv2]",
+				"mongo-host=  localhost:50000    ",
+				"mongo-db   =     db   ",
+				"template-dir = somedir",
+				"environment-header=   \t     ",
+				"token-cookie-name=nomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnom"
+				);
+		failConstruct(cfgfile, new AuthConfigurationException(String.format(
+				"Required parameter environment-header not provided in configuration file %s, " +
+				"section authserv2", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailEnvHeaderBadPrefix() throws Exception {
+		final Path cfgfile = writeTempFile(
+				"[authserv2]",
+				"mongo-host=  localhost:50000    ",
+				"mongo-db   =     db   ",
+				"template-dir = somedir",
+				"environment-header=   Y-FOO-BAR",
+				"token-cookie-name=nomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnom"
+				);
+		failConstruct(cfgfile, new AuthConfigurationException(String.format(
+				"Parameter environment-header must start with X- in configuration file %s, " +
+				"section authserv2", cfgfile)));
+	}
+	
+	@Test
+	public void constructWithPathFailEnvHeaderBadCharacter() throws Exception {
+		for (final String test: Arrays.asList("X-FOO_BAR/_", "X-FO0-BAR/0", "X-FOo-BAR/o")) {
+			final String[] headerChar = test.split("/");
+			final Path cfgfile = writeTempFile(
+					"[authserv2]",
+					"mongo-host=  localhost:50000    ",
+					"mongo-db   =     db   ",
+					"template-dir = somedir",
+					"environment-header=   " + headerChar[0],
+					"token-cookie-name=nomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnomnom"
+					);
+			failConstruct(cfgfile, new AuthConfigurationException(String.format(
+					"Illegal character in environment-header %s in configuration file " +
+					"%s, section authserv2: %s", headerChar[0], cfgfile, headerChar[1])));
+		}
 	}
 	
 	@Test
@@ -399,6 +460,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     db   ",
 				"mongo-pwd = mypwd",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name= coooooooooookieeeee  "
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -415,6 +477,7 @@ public class KBaseAuthConfigTest {
 				"mongo-user = user",
 				"mongo-pwd =  ",
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name= coooooooooookieeeee  "
 				);
 		failConstruct(cfgfile, new AuthConfigurationException(String.format(
@@ -430,6 +493,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				//"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -452,6 +516,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = htps://login.prov1.com",
@@ -474,6 +539,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -498,6 +564,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -520,6 +587,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -542,6 +610,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -564,6 +633,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-prov1-factory = facclass",
 				"identity-provider-prov1-login-url = https://login.prov1.com",
@@ -586,6 +656,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
@@ -610,6 +681,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
@@ -636,6 +708,7 @@ public class KBaseAuthConfigTest {
 				"mongo-db   =     mydb   ",
 				"template-dir = somedir",
 				"token-cookie-name=cookiename",
+				"environment-header=X-FOO-BAR",
 				"identity-providers = prov1",
 				"identity-provider-envs=foo",
 				"identity-provider-prov1-factory = facclass",
@@ -682,6 +755,7 @@ public class KBaseAuthConfigTest {
 				"test-mode-enabled= true",
 				"log-name = logname", // this is annoying to test
 				"template-dir = somedir",
+				"environment-header=X-FOO-BAR",
 				"token-cookie-name=cookiename",
 				"identity-providers = prov1   \t   ,    \t    ",
 				"identity-provider-prov1-factory = facclass",

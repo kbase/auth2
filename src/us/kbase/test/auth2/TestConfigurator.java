@@ -126,6 +126,11 @@ public class TestConfigurator implements AuthStartupConfig {
 	public String getTokenCookieName() {
 		return "some_cookie";
 	}
+	
+	@Override
+	public String getEnvironmentHeaderName() {
+		return "X-SUPERFAKEHEADER";
+	}
 
 	@Override
 	public boolean isTestModeEnabled() {
