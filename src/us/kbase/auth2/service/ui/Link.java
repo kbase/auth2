@@ -11,6 +11,7 @@ import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLinkInProcessCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getValueFromHeaderOrString;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
@@ -125,14 +126,13 @@ public class Link {
 			@Context final HttpHeaders headers,
 			@FormParam(Fields.PROVIDER) final String provider,
 			@FormParam(Fields.TOKEN) final String formToken,
-			@FormParam(Fields.ENVIRONMENT) String environment)
+			@FormParam(Fields.ENVIRONMENT) final String environForm)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 				MissingParameterException, NoTokenProvidedException, InvalidTokenException,
 				UnauthorizedException, LinkFailedException, NoSuchEnvironmentException {
 		
-		if (environment != null && environment.trim().isEmpty()) {
-			environment = null;
-		}
+		final Optional<String> environment = getValueFromHeaderOrString(
+				headers, cfg.getEnvironmentHeaderName(), environForm);
 		Utils.checkString(provider, Fields.PROVIDER);
 		
 		final IncomingToken token;
@@ -142,11 +142,12 @@ public class Link {
 			token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		}
 		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true, environment));
+		final URI target = toURI(auth.getIdentityProviderURL(
+				provider, state, true, environment.orNull()));
 		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
-				.cookie(getEnvironmentCookie(environment, UIPaths.LINK_ROOT,
+				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LINK_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				/* the link in process token must be a session token so that if a user closes the
 				 * browser and thus logs themselves out, the link session token disappears.

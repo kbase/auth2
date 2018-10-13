@@ -198,11 +198,24 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect, null);
+		loginStart(form, null, expectedsession, expectedredirect, null);
 	}
 	
 	@Test
-	public void loginStartEmptyStringsWithEnvironment() throws Exception {
+	public void loginStartHeaderEnvironment() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		form.param("environment", "env2");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+
+		loginStart(form, "env1", expectedsession, expectedredirect, "env1");
+	}
+	
+	@Test
+	public void loginStartEmptyStringsWithFormEnvironmentWhitespaceHeader() throws Exception {
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("redirecturl", "  \t   \n   ");
@@ -213,7 +226,7 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect, "myenv");
+		loginStart(form, "      \t     ", expectedsession, expectedredirect, "myenv");
 	}
 	
 	@Test
@@ -230,7 +243,7 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
 				"/login", null, "redirect url", 30 * 60, false);
 
-		loginStart(form, expectedsession, expectedredirect, null);
+		loginStart(form, null, expectedsession, expectedredirect, null);
 	}
 	
 	@Test
@@ -246,14 +259,15 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
 				"/login", null, "redirect url", 30 * 60, false);
 
-		loginStart(form, expectedsession, expectedredirect, "env1");
+		loginStart(form, null, expectedsession, expectedredirect, "env1");
 	}
 
 	private void loginStart(
 			final Form form,
+			final String headerEnv,
 			final NewCookie expectedsession,
 			final NewCookie expectedredirect,
-			final String environment)
+			final String expectedEnv)
 			throws Exception {
 		final IdentityProvider provmock = MockIdentityProviderFactory
 				.MOCKS.get("prov1");
@@ -266,11 +280,15 @@ public class LoginTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(environment)))
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(expectedEnv)))
 				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
-		final Response res = wt.request().post(
+		final Builder b = wt.request();
+		if (headerEnv != null) {
+			b.header("X-DOEKBASE-ENVIRONMENT", headerEnv);
+		}
+		final Response res = b.post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
@@ -286,7 +304,7 @@ public class LoginTest {
 		final NewCookie redirect = res.getCookies().get("loginredirect");
 		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
 		
-		assertEnvironmentCookieCorrect(res, environment, 30 * 60);
+		assertEnvironmentCookieCorrect(res, expectedEnv, 30 * 60);
 	}
 	
 	@Test
