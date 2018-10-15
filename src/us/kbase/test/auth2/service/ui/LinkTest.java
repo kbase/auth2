@@ -253,22 +253,36 @@ public class LinkTest {
 	
 	@Test
 	public void linkStartWithTokenInForm() throws Exception {
-		linkStartWithTokenInForm(null);
+		linkStartWithTokenInForm(null, null, null);
+	}
+	
+	@Test
+	public void linkStartWithTokenInFormAndEnvironmentHeader() throws Exception {
+		linkStartWithTokenInForm("env2", "env1", "env2");
 	}
 
 	@Test
-	public void linkStartWithTokenInFormAndEnvironment() throws Exception {
-		linkStartWithTokenInForm("env1");
+	public void linkStartWithTokenInFormAndFormEnvironmentWhiteSpaceHeader() throws Exception {
+		linkStartWithTokenInForm("        ", "env1", "env1");
+	}
+	
+	@Test
+	public void linkStartWithTokenInFormAndFormEnvironmentNullHeader() throws Exception {
+		linkStartWithTokenInForm(null, "env2", "env2");
 	}
 
-	private void linkStartWithTokenInForm(final String env) throws Exception {
+	private void linkStartWithTokenInForm(
+			final String headerEnvVal,
+			final String formEnvVal,
+			final String expectedEnvVal)
+			throws Exception {
 		final NewToken nt = setUpLinkUserAndToken();
 		
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("token", nt.getToken());
-		if (env != null) {
-			form.param("environment", "env1");
+		if (formEnvVal != null) {
+			form.param("environment", formEnvVal);
 		}
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
@@ -279,11 +293,15 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(env)))
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(expectedEnvVal)))
 				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
-		final Response res = wt.request().post(
+		final Builder b = wt.request();
+		if (headerEnvVal != null) {
+			b.header("X-DOEKBASE-ENVIRONMENT", headerEnvVal);
+		}
+		final Response res = b.post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
@@ -293,7 +311,7 @@ public class LinkTest {
 				"/link/complete", null, "linkstate", 30 * 60, false);
 		assertThat("incorrect state cookie", state, is(expectedstate));
 		
-		assertEnvironmentCookieCorrect(res, env, 30 * 60);
+		assertEnvironmentCookieCorrect(res, expectedEnvVal, 30 * 60);
 		
 		final NewCookie process = res.getCookies().get("in-process-link-token");
 		final NewCookie expectedprocess = new NewCookie("in-process-link-token",

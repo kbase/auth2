@@ -260,6 +260,34 @@ public class UIUtils {
 		}
 	}
 	
+	/** Get a header value from a header or an optional default.
+	 * Returns, in order of precedence, the value of the header given by headerName if not
+	 * null or whitespace only, the value of the stringValue if not null or whitespace only, or
+	 * {@link Optional#absent()}.
+	 * 
+	 * All values are {@link String#trim()}ed before returning.
+	 * 
+	 * @param headers the headers to interrogate.
+	 * @param headerName the name of the header to retrieve.
+	 * @param stringValue the value to return if the header value is absent.
+	 * @return the header value, string value, or {@link Optional#absent()}.
+	 */
+	public static Optional<String> getValueFromHeaderOrString(
+			final HttpHeaders headers,
+			final String headerName,
+			final String stringValue) {
+		nonNull(headers, "headers");
+		checkStringNoCheckedException(headerName, "headerName");
+		final String headerEnv = headers.getHeaderString(headerName);
+		if (!nullOrEmpty(headerEnv)) {
+			return Optional.of(headerEnv.trim());
+		} else if (!nullOrEmpty(stringValue)) {
+			return Optional.of(stringValue.trim());
+		} else {
+			return Optional.absent();
+		}
+	}
+	
 	/** Given a multivalued map as form input, return the set of roles that are contained as keys
 	 * in the form and have non-null values (e.g. the form contains a list for that value).
 	 * @param form the form to process.

@@ -13,6 +13,7 @@ import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginInProcessCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
+import static us.kbase.auth2.service.ui.UIUtils.getValueFromHeaderOrString;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
@@ -42,6 +43,7 @@ import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Cookie;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
@@ -152,21 +154,22 @@ public class Login {
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LOGIN_START)
 	public Response loginStart(
+			@Context final HttpHeaders headers,
 			@FormParam(Fields.PROVIDER) final String provider,
 			@FormParam(Fields.URL_REDIRECT) final String redirect,
 			@FormParam(Fields.STAY_LOGGED_IN) final String stayLoggedIn,
-			@FormParam(Fields.ENVIRONMENT) String environment)
+			@FormParam(Fields.ENVIRONMENT) final String environForm)
 			throws IllegalParameterException, AuthStorageException, NoSuchEnvironmentException,
 				NoSuchIdentityProviderException, MissingParameterException {
 		
-		if (environment != null && environment.trim().isEmpty()) {
-			environment = null;
-		}
+		final Optional<String> environment = getValueFromHeaderOrString(
+				headers, cfg.getEnvironmentHeaderName(), environForm);
 		Utils.checkString(provider, Fields.PROVIDER);
 		
-		getRedirectURL(environment, redirect); // check redirect url is ok
+		getRedirectURL(environment.orNull(), redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(provider, state, false, environment));
+		final URI target = toURI(auth.getIdentityProviderURL(
+				provider, state, false, environment.orNull()));
 		
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
@@ -174,7 +177,7 @@ public class Login {
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
-				.cookie(getEnvironmentCookie(environment, UIPaths.LOGIN_ROOT,
+				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LOGIN_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				.build();
 	}

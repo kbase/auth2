@@ -346,6 +346,64 @@ public class UIUtilsTest {
 	}
 	
 	@Test
+	public void getValueFromHeaderNullInput() throws Exception {
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		when(headers.getHeaderString("myheader")).thenReturn(null);
+		final Optional<String> res = UIUtils.getValueFromHeaderOrString(headers, "myheader", null);
+		assertThat("incorrect value", res, is(Optional.absent()));
+	}
+	
+	@Test
+	public void getValueFromHeaderWhitespaceInput() throws Exception {
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		when(headers.getHeaderString("myheader")).thenReturn("    \t    ");
+		final Optional<String> res = UIUtils.getValueFromHeaderOrString(
+				headers, "myheader", "    \t    ");
+		assertThat("incorrect value", res, is(Optional.absent()));
+	}
+	
+	@Test
+	public void getValueFromHeaderHeaderValue() throws Exception {
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		when(headers.getHeaderString("myheader")).thenReturn("       my value"    );
+		final Optional<String> res = UIUtils.getValueFromHeaderOrString(
+				headers, "myheader", "my other value");
+		assertThat("incorrect value", res, is(Optional.of("my value")));
+	}
+	
+	@Test
+	public void getValueFromHeaderStringValue() throws Exception {
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		when(headers.getHeaderString("myheader")).thenReturn(null);
+		final Optional<String> res = UIUtils.getValueFromHeaderOrString(
+				headers, "myheader", "      my other value      ");
+		assertThat("incorrect value", res, is(Optional.of("my other value")));
+	}
+	
+	@Test
+	public void getValueFromHeadersFail() throws Exception {
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		failGetValueFromHeader(null, "s", new NullPointerException("headers"));
+		failGetValueFromHeader(headers, null, new IllegalArgumentException(
+				"Missing argument: headerName"));
+		failGetValueFromHeader(headers, "    \t    ", new IllegalArgumentException(
+				"Missing argument: headerName"));
+	}
+	
+	private void failGetValueFromHeader(
+			final HttpHeaders headers,
+			final String headerName,
+			final Exception expected) {
+		try {
+			UIUtils.getValueFromHeaderOrString(headers, headerName, null);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	@Test
 	public void getMaxCookieAge() throws Exception {
 		final TemporaryToken tt = tempToken(
 				UUID.randomUUID(), Instant.ofEpochMilli(10000),
