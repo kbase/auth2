@@ -21,7 +21,7 @@ token-cookie-name = kbase_session
 # /login/start and /link/start endpoints. The header takes precedence over form submission
 # of the environment name.
 # The header must start with 'X-' and consist of only capital letters and hyphens.
-environment-header=X-AUTH2-ENVIRONMENT
+environment-header=X-AUTHTWO-ENVIRONMENT
 
 # The name of the service to report when logging to syslog.
 log-name = KBaseAuthServ2
