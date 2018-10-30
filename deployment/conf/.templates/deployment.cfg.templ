@@ -31,7 +31,7 @@ identity-provider-Google-client-secret={{ default .Env.idp_Google_client_secret 
 identity-provider-Google-login-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/google
 identity-provider-Google-link-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/google
 identity-provider-Google-env-{{ default .Env.env1 "" }}-login-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/login/complete/google
-identity-provider-Google-env-{{ default .Env.env1 "" }}-link-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/link/complete/goolgle
+identity-provider-Google-env-{{ default .Env.env1 "" }}-link-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/link/complete/google
 
 identity-provider-OrcID-factory = {{ default .Env.idp_OrcID_factory "us.kbase.auth2.providers.OrcIDIdentityProviderFactory" }}
 identity-provider-OrcID-login-url = {{ default .Env.idp_OrcID_login_url "https://sandbox.orcid.org/" }}
