@@ -7,6 +7,7 @@
 	<input type="radio" name="provider" value="prov1"/>prov1<br/>
 	<input type="checkbox" name="stayloggedin"/> Keep me logged in<br/>
 	Redirect after login: <input type="text" name="redirecturl"/><br/>
+	Environment: <input type="text" name="environment"/><br/>
 	<input type="submit" value="Submit"/>
 </form>
 

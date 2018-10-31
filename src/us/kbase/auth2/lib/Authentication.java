@@ -62,6 +62,7 @@ import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchLocalUserException;
@@ -221,19 +222,10 @@ public class Authentication {
 			throw new RuntimeException("This should be impossible", e);
 		}
 		nonNull(storage, "storage");
-		nonNull(identityProviderSet, "identityProviderSet");
-		noNulls(identityProviderSet, "Null identity provider in set");
 		nonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.defaultExternalConfig = defaultExternalConfig;
 		this.storage = storage;
-		for (final IdentityProvider idp: identityProviderSet) {
-			nonNull(idp.getProviderName(), "provider name");
-			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
-				throw new IllegalArgumentException("Duplicate provider name: " +
-						idp.getProviderName());
-			}
-			idProviderSet.put(idp.getProviderName(), idp);
-		}
+		setUpIdentityProviders(identityProviderSet);
 		final AuthConfigUpdate<ExternalConfig> acu = buildDefaultConfig();
 		try {
 			storage.updateConfig(acu, false);
@@ -246,6 +238,29 @@ public class Authentication {
 		} catch (AuthStorageException e) {
 			throw new StorageInitException("Failed to initialize config manager: " +
 					e.getMessage(), e);
+		}
+	}
+
+	private void setUpIdentityProviders(final Set<IdentityProvider> identityProviderSet) {
+		nonNull(identityProviderSet, "identityProviderSet");
+		noNulls(identityProviderSet, "Null identity provider in set");
+		if (identityProviderSet.isEmpty()) {
+			return;
+		}
+		final IdentityProvider prov = identityProviderSet.iterator().next();
+		for (final IdentityProvider idp: identityProviderSet) {
+			nonNull(idp.getProviderName(), "provider name");
+			if (!idp.getEnvironments().equals(prov.getEnvironments())) {
+				throw new IllegalArgumentException(String.format(
+						"Provider %s environments %s do not match provider %s environments %s",
+						prov.getProviderName(), prov.getEnvironments(),
+						idp.getProviderName(), idp.getEnvironments()));
+			}
+			if (idProviderSet.containsKey(idp.getProviderName())) { // case insensitive
+				throw new IllegalArgumentException("Duplicate provider name: " +
+						idp.getProviderName());
+			}
+			idProviderSet.put(idp.getProviderName(), idp);
 		}
 	}
 	
@@ -1587,6 +1602,18 @@ public class Authentication {
 		return provs;
 	}
 	
+	
+	/** Get any alternative environments that are configured for the identity providers. This
+	 * method will return the list even if no identity providers are enabled.
+	 * @return the alternative environment names.
+	 */
+	public Set<String> getEnvironments() {
+		if (idProviderSet.isEmpty()) {
+			return Collections.emptySet();
+		}
+		return idProviderSet.values().iterator().next().getEnvironments();
+	}
+	
 	// looks up the provider, case insensitive 
 	private IdentityProvider getIdentityProvider(final String provider)
 			throws NoSuchIdentityProviderException, AuthStorageException {
@@ -1606,19 +1633,25 @@ public class Authentication {
 	 * @param provider the name of the provider that will service the OAuth2 request.
 	 * @param state the OAuth2 state variable to send with the request.
 	 * @param link true if the action is a link request rather than a login request.
+	 * @param environment the name of the current environment. This determines which set of
+	 * redirect urls will be used to redirect back to the auth service from the identity
+	 * provider.
 	 * @return the redirect url.
 	 * @throws NoSuchIdentityProviderException if the provider does not exist or is not enabled.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider.
 	 */
 	public URL getIdentityProviderURL(
 			final String provider,
 			final String state,
-			final boolean link)
-			throws NoSuchIdentityProviderException, AuthStorageException {
+			final boolean link,
+			final String environment)
+			throws NoSuchIdentityProviderException, AuthStorageException,
+			NoSuchEnvironmentException {
 		if (state == null || state.trim().isEmpty()) {
 			throw new IllegalArgumentException("state cannot be null or empty");
 		}
-		return getIdentityProvider(provider).getLoginURL(state, link);
+		return getIdentityProvider(provider).getLoginURL(state, link, environment);
 	}
 	
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1627,7 +1660,7 @@ public class Authentication {
 	 * @return A login token. In this case the token will always be a temporary token so the
 	 * control flow can be returned to the UI before returning an error.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @see #login(String, String, TokenCreationContext)
+	 * @see #login(String, String, String, TokenCreationContext)
 	 */
 	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
@@ -1656,6 +1689,8 @@ public class Authentication {
 	 * 
 	 * @param provider the name of the identity provider that is servicing the login request.
 	 * @param authcode the authcode provided by the provider.
+	 * @param environment the environment in which the login request is occurring. Null for the
+	 * default environment.
 	 * @param tokenCtx the context under which the token will be created.
 	 * @return either a login token or temporary token.
 	 * @throws MissingParameterException if the authcode is missing.
@@ -1663,19 +1698,21 @@ public class Authentication {
 	 * from the provider.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
+	 * @throws NoSuchEnvironmentException if no such environment is configured. 
 	 */
 	public LoginToken login(
 			final String provider,
 			final String authcode,
+			final String environment,
 			final TokenCreationContext tokenCtx)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException {
+			AuthStorageException, NoSuchIdentityProviderException, NoSuchEnvironmentException {
 		nonNull(tokenCtx, "tokenCtx");
 		if (authcode == null || authcode.trim().isEmpty()) {
 			throw new MissingParameterException("authorization code");
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false);
+		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false, environment);
 		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken token;
@@ -1732,7 +1769,7 @@ public class Authentication {
 
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after
-	 * {@link #login(String, String, TokenCreationContext)}.
+	 * {@link #login(String, String, String, TokenCreationContext)}.
 	 * After user interaction is completed, a new user can be created via
 	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, TokenCreationContext, boolean)}
 	 * or the login can complete via
@@ -2323,17 +2360,6 @@ public class Authentication {
 		return storeTemporarySessionData(data);
 	}
 	
-	private Set<RemoteIdentity> getLinkCandidates(
-			final IdentityProvider idp,
-			final String authcode)
-			throws NoSuchIdentityProviderException, AuthStorageException,
-			MissingParameterException, IdentityRetrievalException {
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
-		return idp.getIdentities(authcode, true);
-	}
-	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
 	 * identity provider.
 	 * If the information returned from the identity provider allows the link to occur
@@ -2355,6 +2381,8 @@ public class Authentication {
 	 * {@link #linkStart(IncomingToken, int)}.
 	 * @param provider the name of the identity provider that is servicing the link request.
 	 * @param authcode the authcode provided by the provider.
+	 * @param environment the environment in which the link request is proceeding. Null for the
+	 * default environment.
 	 * @return a temporary token if required.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws MissingParameterException if the authcode is missing.
@@ -2367,15 +2395,20 @@ public class Authentication {
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws IdentityProviderErrorException if the incoming token is associated with an
 	 * identity provider error.
+	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider. 
 	 */
 	public LinkToken link(
 			final IncomingToken token,
 			final String provider,
-			final String authcode)
+			final String authcode,
+			final String environment)
 			throws InvalidTokenException, AuthStorageException,
 				MissingParameterException, IdentityRetrievalException,
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
-				UnauthorizedException, IdentityProviderErrorException {
+				UnauthorizedException, IdentityProviderErrorException, NoSuchEnvironmentException {
+		if (authcode == null || authcode.trim().isEmpty()) {
+			throw new MissingParameterException("authorization code");
+		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final TemporarySessionData tids = getTemporaryIdentities(
 				Optional.absent(), Operation.LINKSTART, token);
@@ -2387,7 +2420,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = getLinkCandidates(idp, authcode);
+		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true, environment);
 		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
 		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
@@ -2469,7 +2502,8 @@ public class Authentication {
 	}
 	
 	/** Get the current state of a linking process associated with a temporary token.
-	 * This method is expected to be called after {@link #link(IncomingToken, String, String)}.
+	 * This method is expected to be called after
+	 * {@link #link(IncomingToken, String, String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, String)} or
 	 * {@link #linkAll(IncomingToken, IncomingToken)}.

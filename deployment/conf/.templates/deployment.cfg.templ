@@ -5,9 +5,12 @@ mongo-user={{ default .Env.mongo_user "" }}
 mongo-pwd={{ default .Env.mongo_pwd "" }}
 # The name of the cookie in which tokens should be stored in the browser.
 token-cookie-name = {{ default .Env.token_cookie_name "kbase_session" }}
+environment-header={{ default .Env.environment_header "X-DOEKBASE-ENVIRONMENT" }}
 # the name of the service to report when logging to syslog.
 log-name={{ default .Env.log_name "KBaseAuthServ2" }}
+test-mode-enabled={{ default .Env.test_mode_enabled "false"}}
 identity-providers={{ default .Env.idp "Globus, Google, OrcID" }}
+identity-provider-envs={{ default .Env.envs ""}}
 identity-provider-Globus-factory = {{ default .Env.idp_Globus_factory "us.kbase.auth2.providers.GlobusIdentityProviderFactory" }}
 identity-provider-Globus-login-url={{ default .Env.idp_Globus_login_url "https://auth.globus.org" }}
 identity-provider-Globus-api-url={{ default .Env.idp_Globus_api_url "https://auth.globus.org" }}
@@ -17,6 +20,9 @@ identity-provider-Globus-login-redirect-url={{ default .Env.auth_base_url "https
 identity-provider-Globus-link-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/globus
 # added at erik's and shane's request over gavin's vehement protestations
 identity-provider-Globus-custom-ignore-secondary-identities={{ default .Env.idp_Globus_custom_ignore_secondary_identities "true" }}
+identity-provider-Globus-env-{{ default .Env.env1 "" }}-login-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/login/complete/globus
+identity-provider-Globus-env-{{ default .Env.env1 "" }}-link-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/link/complete/globus
+
 identity-provider-Google-factory = {{ default .Env.idp_Google_factory "us.kbase.auth2.providers.GoogleIdentityProviderFactory" }}
 identity-provider-Google-login-url={{ default .Env.idp_Google_login_url "https://accounts.google.com/" }}
 identity-provider-Google-api-url={{ default .Env.idp_Google_api_url "https://www.googleapis.com/" }}
@@ -24,6 +30,8 @@ identity-provider-Google-client-id={{ default .Env.idp_Google_client_id "kbaseau
 identity-provider-Google-client-secret={{ default .Env.idp_Google_client_secret "mocksecret" }}
 identity-provider-Google-login-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/google
 identity-provider-Google-link-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/google
+identity-provider-Google-env-{{ default .Env.env1 "" }}-login-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/login/complete/google
+identity-provider-Google-env-{{ default .Env.env1 "" }}-link-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/link/complete/google
 
 identity-provider-OrcID-factory = {{ default .Env.idp_OrcID_factory "us.kbase.auth2.providers.OrcIDIdentityProviderFactory" }}
 identity-provider-OrcID-login-url = {{ default .Env.idp_OrcID_login_url "https://sandbox.orcid.org/" }}
@@ -32,5 +40,7 @@ identity-provider-OrcID-client-id = {{ default .Env.idp_OrcID_client_id "kbaseau
 identity-provider-OrcID-client-secret = {{ default .Env.idp_OrcID_client_secret "mocksecret" }}
 identity-provider-OrcID-login-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/orcid
 identity-provider-OrcID-link-redirect-url = {{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/link/complete/orcid
+identity-provider-OrcID-env-{{ default .Env.env1 "" }}-login-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/login/complete/orcid
+identity-provider-OrcID-env-{{ default .Env.env1 "" }}-link-redirect-url={{ default .Env.auth_base_url_env1 "https://ci.kbase.us/services/auth" }}/link/complete/orcid
 
 template-dir = {{ default .Env.template_dir "templates" }}

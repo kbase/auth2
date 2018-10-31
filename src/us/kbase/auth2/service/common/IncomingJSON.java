@@ -53,7 +53,7 @@ public class IncomingJSON {
 	}
 
 	@JsonAnySetter
-	public void setAdditionalProperties(String name, Object value) {
+	public void setAdditionalProperties(final String name, final Object value) {
 		this.additionalProperties.put(name, value);
 	}
 

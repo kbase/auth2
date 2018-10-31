@@ -3,6 +3,8 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static org.mockserver.model.NottableString.not;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -33,8 +35,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory.GlobusIdentityProvider;
@@ -94,15 +98,17 @@ public class GlobusIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					GlobusIdentityProviderFactory.class.getName(),
 					new URL("https://login.com"),
 					new URL("https://setapiurl.com"),
 					"foo",
 					"bar",
 					new URL("https://loginredir.com"),
-					new URL("https://linkredir.com"),
-					Collections.emptyMap());
+					new URL("https://linkredir.com"))
+					.withEnvironment("myenv",
+							new URL("https://myloginred.com"), new URL("https://mylinkred.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -114,15 +120,27 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false),
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo3", true, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
+						"&response_type=code&client_id=foo")));
+		
+		assertThat("incorrect login url", gip.getLoginURL("foo2", false, "myenv"),
+				is(new URL("https://login.com/v2/oauth2/authorize?" +
+						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
+						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
+						"&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURL("foo3", true, "myenv"),
+				is(new URL("https://login.com/v2/oauth2/authorize?" +
+						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
+						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +
 						"&response_type=code&client_id=foo")));
 		
 	}
@@ -132,31 +150,42 @@ public class GlobusIdentityProviderTest {
 		
 		final IdentityProvider gip = new GlobusIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false),
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo3", true, null),
 				is(new URL("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
 						"&response_type=code&client_id=foo")));
 		
+		assertThat("incorrect login url", gip.getLoginURL("foo2", false, "myenv"),
+				is(new URL("https://login.com/v2/oauth2/authorize?" +
+						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
+						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
+						"&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURL("foo3", true, "myenv"),
+				is(new URL("https://login.com/v2/oauth2/authorize?" +
+						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
+						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +
+						"&response_type=code&client_id=foo")));
 	}
 	
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -177,6 +206,14 @@ public class GlobusIdentityProviderTest {
 				"authcode cannot be null or empty"));
 		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
+	}
+	
+	@Test
+	public void noSuchEnvironment() throws Exception {
+		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
+		
+		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	@Test
@@ -464,7 +501,9 @@ public class GlobusIdentityProviderTest {
 					new Parameter("include", "identities_set"),
 					new Parameter("token", authtoken));
 		} else {
-			parameterBody = new ParameterBody(new Parameter("token", authtoken));
+			parameterBody = new ParameterBody(
+					new Parameter("token", authtoken),
+					new Parameter(not("include"), not("identities_set")));
 		}
 		mockClientAndServer.when(
 				new HttpRequest()
@@ -472,8 +511,7 @@ public class GlobusIdentityProviderTest {
 					.withPath("/v2/oauth2/token/introspect")
 					.withHeader(ACCEPT, APP_JSON)
 					.withHeader("Authorization", bauth)
-					.withBody(parameterBody
-					),
+					.withBody(parameterBody),
 				Times.exactly(1)
 			).respond(
 				resp
@@ -485,8 +523,17 @@ public class GlobusIdentityProviderTest {
 			final String authcode,
 			final boolean link,
 			final Exception exception) throws Exception {
+		failGetIdentities(idp, authcode, link, null, exception);
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final String env,
+			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link);
+			idp.getIdentities(authcode, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -501,15 +548,19 @@ public class GlobusIdentityProviderTest {
 	
 	private IdentityProviderConfig getTestIDConfig(final Map<String, String> customConfig)
 			throws MalformedURLException, IdentityProviderConfigurationException {
-		return new IdentityProviderConfig(
+		final Builder b =  IdentityProviderConfig.getBuilder(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"foo",
 				"bar",
 				new URL("https://loginredir.com"),
-				new URL("https://linkredir.com"),
-				customConfig);
+				new URL("https://linkredir.com"))
+				.withEnvironment("myenv", new URL("https://lor2.com"), new URL("https://li2.com"));
+		for (final String k: customConfig.keySet()) {
+			b.withCustomConfiguration(k, customConfig.get(k));
+		}
+		return b.build();
 	}
 
 	private String getBasicAuth(final IdentityProviderConfig idconfig) {
@@ -572,7 +623,7 @@ public class GlobusIdentityProviderTest {
 	}
 	
 	@Test
-	public void getIdentityWithSecondariesAndLoginURL() throws Exception {
+	public void getIdentityWithSecondariesAndLoginURLAndEnvironment() throws Exception {
 		final String authCode = "authcode";
 		final IdentityProviderConfig testIDConfig = getTestIDConfig(
 				ImmutableMap.of("ignore-secondary-identities", "ntrue"));
@@ -581,7 +632,7 @@ public class GlobusIdentityProviderTest {
 		final String token = "footoken";
 		final int respCode = 200;
 
-		setUpCallAuthToken(authCode, token, "https://loginredir.com", bauth);
+		setUpCallAuthToken(authCode, token, "https://lor2.com", bauth);
 		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 						.put("aud", Arrays.asList(testIDConfig.getClientID()))
@@ -600,7 +651,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, "myenv");
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -640,7 +691,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, null);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -671,21 +722,32 @@ public class GlobusIdentityProviderTest {
 
 	@Test
 	public void getIdentityWithoutSecondariesAndLinkURL() throws Exception {
+		getIdentityWithoutSecondariesAndLinkURL(null, "https://linkredir2.com");
+	}
+	
+	@Test
+	public void getIdentityWithoutSecondariesAndLinkURLAndEnvironment() throws Exception {
+		getIdentityWithoutSecondariesAndLinkURL("e1", "https://li.com");
+	}
+
+	private void getIdentityWithoutSecondariesAndLinkURL(final String env, final String linkURL)
+			throws Exception {
 		final String clientID = "clientID2";
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				GlobusIdentityProviderFactory.class.getName(),
 				new URL("https://login2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				clientID,
 				"bar2",
 				new URL("https://loginredir2.com"),
-				new URL("https://linkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://linkredir2.com"))
+				.withEnvironment("e1", new URL("http://foo.com"), new URL("https://li.com"))
+				.build();
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
 		final String bauth = getBasicAuth(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://linkredir2.com", bauth);
+		setUpCallAuthToken(authCode, "footoken2", linkURL, bauth);
 		setUpCallPrimaryID("footoken2", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("aud", Arrays.asList(clientID),
 					"sub", "anID2",
@@ -693,7 +755,7 @@ public class GlobusIdentityProviderTest {
 					"name", null,
 					"email", null,
 					"identities_set", Arrays.asList("anID2  \n"))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
 				new RemoteIdentityDetails("aUsername2", null, null)));

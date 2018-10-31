@@ -112,7 +112,7 @@ public class SimpleEndpointsTest {
 	 * an error message or a git commit hash depending on the test environment, so both are
 	 * allowed
 	 */
-	private static final String SERVER_VER = "0.2.5";
+	private static final String SERVER_VER = "0.2.6";
 	private static final String GIT_ERR = 
 			"Missing git commit file gitcommit, should be in us.kbase.auth2";
 

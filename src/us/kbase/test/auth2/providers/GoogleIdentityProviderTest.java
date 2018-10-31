@@ -3,13 +3,13 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -29,6 +29,7 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -92,15 +93,17 @@ public class GoogleIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					GoogleIdentityProviderFactory.class.getName(),
 					new URL("https://glogin.com"),
 					new URL("https://gsetapiurl.com"),
 					"gfoo",
 					"gbar",
 					new URL("https://gloginredir.com"),
-					new URL("https://glinkredir.com"),
-					Collections.emptyMap());
+					new URL("https://glinkredir.com"))
+					.withEnvironment("myenv",
+							new URL("https://mygloginred.com"), new URL("https://myglinkred.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -112,15 +115,27 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect login url", gip.getLoginURL("foo3", false),
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo4", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fglinkredir.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 	}
 	
@@ -129,15 +144,27 @@ public class GoogleIdentityProviderTest {
 		
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
-		assertThat("incorrect login url", gip.getLoginURL("foo5", false),
+		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", gip.getLoginURL("foo5", false, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo6", true),
+		assertThat("incorrect link url", gip.getLoginURL("foo6", true, null),
 				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Fglinkredir.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		
+		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
+						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
+						"scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fplus.me+profile+email" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 		
 	}
@@ -145,15 +172,15 @@ public class GoogleIdentityProviderTest {
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -176,13 +203,30 @@ public class GoogleIdentityProviderTest {
 				"authcode cannot be null or empty"));
 	}
 	
+	@Test
+	public void noSuchEnvironment() throws Exception {
+		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
+		
+		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+	}
+	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
 			final boolean link,
 			final Exception exception) throws Exception {
+		failGetIdentities(idp, authcode, link, null, exception);
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final String env,
+			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link);
+			idp.getIdentities(authcode, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -192,15 +236,16 @@ public class GoogleIdentityProviderTest {
 	private IdentityProviderConfig getTestIDConfig()
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
-		return new IdentityProviderConfig(
+		return IdentityProviderConfig.getBuilder(
 				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"gfoo",
 				"gbar",
 				new URL("https://gloginredir.com"),
-				new URL("https://glinkredir.com"),
-				Collections.emptyMap());
+				new URL("https://glinkredir.com"))
+				.withEnvironment("e2", new URL("http://lo.com"), new URL("http://li.com"))
+				.build();
 	}
 	
 	@Test
@@ -368,16 +413,25 @@ public class GoogleIdentityProviderTest {
 	
 	@Test
 	public void getIdentityWithLoginURL() throws Exception {
+		getIdentityWithLoginURL(null, "https://gloginredir.com");
+	}
+
+	@Test
+	public void getIdentityWithLoginURLAndEnvironment() throws Exception {
+		getIdentityWithLoginURL("e2", "http://lo.com");
+	}
+	
+	private void getIdentityWithLoginURL(final String env, final String url) throws Exception {
 		final String authCode = "authcode2";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken3", "https://gloginredir.com",
+		setUpCallAuthToken(authCode, "footoken3", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
 		setupCallID("footoken3", APP_JSON, 200, MAPPER.writeValueAsString(
 				map("id", "id7", "displayName", null, "emails", Arrays.asList(
 						map("value", "email3")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
@@ -387,24 +441,34 @@ public class GoogleIdentityProviderTest {
 	
 	@Test
 	public void getIdentityWithLinkURL() throws Exception {
+		getIdentityWithLinkURL(null, "https://glinkredir2.com");
+	}
+
+	@Test
+	public void getIdentityWithLinkURLAndEnvironment() throws Exception {
+		getIdentityWithLinkURL("e2", "http://li2.com");
+	}
+
+	private void getIdentityWithLinkURL(final String env, final String url) throws Exception {
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				GoogleIdentityProviderFactory.class.getName(),
 				new URL("https://glogin2.com"),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",
 				"bar2",
 				new URL("https://gloginredir2.com"),
-				new URL("https://glinkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://glinkredir2.com"))
+				.withEnvironment("e2", new URL("http://lo.com"), new URL("http://li2.com"))
+				.build();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://glinkredir2.com",
+		setUpCallAuthToken(authCode, "footoken2", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
 		setupCallID("footoken2", APP_JSON, 200, MAPPER.writeValueAsString(
 				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
 						map("value", "email1")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),

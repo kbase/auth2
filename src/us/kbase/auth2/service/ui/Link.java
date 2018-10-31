@@ -4,10 +4,14 @@ import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LINK_COOKIE;
+import static us.kbase.auth2.service.ui.UIUtils.ENVIRONMENT_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.checkState;
+import static us.kbase.auth2.service.ui.UIUtils.getEnvironmentCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLinkInProcessCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
+import static us.kbase.auth2.service.ui.UIUtils.getValueFromHeaderOrString;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
 import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
@@ -58,6 +62,7 @@ import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.LinkFailedException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
@@ -120,11 +125,14 @@ public class Link {
 	public Response linkStart(
 			@Context final HttpHeaders headers,
 			@FormParam(Fields.PROVIDER) final String provider,
-			@FormParam(Fields.TOKEN) final String formToken)
+			@FormParam(Fields.TOKEN) final String formToken,
+			@FormParam(Fields.ENVIRONMENT) final String environForm)
 			throws NoSuchIdentityProviderException, AuthStorageException,
 				MissingParameterException, NoTokenProvidedException, InvalidTokenException,
-				UnauthorizedException, LinkFailedException {
+				UnauthorizedException, LinkFailedException, NoSuchEnvironmentException {
 		
+		final Optional<String> environment = getValueFromHeaderOrString(
+				headers, cfg.getEnvironmentHeaderName(), environForm);
 		Utils.checkString(provider, Fields.PROVIDER);
 		
 		final IncomingToken token;
@@ -133,17 +141,19 @@ public class Link {
 		} else {
 			token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		}
-		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(provider, state, true));
+		final URI target = toURI(auth.getIdentityProviderURL(
+				provider, state, true, environment.orNull()));
+		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
+				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LINK_ROOT,
+						PROVIDER_RETURN_EXPIRATION_SEC))
 				/* the link in process token must be a session token so that if a user closes the
 				 * browser and thus logs themselves out, the link session token disappears.
 				 * Otherwise another user could access the link in process token that identifies
 				 * them as the first user and proceed with the linking process, thus linking their
 				 * remote account to the first user's account.
-				 * 
 				 */
 				.cookie(getLinkInProcessCookie(tt))
 				.build();
@@ -163,10 +173,11 @@ public class Link {
 			@PathParam(Fields.PROVIDER) final String provider,
 			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String userCookie,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthenticationException, NoSuchProviderException,
 				AuthStorageException, LinkFailedException, UnauthorizedException,
-				NoTokenProvidedException {
+				NoTokenProvidedException, NoSuchEnvironmentException {
 		
 		//provider cannot be null or empty here since it's a path param
 		final MultivaluedMap<String, String> qps = uriInfo.getQueryParameters();
@@ -179,7 +190,7 @@ public class Link {
 		} else {
 			checkState(state, retstate);
 			final IncomingToken token = getLinkInProcessToken(userCookie);
-			final LinkToken lt = auth.link(token, provider, authcode);
+			final LinkToken lt = auth.link(token, provider, authcode, environment);
 			if (lt.isLinked()) {
 				tt = Optional.absent();
 			} else {
@@ -191,18 +202,25 @@ public class Link {
 		// note nginx will rewrite the redirect appropriately so absolute
 		// redirects are ok
 		if (tt.isPresent()) {
-			final URI completeURL = getExternalConfigURI(auth,
-					cfg -> cfg.getCompleteLinkRedirect(), UIPaths.LINK_ROOT_CHOICE);
-			r = Response.seeOther(completeURL)
+			final URI completeURI = getExternalConfigURI(
+					auth,
+					cfg -> cfg.getURLSetOrDefault(environment).getCompleteLinkRedirect(),
+					UIPaths.LINK_ROOT_CHOICE);
+			final int age = getMaxCookieAge(tt.get());
+			r = Response.seeOther(completeURI)
 					.cookie(getLinkInProcessCookie(tt.get()))
 					.cookie(getStateCookie(null))
+					.cookie(getEnvironmentCookie(environment, UIPaths.LINK_ROOT, age))
 					.build();
 		} else {
-			final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+			final URI postLinkURI = getExternalConfigURI(
+					auth,
+					cfg-> cfg.getURLSetOrDefault(environment).getPostLinkRedirect(),
 					UIPaths.ME_ROOT);
 			r = Response.seeOther(postLinkURI)
-					.cookie(getStateCookie(null))
 					.cookie(getLinkInProcessCookie(null))
+					.cookie(getStateCookie(null))
+					.cookie(getEnvironmentCookie(null, UIPaths.LINK_ROOT, 0))
 					.build();
 		}
 		return r;
@@ -302,7 +320,10 @@ public class Link {
 	private Response cancelLink(final String token)
 			throws NoTokenProvidedException, AuthStorageException {
 		auth.deleteLinkOrLoginState(getLinkInProcessToken(token));
-		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
+		return Response.noContent()
+				.cookie(getLinkInProcessCookie(null))
+				.cookie(getEnvironmentCookie(null, UIPaths.LINK_ROOT, 0))
+				.build();
 	}
 	
 	// for dumb HTML pages that use forms
@@ -313,19 +334,25 @@ public class Link {
 	public Response pickAccount(
 			@Context final HttpHeaders headers,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String linktoken,
+			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@FormParam(Fields.ID) String identityID)
 			throws NoTokenProvidedException, AuthStorageException, LinkFailedException,
 				IdentityLinkedException, UnauthorizedException, InvalidTokenException,
-				MissingParameterException, IdentityProviderErrorException {
+				MissingParameterException, IdentityProviderErrorException,
+				NoSuchEnvironmentException {
 		if (nullOrEmpty(identityID)) {
 			identityID = null;
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		pickAccount(token, linktoken, Optional.fromNullable(identityID));
-		final URI postLinkURI = getExternalConfigURI(auth, cfg-> cfg.getPostLinkRedirect(),
+		final URI postLinkURI = getExternalConfigURI(
+				auth,
+				cfg-> cfg.getURLSetOrDefault(environment).getPostLinkRedirect(),
 				UIPaths.ME_ROOT);
 		return Response.seeOther(postLinkURI)
-				.cookie(getLinkInProcessCookie(null)).build();
+				.cookie(getLinkInProcessCookie(null))
+				.cookie(getEnvironmentCookie(null, UIPaths.LINK_ROOT, 0))
+				.build();
 	}
 	
 	private static class LinkPick extends IncomingJSON {
@@ -361,7 +388,10 @@ public class Link {
 		}
 		linkpick.exceptOnAdditionalProperties();
 		pickAccount(getToken(token), linktoken, linkpick.getID());
-		return Response.noContent().cookie(getLinkInProcessCookie(null)).build();
+		return Response.noContent()
+				.cookie(getLinkInProcessCookie(null))
+				.cookie(getEnvironmentCookie(null, UIPaths.LINK_ROOT, 0))
+				.build();
 	}
 
 	private void pickAccount(

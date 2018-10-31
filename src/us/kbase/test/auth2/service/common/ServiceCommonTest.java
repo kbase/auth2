@@ -33,6 +33,7 @@ import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.providers.GoogleIdentityProviderFactory;
 import us.kbase.auth2.service.AuthExternalConfig;
+import us.kbase.auth2.service.AuthExternalConfig.URLSet;
 import us.kbase.auth2.service.UserAgentParser;
 import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
@@ -351,9 +352,15 @@ public class ServiceCommonTest {
 	public void isIgnoreIPsInHeaders() throws Exception {
 		final Authentication auth = mock(Authentication.class);
 		when(auth.getExternalConfig(isA(AuthExternalConfig.AuthExternalConfigMapper.class)))
-				.thenReturn(new AuthExternalConfig<>(ConfigItem.emptyState(),
-						ConfigItem.emptyState(), ConfigItem.emptyState(), ConfigItem.emptyState(),
-						ConfigItem.state(false), ConfigItem.state(false)));
+				.thenReturn(AuthExternalConfig.getBuilder(
+						new URLSet<>(
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState(),
+								ConfigItem.emptyState()),
+						ConfigItem.state(false),
+						ConfigItem.state(false))
+						.build());
 		assertThat("incorrect ignore IPs setting", ServiceCommon.isIgnoreIPsInHeaders(auth),
 				is(false));
 	}

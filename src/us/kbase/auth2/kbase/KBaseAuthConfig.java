@@ -7,10 +7,11 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
@@ -18,6 +19,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.SLF4JAutoLogger;
@@ -28,9 +30,11 @@ import us.kbase.common.service.JsonServerSyslog.RpcInfo;
 public class KBaseAuthConfig implements AuthStartupConfig {
 	
 	//TODO JAVADOC
-	//TODO TEST
 	
-	private static final String KB_DEP = "KB_DEPLOYMENT_CONFIG";
+	/** The property name where the config class will look in the environment and the system
+	 * properties for the configuration file location. System properties take precedence.
+	 */
+	public static final String KB_DEPLOY_CFG = "KB_DEPLOYMENT_CONFIG";
 	private static final String CFG_LOC ="authserv2";
 	private static final String DEFAULT_LOG_NAME = "KBaseAuthService2";
 	private static final String TEMP_KEY_CFG_FILE = "temp-key-config-file";
@@ -41,8 +45,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
+	private static final String KEY_ENVIRONMENT_HEADER = "environment-header";
 	private static final String KEY_TEMPLATE_DIR = "template-dir";
 	private static final String KEY_ID_PROV = "identity-providers";
+	private static final String KEY_ID_PROV_ENVS = "identity-provider-envs";
 	private static final String KEY_PREFIX_ID_PROVS = "identity-provider-";
 	private static final String KEY_SUFFIX_ID_PROVS_FACTORY = "-factory";
 	private static final String KEY_SUFFIX_ID_PROVS_LOGIN_URL = "-login-url";
@@ -54,8 +60,10 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			"-login-redirect-url";
 	private static final String KEY_SUFFIX_ID_PROVS_LINK_REDIRECT =
 			"-link-redirect-url";
+	private static final String KEY_SUFFIX_ID_PROVS_ENV = "-env-";
 	private static final String KEY_SUFFIX_ID_PROVS_CUSTOM = "-custom-";
 	private static final String TRUE = "true";
+	private static final String ENVIRONMENT_HEADER_PREFIX = "X-";
 	private static final String KEY_TEST_MODE_ENABLED = "test-mode-enabled";
 	
 	private final SLF4JAutoLogger logger;
@@ -64,6 +72,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final Optional<String> mongoUser;
 	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
+	private final String environmentHeader;
 	private final Set<IdentityProviderConfig> providers;
 	private final boolean isTestModeEnabled;
 	private final Path templateDir;
@@ -103,6 +112,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 					Optional.of(mongop.get().toCharArray()) : Optional.absent();
 			mongop = null; //GC
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
+			environmentHeader = getEnvironmentHeader(cfg);
 			providers = getProviders(cfg);
 		} catch (AuthConfigurationException e) {
 			if (!nullLogger) {
@@ -113,6 +123,28 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 	}
 	
+	private static final String INVALID_CHARS_REGEX = "[^A-Z-]+";
+	private static final Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
+	
+	private String getEnvironmentHeader(final Map<String, String> cfg)
+			throws AuthConfigurationException {
+		final String eh = getString(KEY_ENVIRONMENT_HEADER, cfg, true);
+		if (!eh.startsWith(ENVIRONMENT_HEADER_PREFIX)) {
+			throw new AuthConfigurationException(String.format(
+					"Parameter %s must start with %s in configuration file %s, section %s",
+					KEY_ENVIRONMENT_HEADER, ENVIRONMENT_HEADER_PREFIX,
+					cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
+		}
+		final Matcher m = INVALID_CHARS.matcher(eh);
+		if (m.find()) {
+			throw new AuthConfigurationException(String.format(
+					"Illegal character in %s %s in configuration file %s, section %s: %s",
+					KEY_ENVIRONMENT_HEADER, eh, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC,
+					m.group()));
+		}
+		return eh;
+	}
+
 	private Set<IdentityProviderConfig> getProviders(
 			final Map<String, String> cfg)
 			throws AuthConfigurationException {
@@ -134,29 +166,53 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			final URL api = getURL(pre + KEY_SUFFIX_ID_PROVS_API_URL, cfg);
 			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
 			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
-			final Map<String, String> custom = getCustom(pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
 			try {
-				ips.add(new IdentityProviderConfig(factory, login, api, cliid, clisec,
-						loginRedirect, linkRedirect, custom));
+				final Builder ipcfg = IdentityProviderConfig.getBuilder(
+						factory, login, api, cliid, clisec, loginRedirect, linkRedirect);
+				addCustom(ipcfg, pre + KEY_SUFFIX_ID_PROVS_CUSTOM, cfg);
+				addEnvs(ipcfg, pre, cfg);
+				ips.add(ipcfg.build());
 			} catch (IdentityProviderConfigurationException e) {
-				//TODO TEST ^ is ok in a url, but not in a URI
 				throw new AuthConfigurationException(String.format(
 						"Error building configuration for provider %s in " +
 						"section %s of config file %s: %s",
-						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE)));
+						p, CFG_LOC, cfg.get(TEMP_KEY_CFG_FILE), e.getMessage()), e);
 			}
 		}
 		return Collections.unmodifiableSet(ips);
 	}
 	
-	private Map<String, String> getCustom(final String keyprefix, final Map<String, String> cfg) {
-		final Map<String, String> ret = new HashMap<>();
+	private void addEnvs(
+			final Builder idProviderConfig,
+			final String prefix,
+			final Map<String, String> cfg)
+			throws AuthConfigurationException, IdentityProviderConfigurationException {
+		final String envs = getString(KEY_ID_PROV_ENVS, cfg);
+		if (envs == null) {
+			return;
+		}
+		for (String e: envs.split(",")) {
+			e = e.trim();
+			if (e.isEmpty()) {
+				continue;
+			}
+			final String pre = prefix + KEY_SUFFIX_ID_PROVS_ENV + e;
+			final URL loginRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LOGIN_REDIRECT, cfg);
+			final URL linkRedirect = getURL(pre + KEY_SUFFIX_ID_PROVS_LINK_REDIRECT, cfg);
+			idProviderConfig.withEnvironment(e, loginRedirect, linkRedirect);
+		}
+	}
+
+	private void addCustom(
+			final Builder idProviderConfig,
+			final String keyprefix,
+			final Map<String, String> cfg)
+			throws IdentityProviderConfigurationException {
 		for (final String key: cfg.keySet()) {
-			if (key != null && key.startsWith(keyprefix)) {
-				ret.put(key.replace(keyprefix, ""), cfg.get(key));
+			if (key.startsWith(keyprefix)) { // no way for a key to be null
+				idProviderConfig.withCustomConfiguration(key.replace(keyprefix, ""), cfg.get(key));
 			}
 		}
-		return ret;
 	}
 
 	private URL getURL(final String key, final Map<String, String> cfg)
@@ -239,12 +295,12 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 
 	private static Path getConfigPathFromEnv()
 			throws AuthConfigurationException {
-		final String file = System.getProperty(KB_DEP) == null ?
-				System.getenv(KB_DEP) : System.getProperty(KB_DEP);
+		final String file = System.getProperty(KB_DEPLOY_CFG) == null ?
+				System.getenv(KB_DEPLOY_CFG) : System.getProperty(KB_DEPLOY_CFG);
 		if (file == null || file.trim().isEmpty()) {
 			throw new AuthConfigurationException(String.format(
 					"Deployment configuration variable %s not in " +
-							"environment or system properties", KB_DEP));
+							"environment or system properties", KB_DEPLOY_CFG));
 		}
 		return Paths.get(file);
 	}
@@ -278,6 +334,14 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	public Set<IdentityProviderConfig> getIdentityProviderConfigs() {
 		return providers;
 	}
+	
+	@Override
+	public Set<String> getEnvironments() {
+		if (providers.isEmpty()) {
+			return Collections.emptySet();
+		}
+		return providers.iterator().next().getEnvironments();
+	}
 
 	@Override
 	public String getMongoHost() {
@@ -302,6 +366,11 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	@Override
 	public String getTokenCookieName() {
 		return cookieName;
+	}
+	
+	@Override
+	public String getEnvironmentHeaderName() {
+		return environmentHeader;
 	}
 	
 	@Override

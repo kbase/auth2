@@ -1,6 +1,20 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.6
+-----
+* CONFIGURATION CHANGE - there is a new required `deploy.cfg` parameter, `environment-header`
+  (see below).
+* The service can now support multiple alternate environments with different redirect urls
+  along with the default environment.
+  When starting a login or link flow, a custom header or an `environment` form parameter can
+  be sent to the endpoint to specify the environment to use for the flow. The header takes
+  precedence over the form parameter and is specified in the `deploy.cfg` file.
+  Environments are configured in the `deploy.cfg` file - see `deploy.cfg.example` for an
+  example. Each identity provider will need to specify login and link redirect urls for each
+  environment. Additionally, in the `/admin/config/` configuration endpoint, optional redirect
+  URLs equivalent to the default environment redirect urls can be configured.
+
 0.2.5
 -----
 * OrcID is now supported as an identity provider. See `deploy.cfg.example` for a

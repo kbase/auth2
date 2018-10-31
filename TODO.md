@@ -20,6 +20,7 @@ Auth service work
   * Code documentation
   * Try swagger again - go from code -> docs vs. other way around
   * Server manual, incl user and admin coverage
+  * Interaction diagram for login and link flow w/ I/O, cookies, etc. noted.
 * General
   * Lock local account for X m after Y failed logins - use sshguard or something here
   * Make server root return endpoints

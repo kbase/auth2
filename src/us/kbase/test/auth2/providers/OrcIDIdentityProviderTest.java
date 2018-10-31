@@ -3,6 +3,7 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
@@ -28,6 +29,7 @@ import org.mockserver.model.ParameterBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -91,15 +93,17 @@ public class OrcIDIdentityProviderTest {
 	private static final IdentityProviderConfig CFG;
 	static {
 		try {
-			CFG = new IdentityProviderConfig(
+			CFG = IdentityProviderConfig.getBuilder(
 					OrcIDIdentityProviderFactory.class.getName(),
 					new URL("https://ologin.com"),
 					new URL("https://osetapiurl.com"),
 					"ofoo",
 					"obar",
 					new URL("https://ologinredir.com"),
-					new URL("https://olinkredir.com"),
-					Collections.emptyMap());
+					new URL("https://olinkredir.com"))
+					.withEnvironment("myenv",
+							new URL("https://myologinred.com"), new URL("https://myolinkred.com"))
+					.build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
@@ -111,15 +115,27 @@ public class OrcIDIdentityProviderTest {
 		
 		final IdentityProvider oip = gc.configure(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false),
+		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true),
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
+						"&response_type=code&client_id=ofoo")));
+		
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
+						"&response_type=code&client_id=ofoo")));
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 	}
 	
@@ -128,15 +144,27 @@ public class OrcIDIdentityProviderTest {
 		
 		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
-		assertThat("incorrect login url", oip.getLoginURL("foo5", false),
+		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
+		assertThat("incorrect login url", oip.getLoginURL("foo5", false, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo6", true),
+		assertThat("incorrect link url", oip.getLoginURL("foo6", true, null),
 				is(new URL("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
+						"&response_type=code&client_id=ofoo")));
+		
+		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
+						"&response_type=code&client_id=ofoo")));
+		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
+				is(new URL("https://ologin.com/oauth/authorize?" +
+						"scope=%2Fauthenticate" +
+						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 		
 	}
@@ -144,15 +172,15 @@ public class OrcIDIdentityProviderTest {
 	@Test
 	public void createFail() throws Exception {
 		failCreate(null, new NullPointerException("idc"));
-		failCreate(new IdentityProviderConfig(
+		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
 				CFG.getLoginURL(),
 				CFG.getApiURL(),
 				CFG.getClientID(),
 				CFG.getClientSecret(),
 				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL(),
-				Collections.emptyMap()),
+				CFG.getLinkRedirectURL())
+				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
 	}
@@ -175,13 +203,31 @@ public class OrcIDIdentityProviderTest {
 				"authcode cannot be null or empty"));
 	}
 	
+	@Test
+	public void noSuchEnvironment() throws Exception {
+		final IdentityProvider idp = new OrcIDIdentityProvider(CFG);
+		
+		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+	}
+	
+	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
 			final boolean link,
 			final Exception exception) throws Exception {
+		failGetIdentities(idp, authcode, link, null, exception);
+	}
+	
+	private void failGetIdentities(
+			final IdentityProvider idp,
+			final String authcode,
+			final boolean link,
+			final String env,
+			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link);
+			idp.getIdentities(authcode, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -191,15 +237,16 @@ public class OrcIDIdentityProviderTest {
 	private IdentityProviderConfig getTestIDConfig()
 			throws IdentityProviderConfigurationException, MalformedURLException,
 			URISyntaxException {
-		return new IdentityProviderConfig(
+		return IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"ofoo",
 				"obar",
 				new URL("https://ologinredir.com"),
-				new URL("https://olinkredir.com"),
-				Collections.emptyMap());
+				new URL("https://olinkredir.com"))
+				.withEnvironment("e3", new URL("https://lo.com"), new URL("https://li.com"))
+				.build();
 	}
 	
 	@Test
@@ -347,11 +394,30 @@ public class OrcIDIdentityProviderTest {
 		setUpCallAuthToken(authCode, "footoken3", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
 				new RemoteIdentityDetails(orcID, "My name", email)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithLoginURLAndEnvironment() throws Exception {
+		final String authCode = "authcode2";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		setUpCallAuthToken(authCode, "footoken3", "https://lo.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
+		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "email7")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, "e3");
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "email7")));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -369,15 +435,15 @@ public class OrcIDIdentityProviderTest {
 	private void getIdentityWithLinkURL(final String email, final Map<String, Object> response)
 			throws Exception {
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = new IdentityProviderConfig(
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				"someclient",
 				"bar2",
 				new URL("https://ologinredir2.com"),
-				new URL("https://olinkredir2.com"),
-				Collections.emptyMap());
+				new URL("https://olinkredir2.com"))
+				.build();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		
@@ -386,11 +452,40 @@ public class OrcIDIdentityProviderTest {
 				null, orcID);
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
 				new RemoteIdentityDetails(orcID, null, email)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithLinkURLAndEnvironment() throws Exception {
+		final String authCode = "authcode2";
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
+				OrcIDIdentityProviderFactory.class.getName(),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				"someclient",
+				"bar2",
+				new URL("https://ologinredir2.com"),
+				new URL("https://olinkredir2.com"))
+				.withEnvironment("e3", new URL("https://lo.com"), new URL("https://li.com"))
+				.build();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		setUpCallAuthToken(authCode, "footoken2", "https://li.com",
+				idconfig.getClientID(), idconfig.getClientSecret(),
+				null, orcID);
+		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "email4")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, "e3");
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, null, "email4")));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
