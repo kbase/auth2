@@ -1,6 +1,10 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.7
+-----
+* Update the MongoDB client to 3.8.2 to fix https://jira.mongodb.org/browse/JAVA-2383.
+
 0.2.6
 -----
 * CONFIGURATION CHANGE - there is a new required `deploy.cfg` parameter, `environment-header`
