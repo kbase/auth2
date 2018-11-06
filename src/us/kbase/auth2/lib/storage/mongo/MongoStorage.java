@@ -301,7 +301,7 @@ public class MongoStorage implements AuthStorage {
 			}
 			// ok, duplicate key means the version doc is already there, this isn't the first
 			// startup
-			if (col.count() != 1) {
+			if (col.countDocuments() != 1) {
 				// if this occurs the indexes are broken, so there's no way to test without
 				// altering ensureIndexes()
 				throw new StorageInitException(
@@ -1882,7 +1882,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private boolean userExists(final UserName userName) throws AuthStorageException {
 		try {
-			return db.getCollection(COL_USERS).count(
+			return db.getCollection(COL_USERS).countDocuments(
 					new Document(Fields.USER_NAME, userName.getName())) == 1;
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
