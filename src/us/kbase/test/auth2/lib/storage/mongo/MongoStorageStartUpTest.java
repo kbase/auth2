@@ -42,7 +42,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final MongoDatabase db = mc.getDatabase("startUpAndCheckConfigDoc");
 		new MongoStorage(db);
 		final MongoCollection<Document> col = db.getCollection("config");
-		assertThat("Only one config doc", col.count(), is(1L));
+		assertThat("Only one config doc", col.countDocuments(), is(1L));
 		final FindIterable<Document> c = col.find();
 		final Document d = c.first();
 		
