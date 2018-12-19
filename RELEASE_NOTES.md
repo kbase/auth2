@@ -1,6 +1,10 @@
 Authentication Service MKII release notes
 =========================================
 
+0.2.8
+-----
+* Added a customizable config block to the deployment template.
+
 0.2.7
 -----
 * Update the MongoDB client to 3.8.2 to fix https://jira.mongodb.org/browse/JAVA-2383.
