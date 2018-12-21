@@ -3,6 +3,7 @@ Auth2 TODO list
 
 Auth service work
 -----------------
+* Include users's identities in admin user view
 * Complete rich UI (code not in this repo)
   * Currently only covers login, link, me, and tokens.
 * TODOs in the codebase
