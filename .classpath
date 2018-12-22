@@ -16,7 +16,6 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-jaxrs-json-provider-2.5.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-module-jaxb-annotations-2.5.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jetty/jetty-all-9.3.11.v20160721-uber.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-3.3.0.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mustache/compiler-0.9.3.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/kbase/common/kbase-common-0.0.22.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jersey/mvc/jersey-mvc-2.23.2.jar"/>
@@ -62,6 +61,7 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/slf4j/slf4j-api-1.7.25.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/snakeyaml/snakeyaml-1.18.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/yauaa/yauaa-1.3.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/apache_commons/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/equalsverifier/equalsverifier-2.2.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/diff/java-diff-utils-2.1.1.jar" sourcepath="/jars/lib/jars/diff/java-diff-utils-2.1.1-sources.jar">
@@ -75,5 +75,6 @@
 			<attribute name="javadoc_location" value="jar:platform:/resource/jars/lib/jars/jsoup/jsoup-1.10.2-javadoc.jar!/"/>
 		</attributes>
 	</classpathentry>
+	<classpathentry kind="lib" path="/jars/lib/jars/mongo/mongo-java-driver-3.8.2.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

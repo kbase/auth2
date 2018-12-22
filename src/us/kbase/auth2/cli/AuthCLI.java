@@ -125,7 +125,8 @@ public class AuthCLI {
 		try {
 			// may need to be smarter here about figuring out the config implementation
 			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
-			auth = new AuthBuilder(cfg, AuthExternalConfig.SET_DEFAULT).getAuth();
+			auth = new AuthBuilder(cfg, AuthExternalConfig.getDefaultConfig(cfg.getEnvironments()))
+					.getAuth();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			printError(e, a);
 			return 1;

@@ -14,6 +14,7 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.enableRedirect;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import static us.kbase.test.auth2.service.ServiceTestUtils.setLoginCompleteRedirect;
+import static us.kbase.test.auth2.service.ServiceTestUtils.setEnvironment;
 
 import java.net.URI;
 import java.net.URL;
@@ -23,6 +24,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -59,10 +61,10 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
-import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
@@ -86,6 +88,8 @@ import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LoginTest {
+	
+	//TODO TEST convert most of these to unit tests
 	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
@@ -111,7 +115,6 @@ public class LoginTest {
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
-		TestCommon.stfuLoggers();
 		manager = new MongoStorageTestManager(DB_NAME);
 		final Path cfgfile = ServiceTestUtils.generateTempConfigFile(manager, DB_NAME, COOKIE_NAME);
 		TestCommon.getenv().put("KB_DEPLOYMENT_CONFIG", cfgfile.toString());
@@ -195,57 +198,97 @@ public class LoginTest {
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, null, expectedsession, expectedredirect, null);
 	}
 	
 	@Test
-	public void loginStartEmptyStrings() throws Exception {
+	public void loginStartHeaderEnvironment() throws Exception {
 		final Form form = new Form();
 		form.param("provider", "prov1");
-		form.param("redirecturl", "  \t   \n   ");
-		form.param("stayloggedin", "  \t   \n   ");
+		form.param("environment", "env2");
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
 				"/login", null, "session choice", 30 * 60, false);
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, "env1", expectedsession, expectedredirect, "env1");
 	}
 	
 	@Test
-	public void loginStartWithRedirectAndNonSessionCookie() throws Exception {
+	public void loginStartEmptyStringsWithFormEnvironmentWhitespaceHeader() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		form.param("redirecturl", "  \t   \n   ");
+		form.param("stayloggedin", "  \t   \n   ");
+		form.param("environment", "myenv");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "true",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
+				"/login", null, "redirect url", 0, false);
+
+		loginStart(form, "      \t     ", expectedsession, expectedredirect, "myenv");
+	}
+	
+	@Test
+	public void loginStartWithRedirectAndNonSessionCookieWithWhitespaceEnvironment()
+			throws Exception {
 		final String redirect = "https://foobar.com/thingy/stuff";
 		final Form form = new Form();
 		form.param("provider", "prov1");
 		form.param("redirecturl", redirect);
 		form.param("stayloggedin", "f");
+		form.param("environment", "   \t  ");
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "false",
 				"/login", null, "session choice", 30 * 60, false);
 		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
 				"/login", null, "redirect url", 30 * 60, false);
 
-		loginStart(form, expectedsession, expectedredirect);
+		loginStart(form, null, expectedsession, expectedredirect, null);
+	}
+	
+	@Test
+	public void loginStartWithRedirectAndNonSessionCookieWithEnvironment() throws Exception {
+		final String redirect = "https://foobaz.com/thingy/stuff";
+		final Form form = new Form();
+		form.param("provider", "prov1");
+		form.param("redirecturl", redirect);
+		form.param("stayloggedin", "f");
+		form.param("environment", "env1");
+		final NewCookie expectedsession = new NewCookie("issessiontoken", "false",
+				"/login", null, "session choice", 30 * 60, false);
+		final NewCookie expectedredirect = new NewCookie("loginredirect", redirect,
+				"/login", null, "redirect url", 30 * 60, false);
+
+		loginStart(form, null, expectedsession, expectedredirect, "env1");
 	}
 
 	private void loginStart(
 			final Form form,
+			final String headerEnv,
 			final NewCookie expectedsession,
-			final NewCookie expectedredirect)
+			final NewCookie expectedredirect,
+			final String expectedEnv)
 			throws Exception {
 		final IdentityProvider provmock = MockIdentityProviderFactory
-				.mocks.get("prov1");
+				.MOCKS.get("prov1");
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableRedirect(host, admintoken, "https://foobar.com/thingy");
+		enableRedirect(host, COOKIE_NAME, admintoken, "https://foobaz.com/thingy", "env1");
 		
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(false))).thenReturn(new URL(url));
+		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(expectedEnv)))
+				.thenReturn(new URL(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
-		final Response res = wt.request().post(
+		final Builder b = wt.request();
+		if (headerEnv != null) {
+			b.header("X-DOEKBASE-ENVIRONMENT", headerEnv);
+		}
+		final Response res = b.post(
 				Entity.entity(form, MediaType.APPLICATION_FORM_URLENCODED_TYPE));
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
@@ -260,6 +303,8 @@ public class LoginTest {
 		
 		final NewCookie redirect = res.getCookies().get("loginredirect");
 		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
+		
+		assertEnvironmentCookieCorrect(res, expectedEnv, 30 * 60);
 	}
 	
 	@Test
@@ -283,6 +328,15 @@ public class LoginTest {
 	}
 	
 	@Test
+	public void loginStartFailNoSuchEnvironment() throws Exception {
+		final Form form = new Form();
+		form.param("provider", "fake");
+		form.param("environment", "env3");
+		form.param("redirecturl", "https://foo.com");
+		failLoginStart(form, 400, "Bad Request", new NoSuchEnvironmentException("env3"));
+	}
+	
+	@Test
 	public void loginStartFailBadRedirect() throws Exception {
 		final Form form = new Form();
 		form.param("provider", "fake");
@@ -303,9 +357,22 @@ public class LoginTest {
 		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
 				"Post-login redirects are not enabled"));
 		
+		// with environment without redirect url prefix configured
+		final Form form4 = new Form();
+		form4.param("provider", "fake");
+		form4.param("redirecturl", "https://foobar.com/stuff/thingy");
+		form4.param("environment", "env1");
+		failLoginStart(form4, 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled for environment env1"));
+		
 		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
 		failLoginStart(form3, 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		
+		// with environment with url prefix configured
+		enableRedirect(host, COOKIE_NAME, adminToken, "https://foobar.com/stuff2/", "env1");
+		failLoginStart(form4, 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
 
@@ -324,22 +391,32 @@ public class LoginTest {
 	
 	@Test
 	public void loginCompleteImmediateLoginMinimalInput() throws Exception {
-		
+		loginCompleteImmediateLoginMinimalInput(null);
+	}
+
+	@Test
+	public void loginCompleteImmediateLoginMinimalInputWithEnvironment() throws Exception {
+		loginCompleteImmediateLoginMinimalInput("env1");
+	}
+
+	private void loginCompleteImmediateLoginMinimalInput(final String env) throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
-		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		loginCompleteImmediateLoginStoreUser(authcode);
+		loginCompleteImmediateLoginStoreUser(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
-				.cookie("loginstatevar", state)
-				.get();
+		final Builder b = wt.request()
+				.cookie("loginstatevar", state);
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
@@ -368,7 +445,7 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		loginCompleteImmediateLoginStoreUser(authcode);
+		loginCompleteImmediateLoginStoreUser(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTargetEmptyError(authcode, state);
 		final Response res = wt.request()
@@ -393,28 +470,44 @@ public class LoginTest {
 	
 	@Test
 	public void loginCompleteImmediateLoginRedirectAndTrueSession() throws Exception {
-		
+		loginCompleteImmediateLoginRedirectAndTrueSession(null, "https://foobar.com/thingy/stuff");
+	}
+	
+	@Test
+	public void loginCompleteImmediateLoginRedirectAndTrueSessionWithEnvironment() 
+			throws Exception {
+		loginCompleteImmediateLoginRedirectAndTrueSession(
+				"env2", "https://foobar.com/t2hingy/stuff");
+	}
+
+	private void loginCompleteImmediateLoginRedirectAndTrueSession(
+			final String env,
+			final String url)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableRedirect(host, admintoken, "https://foobar.com/thingy");
+		enableRedirect(host, COOKIE_NAME, admintoken, "https://foobar.com/t2hingy", "env2");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		loginCompleteImmediateLoginStoreUser(authcode);
+		loginCompleteImmediateLoginStoreUser(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("loginstatevar", state)
-				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
-				.cookie("issessiontoken", "true")
-				.get();
+				.cookie("loginredirect", url)
+				.cookie("issessiontoken", "true");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://foobar.com/thingy/stuff")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		assertLoginProcessTokensRemoved(res);
 		
@@ -439,7 +532,7 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		loginCompleteImmediateLoginStoreUser(authcode);
+		loginCompleteImmediateLoginStoreUser(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -464,8 +557,12 @@ public class LoginTest {
 		loginCompleteImmediateLoginCheckToken(token);
 	}
 
-	private void loginCompleteImmediateLoginStoreUser(final String authcode) throws Exception {
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+	private void loginCompleteImmediateLoginStoreUser(
+			final String authcode,
+			final String environment)
+			throws Exception {
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
+				authcode, environment);
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
@@ -516,11 +613,43 @@ public class LoginTest {
 				"/login", null, "logintoken", 0, false);
 		final NewCookie inprocess = res.getCookies().get("in-process-login-token");
 		assertThat("incorrect process cookie", inprocess, is(expectedinprocess));
+		
+		assertEnvironmentCookieRemoved(res);
+	}
+	
+	private void assertEnvironmentCookieRemoved(final Response res) {
+		final NewCookie expectedenv = new NewCookie("environment", "no env",
+				"/login", null, "environment", 0, false);
+		final NewCookie envcookie = res.getCookies().get("environment");
+		assertThat("incorrect state cookie", envcookie, is(expectedenv));
+	}
+	
+	private void assertEnvironmentCookieCorrect(
+			final Response res,
+			final String env,
+			final int lifetime) {
+		if (env != null) {
+			final NewCookie envcookie = res.getCookies().get("environment");
+			final NewCookie expectedenv = new NewCookie("environment", env,
+					"/login", null, "environment", envcookie.getMaxAge(), false);
+			assertThat("incorrect env cookie", envcookie, is(expectedenv));
+			TestCommon.assertCloseTo(envcookie.getMaxAge(), lifetime, 10);
+		} else {
+			assertEnvironmentCookieRemoved(res);
+		}
 	}
 	
 	@Test
 	public void loginCompleteDelayedMinimalInput() throws Exception {
-		
+		loginCompleteDelayedMinimalInput(null);
+	}
+
+	@Test
+	public void loginCompleteDelayedMinimalInputWithEnvironment() throws Exception {
+		loginCompleteDelayedMinimalInput("env1");
+	}
+	
+	private void loginCompleteDelayedMinimalInput(final String env) throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
@@ -530,12 +659,15 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
-				.cookie("loginstatevar", state)
-				.get();
+		final Builder b = wt.request()
+				.cookie("loginstatevar", state);
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/login/choice")));
@@ -550,34 +682,53 @@ public class LoginTest {
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));
 		
+		assertEnvironmentCookieCorrect(res, env, 30 * 60);
+		
 		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+	}
+
+	@Test
+	public void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect() throws Exception {
+		loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect(
+				null, "https://whee.com/bleah");
 	}
 	
 	@Test
-	public void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect() throws Exception {
-		
+	public void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirectAndAlsoEnvironment()
+			throws Exception {
+		loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect(
+				"env2", "https://whoo.com/bleah");
+	}
+
+	private void loginCompleteDelayedEmptyStringInputAndAlternateChoiceRedirect(
+			final String env,
+			final String url)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		setLoginCompleteRedirect(host, admintoken, "https://whee.com/bleah");
+		setLoginCompleteRedirect(host, COOKIE_NAME, admintoken, "https://whoo.com/bleah", "env2");
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("loginstatevar", state)
 				.cookie("loginredirect", "   \t   ")
-				.cookie("issessiontoken", "    \t   ")
-				.get();
+				.cookie("issessiontoken", "    \t   ");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://whee.com/bleah")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		final NewCookie expectedredirect = new NewCookie("loginredirect", "no redirect",
 				"/login", null, "redirect url", 0, false);
@@ -589,38 +740,62 @@ public class LoginTest {
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));
 		
+		assertEnvironmentCookieCorrect(res, env, 30 * 60);
+		
 		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
 	}
 	
 	@Test
 	public void loginCompleteDelayedLoginRedirectAndTrueSession() throws Exception {
-		
+		loginCompleteDelayedLoginRedirectAndTrueSession(
+				null, "https://whee.com/bleah", "https://foobar.com/thingy/stuff");
+	}
+
+	
+	@Test
+	public void loginCompleteDelayedLoginRedirectAndTrueSessionAndEnvironment() throws Exception {
+		loginCompleteDelayedLoginRedirectAndTrueSession(
+				"env1", "https://whoo.com/bleah", "https://foobar2.com/thingy/stuff");
+	}
+
+	private void loginCompleteDelayedLoginRedirectAndTrueSession(
+			final String env,
+			final String completeURL,
+			final String redirectURL)
+			throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
 		enableRedirect(host, admintoken, "https://foobar.com/thingy");
 		setLoginCompleteRedirect(host, admintoken, "https://whee.com/bleah");
+		final Form form = new Form();
+		form.param("environment", "env1");
+		form.param("completeloginredirect", "https://whoo.com/bleah");
+		form.param("allowedloginredirect", "https://foobar2.com/thingy");
+		setEnvironment(host, COOKIE_NAME, admintoken, form);
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
-		final Response res = wt.request()
+		final Builder b = wt.request()
 				.cookie("loginstatevar", state)
-				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
-				.cookie("issessiontoken", "true")
-				.get();
+				.cookie("loginredirect", redirectURL)
+				.cookie("issessiontoken", "true");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final Response res = b.get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://whee.com/bleah")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(completeURL)));
 		
 		final NewCookie redirect = res.getCookies().get("loginredirect");
 		final NewCookie expectedredirect = new NewCookie(
-				"loginredirect", "https://foobar.com/thingy/stuff",
+				"loginredirect", redirectURL,
 				"/login", null, "redirect url", redirect.getMaxAge(), false);
 		assertThat("incorrect redirect cookie less max age", redirect, is(expectedredirect));
 		TestCommon.assertCloseTo(redirect.getMaxAge(), 30 * 60, 10);
@@ -630,6 +805,8 @@ public class LoginTest {
 				"/login", null, "session choice", session.getMaxAge(), false);
 		assertThat("incorrect session cookie less max age", session, is(expectedsession));
 		TestCommon.assertCloseTo(session.getMaxAge(), 30 * 60, 10);
+		
+		assertEnvironmentCookieCorrect(res, env, 30 * 60);
 		
 		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
 	}
@@ -647,7 +824,7 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -720,14 +897,16 @@ public class LoginTest {
 		return CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
 	}
 
-	private RemoteIdentity loginCompleteSetUpProviderMock(final String authcode)
-			throws IdentityRetrievalException {
+	private RemoteIdentity loginCompleteSetUpProviderMock(
+			final String authcode,
+			final String environment)
+			throws Exception {
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.mocks.get("prov1");
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		final RemoteIdentity remoteIdentity = new RemoteIdentity(
 				new RemoteIdentityID("prov1", "prov1id"),
 				new RemoteIdentityDetails("user", "full", "email@email.com"));
-		when(provmock.getIdentities(authcode, false)).thenReturn(set(remoteIdentity));
+		when(provmock.getIdentities(authcode, false, environment)).thenReturn(set(remoteIdentity));
 		return remoteIdentity;
 	}
 	
@@ -861,6 +1040,18 @@ public class LoginTest {
 	}
 	
 	@Test
+	public void loginCompleteFailNoSuchEnvironment() throws Exception {
+		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginstatevar", "foobarstate")
+				.cookie("environment", "env3")
+				.cookie("loginredirect", "http://foo.com");
+		
+		failRequestJSON(request.get(), 400, "Bad Request", new NoSuchEnvironmentException("env3"));
+	}
+	
+	@Test
 	public void loginCompleteFailBadRedirect() throws Exception {
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
@@ -884,6 +1075,15 @@ public class LoginTest {
 		
 		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
+		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
+				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		
+		// test with environment
+		request.cookie("environment", "env1");
+		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled for environment env1"));
+		
+		enableRedirect(host, COOKIE_NAME, adminToken, "https://foobar.com/stuff2", "env1");
 		failRequestJSON(request.get(), 400, "Bad Request", new IllegalParameterException(
 				"Illegal redirect URL: https://foobar.com/stuff/thingy"));
 	}
@@ -1116,6 +1316,16 @@ public class LoginTest {
 	
 	@Test
 	public void loginChoice2CreateAndLoginDisabled() throws Exception {
+		loginChoice2CreateAndLoginDisabled(null);
+	}
+
+	@Test
+	public void loginChoice2CreateAndLoginDisabledAndEnvironment() throws Exception {
+		// without a redirect cookie, env should do nothing
+		loginChoice2CreateAndLoginDisabled("env1");
+	}
+	
+	private void loginChoice2CreateAndLoginDisabled(final String env) throws Exception {
 		// tests with login disabled
 		// tests with trailing slash on target
 		// tests empty string for redirect
@@ -1139,22 +1349,26 @@ public class LoginTest {
 		
 		final WebTarget wt = CLI.target(target);
 		
-		final String res = wt.request()
+		final Builder b = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
-				.cookie("loginredirect", "   \t   ")
-				.get()
-				.readEntity(String.class);
+				.cookie("loginredirect", "   \t   ");
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final String res = b.get().readEntity(String.class);
 		
 		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 	
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> json = wt.request()
+		final Builder bjson = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
 				.cookie("loginredirect", "   \t   ")
-				.header("accept", MediaType.APPLICATION_JSON)
-				.get()
-				.readEntity(Map.class);
+				.header("accept", MediaType.APPLICATION_JSON);
+		if (env != null) {
+			bjson.cookie("environment", env);
+		}
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = bjson.get().readEntity(Map.class);
 		
 		final Map<String, Object> expectedJson = new HashMap<>();
 		expectedJson.put("pickurl", "../pick");
@@ -1184,10 +1398,22 @@ public class LoginTest {
 	
 	@Test
 	public void loginChoice2CreateWithRedirectURL() throws Exception {
+		loginChoice2CreateWithRedirectURL(null, "https://foo.com/whee/stuff");
+	}
+	
+	@Test
+	public void loginChoice2CreateWithRedirectURLAndEnvironment() throws Exception {
+		loginChoice2CreateWithRedirectURL("env2", "https://bar.com/whee/stuff");
+	}
+
+	private void loginChoice2CreateWithRedirectURL(final String env, final String url)
+			throws Exception {
 		// tests with redirect cookie
+		// note that the html form response does not include the redirect url
 		
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, admintoken, "https://foo.com/whee");
+		enableRedirect(host, COOKIE_NAME, admintoken, "https://bar.com/whee", "env2");
 		enableLogin(host, admintoken);
 
 		final Set<RemoteIdentity> idents = new HashSet<>();
@@ -1209,33 +1435,41 @@ public class LoginTest {
 		
 		final WebTarget wt = CLI.target(target);
 		
-		final String res = wt.request()
+		final Builder b = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
-				.cookie("loginredirect", "https://foo.com/whee/baz")
-				.get()
-				.readEntity(String.class);
+				.cookie("loginredirect", url);
+		if (env != null) {
+			b.cookie("environment", env);
+		}
+		final String res = b.get().readEntity(String.class);
 		
 		TestCommon.assertNoDiffs(res, TestCommon.getTestExpectedData(getClass(),
 				TestCommon.getCurrentMethodName()));
 	
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> json = wt.request()
+		final Builder bjson = wt.request()
 				.cookie("in-process-login-token", tt.getToken())
-				.cookie("loginredirect", "https://foo.com/whee/baz")
-				.header("accept", MediaType.APPLICATION_JSON)
-				.get()
-				.readEntity(Map.class);
+				.cookie("loginredirect", url)
+				.header("accept", MediaType.APPLICATION_JSON);
+		if (env != null) {
+			bjson.cookie("environment", env);
+		}
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = bjson.get().readEntity(Map.class);
+		// since we don't care about the order of the providers
+		@SuppressWarnings("unchecked")
+		final List<Map<String, String>> l = (List<Map<String, String>>) json.get("create");
+		json.put("create", new HashSet<>(l));
 		
 		final Map<String, Object> expectedJson = new HashMap<>();
 		expectedJson.put("pickurl", "pick");
 		expectedJson.put("createurl", "create");
 		expectedJson.put("cancelurl", "cancel");
 		expectedJson.put("suggestnameurl", "suggestname");
-		expectedJson.put("redirecturl", "https://foo.com/whee/baz");
+		expectedJson.put("redirecturl", url);
 		expectedJson.put("expires", 11493000000000L);
 		expectedJson.put("creationallowed", true);
 		expectedJson.put("provider", "prov");
-		expectedJson.put("create", Arrays.asList(
+		expectedJson.put("create", set(
 				ImmutableMap.of("provusername", "user1",
 						"availablename", "user1",
 						"provfullname", "full1",
@@ -1314,6 +1548,32 @@ public class LoginTest {
 	}
 	
 	@Test
+	public void loginChoiceFailNoSuchEnvironment() throws Exception {
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/choice")
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder res = wt.request()
+				.cookie("environment", "env3")
+				.cookie("loginredirect", "https://foo.com")
+				.cookie("in-process-login-token", "foobarbaz");
+		
+		final Builder jsonrequest = wt.request()
+				.cookie("environment", "env3")
+				.cookie("loginredirect", "https://foo.com")
+				.cookie("in-process-login-token", "foobarbaz")
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestHTML(res.get(), 400, "Bad Request", new NoSuchEnvironmentException("env3"));
+		
+		failRequestJSON(jsonrequest.get(), 400, "Bad Request",
+				new NoSuchEnvironmentException("env3"));
+	}
+	
+	@Test
 	public void loginChoiceFailBadRedirect() throws Exception {
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/choice")
@@ -1353,6 +1613,24 @@ public class LoginTest {
 		
 		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
+		
+		failRequestHTML(request.get(), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		failRequestJSON(jsonrequest.get(), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		
+		// with envs
+		request.cookie("environment", "env1");
+		jsonrequest.cookie("environment", "env1");
+		
+		failRequestHTML(request.get(), 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled for environment env1"));
+		failRequestJSON(jsonrequest.get(), 400, "Bad Request", new IllegalParameterException(
+				"Post-login redirects are not enabled for environment env1"));
+		
+		enableRedirect(host, COOKIE_NAME, adminToken, "https://foobar.com/stuff2/", "env1");
 		
 		failRequestHTML(request.get(), 400, "Bad Request",
 				new IllegalParameterException(
@@ -1440,17 +1718,28 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFormMinimalInput() throws Exception {
-		
+		loginPickFormMinimalInput(null);
+	}
+
+	@Test
+	public void loginPickFormMinimalInputWithEnvironment() throws Exception {
+		// without a redirect url env makes no difference
+		loginPickFormMinimalInput("env1");
+	}
+	
+	private void loginPickFormMinimalInput(final String env) throws Exception {
 		final TemporaryToken tt = loginPickSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env);
 		
 		final Form form = new Form();
 		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
 		
 		final Response res = req.post(Entity.form(form));
+		
+		assertLoginProcessTokensRemoved(res);
 		
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
@@ -1467,12 +1756,20 @@ public class LoginTest {
 
 	@Test
 	public void loginPickJSONMinimalInput() throws Exception {
-		
+		loginPickJSONMinimalInput(null);
+	}
+
+	@Test
+	public void loginPickJSONMinimalInputWithException() throws Exception {
+		loginPickJSONMinimalInput("env1");
+	}
+	
+	private void loginPickJSONMinimalInput(final String env) throws Exception {
 		final TemporaryToken tt = loginPickSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env);
 		
 		final Response res = req.post(Entity.json(
 				ImmutableMap.of("id", "ef0518c79af70ed979907969c6d0a0f7")));
@@ -1500,13 +1797,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickFormMaximalInput() throws Exception {
-		
+		loginPickFormMaximalInput(null, "https://foo.com/baz/bat");
+	}
+
+	@Test
+	public void loginPickFormMaximalInputWithEnvironment() throws Exception {
+		loginPickFormMaximalInput("env1", "https://bar.com/baz/bat");
+	}
+	
+	private void loginPickFormMaximalInput(final String env, final String url) throws Exception {
 		final TemporaryToken tt = loginPickSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
-				.cookie("loginredirect", "https://foo.com/baz/bat")
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env)
+				.cookie("loginredirect", url)
 				.cookie("issessiontoken", "false");
 		
 		final Form form = new Form();
@@ -1518,9 +1823,10 @@ public class LoginTest {
 		
 		final Response res = req.post(Entity.form(form));
 		
+		assertLoginProcessTokensRemoved(res);
+		
 		assertThat("incorrect response code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://foo.com/baz/bat")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
 		
@@ -1537,13 +1843,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginPickJsonMaximalInput() throws Exception {
-		
+		loginPickJsonMaximalInput(null, "https://foo.com/baz/bat");
+	}
+	
+	@Test
+	public void loginPickJsonMaximalInputWithEnvironment() throws Exception {
+		loginPickJsonMaximalInput("env1", "https://bar.com/baz/bat");
+	}
+
+	private void loginPickJsonMaximalInput(final String env, final String url) throws Exception {
 		final TemporaryToken tt = loginPickSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
-				.cookie("loginredirect", "https://foo.com/baz/bat")
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env)
+				.cookie("loginredirect", url)
 				.cookie("issessiontoken", "false");
 		
 		final Response res = req.post(Entity.json(
@@ -1559,8 +1873,7 @@ public class LoginTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		assertThat("incorrect redirect url", response.get("redirecturl"),
-				is("https://foo.com/baz/bat"));
+		assertThat("incorrect redirect url", response.get("redirecturl"), is(url));
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
@@ -1584,7 +1897,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, null)
 				.cookie("loginredirect", "   \t    ")
 				.cookie("issessiontoken", "true");
 		
@@ -1616,7 +1929,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, null)
 				.cookie("loginredirect", "    \t    ")
 				.cookie("issessiontoken", "false");
 		
@@ -1645,6 +1958,31 @@ public class LoginTest {
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
 		
 		assertNoTempToken(tt);
+	}
+
+	@Test
+	public void loginPickFailNoSuchEnvironment() throws Exception {
+		loginPickOrCreateFailNoSuchEnvironment("/login/pick");
+	}
+
+	private void loginPickOrCreateFailNoSuchEnvironment(final String path) throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path(path)
+				.build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder request = wt.request()
+				.cookie("environment", "env3")
+				.cookie("loginredirect", "https://foo.com");
+		final Builder jsonrequest = wt.request()
+				.cookie("environment", "env3")
+				.header("accept", MediaType.APPLICATION_JSON)
+				.cookie("loginredirect", "https://foo.com");
+		
+		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
+				new NoSuchEnvironmentException("env3"));
+		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
+				new NoSuchEnvironmentException("env3"));
 	}
 	
 	@Test
@@ -1690,6 +2028,26 @@ public class LoginTest {
 		
 		final IncomingToken adminToken = ServiceTestUtils.getAdminToken(manager);
 		enableRedirect(host, adminToken, "https://foobar.com/stuff2/");
+		
+		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Illegal redirect URL: https://foobar.com/stuff/thingy"));
+		
+		// with envs
+		request.cookie("environment", "env1");
+		jsonrequest.cookie("environment", "env1");
+		
+		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Post-login redirects are not enabled for environment env1"));
+		failRequestJSON(jsonrequest.post(Entity.json(Collections.emptyMap())), 400, "Bad Request",
+				new IllegalParameterException(
+						"Post-login redirects are not enabled for environment env1"));
+		
+		enableRedirect(host, COOKIE_NAME, adminToken, "https://foobar.com/stuff2/", "env1");
 		
 		failRequestHTML(request.post(Entity.form(new Form())), 400, "Bad Request",
 				new IllegalParameterException(
@@ -1932,10 +2290,16 @@ public class LoginTest {
 		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("u1"));
 	}
 
-	private Builder loginPickOrCreateRequestBuilder(final TemporaryToken tt, final URI target) {
+	private Builder loginPickOrCreateRequestBuilder(
+			final TemporaryToken tt,
+			final URI target,
+			final String environment) {
 		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
 		final Builder req = wt.request()
 				.cookie("in-process-login-token", tt.getToken());
+		if (environment != null) {
+			req.cookie("environment", environment);
+		}
 		return req;
 	}
 
@@ -1945,6 +2309,7 @@ public class LoginTest {
 		
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");
+		enableRedirect(host, COOKIE_NAME, admintoken, "https://bar.com/baz", "env1");
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
@@ -1964,12 +2329,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginCreateFormMinimalInput() throws Exception {
-		
+		loginCreateFormMinimalInput(null);
+	}
+
+	@Test
+	public void loginCreateFormMinimalInputWithEnvironment() throws Exception {
+		// without a redirect url specified env makes no difference
+		loginCreateFormMinimalInput("env2");
+	}
+	
+	private void loginCreateFormMinimalInput(final String env) throws Exception {
 		final TemporaryToken tt = loginChoiceSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env);
 		
 		final Form form = new Form();
 		form.param("id", "ef0518c79af70ed979907969c6d0a0f7");
@@ -1978,6 +2352,8 @@ public class LoginTest {
 		form.param("email", "e1@g.com");
 		
 		final Response res = req.post(Entity.form(form));
+		
+		assertLoginProcessTokensRemoved(res);
 		
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
@@ -1996,12 +2372,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginCreateJSONMinimalInput() throws Exception {
-		
+		loginCreateJSONMinimalInput(null);
+	}
+
+	@Test
+	public void loginCreateJSONMinimalInputWithEnvironment() throws Exception {
+		loginCreateJSONMinimalInput("env2");
+	}
+
+	
+	private void loginCreateJSONMinimalInput(final String env) throws Exception {
 		final TemporaryToken tt = loginChoiceSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target);
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env);
 		
 		final Map<String, String> json = ImmutableMap.of(
 				"id", "ef0518c79af70ed979907969c6d0a0f7",
@@ -2036,13 +2421,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginCreateFormMaximalInput() throws Exception {
-		
+		loginCreateFormMaximalInput(null, "https://foo.com/baz/bat");
+	}
+
+	@Test
+	public void loginCreateFormMaximalInputFromEnvironment() throws Exception {
+		loginCreateFormMaximalInput("env2", "https://bar.com/baz/bat");
+	}
+	
+	private void loginCreateFormMaximalInput(final String env, final String url) throws Exception {
 		final TemporaryToken tt = loginChoiceSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
-				.cookie("loginredirect", "https://foo.com/baz/bat")
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env)
+				.cookie("loginredirect", url)
 				.cookie("issessiontoken", "false");
 		
 		final Form form = new Form();
@@ -2057,9 +2450,10 @@ public class LoginTest {
 		
 		final Response res = req.post(Entity.form(form));
 		
+		assertLoginProcessTokensRemoved(res);
+		
 		assertThat("incorrect response code", res.getStatus(), is(303));
-		assertThat("incorrect target uri", res.getLocation(),
-				is(new URI("https://foo.com/baz/bat")));
+		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
 		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
 		
@@ -2079,13 +2473,21 @@ public class LoginTest {
 	
 	@Test
 	public void loginCreateJSONMaximalInput() throws Exception {
-		
+		loginCreateJSONMaximalInput(null, "https://foo.com/baz/bat");
+	}
+	
+	@Test
+	public void loginCreateJSONMaximalInputWithEnvironment() throws Exception {
+		loginCreateJSONMaximalInput("env2", "https://bar.com/baz/bat");
+	}
+
+	private void loginCreateJSONMaximalInput(final String env, final String url) throws Exception {
 		final TemporaryToken tt = loginChoiceSetup();
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
-				.cookie("loginredirect", "https://foo.com/baz/bat")
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, env)
+				.cookie("loginredirect", url)
 				.cookie("issessiontoken", "false");
 		
 		final Map<String, Object> json = MapBuilder.<String, Object>newHashMap()
@@ -2108,8 +2510,7 @@ public class LoginTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		assertThat("incorrect redirect url", response.get("redirecturl"),
-				is("https://foo.com/baz/bat"));
+		assertThat("incorrect redirect url", response.get("redirecturl"), is(url));
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
@@ -2135,7 +2536,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, null)
 				.cookie("loginredirect", "   \t    ")
 				.cookie("issessiontoken", "true");
 		
@@ -2149,6 +2550,8 @@ public class LoginTest {
 		form.param("customcontext", "   \t \n   ");
 		
 		final Response res = req.post(Entity.form(form));
+		
+		assertLoginProcessTokensRemoved(res);
 		
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
@@ -2172,7 +2575,7 @@ public class LoginTest {
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
-		final Builder req = loginPickOrCreateRequestBuilder(tt, target)
+		final Builder req = loginPickOrCreateRequestBuilder(tt, target, null)
 				.cookie("loginredirect", "   \t    ")
 				.cookie("issessiontoken", "true");
 		
@@ -2211,6 +2614,10 @@ public class LoginTest {
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("e1@g.com")));
 		
 		assertNoTempToken(tt);
+	}
+	
+	public void loginCreateFailNoSuchEnvironment() throws Exception {
+		loginPickOrCreateFailNoSuchEnvironment("/login/create");
 	}
 	
 	@Test
@@ -2441,6 +2848,7 @@ public class LoginTest {
 		
 		enableLogin(host, admintoken);
 		enableRedirect(host, admintoken, "https://foo.com/baz");
+		enableRedirect(host, COOKIE_NAME, admintoken, "https://bar.com/baz", "env2");
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)

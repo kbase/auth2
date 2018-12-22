@@ -19,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.regex.Pattern;
 
 import javax.ws.rs.client.Client;
@@ -76,7 +77,7 @@ public class ServiceTestUtils {
 		final String rootpwd = "foobarwhoowhee";
 		when(manager.mockClock.instant()).thenReturn(Instant.now());
 		final Authentication auth = new Authentication(
-				manager.storage, set(), AuthExternalConfig.SET_DEFAULT, false);
+				manager.storage, set(), AuthExternalConfig.getDefaultConfig(set()), false);
 		auth.createRoot(new Password(rootpwd.toCharArray()));
 		final String roottoken = auth.localLogin(UserName.ROOT,
 				new Password(rootpwd.toCharArray()),
@@ -185,7 +186,7 @@ public class ServiceTestUtils {
 				"Note that in a proper UI, the error message and exception should " +
 				"be HTML-escaped."));
 		assertThat("incorrect line 2", body.child(1).html(), is(
-				"Gee whiz, I sure am sorry, but an error occurred. Gosh!"));
+				"An error occurred during the operation:"));
 		final String timestamp = breaks.get(2).getWholeText();
 		assertThat("incorrect timestamp prefix", timestamp,
 				RegexMatcher.matches("^\\s*Timestamp: \\d+"));
@@ -351,22 +352,25 @@ public class ServiceTestUtils {
 		// This is very bad form but it takes too long to start the server up for every test
 		// The alternative is to use concrete IdentityProvider implementations with 
 		// a mock server they talk to, but that seems like an even bigger pita
-		for (final IdentityProvider mock: MockIdentityProviderFactory.mocks.values()) {
+		for (final IdentityProvider mock: MockIdentityProviderFactory.MOCKS.values()) {
 			final String name = mock.getProviderName();
+			final Set<String> envs = mock.getEnvironments();
 			reset(mock);
 			when(mock.getProviderName()).thenReturn(name);
+			when(mock.getEnvironments()).thenReturn(envs);
 		}
 	}
 	
 	// inserts the config that would result on server startup per the config file below
 	private static void insertStandardConfig(final MongoStorageTestManager manager)
 			throws Exception {
+		// note these providers and this auth instance are DOA and don't affect the running service
 		final IdentityProvider prov1 = mock(IdentityProvider.class);
 		final IdentityProvider prov2 = mock(IdentityProvider.class);
 		when(prov1.getProviderName()).thenReturn("prov1");
 		when(prov2.getProviderName()).thenReturn("prov2");
-		new Authentication(manager.storage, set(prov1, prov2), AuthExternalConfig.SET_DEFAULT,
-				false);
+		new Authentication(manager.storage, set(prov1, prov2),
+				AuthExternalConfig.getDefaultConfig(set("env1", "env2")), false);
 	}
 	
 	public static Path generateTempConfigFile(
@@ -388,6 +392,7 @@ public class ServiceTestUtils {
 		sec.add("mongo-host", "localhost:" + manager.mongo.getServerPort());
 		sec.add("mongo-db", dbName);
 		sec.add("token-cookie-name", cookieName);
+		sec.add("environment-header", "X-DOEKBASE-ENVIRONMENT");
 		sec.add("template-dir", "templates");
 		// don't bother with logger name
 		
@@ -396,6 +401,7 @@ public class ServiceTestUtils {
 		}
 		
 		sec.add("identity-providers", "prov1, prov2");
+		sec.add("identity-provider-envs", "env1, env2");
 		
 		sec.add("identity-provider-prov1-factory", MockIdentityProviderFactory.class.getName());
 		sec.add("identity-provider-prov1-login-url", "https://login.prov1.com");
@@ -406,6 +412,14 @@ public class ServiceTestUtils {
 				"https://loginredirectforprov1.kbase.us");
 		sec.add("identity-provider-prov1-link-redirect-url",
 				"https://linkredirectforprov1.kbase.us");
+		sec.add("identity-provider-prov1-env-env1-login-redirect-url",
+				"https://loginredirectforprov1env1.kbase.us");
+		sec.add("identity-provider-prov1-env-env1-link-redirect-url",
+				"https://linkredirectforprov1env1.kbase.us");
+		sec.add("identity-provider-prov1-env-env2-login-redirect-url",
+				"https://loginredirectforprov1env2.kbase.us");
+		sec.add("identity-provider-prov1-env-env2-link-redirect-url",
+				"https://linkredirectforprov1env2.kbase.us");
 
 		sec.add("identity-provider-prov2-factory", MockIdentityProviderFactory.class.getName());
 		sec.add("identity-provider-prov2-login-url", "https://login.prov2.com");
@@ -416,6 +430,14 @@ public class ServiceTestUtils {
 				"https://loginredirectforprov2.kbase.us");
 		sec.add("identity-provider-prov2-link-redirect-url",
 				"https://linkredirectforprov2.kbase.us");
+		sec.add("identity-provider-prov2-env-env1-login-redirect-url",
+				"https://loginredirectforprov2env1.kbase.us");
+		sec.add("identity-provider-prov2-env-env1-link-redirect-url",
+				"https://linkredirectforprov2env1.kbase.us");
+		sec.add("identity-provider-prov2-env-env2-login-redirect-url",
+				"https://loginredirectforprov2env2.kbase.us");
+		sec.add("identity-provider-prov2-env-env2-link-redirect-url",
+				"https://linkredirectforprov2env2.kbase.us");
 
 		final Path temp = TestCommon.getTempDir();
 		final Path deploy = temp.resolve(Files.createTempFile(temp, "cli_test_deploy", ".cfg"));
@@ -442,6 +464,30 @@ public class ServiceTestUtils {
 				.post(Entity.json(json));
 		assertThat("failed to set config", r.getStatus(), is(204));
 	}
+	
+	private static void setEnvironment(
+			final String host,
+			final String cookieName,
+			final IncomingToken admintoken,
+			final String environment,
+			final String linkkey,
+			final String url) {
+		final Form form = new Form();
+		form.param("environment", environment);
+		form.param(linkkey, url);
+		setEnvironment(host, cookieName, admintoken, form);
+	}
+	
+	public static void setEnvironment(
+			final String host,
+			final String cookieName,
+			final IncomingToken admintoken,
+			final Form form) {
+		final Response r = CLI.target(host + "/admin/config/environment").request()
+				.cookie(cookieName, admintoken.getToken())
+				.post(Entity.form(form));
+		assertThat("failed to set config", r.getStatus(), is(204));
+	}
 
 	public static void enableProvider(
 			final String host,
@@ -465,12 +511,33 @@ public class ServiceTestUtils {
 		setAdmin(host, adminToken, ImmutableMap.of("allowedloginredirect", redirectURLPrefix));
 	}
 	
+	public static void enableRedirect(
+			final String host,
+			final String cookieName,
+			final IncomingToken adminToken,
+			final String redirectURLPrefix,
+			final String environment) {
+		setEnvironment(host, cookieName, adminToken, environment, "allowedloginredirect",
+				redirectURLPrefix);
+	}
+	
 	public static void setLoginCompleteRedirect(
 			final String host,
 			final IncomingToken adminToken,
 			final String loginCompleteRedirectURL) {
 		setAdmin(host, adminToken,
 				ImmutableMap.of("completeloginredirect", loginCompleteRedirectURL));
+	}
+	
+
+	public static void setLoginCompleteRedirect(
+			final String host,
+			final String cookieName,
+			final IncomingToken adminToken,
+			final String postLinkRedirectURL,
+			final String environment) {
+		setEnvironment(host, cookieName, adminToken, environment, "completeloginredirect",
+				postLinkRedirectURL);
 	}
 	
 	public static void setLinkCompleteRedirect(
@@ -481,11 +548,31 @@ public class ServiceTestUtils {
 				ImmutableMap.of("completelinkredirect", linkCompleteRedirectURL));
 	}
 	
+	public static void setLinkCompleteRedirect(
+			final String host,
+			final String cookieName,
+			final IncomingToken adminToken,
+			final String linkCompleteRedirectURL,
+			final String environment) {
+		setEnvironment(host, cookieName, adminToken, environment, "completelinkredirect",
+				linkCompleteRedirectURL);
+	}
+	
 	public static void setPostLinkRedirect(
 			final String host,
 			final IncomingToken adminToken,
 			final String postLinkRedirectURL) {
 		setAdmin(host, adminToken,
 				ImmutableMap.of("postlinkredirect", postLinkRedirectURL));
+	}
+
+	public static void setPostLinkRedirect(
+			final String host,
+			final String cookieName,
+			final IncomingToken adminToken,
+			final String postLinkRedirectURL,
+			final String environment) {
+		setEnvironment(host, cookieName, adminToken, environment, "postlinkredirect",
+				postLinkRedirectURL);
 	}
 }

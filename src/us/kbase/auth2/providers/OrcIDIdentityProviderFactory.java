@@ -28,6 +28,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
+import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
@@ -90,19 +91,33 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			return NAME;
 		}
 		
+		@Override
+		public Set<String> getEnvironments() {
+			return cfg.getEnvironments();
+		}
+
 		// state will be url encoded
 		@Override
-		public URL getLoginURL(final String state, final boolean link) {
+		public URL getLoginURL(final String state, final boolean link, final String environment)
+				throws NoSuchEnvironmentException {
 			final URI target = UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
-					.queryParam("redirect_uri", link ? cfg.getLinkRedirectURL() :
-						cfg.getLoginRedirectURL())
+					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
 					.build();
 			return toURL(target);
+		}
+		
+		private URL getRedirectURL(final boolean link, final String environment)
+				throws NoSuchEnvironmentException {
+			if (environment == null) {
+				return link ? cfg.getLinkRedirectURL() : cfg.getLoginRedirectURL();
+			}
+			return link ? cfg.getLinkRedirectURL(environment) :
+				cfg.getLoginRedirectURL(environment);
 		}
 		
 		//Assumes valid URL in URI form
@@ -124,12 +139,16 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		}
 	
 		@Override
-		public Set<RemoteIdentity> getIdentities(final String authcode, final boolean link)
-				throws IdentityRetrievalException {
+		public Set<RemoteIdentity> getIdentities(
+				final String authcode,
+				final boolean link,
+				final String environment)
+				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
-			final OrcIDAccessTokenResponse accessToken = getAccessToken(authcode, link);
+			final OrcIDAccessTokenResponse accessToken = getAccessToken(
+					authcode, link, environment);
 			final RemoteIdentity ri = getIdentity(accessToken);
 			return new HashSet<>(Arrays.asList(ri));
 		}
@@ -214,14 +233,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			}
 		}
 		
-		private OrcIDAccessTokenResponse getAccessToken(final String authcode, final boolean link)
-				throws IdentityRetrievalException {
+		private OrcIDAccessTokenResponse getAccessToken(
+				final String authcode,
+				final boolean link,
+				final String environment)
+				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			final MultivaluedMap<String, String> formParameters =
 					new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
-			formParameters.add("redirect_uri", link ?
-					cfg.getLinkRedirectURL().toString() :
-					cfg.getLoginRedirectURL().toString());
+			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			formParameters.add("client_id", cfg.getClientID());
 			formParameters.add("client_secret", cfg.getClientSecret());

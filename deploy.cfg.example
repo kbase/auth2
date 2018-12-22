@@ -17,6 +17,12 @@ mongo-pwd =
 # The name of the cookie in which tokens should be stored in the browser.
 token-cookie-name = kbase_session
 
+# The name of the header to be used to pass the environment name (see below) to the server at the 
+# /login/start and /link/start endpoints. The header takes precedence over form submission
+# of the environment name.
+# The header must start with 'X-' and consist of only capital letters and hyphens.
+environment-header=X-AUTHTWO-ENVIRONMENT
+
 # The name of the service to report when logging to syslog.
 log-name = KBaseAuthServ2
 
@@ -26,6 +32,13 @@ template-dir = templates
 # A list of enabled identity providers. Each identity provider has a set of configuration variables
 # below that start with identity-provider-<provider name> that must be correctly set.
 identity-providers = Globus, Google, OrcID
+
+# A comma separated list of names of alternate environments in which the service operates in
+# addition to the environment served by the default login and link redirect urls.
+# Each environment must specify its own login and link redirect urls. These URLs must be
+# registered with the identity provider as usual. The environment to use for a particular login
+# or link request can be specified via the service interface at login or link start time.
+identity-provider-envs=
 
 # Below are the list of configuration variables for each identity provider. The keys are:
 
@@ -49,6 +62,13 @@ identity-providers = Globus, Google, OrcID
 # identity-provider-<provider name>-custom-X=Y - Custom per provider configuration options. These
 # options will be provided to the identity provider as a set of keys and values where X is the key
 # any Y is the value.
+
+# Alternate environment configuration variables:
+# <env> is the environment name as specified in the identity-provider-envs
+# configuration variable.
+#
+# identity-provider-<provider name>-env-<env>-link-redirect - the alternate link redirect url.
+# identity-provider-<provider name>-env-<env>-login-redirect - the alternate login redirect url.
 
 identity-provider-Globus-factory = us.kbase.auth2.providers.GlobusIdentityProviderFactory
 identity-provider-Globus-login-url = https://auth.globus.org

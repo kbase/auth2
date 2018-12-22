@@ -126,6 +126,11 @@ public class TestConfigurator implements AuthStartupConfig {
 	public String getTokenCookieName() {
 		return "some_cookie";
 	}
+	
+	@Override
+	public String getEnvironmentHeaderName() {
+		return "X-SUPERFAKEHEADER";
+	}
 
 	@Override
 	public boolean isTestModeEnabled() {
@@ -136,6 +141,11 @@ public class TestConfigurator implements AuthStartupConfig {
 	public Path getPathToTemplateDirectory() {
 		return Paths.get(templatesDir == null ?
 				System.getProperty("AUTH2_TEST_TEMPLATE_DIR") : templatesDir);
+	}
+
+	@Override
+	public Set<String> getEnvironments() {
+		return Collections.emptySet();
 	}
 
 }

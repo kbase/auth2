@@ -19,6 +19,8 @@ public interface AuthStartupConfig {
 	Optional<String> getMongoUser();
 	Optional<char[]> getMongoPwd();
 	String getTokenCookieName();
+	String getEnvironmentHeaderName();
 	Path getPathToTemplateDirectory();
 	boolean isTestModeEnabled();
+	Set<String> getEnvironments();
 }
