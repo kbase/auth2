@@ -53,29 +53,35 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 	 */
 	public static class GoogleIdentityProvider implements IdentityProvider {
 	
+		/* might want to take another crack at using the google client. Last time
+		 * trying to figure out how to get it to work was such a pain I gave up and wrote
+		 * my own code in less time than I spent struggling with the client.
+		 */
+		
 		/* Get creds: https://console.developers.google.com/apis
 		 * Google+ API must be enabled
 		 * Docs:
 		 * https://developers.google.com/identity/protocols/OAuth2
 		 * https://developers.google.com/identity/protocols/OAuth2WebServer
-		 * https://developers.google.com/+/web/api/rest/oauth#login-scopes
-		 * https://developers.google.com/+/web/api/rest/latest/people/get
-		 * https://developers.google.com/+/web/api/rest/latest/people
+		 * https://developers.google.com/people/api/rest/v1/people/get
+		 * https://developers.google.com/people/v1/how-tos/authorizing
 		 */
 		
 		private static final String NAME = "Google";
-		private static final String SCOPE =
-				"https://www.googleapis.com/auth/plus.me profile email";
+		private static final String SCOPE = "profile email";
 		private static final String LOGIN_PATH = "/o/oauth2/v2/auth";
 		private static final String TOKEN_PATH = "/oauth2/v4/token";
-		private static final String IDENTITY_PATH = "/plus/v1/people/me";
+		private static final String IDENTITY_PATH = "/v1/people/me";
 		
 		//thread safe
 		private static final Client CLI = ClientBuilder.newClient();
 		
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		
+		private static final String PEOPLE_API_CFG_KEY = "people-api-host";
+		
 		private final IdentityProviderConfig cfg;
+		private final URI peopleAPI;
 		
 		/** Create an identity provider for Google.
 		 * @param idc the configuration for this provider.
@@ -89,6 +95,21 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 						idc.getIdentityProviderFactoryClassName());
 			}
 			this.cfg = idc;
+			final String pAPI = idc.getCustomConfiguation().get(PEOPLE_API_CFG_KEY);
+			if (pAPI == null) { // can't be whitespace only
+				throw new IllegalArgumentException(String.format(
+						"Missing required configuration for %s identity provider: %s",
+						NAME, PEOPLE_API_CFG_KEY));
+			}
+			try {
+				new URL(pAPI);
+				peopleAPI = new URI(pAPI);
+			} catch (URISyntaxException | MalformedURLException e) {
+				throw new IllegalArgumentException(String.format(
+						"Invalid url for configuration key %s for %s identity provider: %s",
+						PEOPLE_API_CFG_KEY, NAME, pAPI));
+			}
+			
 		}
 	
 		@Override
@@ -160,29 +181,39 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 	
 		private RemoteIdentity getIdentity(final String accessToken)
 				throws IdentityRetrievalException {
-			final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-					.path(IDENTITY_PATH).build();
+			final URI target = UriBuilder.fromUri(peopleAPI)
+					.path(IDENTITY_PATH)
+					.queryParam("personFields", "emailAddresses,names")
+					.build();
 			final Map<String, Object> id = googleGetRequest(accessToken, target);
 			// could do a whooole lot of type checking here. We'll just assume Google aren't
 			// buttholes that change their API willy nilly
 			@SuppressWarnings("unchecked")
-			final List<Map<String, String>> emails = (List<Map<String, String>>) id.get("emails");
+			final List<Map<String, String>> emails =
+					(List<Map<String, String>>) id.get("emailAddresses");
 			if (emails == null || emails.isEmpty()) {
 				throw new IdentityRetrievalException("No username included in response from " +
 						NAME);
 			}
 			// we'll also just grab the first email and assume that if it's null or empty something
 			// is very wrong @ Google
+			// could run through the emails and choose one now that the metadata includes
+			// the user id.
+			// Same for names. probably not necessary.
 			final String email = emails.get(0).get("value");
 			if (email == null || email.trim().isEmpty()) {
 				throw new IdentityRetrievalException("No username included in response from " +
 						NAME);
 			}
+			final String uniqueid = ((String)id.get("resourceName")).replace("people/", "");
+			@SuppressWarnings("unchecked")
+			final List<Map<String, Object>> names = (List<Map<String, Object>>) id.get("names");
+			// again, we'll just grab the first name
 			return new RemoteIdentity(
-					new RemoteIdentityID(NAME, (String) id.get("id")),
+					new RemoteIdentityID(NAME, uniqueid),
 					new RemoteIdentityDetails(
 							email, // use email for user id
-							(String) id.get("displayName"),
+							(String) names.get(0).get("displayName"),
 							email));
 		}
 	
