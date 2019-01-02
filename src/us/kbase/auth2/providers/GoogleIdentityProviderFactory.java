@@ -59,7 +59,7 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		 */
 		
 		/* Get creds: https://console.developers.google.com/apis
-		 * Google+ API must be enabled
+		 * Google People API must be enabled
 		 * Docs:
 		 * https://developers.google.com/identity/protocols/OAuth2
 		 * https://developers.google.com/identity/protocols/OAuth2WebServer
