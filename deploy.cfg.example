@@ -87,6 +87,8 @@ identity-provider-Google-client-id =
 identity-provider-Google-client-secret =
 identity-provider-Google-login-redirect-url = https://kbase.us/services/auth/login/complete/google
 identity-provider-Google-link-redirect-url = https://kbase.us/services/auth/link/complete/google
+# this custom parameter is required for Google
+identity-provider-Google-custom-people-api-host=https://people.googleapis.com
 
 identity-provider-OrcID-factory = us.kbase.auth2.providers.OrcIDIdentityProviderFactory
 identity-provider-OrcID-login-url = https://sandbox.orcid.org/

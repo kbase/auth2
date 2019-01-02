@@ -1,6 +1,16 @@
 Authentication Service MKII release notes
 =========================================
 
+0.3.0
+-----
+* CONFIGURATION CHANGE - the `identity-provider-Google-custom-people-api-host`
+  configuration key is now required for the Google identity provider (see below).
+* The Google identity provider has been updated to no longer use the soon to be removed
+  Google+ People API, and now uses the stand alone People API. This requires two changes on 
+  update: 1) The configuration key noted above must be set in the `deploy.cfg` file. The
+  `deploy.cfg.example` file has an example setting. 2) The People API must be enabled
+  for the project corresponding to the Google client ID and client secret.
+
 0.2.8
 -----
 * Added a customizable config block to the deployment template.

@@ -204,7 +204,7 @@ Admin notes
     * urn:globus:auth:scope:auth.globus.org:view_identities 
     * email
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
-  * Note that the Google+ API must be enabled.
+  * Note that the Google People API must be enabled.
 * Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
   * Note that only the public API has been tested with the auth server.
 
