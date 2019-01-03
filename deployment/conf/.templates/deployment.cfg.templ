@@ -26,6 +26,7 @@ identity-provider-Globus-env-{{ default .Env.env1 "" }}-link-redirect-url={{ def
 identity-provider-Google-factory = {{ default .Env.idp_Google_factory "us.kbase.auth2.providers.GoogleIdentityProviderFactory" }}
 identity-provider-Google-login-url={{ default .Env.idp_Google_login_url "https://accounts.google.com/" }}
 identity-provider-Google-api-url={{ default .Env.idp_Google_api_url "https://www.googleapis.com/" }}
+identity-provider-Google-custom-people-api-host={{default .Env.idp_Google_custom_people_api_host "https://people.googleapis.com" }}
 identity-provider-Google-client-id={{ default .Env.idp_Google_client_id "kbaseauth" }}
 identity-provider-Google-client-secret={{ default .Env.idp_Google_client_secret "mocksecret" }}
 identity-provider-Google-login-redirect-url={{ default .Env.auth_base_url "https://ci.kbase.us/services/auth" }}/login/complete/google
