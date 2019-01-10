@@ -1,6 +1,7 @@
 package us.kbase.test.auth2.providers;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
@@ -8,8 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -20,13 +20,13 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockserver.integration.ClientAndServer;
 import org.mockserver.matchers.Times;
-import org.mockserver.model.Header;
 import org.mockserver.model.HttpRequest;
 import org.mockserver.model.HttpResponse;
 import org.mockserver.model.Parameter;
 import org.mockserver.model.ParameterBody;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
@@ -184,33 +184,6 @@ public class GoogleIdentityProviderTest {
 				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
-		createFail("foo", "bar", new IllegalArgumentException(
-				"Missing required configuration for Google identity provider: people-api-host"));
-		createFail("people-api-host", "bar", new IllegalArgumentException(
-				"Invalid url for configuration key people-api-host for Google identity " +
-				"provider: bar"));
-		// triggers URI exception vs. URL exception.
-		createFail("people-api-host", "https://pe^ople.googlapis.com",
-				new IllegalArgumentException("Invalid url for configuration key people-api-host " +
-						"for Google identity provider: https://pe^ople.googlapis.com"));
-	}
-	
-	private void createFail(
-			final String customParam,
-			final String value,
-			final Exception expected)
-			throws Exception {
-		failCreate(IdentityProviderConfig.getBuilder(
-				CFG.getIdentityProviderFactoryClassName(),
-				CFG.getLoginURL(),
-				CFG.getApiURL(),
-				CFG.getClientID(),
-				CFG.getClientSecret(),
-				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL())
-				.withCustomConfiguration(customParam, value)
-				.build(),
-				expected);
 	}
 	
 	private void failCreate(final IdentityProviderConfig cfg, final Exception exception) {
@@ -279,22 +252,7 @@ public class GoogleIdentityProviderTest {
 	}
 	
 	@Test
-	public void returnsIllegalAuthtoken() throws Exception {
-		final IdentityProviderConfig testIDConfig = getTestIDConfig();
-		final IdentityProvider idp = new GoogleIdentityProvider(testIDConfig);
-		final String redir = testIDConfig.getLoginRedirectURL().toString();
-		final IdentityRetrievalException e =
-				new IdentityRetrievalException("No access token was returned by Google");
-		setUpCallAuthToken("authcode6", null, redir,
-				testIDConfig.getClientID(), testIDConfig.getClientSecret());
-		failGetIdentities(idp, "authcode6", false, e);
-		setUpCallAuthToken("authcode6", "\t  ", redir,
-				testIDConfig.getClientID(), testIDConfig.getClientSecret());
-		failGetIdentities(idp, "authcode6", false, e);
-	}
-	
-	@Test
-	public void returnsBadResponseAuthToken() throws Exception {
+	public void returnsBadResponseOAuth() throws Exception {
 		final IdentityProviderConfig cfg = getTestIDConfig();
 		final IdentityProvider idp = new GoogleIdentityProvider(cfg);
 		final String redir = cfg.getLoginRedirectURL().toString();
@@ -302,36 +260,36 @@ public class GoogleIdentityProviderTest {
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo10";
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, "text/html", 200,
+		setUpOAuthCall(authCode, redir, cliid, clisec, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Truncated response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, null);
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, null);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
 				"from Google service: 500."));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
 				"response body from Google service: 500."));
 		
-		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500,
+		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500,
 				"{\"error\":\"whee!\",\"error_description\":\"whoo!\"}");
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Google service returned an error. HTTP code: 500. " +
@@ -347,100 +305,58 @@ public class GoogleIdentityProviderTest {
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo11";
 		
-		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
-		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("id", "id7", "displayName", null, "emailAddresses", null)));
+		setUpOAuthCall(authCode, null, redir, cliid, clisec);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No ID token in response from Google"));
+		
+		setUpOAuthCall(authCode, "    \t    ", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"No ID token in response from Google"));
+		
+		setUpOAuthCall(authCode, "foo", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Unable to decode JWT: 1"));
+		
+		setUpOAuthCall(authCode, "foo.7.bar", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+				"Unable to decode JWT: Input byte[] should at least have 2 bytes " +
+				"for base64 bytes"));
+		
+		setUpOAuthCall(authCode, "foo.notjson.bar", redir, cliid, clisec);
+		try {
+			idp.getIdentities(authCode, false, null);
+			fail("got identities with bad setup");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect error", e.getMessage(), containsString(
+					"10030 Identity retrieval failed: Unable to decode JWT: " + 
+					"Unexpected character ((CTRL-CHAR, code 158)): expected a valid " +
+					"value (number, String, array, object, 'true', 'false' or 'null')\n at " +
+					"[Source: "));
+			assertThat("incorrect error", e.getMessage(), containsString(" line: 1, column: 2]"));
+		}
+		
+		final Map<String, String> payload = new HashMap<>();
+		
+		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
-		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
-		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("id", "id7", "displayName", null, "emailAddresses", new ArrayList<String>())));
+		payload.put("email", null);
+		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
-		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
-		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("id", "id7", "displayName", null,
-						"emailAddresses", Arrays.asList(map("value", null)))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"No username included in response from Google"));
-		
-		setUpCallAuthToken(authCode, "token1", redir, cliid, clisec);
-		setupCallID("token1", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("id", "id7", "displayName", null,
-						"emailAddresses", Arrays.asList(map("value", " \t \n  ")))));
+		payload.put("email", "   \t    ");
+		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 	}
 	
-	@Test
-	public void returnsBadResponseIdentity() throws Exception {
-		final IdentityProviderConfig cfg = getTestIDConfig();
-		final IdentityProvider idp = new GoogleIdentityProvider(cfg);
-		final String redir = cfg.getLoginRedirectURL().toString();
-		final String cliid = cfg.getClientID();
-		final String clisec = cfg.getClientSecret();
-		final String authCode = "foo";
-		final String authtoken = "bartoken";
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 200, "bleah");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Unable to parse response from Google service."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, "text/html", 200, MAPPER.writeValueAsString(
-				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
-						map("value", "email1")))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Unable to parse response from Google service."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code and unparseable " +
-				"response from Google service: 500. Response: " + STRING1000));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code and unparseable " +
-				"response from Google service: 500. Truncated response: " + STRING1000));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with no response " +
-				"body from Google service: 500."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with no error in " +
-				"the response body from Google service: 500."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 401, MAPPER.writeValueAsString(
-				map("error", null)));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with null error in the response body from Google " +
-				"service: 401."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 404, MAPPER.writeValueAsString(
-				map("error", new HashMap<String, String>())));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Got unexpected HTTP code with null error in the response body from Google " +
-						"service: 404."));
-		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec);
-		setupCallID(authtoken, APP_JSON, 400, MAPPER.writeValueAsString(
-				map("error", map("message", "foobar"))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Google service returned an error. HTTP code: 400. Error: foobar"));
+	private String b64json(final Map<String, String> payload) throws Exception {
+		final String json = MAPPER.writeValueAsString(payload);
+		return Base64.getEncoder().encodeToString(json.getBytes());
 	}
-	
+
 	@Test
 	public void getIdentityWithLoginURL() throws Exception {
 		getIdentityWithLoginURL(null, "https://gloginredir.com");
@@ -456,12 +372,12 @@ public class GoogleIdentityProviderTest {
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken3", url,
+		final Map<String, String> payload = ImmutableMap.of(
+				"sub", "id7",
+				"email", "email3");
+		
+		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		setupCallID("footoken3", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("resourceName", "people/id7",
-						"names", Arrays.asList(map("displayName", null)),
-						"emailAddresses", Arrays.asList(map("value", "email3")))));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
@@ -496,12 +412,13 @@ public class GoogleIdentityProviderTest {
 				.build();
 		final IdentityProvider idp = new GoogleIdentityProvider(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", url,
+		final Map<String, String> payload = ImmutableMap.of(
+				"sub", "id1",
+				"email", "email1",
+				"name", "dispname1");
+		
+		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		setupCallID("footoken2", APP_JSON, 200, MAPPER.writeValueAsString(
-				map("resourceName", "people/id1",
-						"names", Arrays.asList(map("displayName", "dispname1")),
-						"emailAddresses", Arrays.asList(map("value", "email1")))));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
@@ -510,9 +427,9 @@ public class GoogleIdentityProviderTest {
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
-	private void setUpCallAuthToken(
+	private void setUpOAuthCall(
 			final String authCode,
-			final String authtoken,
+			final String idtoken,
 			final String redirect,
 			final String clientID,
 			final String clientSecret)
@@ -534,11 +451,11 @@ public class GoogleIdentityProviderTest {
 				new HttpResponse()
 					.withStatusCode(200)
 					.withHeader(CONTENT_TYPE, APP_JSON)
-					.withBody(MAPPER.writeValueAsString(map("access_token", authtoken)))
+					.withBody(MAPPER.writeValueAsString(map("id_token", idtoken)))
 			);
 	}
 	
-	private void setUpCallAuthToken(
+	private void setUpOAuthCall(
 			final String authCode,
 			final String redirect,
 			final String clientID,
@@ -568,26 +485,6 @@ public class GoogleIdentityProviderTest {
 					),
 				Times.exactly(1)
 			).respond(resp);
-	}
-	
-	private void setupCallID(
-			final String token,
-			final String contentType,
-			final int respCode,
-			final String body) {
-		mockClientAndServer.when(
-					new HttpRequest()
-						.withMethod("GET")
-						.withPath("/v1/people/me")
-						.withHeader(ACCEPT, APP_JSON)
-						.withHeader("Authorization", "Bearer " + token),
-					Times.exactly(1)
-				).respond(
-					new HttpResponse()
-						.withStatusCode(respCode)
-						.withHeader(new Header(CONTENT_TYPE, contentType))
-						.withBody(body)
-				);
 	}
 	
 	private Map<String, Object> map(final Object... entries) {

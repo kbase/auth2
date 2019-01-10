@@ -8,8 +8,8 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,29 +59,23 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		 */
 		
 		/* Get creds: https://console.developers.google.com/apis
-		 * Google People API must be enabled
 		 * Docs:
 		 * https://developers.google.com/identity/protocols/OAuth2
 		 * https://developers.google.com/identity/protocols/OAuth2WebServer
-		 * https://developers.google.com/people/api/rest/v1/people/get
-		 * https://developers.google.com/people/v1/how-tos/authorizing
+		 * https://developers.google.com/identity/protocols/OpenIDConnect
 		 */
 		
 		private static final String NAME = "Google";
 		private static final String SCOPE = "profile email";
 		private static final String LOGIN_PATH = "/o/oauth2/v2/auth";
 		private static final String TOKEN_PATH = "/oauth2/v4/token";
-		private static final String IDENTITY_PATH = "/v1/people/me";
 		
 		//thread safe
 		private static final Client CLI = ClientBuilder.newClient();
 		
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		
-		private static final String PEOPLE_API_CFG_KEY = "people-api-host";
-		
 		private final IdentityProviderConfig cfg;
-		private final URI peopleAPI;
 		
 		/** Create an identity provider for Google.
 		 * @param idc the configuration for this provider.
@@ -95,21 +89,6 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 						idc.getIdentityProviderFactoryClassName());
 			}
 			this.cfg = idc;
-			final String pAPI = idc.getCustomConfiguation().get(PEOPLE_API_CFG_KEY);
-			if (pAPI == null) { // can't be whitespace only
-				throw new IllegalArgumentException(String.format(
-						"Missing required configuration for %s identity provider: %s",
-						NAME, PEOPLE_API_CFG_KEY));
-			}
-			try {
-				new URL(pAPI);
-				peopleAPI = new URI(pAPI);
-			} catch (URISyntaxException | MalformedURLException e) {
-				throw new IllegalArgumentException(String.format(
-						"Invalid url for configuration key %s for %s identity provider: %s",
-						PEOPLE_API_CFG_KEY, NAME, pAPI));
-			}
-			
 		}
 	
 		@Override
@@ -174,87 +153,11 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
-			final String accessToken = getAccessToken(authcode, link, environment);
-			final RemoteIdentity ri = getIdentity(accessToken);
+			final RemoteIdentity ri = getIdentity(authcode, link, environment);
 			return new HashSet<>(Arrays.asList(ri));
 		}
 	
-		private RemoteIdentity getIdentity(final String accessToken)
-				throws IdentityRetrievalException {
-			final URI target = UriBuilder.fromUri(peopleAPI)
-					.path(IDENTITY_PATH)
-					.queryParam("personFields", "emailAddresses,names")
-					.build();
-			final Map<String, Object> id = googleGetRequest(accessToken, target);
-			// could do a whooole lot of type checking here. We'll just assume Google aren't
-			// buttholes that change their API willy nilly
-			@SuppressWarnings("unchecked")
-			final List<Map<String, String>> emails =
-					(List<Map<String, String>>) id.get("emailAddresses");
-			if (emails == null || emails.isEmpty()) {
-				throw new IdentityRetrievalException("No username included in response from " +
-						NAME);
-			}
-			// we'll also just grab the first email and assume that if it's null or empty something
-			// is very wrong @ Google
-			// could run through the emails and choose one now that the metadata includes
-			// the user id.
-			// Same for names. probably not necessary.
-			final String email = emails.get(0).get("value");
-			if (email == null || email.trim().isEmpty()) {
-				throw new IdentityRetrievalException("No username included in response from " +
-						NAME);
-			}
-			final String uniqueid = ((String)id.get("resourceName")).replace("people/", "");
-			@SuppressWarnings("unchecked")
-			final List<Map<String, Object>> names = (List<Map<String, Object>>) id.get("names");
-			// again, we'll just grab the first name
-			return new RemoteIdentity(
-					new RemoteIdentityID(NAME, uniqueid),
-					new RemoteIdentityDetails(
-							email, // use email for user id
-							(String) names.get(0).get("displayName"),
-							email));
-		}
-	
-		private Map<String, Object> googleGetRequest(
-				final String accessToken,
-				final URI target)
-				throws IdentityRetrievalException {
-			final WebTarget wt = CLI.target(target);
-			Response r = null;
-			try {
-				r = wt.request(MediaType.APPLICATION_JSON_TYPE)
-						.header("Authorization", "Bearer " + accessToken)
-						.get();
-				return processResponse(r, 200, new ErrorHandler() {
-					
-					@Override
-					public void handleError(final Response r, final Map<String, Object> response)
-							throws IdentityRetrievalException {
-						// ignoring type checking again, assuming that Google aren't jerks
-						@SuppressWarnings("unchecked")
-						final Map<String, Object> m = (Map<String, Object>) response.get("error");
-						// there's more details in the 'errors' key but ignore that for now
-						// could log later
-						if (m == null || !m.containsKey("message")) {
-							throw new IdentityRetrievalException(String.format(
-									"Got unexpected HTTP code with null error in the response " +
-									"body from %s service: %s.", NAME, r.getStatus()));
-						}
-						throw new IdentityRetrievalException(String.format(
-								"%s service returned an error. HTTP code: %s. Error: %s",
-								NAME, r.getStatus(), m.get("message")));
-					}
-				});
-			} finally {
-				if (r != null) {
-					r.close();
-				}
-			}
-		}
-	
-		private String getAccessToken(
+		private RemoteIdentity getIdentity(
 				final String authcode,
 				final boolean link,
 				final String environment)
@@ -267,8 +170,7 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 			formParameters.add("client_id", cfg.getClientID());
 			formParameters.add("client_secret", cfg.getClientSecret());
 			
-			final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL()))
-					.path(TOKEN_PATH).build();
+			final URI target = UriBuilder.fromUri(toURI(cfg.getApiURL())).path(TOKEN_PATH).build();
 			
 			final Map<String, Object> m;
 			try {
@@ -279,11 +181,32 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IdentityRetrievalException("Authtoken retrieval failed: " +
 						msg[msg.length - 1].trim());
 			}
-			final String token = (String) m.get("access_token");
-			if (token == null || token.trim().isEmpty()) {
-				throw new IdentityRetrievalException("No access token was returned by " + NAME);
+			final String idtoken = (String) m.get("id_token");
+			if (idtoken == null || idtoken.trim().isEmpty()) {
+				throw new IdentityRetrievalException("No ID token in response from " + NAME);
 			}
-			return token;
+			final Map<String, Object> payload;
+			try {
+				// 2nd part of the JSON Web Token (between `.`) contains payload
+				final byte[] jsontoken = Base64.getDecoder().decode(idtoken.split("\\.")[1]);
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> temppayload = MAPPER.readValue(jsontoken, Map.class);
+				payload = temppayload;
+			} catch (IOException | IndexOutOfBoundsException | IllegalArgumentException e) {
+				throw new IdentityRetrievalException("Unable to decode JWT: " +
+						e.getMessage(), e);
+			}
+			final String email = (String) payload.get("email");
+			if (email == null || email.trim().isEmpty()) {
+				throw new IdentityRetrievalException("No username included in response from " +
+						NAME);
+			}
+			return new RemoteIdentity(
+					new RemoteIdentityID(NAME, (String) payload.get("sub")),
+					new RemoteIdentityDetails(
+							email, // use email for user id
+							(String) payload.get("name"), // ok if null, we just don't record
+							email));
 		}
 	
 		private Map<String, Object> googlePostRequest(
