@@ -1,6 +1,16 @@
 Authentication Service MKII release notes
 =========================================
 
+0.4.0
+-----
+* CONFIGURATION CHANGE - the `identity-provider-Google-custom-people-api-host`
+  configuration key has been removed. (see below).
+* The Google People API does not return the email address for a small subset of users for,
+  at this time, unknown reasons. The Google Identity Provider has been altered to extract
+  user information (the Google unique user ID, the user display name, and the user email address /
+  user name) from the JWT provided at the end of the OAuth2 login flow rather than using the
+  People API.
+
 0.3.0
 -----
 * CONFIGURATION CHANGE - the `identity-provider-Google-custom-people-api-host`
