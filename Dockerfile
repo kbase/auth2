@@ -1,3 +1,12 @@
+FROM kbase/sdkbase2 as build
+
+COPY . /tmp/auth2
+RUN pip install configobj && \
+    cd /tmp && \
+    git clone https://github.com/kbase/jars && \
+    cd auth2 && \
+    ant buildwar
+
 FROM kbase/kb_jre:latest
 
 # These ARGs values are passed in via the docker build command
@@ -5,8 +14,8 @@ ARG BUILD_DATE
 ARG VCS_REF
 ARG BRANCH=develop
 
-COPY deployment/ /kb/deployment/
-COPY jettybase/ /kb/deployment/jettybase/
+COPY --from=build /tmp/auth2/deployment/ /kb/deployment/
+COPY --from=build /tmp/auth2/jettybase/ /kb/deployment/jettybase/
 
 # The BUILD_DATE value seem to bust the docker cache when the timestamp changes, move to
 # the end
