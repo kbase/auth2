@@ -63,6 +63,7 @@ necessary.
   * The UI should show that the user is in anonymous mode, their transient username, and allow
     them to log in normally.
 * Downloads
+  * All the requirements for the Narrative above are also requirements here.
   * Note that DLs are significantly more work but are orthogonal to the Narrative work.
   * JSON DLs should work as is as long as the front end does not pass the AT to DIE.
   * Other downloads
@@ -86,6 +87,7 @@ necessary.
 
 ## Resourcing
 
+* Resourcing estimate is only for the auth service changes.
 * Estimated effort is ~1 week for a developer familiar with the auth codebase.
   * Requires a lot of testing to ensure anonymous tokens don't interact negatively with the
     rest of the service.
