@@ -41,7 +41,7 @@ necessary.
 * ATs could not be used to create other tokens.
 * ATs would be prefixed with a string to indicate they are anonymous
   (e.g. `***ANONYMOUS***-[remainder of token goes here]`)
-* ATs would be created and introspected with separate APIs from normal tokens.
+* ATs would be created, introspected, and revoked with separate APIs from normal tokens.
   * Token creation requires no authentication.
 * The administration UI would have AT and user lookup functionality and the ability
   to revoke said tokens.
@@ -82,6 +82,13 @@ necessary.
     * The Staging service would need to understand ATs and place folders
       for anonymous users in a separate namespace.
       * The Staging service should not allow anonymous uploads.
+    * Note that all of these changes could be made and deployed piecemeal.
+
+## Resourcing
+
+* Estimated effort is ~1 week for a developer familiar with the auth codebase.
+  * Requires a lot of testing to ensure anonymous tokens don't interact negatively with the
+    rest of the service.
 
 ## Side Nodes
 
