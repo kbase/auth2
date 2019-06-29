@@ -54,7 +54,7 @@ necessary.
 
 * Most KBase core services (including data services) should never see an an AT.
 * Narrative:
-  * When a user without a KBase cookie in the browser loads the KBase UI, an anonymous token would
+  * When a user without a KBase cookie in the browser loads the KBase UI, an AT would
     be generated and stored in a cookie (potentially the same cookie).
   * Starting a narrative would assign the docker container to the username in the AT.
     * Narratives started in this manner would always be read-only to the user and must
@@ -63,18 +63,22 @@ necessary.
   * The UI should show that the user is in anonymous mode, their transient username, and allow
     them to log in normally.
 * Downloads
-  * All the requirements for the Narrative above are also requirements here.
+  * All the requirements for the Narrative above are also requirements here, except that the
+    Narrative would now pass ATs on to the NJS and Staging service.
   * Note that DLs are significantly more work but are orthogonal to the Narrative work.
   * JSON DLs should work as is as long as the front end does not pass the AT to DIE.
   * Other downloads
-    * The NJS would need to understand anonymous tokens (to allow for job
-      tracking purposes) and have the ability to start jobs without a token.
-      * The NJS or catalog could have a list of apps that may be started without a
-        token - these would presumably be DL apps only.
-    * The SDK would have to support starting apps without a token.
-    * DL apps would have to support running without a token.
-      * For non-staging service apps, the Shock node created by the app would need
-        to be set public for anonymous users.
+    * The NJS would need to understand ATs (to allow for job
+      tracking purposes) and have the ability to start jobs with an AT.
+      * The NJS or catalog could have a list of apps that may be started with an AT - these
+        would presumably be DL apps only.
+    * DL apps would have to support running with an AT.
+      * Non staging service DL apps would have to be retired, as Shock does not
+        allow saving anonymous data -OR -
+      * Non-staging service DL apps would have to have a service token with which
+        they could create Shock nodes and make them public for anonymous download.
+      * Staging service DL apps would have to run with an AT and place
+        anonymous data in the correct area.
     * The DIE should work normally for non-staging area DLs as long as the front
       end does not pass the AT to DIE.
     * Alternatively, non-staging area DLs could be deprecated and removed.
@@ -89,7 +93,7 @@ necessary.
 
 * Resourcing estimate is only for the auth service changes.
 * Estimated effort is ~1 week for a developer familiar with the auth codebase.
-  * Requires a lot of testing to ensure anonymous tokens don't interact negatively with the
+  * Requires a lot of testing to ensure ATs don't interact negatively with the
     rest of the service.
 
 ## Side Nodes
