@@ -43,6 +43,8 @@ necessary.
   (e.g. `***ANONYMOUS***-[remainder of token goes here]`)
 * ATs would be created, introspected, and revoked with separate APIs from normal tokens.
   * Token creation requires no authentication.
+  * Test mode would support creation and introspection (token revocation is not supported in
+    general via test mode and hasn't been needed so far)
 * The administration UI would have AT and user lookup functionality and the ability
   to revoke said tokens.
 * The administration UI would have the ability to set the lifetime of ATs. The default lifetime
