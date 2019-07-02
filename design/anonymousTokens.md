@@ -58,6 +58,7 @@ necessary.
 * Narrative:
   * When a user without a KBase cookie in the browser loads the KBase UI, an AT would
     be generated and stored in a cookie (potentially the same cookie).
+    * A captcha could be used to ensure we're not spinning up containers for bots.
   * Starting a narrative would assign the docker container to the username in the AT.
     * Narratives started in this manner would always be read-only to the user and must
       be public.
@@ -102,3 +103,7 @@ necessary.
 
 * It is really weird that staging area downloads wind up as narrative cells. That seems to
   just clutter up the Narrative and interrupt the flow of the scientific narrative.
+* If we're allowing anyone to spin up Narrative containers, it may be worthwhile to support an
+  IP blacklist. This could be implemented at the NGINX level, the auth level, or the auth
+  function level (e.g. anonymous token production), depending on performance issues or blacklist
+  needs.
