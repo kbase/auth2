@@ -55,10 +55,12 @@ necessary.
 ## Interactions with KBase infrastructure
 
 * Most KBase core services (including data services) should never see an an AT.
-* Narrative:
+* Narrative / UI:
   * When a user without a KBase cookie in the browser loads the KBase UI, an AT would
     be generated and stored in a cookie (potentially the same cookie).
     * A captcha must be used to ensure we're not spinning up containers for bots.
+      * This may or may not require backend support depending on the captcha
+        implementation.
   * Starting a narrative would assign the docker container to the username in the AT.
     * Narratives started in this manner would always be read-only to the user and must
       be public.
