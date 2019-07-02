@@ -58,7 +58,7 @@ necessary.
 * Narrative:
   * When a user without a KBase cookie in the browser loads the KBase UI, an AT would
     be generated and stored in a cookie (potentially the same cookie).
-    * A captcha could be used to ensure we're not spinning up containers for bots.
+    * A captcha must be used to ensure we're not spinning up containers for bots.
   * Starting a narrative would assign the docker container to the username in the AT.
     * Narratives started in this manner would always be read-only to the user and must
       be public.
