@@ -3,7 +3,8 @@
 ## Problem statement
 
 Currently KBase users must log into KBase in order to view a narrative or download (DL) data from
-a narrative. We wish for users that are not logged in to be able to do both.
+a narrative. We wish for users that are not logged in to be able view narratives and possibly
+download data.
 
 ## Background
 
@@ -67,7 +68,7 @@ necessary.
     * The Narrative backend would not pass the AT on to any services.
   * The UI should show that the user is in anonymous mode, their transient username, and allow
     them to log in normally.
-* Downloads
+* Downloads (if implemented - not implementing does not change the auth design)
   * All the requirements for the Narrative above are also requirements here, except that the
     Narrative would now pass ATs on to the NJS and Staging service.
   * Note that DLs are significantly more work but are orthogonal to the Narrative work.
