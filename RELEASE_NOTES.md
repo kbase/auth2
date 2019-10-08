@@ -1,6 +1,11 @@
 Authentication Service MKII release notes
 =========================================
 
+0.4.1
+-----
+
+* The service is now tested against OpenJDK 8 and 11.
+
 0.4.0
 -----
 * CONFIGURATION CHANGE - the `identity-provider-Google-custom-people-api-host`

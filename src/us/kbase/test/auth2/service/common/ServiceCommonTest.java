@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.common;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.isA;
@@ -15,6 +16,7 @@ import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -176,13 +178,27 @@ public class ServiceCommonTest {
 	
 	@Test
 	public void loadClassWithInterfaceFailPrivateConstructor() throws Exception {
-		failLoadClassWithInterface(FailOnInstantiationPrivateConstructor.class.getName(),
-				IdentityProviderFactory.class, new AuthConfigurationException(
-						"Module us.kbase.test.auth2.service.common.FailOnInstantiation" +
-						"PrivateConstructor could not be instantiated: Class us.kbase.auth2." +
-						"service.common.ServiceCommon can not access a member of class us." +
-						"kbase.test.auth2.service.common.FailOnInstantiationPrivateConstructor " +
-						"with modifiers \"private\""));
+		try {
+			ServiceCommon.loadClassWithInterface(
+					FailOnInstantiationPrivateConstructor.class.getName(),
+					IdentityProviderFactory.class);
+			fail("expected exception");
+		} catch (Exception got) {
+			final String msg = "incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got);
+			assertThat(msg, got.getMessage(), containsString(
+					"Module us.kbase.test.auth2.service.common.FailOnInstantiation" +
+					"PrivateConstructor could not be instantiated: "));
+			assertThat(msg, got.getMessage(), containsString(
+					// java 8 is capitalized, java 11 isn't
+					"lass us.kbase.auth2.service.common.ServiceCommon can"));
+			assertThat(msg, got.getMessage(), containsString(
+					// java 8 is can not, java 11 is cannot
+					"not access a member of class us." +
+					"kbase.test.auth2.service.common.FailOnInstantiationPrivate" +
+					"Constructor with modifiers \"private\""));
+			assertThat("incorrect exception type", got,
+					instanceOf(AuthConfigurationException.class));
+		}
 	}
 	
 	private void failLoadClassWithInterface(
