@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Set;
 
@@ -32,7 +33,8 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 
-	private static final Instant NOW = Instant.now();
+	private static final Instant NOW = Instant.now()
+			.truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),

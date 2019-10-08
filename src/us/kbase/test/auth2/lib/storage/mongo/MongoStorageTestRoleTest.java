@@ -32,7 +32,8 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestRoleTest extends MongoStorageTester {
 	
-	private final static Instant DAY1 = Instant.now().plus(1, ChronoUnit.DAYS);
+	private final static Instant DAY1 = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+			.plus(1, ChronoUnit.DAYS); // mongo truncates
 	
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),

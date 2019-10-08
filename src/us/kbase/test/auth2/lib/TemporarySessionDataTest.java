@@ -117,6 +117,26 @@ public class TemporarySessionDataTest {
 		assertImmutable(ti);
 	}
 	
+	@Test
+	public void constructExpireOverflows() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant create = Instant.MAX.minusMillis(1000);
+		final TemporarySessionData ti = TemporarySessionData.create(id, create, 2000)
+				.link(new UserName("bar"), set(REMOTE2, REMOTE1));
+		
+		assertThat("incorrect op", ti.getOperation(), is(Operation.LINKIDENTS));
+		assertThat("incorrect id", ti.getId(), is(id));
+		assertThat("incorrect created", ti.getCreated(), is(create));
+		assertThat("incorrect expires", ti.getExpires(), is(Instant.MAX));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
+		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
+		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect has error", ti.hasError(), is(false));
+		
+		assertImmutable(ti);
+	}
+	
 	private void assertImmutable(final TemporarySessionData tsd) {
 		try {
 			tsd.getIdentities().get().add(new RemoteIdentity(
@@ -135,6 +155,7 @@ public class TemporarySessionDataTest {
 		final Instant e = c.plusMillis(10);
 		failConstructStageOne(null, c, e, new NullPointerException("id"));
 		failConstructStageOne(id, null, e, new NullPointerException("created"));
+		failConstructStageOne(id, null, 200, new NullPointerException("created"));
 		failConstructStageOne(id, c, null, new NullPointerException("expires"));
 		failConstructStageOne(id, e, c, new IllegalArgumentException("expires is before created"));
 		failConstructStageOne(id, e, -1, new IllegalArgumentException("lifetime must be >= 0"));

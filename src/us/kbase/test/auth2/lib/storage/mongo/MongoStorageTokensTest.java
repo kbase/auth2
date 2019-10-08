@@ -8,6 +8,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.InetAddress;
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.UUID;
 
@@ -29,7 +30,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	@Test
 	public void storeAndGet() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken store = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
 			.withLifeTime(now, now.plusSeconds(20))
@@ -63,7 +64,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetWithLocalhost() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken store = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
 			.withLifeTime(now, now.plusSeconds(20))
@@ -87,7 +88,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetNoNameNoContext() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
 			.withLifeTime(now, now.plusSeconds(10)).build();
@@ -108,7 +109,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		 * in the db.
 		 */
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
 			.withLifeTime(now, now.plusSeconds(10)).build();
@@ -216,7 +217,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	public void getTokens() throws Exception {
 		final UUID id1 = UUID.randomUUID();
 		final UUID id3 = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, id1, new UserName("bar"))
@@ -261,7 +262,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	@Test
 	public void deleteToken() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
@@ -326,7 +327,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	@Test
 	public void deleteTokensForUser() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))

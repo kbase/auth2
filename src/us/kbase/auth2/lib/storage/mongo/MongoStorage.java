@@ -121,6 +121,8 @@ public class MongoStorage implements AuthStorage {
 	 * https://github.com/mockito/mockito/wiki/How-to-write-good-tests
 	 */
 	
+	// TODO CODE switch dates to instances
+	
 	private static final int SCHEMA_VERSION = 1;
 	
 	// collection names;

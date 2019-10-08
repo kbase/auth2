@@ -1,7 +1,9 @@
 package us.kbase.test.auth2.providers;
 
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.anyOf;
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
@@ -15,6 +17,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.After;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -314,8 +317,18 @@ public class GoogleIdentityProviderTest {
 				"No ID token in response from Google"));
 		
 		setUpOAuthCall(authCode, "foo", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Unable to decode JWT: 1"));
+		try {
+			idp.getIdentities(authCode, false, null);
+			fail("got identities with bad setup");
+		} catch (Exception got) {
+			final String prefix = "10030 Identity retrieval failed: Unable to decode JWT: ";
+			assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
+					got.getMessage(), anyOf(
+							is(prefix + "1"),  // java 8
+							is(prefix + "Index 1 out of bounds for length 1"))); // java 11
+			assertThat("incorrect exception type", got,
+					instanceOf(IdentityRetrievalException.class));
+		}
 		
 		setUpOAuthCall(authCode, "foo.7.bar", redir, cliid, clisec);
 		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(

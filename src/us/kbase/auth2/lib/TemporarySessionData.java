@@ -1,10 +1,10 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.addNoOverflow;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
@@ -231,8 +231,14 @@ public class TemporarySessionData {
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
-		final Instant expires = Instant.ofEpochMilli(
-				addNoOverflow(created.toEpochMilli(), lifetimeInMS));
+		nonNull(created, "created");
+		final Duration d = Duration.ofMillis(lifetimeInMS);
+		final Instant expires;
+		if (Instant.MAX.minus(d).isBefore(created)) {
+			expires = Instant.MAX;
+		} else {
+			expires = created.plus(d);
+		}
 		return new Builder(id, created, expires);
 	}
 	

@@ -7,6 +7,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 import org.bson.Document;
@@ -39,7 +40,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetLogin() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
 				.login(set(REMOTE2));
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
@@ -53,7 +54,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetLinkIdents() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
 				.link(new UserName("whee"), set(REMOTE1, REMOTE2));
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
@@ -67,7 +68,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetLinkStart() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
 				.link(new UserName("whee"));
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
@@ -81,7 +82,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	@Test
 	public void storeAndGetError() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final Instant now = Instant.now();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
 				.error("foobarbaz", ErrorType.ID_ALREADY_LINKED);
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
