@@ -106,6 +106,19 @@ import us.kbase.auth2.lib.user.NewUser;
  */
 public class MongoStorage implements AuthStorage {
 
+	/* NOTES ON SHARDING:
+	 * It seems unlikely we'll reach a point in KBase where sharding the auth DB will be
+	 * required, but if so:
+	 * - Users cannot be sharded as it requires 2 separate unique indexes.
+	 * - Customroles is too small to worry about.
+	 * - Tokens is the big one. The id index would need to be made non-unique, and the ID
+	 *   uniqueness would have to be enforced by the application. This would need to be
+	 *   documented in the Authstorage API and everywhere tokens are saved in the code.
+	 * - Temptokens are unlikely to need sharding given their temporary nature
+	 * - Config collections are too small to worry about
+	 * - Test collections are also temporary and shouldn't be used in production anyway.
+	 */
+	
 	/* Don't use mongo built in object mapping to create the returned objects
 	 * since that tightly couples the classes to the storage implementation.
 	 * Instead, if needed, create classes specific to the implementation for
