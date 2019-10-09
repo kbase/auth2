@@ -234,11 +234,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		public void setCallInfo(String method, String id, String ipAddress) {
 			//  do nothing
 		}
-
-		@Override
-		public String getCallID() {
-			return null;
-		}
 	}
 
 	private static class JsonServerSysLogAutoLogger implements SLF4JAutoLogger {
@@ -260,11 +255,6 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			rpc.setId(id);
 			rpc.setIp(ipAddress);
 			rpc.setMethod(method);
-		}
-
-		@Override
-		public String getCallID() {
-			return JsonServerSyslog.getCurrentRpcInfo().getId();
 		}
 	}
 	
