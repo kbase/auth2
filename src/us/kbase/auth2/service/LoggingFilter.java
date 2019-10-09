@@ -1,6 +1,7 @@
 package us.kbase.auth2.service;
 
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
+import static us.kbase.auth2.service.ContextFields.REQUEST_ID; 
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -56,10 +57,10 @@ public class LoggingFilter implements ContainerRequestFilter,
 					"An error occurred in the logger when attempting " +
 					"to get the server configuration", e); 
 		}
-		logger.setCallInfo(reqcon.getMethod(),
-				(String.format("%.16f", Math.random())).substring(2),
-				getIpAddress(reqcon, ignoreIPheaders));
 		
+		final String requestID = (String.format("%.16f", Math.random())).substring(2);
+		logger.setCallInfo(reqcon.getMethod(), requestID, getIpAddress(reqcon, ignoreIPheaders));
+		reqcon.setProperty(REQUEST_ID, requestID);
 		logHeaders(reqcon, ignoreIPheaders);
 	}
 	

@@ -135,6 +135,16 @@
     <fileset file="${dist}/${testjar.file}"/>
   </path>
 	
+  <target name="print-classpath">
+    <pathconvert property="classpathInName" refid="compile.classpath"/>
+    <echo>Classpath is ${classpathInName}</echo>
+  </target>
+
+  <target name="print-test-classpath">
+    <pathconvert property="classpathInName" refid="test.classpath"/>
+    <echo>Classpath is ${classpathInName}</echo>
+  </target>
+	
   <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
 

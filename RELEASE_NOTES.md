@@ -5,6 +5,9 @@ Authentication Service MKII release notes
 -----
 
 * The service is now tested against OpenJDK 8 and 11.
+  * Note that the compiler compliance level must still be set at 1.8. The server fails to
+    start if the compliance level is 11, likely due to out of date jars, including, possibly,
+    jersey repackaged asm jars.
 
 0.4.0
 -----

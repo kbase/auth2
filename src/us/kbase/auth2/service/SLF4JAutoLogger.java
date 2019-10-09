@@ -18,9 +18,4 @@ public interface SLF4JAutoLogger {
 			final String method,
 			final String id,
 			final String ipAddress);
-	
-	/** Get the call ID for the call being handled in this thread.
-	 * @return the call ID.
-	 */
-	public String getCallID();
 }

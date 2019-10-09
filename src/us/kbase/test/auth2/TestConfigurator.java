@@ -82,10 +82,6 @@ public class TestConfigurator implements AuthStartupConfig {
 			rpc.setMethod(method);
 		}
 
-		@Override
-		public String getCallID() {
-			return JsonServerSyslog.getCurrentRpcInfo().getId();
-		}
 	}
 	
 	public TestConfigurator() {
