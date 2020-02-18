@@ -140,6 +140,8 @@ Test mode data is only accessible via endpoints under the `/testmode` root endpo
 These endpoints mimic the behavior of the standard API endpoints above, but only interact with
 test mode data.
 
+GET /testmode  
+
 GET /testmode/api/V2/me  
 
 GET /testmode/api/V2/token  
@@ -261,7 +263,8 @@ Developer notes
 * Releases
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
-  * Update the version as per the semantic version rules in `src/us/kbase/auth2/ui/Root.java`.
+  * Update the version as per the semantic version rules in
+    `src/us/kbase/auth2/service/common/ServiceCommon.java`.
   * Tag the version in git and github.
 
 ### Running tests

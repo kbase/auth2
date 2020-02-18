@@ -54,6 +54,7 @@ import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
+import us.kbase.auth2.service.common.ServiceCommon;
 
 @Path(APIPaths.TESTMODE)
 public class TestMode {
@@ -65,6 +66,12 @@ public class TestMode {
 	@Inject
 	public TestMode(final Authentication auth) {
 		this.auth = auth;
+	}
+	
+	@GET
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> testRoot() {
+		return ServiceCommon.root();
 	}
 	
 	public static class CreateTestUser extends IncomingJSON {

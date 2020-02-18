@@ -2,6 +2,7 @@
 <body>
 
 Auth Server<br/>
+Service name: (.+)<br/>
 Version: ([\w\.-]+)<br/>
 Server time: (\d+)<br/>
 Git commit hash: (.+)<br/>

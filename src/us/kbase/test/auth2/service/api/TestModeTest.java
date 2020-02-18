@@ -8,6 +8,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.assertRootJSONCorrect;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -63,6 +64,19 @@ public class TestModeTest {
 	/* Since the TestMode class is only intended to be instantiated by the Jersey framework,
 	 * we do not test for null constructor inputs.
 	 */
+	
+	
+	/* the value of the git commit from the root endpoint could either be
+	 * an error message or a git commit hash depending on the test environment, so both are
+	 * allowed
+	 */
+	@Test
+	public void root() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+		
+		assertRootJSONCorrect(tm.testRoot());
+	}
 	
 	@Test
 	public void createUser() throws Exception {

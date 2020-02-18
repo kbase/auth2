@@ -19,6 +19,8 @@ public class Fields {
 	
 	/** The version of the service. */
 	public static final String VERSION = "version";
+	/** The service name. */
+	public static final String SERVICE_NAME = "servicename";
 	/** The time, in milliseconds since the epoch, at the service. */
 	public static final String SERVER_TIME = "servertime";
 	/** The Git commit from which the service was built. */
