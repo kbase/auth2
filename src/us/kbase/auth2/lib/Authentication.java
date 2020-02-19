@@ -182,6 +182,7 @@ public class Authentication {
 	 * @param defaultExternalConfig the external configuration default settings. Any settings
 	 * that do not already exist in the storage system will be persisted. Pre-existing settings
 	 * are not overwritten.
+	 * @param testMode true to start the system with test mode enabled.
 	 * @throws StorageInitException if the storage system cannot be accessed.
 	 */
 	public Authentication(
