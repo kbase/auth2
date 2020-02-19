@@ -49,6 +49,10 @@ public class ServiceCommon {
 	//TODO ZLATER ROOT add paths to endpoints
 	//TODO ZLATER ROOT add configurable contact email or link
 	
+	/** Get general information about the service intended to be returned with an HTTP GET request
+	 * at the url root.
+	 * @return general information about the service.
+	 */
 	public static Map<String, Object> root() {
 		return ImmutableMap.of(
 				Fields.VERSION, VERSION,
