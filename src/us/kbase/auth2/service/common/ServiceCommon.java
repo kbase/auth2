@@ -3,6 +3,7 @@ package us.kbase.auth2.service.common;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.net.InetAddress;
+import java.time.Instant;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -12,6 +13,9 @@ import java.util.Set;
 
 import javax.servlet.http.HttpServletRequest;
 
+import com.google.common.collect.ImmutableMap;
+
+import us.kbase.auth2.GitCommit;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -35,10 +39,28 @@ import us.kbase.auth2.service.exceptions.AuthConfigurationException;
  */
 public class ServiceCommon {
 	
+	private static final String VERSION = "0.4.1";
+	// TODO FEATURE make configurable. Will need to make this a class & inject into deps
+	private static final String SERVICE_NAME = "Authentication Service";
 	private static final String HEADER_USER_AGENT = "user-agent";
 	private static final String X_FORWARDED_FOR = "X-Forwarded-For";
 	private static final String X_REAL_IP = "X-Real-IP";
 
+	//TODO ZLATER ROOT add paths to endpoints
+	//TODO ZLATER ROOT add configurable contact email or link
+	
+	/** Get general information about the service intended to be returned with an HTTP GET request
+	 * at the url root.
+	 * @return general information about the service.
+	 */
+	public static Map<String, Object> root() {
+		return ImmutableMap.of(
+				Fields.VERSION, VERSION,
+				Fields.SERVICE_NAME, SERVICE_NAME,
+				Fields.SERVER_TIME, Instant.now().toEpochMilli(),
+				Fields.GIT_HASH, GitCommit.COMMIT);
+	}
+	
 	/** Create an incoming token from a string, throwing an appropriate exception if the token is
 	 * null or empty.
 	 * @param token the token.

@@ -99,7 +99,7 @@
 	
   <fileset dir="${jardir}" id="testlibs">
     <include name="apache_commons/commons-io-2.4.jar"/>
-    <include name="equalsverifier/equalsverifier-2.2.2.jar"/>
+    <include name="equalsverifier/equalsverifier-3.1.10.jar"/>
     <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
@@ -107,12 +107,11 @@
     <include name="diff/java-diff-utils-2.1.1.jar"/>
     <include name="diff/java-object-diff/java-object-diff-0.94.jar"/>
     <include name="jsoup/jsoup-1.10.2.jar"/>
-    <include name="jacoco/jacocoant.jar"/>
     <!-- mockito and dependencies -->
-    <include name="mockito/mockito-core-2.7.10.jar"/>
-    <include name="bytebuddy/byte-buddy-1.6.8.jar"/>
-    <include name="bytebuddy/byte-buddy-agent-1.6.8.jar"/>
-    <include name="objenesis/objenesis-2.5.1.jar"/>
+    <include name="mockito/mockito-core-3.0.0.jar"/>
+    <include name="bytebuddy/byte-buddy-1.9.10.jar"/>
+    <include name="bytebuddy/byte-buddy-agent-1.9.10.jar"/>
+    <include name="objenesis/objenesis-2.6.jar"/>
   </fileset>
 	
   <union id="applicationjars">
@@ -135,6 +134,16 @@
     <fileset file="${dist}/${jar.file}"/>
     <fileset file="${dist}/${testjar.file}"/>
   </path>
+	
+  <target name="print-classpath">
+    <pathconvert property="classpathInName" refid="compile.classpath"/>
+    <echo>Classpath is ${classpathInName}</echo>
+  </target>
+
+  <target name="print-test-classpath">
+    <pathconvert property="classpathInName" refid="test.classpath"/>
+    <echo>Classpath is ${classpathInName}</echo>
+  </target>
 	
   <target name="build" depends="compile,buildwar,script,javadoc"
     description="build everything"/>
@@ -238,7 +247,14 @@
 
   <path id="jacoco.classpath">
     <fileset dir="${jardir}">
-      <include name="jacoco/jacocoant.jar"/>
+      <include name="jacoco/org.jacoco.ant-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.core-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.report-0.8.4.jar"/>
+      <include name="jacoco/org.jacoco.agent-0.8.4.jar"/>
+      <include name="asm/asm-7.1.jar"/>
+      <include name="asm/asm-commons-7.1.jar"/>
+      <include name="asm/asm-analysis-7.1.jar"/>
+      <include name="asm/asm-tree-7.1.jar"/>
     </fileset>
   </path>
 

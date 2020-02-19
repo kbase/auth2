@@ -1,7 +1,7 @@
-kbase/auth2/kbase-auth2templates-0.2.4.zip
+kbase/auth2/kbase-auth2templates-0.4.1.zip
 
-kbase/auth2/kbase-auth2-0.2.4.jar
-kbase/auth2/kbase-auth2test-0.2.4.jar
+kbase/auth2/kbase-auth2-0.4.1.jar
+kbase/auth2/kbase-auth2test-0.4.1.jar
 
 #lib
 apache_commons/commons-codec-1.8.jar
@@ -9,7 +9,7 @@ apache_commons/commons-validator-1.5.1.jar
 google/guava-18.0.jar
 ini4j/ini4j-0.5.2.jar
 jcommander/jcommander-1.48.jar
-mongo/mongo-java-driver-3.3.0.jar
+mongo/mongo-java-driver-3.8.2.jar
 mustache/compiler-0.9.3.jar
 nulab-inc/zxcvbn-1.2.2.jar
 
@@ -26,6 +26,7 @@ yauaa/yauaa-1.3.jar
 apache_commons/commons-lang3-3.5.jar
 apache_commons/commons-collections4-4.1.jar
 apache_commons/commons-logging-1.2.jar
+apache_commons/commons-io-2.4.jar
 kohsuke/args4j-2.33.jar
 snakeyaml/snakeyaml-1.18.jar
 

@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.common;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.isA;
@@ -11,10 +12,14 @@ import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 
+import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
@@ -40,6 +45,49 @@ import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.test.auth2.TestCommon;
 
 public class ServiceCommonTest {
+	
+	public static final String SERVICE_NAME = "Authentication Service";
+	public static final String SERVER_VER = "0.4.1";
+	public static final String GIT_ERR = 
+			"Missing git commit file gitcommit, should be in us.kbase.auth2";
+	
+	public static void assertGitCommitFromRootAcceptable(final String gitcommit) {
+		final boolean giterr = GIT_ERR.equals(gitcommit);
+		final Pattern githash = Pattern.compile("[a-f\\d]{40}");
+		final Matcher gitmatch = githash.matcher(gitcommit);
+		final boolean gitcommitmatch = gitmatch.matches();
+		
+		assertThat("gitcommithash is neither an appropriate error nor a git commit: [" +
+				gitcommit + "]",
+				giterr || gitcommitmatch, is(true));
+	}
+	
+	@Test
+	public void root() {
+		assertRootJSONCorrect(ServiceCommon.root());
+	}
+	
+	/* the value of the git commit from the root endpoint could either be
+	 * an error message or a git commit hash depending on the test environment, so both are
+	 * allowed
+	 */
+	public static void assertRootJSONCorrect(final Map<String, Object> rootJSON) {
+		// make a copy for mutability
+		final Map<String, Object> r = new HashMap<>(rootJSON);
+		final long servertime = (long) r.get("servertime");
+		r.remove("servertime");
+		TestCommon.assertCloseToNow(servertime);
+		
+		final String gitcommit = (String) r.get("gitcommithash");
+		r.remove("gitcommithash");
+		assertGitCommitFromRootAcceptable(gitcommit);
+		
+		final Map<String, Object> expected = ImmutableMap.of(
+				"version", SERVER_VER,
+				"servicename", SERVICE_NAME);
+		
+		assertThat("root json incorrect", r, is(expected));
+	}
 	
 	@Test
 	public void getToken() throws Exception {
@@ -176,13 +224,27 @@ public class ServiceCommonTest {
 	
 	@Test
 	public void loadClassWithInterfaceFailPrivateConstructor() throws Exception {
-		failLoadClassWithInterface(FailOnInstantiationPrivateConstructor.class.getName(),
-				IdentityProviderFactory.class, new AuthConfigurationException(
-						"Module us.kbase.test.auth2.service.common.FailOnInstantiation" +
-						"PrivateConstructor could not be instantiated: Class us.kbase.auth2." +
-						"service.common.ServiceCommon can not access a member of class us." +
-						"kbase.test.auth2.service.common.FailOnInstantiationPrivateConstructor " +
-						"with modifiers \"private\""));
+		try {
+			ServiceCommon.loadClassWithInterface(
+					FailOnInstantiationPrivateConstructor.class.getName(),
+					IdentityProviderFactory.class);
+			fail("expected exception");
+		} catch (Exception got) {
+			final String msg = "incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got);
+			assertThat(msg, got.getMessage(), containsString(
+					"Module us.kbase.test.auth2.service.common.FailOnInstantiation" +
+					"PrivateConstructor could not be instantiated: "));
+			assertThat(msg, got.getMessage(), containsString(
+					// java 8 is capitalized, java 11 isn't
+					"lass us.kbase.auth2.service.common.ServiceCommon can"));
+			assertThat(msg, got.getMessage(), containsString(
+					// java 8 is can not, java 11 is cannot
+					"not access a member of class us." +
+					"kbase.test.auth2.service.common.FailOnInstantiationPrivate" +
+					"Constructor with modifiers \"private\""));
+			assertThat("incorrect exception type", got,
+					instanceOf(AuthConfigurationException.class));
+		}
 	}
 	
 	private void failLoadClassWithInterface(

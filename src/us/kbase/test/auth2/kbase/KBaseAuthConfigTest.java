@@ -53,10 +53,8 @@ public class KBaseAuthConfigTest {
 	}
 	
 	private void testLogger(final SLF4JAutoLogger logger, final boolean nullLogger) {
-		// too much of a pain to really test. Just test manually which is trivial.
+		// too much of a pain to really test. Just test it accepts the call
 		logger.setCallInfo("GET", "foo", "0.0.0.0");
-		
-		assertThat("incorrect ID", logger.getCallID(), is(nullLogger ? (String) null : "foo"));
 	}
 
 	@Test

@@ -85,7 +85,8 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	
 	@Test
 	public void createAndGet() throws Exception {
-		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
+		final Instant expiry = Instant.now().truncatedTo(ChronoUnit.MILLIS)
+				.plus(1, ChronoUnit.DAYS); // mongo truncates
 		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
 				Instant.ofEpochMilli(10000), expiry);
 		

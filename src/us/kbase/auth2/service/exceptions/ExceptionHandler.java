@@ -1,5 +1,7 @@
 package us.kbase.auth2.service.exceptions;
 
+import static us.kbase.auth2.service.ContextFields.REQUEST_ID;
+
 import java.lang.reflect.Method;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -11,6 +13,8 @@ import java.util.Set;
 
 import javax.inject.Inject;
 import javax.ws.rs.Produces;
+import javax.ws.rs.container.ContainerRequestContext;
+import javax.ws.rs.container.ResourceContext;
 import javax.ws.rs.container.ResourceInfo;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
@@ -31,7 +35,6 @@ import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
 import us.kbase.auth2.service.common.Fields;
-import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.template.TemplateProcessor;
 
 
@@ -46,11 +49,11 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 	private TemplateProcessor template;
 	private final ObjectMapper mapper = new ObjectMapper();
 	@Inject
-	private SLF4JAutoLogger logger;
-	@Inject
 	private Authentication auth;
 	@Inject
 	private ResourceInfo resourceInfo;
+	@Context
+	private ResourceContext resourceContext;
 
 	@Override
 	public Response toResponse(Throwable ex) {
@@ -68,8 +71,11 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 					"An error occurred in the error handler when attempting " +
 					"to get the server configuration", e); 
 		}
-		//TODO CODE get rid of the logger.getCallID() method and instead make own call ID handler to decouple logger and exception handler.
-		final ErrorMessage em = new ErrorMessage(ex, logger.getCallID(), includeStack);
+		
+		final ContainerRequestContext reqContext = resourceContext.getResource(
+				ContainerRequestContext.class);
+		final String callID = (String) reqContext.getProperty(REQUEST_ID);
+		final ErrorMessage em = new ErrorMessage(ex, callID, includeStack);
 		String ret;
 		if (mt.equals(MediaType.APPLICATION_JSON_TYPE)) {
 			final Map<String, Object> err = new HashMap<>();

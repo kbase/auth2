@@ -78,6 +78,9 @@ All API calls require a valid token in the `Authorization` header except legacy 
 which continue to use their original protocol. All endpoints produce JSON data unless otherwise
 noted.
 
+Tokens are opaque strings - no particular structure should be assumed, and token string contents
+may change without notice.
+
 GET /api/V2/me  
 See the current user's profile.
 
@@ -139,6 +142,8 @@ Test mode data is only accessible via endpoints under the `/testmode` root endpo
 
 These endpoints mimic the behavior of the standard API endpoints above, but only interact with
 test mode data.
+
+GET /testmode  
 
 GET /testmode/api/V2/me  
 
@@ -261,7 +266,8 @@ Developer notes
 * Releases
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
-  * Update the version as per the semantic version rules in `src/us/kbase/auth2/ui/Root.java`.
+  * Update the version as per the semantic version rules in
+    `src/us/kbase/auth2/service/common/ServiceCommon.java`.
   * Tag the version in git and github.
 
 ### Running tests
