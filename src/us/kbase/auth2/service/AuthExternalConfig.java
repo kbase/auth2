@@ -279,6 +279,8 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	}
 	
 	/** Get a builder for an {@link AuthExternalConfig}.
+	 * @param <T> Either {@link State} for the state of the configuration, or {@link Action} to
+	 * specify a change to the configuration.
 	 * @param urlSet the set of urls for the default environment.
 	 * @param ignoreIPHeaders either the state or a change action for the ignore IP headers
 	 * configuration item (see {@link #isIgnoreIPHeaders()}).
@@ -531,7 +533,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		}
 	}
 
-	/** A mapper that maps a string -> {@link ConfigItem} map to an {@link AuthExternalConfig}.
+	/** A mapper that maps a string to {@link ConfigItem} map to an {@link AuthExternalConfig}.
 	 * Reverses the effects of {@link AuthExternalConfig#toMap()}.
 	 * @author gaprice@lbl.gov
 	 *

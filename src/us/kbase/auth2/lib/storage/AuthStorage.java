@@ -454,7 +454,8 @@ public interface AuthStorage {
 	 * programming error.
 	 * @param data the temporary session data.
 	 * @param hash the hash of the token. This value will be used to look up the token in
-	 * {@link #getTemporarySessionData(IncomingHashedToken)}
+	 * {@link #getTemporarySessionData(IncomingHashedToken)}.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
 	 */
 	void storeTemporarySessionData(TemporarySessionData data, String hash)
 			throws AuthStorageException;
