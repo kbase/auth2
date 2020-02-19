@@ -78,6 +78,9 @@ All API calls require a valid token in the `Authorization` header except legacy 
 which continue to use their original protocol. All endpoints produce JSON data unless otherwise
 noted.
 
+Tokens are opaque strings - no particular structure should be assumed, and token string contents
+may change without notice.
+
 GET /api/V2/me  
 See the current user's profile.
 

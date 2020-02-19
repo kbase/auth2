@@ -136,8 +136,6 @@ public class Authentication {
 	//TODO TEST test with gzip compression in header
 	
 	//TODO NOW DOCS better API docs. Also document JSON structures for HTML endpoints.
-	//TODO NOW DOCS note tokens are opaque, including length.
-	//TODO NOW TESTMODE add root endpoint equivalent to main endpoint.
 	
 	private static final int LINK_TOKEN_LIFETIME_MS = 10 * 60 * 1000;
 	private static final int LOGIN_TOKEN_LIFETIME_MS = 30 * 60 * 1000;
