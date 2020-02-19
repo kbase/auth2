@@ -5,6 +5,10 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.SERVER_VER;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.SERVICE_NAME;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.assertGitCommitFromRootAcceptable;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.assertRootJSONCorrect;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -112,10 +116,6 @@ public class SimpleEndpointsTest {
 	 * an error message or a git commit hash depending on the test environment, so both are
 	 * allowed
 	 */
-	private static final String SERVER_VER = "0.4.0";
-	private static final String GIT_ERR = 
-			"Missing git commit file gitcommit, should be in us.kbase.auth2";
-
 	@Test
 	public void rootHTML() throws Exception {
 		
@@ -139,26 +139,17 @@ public class SimpleEndpointsTest {
 		if (!m.matches()) {
 			fail("pattern did not match token page");
 		}
-		final String version = m.group(1);
-		final long servertime = Long.parseLong(m.group(2));
-		final String gitcommit = m.group(3);
+		final String service = m.group(1);
+		final String version = m.group(2);
+		final long servertime = Long.parseLong(m.group(3));
+		final String gitcommit = m.group(4);
+		assertThat("service name incorrect", service, is(SERVICE_NAME));
 		assertThat("version incorrect", version, is(SERVER_VER));
 		TestCommon.assertCloseToNow(servertime);
 		
 		assertGitCommitFromRootAcceptable(gitcommit);
 	}
 
-	private void assertGitCommitFromRootAcceptable(final String gitcommit) {
-		final boolean giterr = GIT_ERR.equals(gitcommit);
-		final Pattern githash = Pattern.compile("[a-f\\d]{40}");
-		final Matcher gitmatch = githash.matcher(gitcommit);
-		final boolean gitcommitmatch = gitmatch.matches();
-		
-		assertThat("gitcommithash is neither an appropriate error nor a git commit: [" +
-				gitcommit + "]",
-				giterr || gitcommitmatch, is(true));
-	}
-	
 	@Test
 	public void rootJSON() throws Exception {
 		final URI target = UriBuilder.fromUri(host).path("/").build();
@@ -174,17 +165,7 @@ public class SimpleEndpointsTest {
 		
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		
-		final long servertime = (long) json.get("servertime");
-		json.remove("servertime");
-		TestCommon.assertCloseToNow(servertime);
-		
-		final String gitcommit = (String) json.get("gitcommithash");
-		json.remove("gitcommithash");
-		assertGitCommitFromRootAcceptable(gitcommit);
-		
-		final Map<String, Object> expected = ImmutableMap.of("version", SERVER_VER);
-		
-		assertThat("root json incorrect", json, is(expected));
+		assertRootJSONCorrect(json);
 	}
 	
 	@Test

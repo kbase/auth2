@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.api;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static us.kbase.test.auth2.service.common.ServiceCommonTest.assertRootJSONCorrect;
 
 import java.net.URI;
 import java.nio.file.Path;
@@ -89,6 +90,28 @@ public class TestModeIntegrationTest {
 	@Before
 	public void beforeTest() throws Exception {
 		ServiceTestUtils.resetServer(manager, host, COOKIE_NAME);
+	}
+	
+	/* the value of the git commit from the root endpoint could either be
+	 * an error message or a git commit hash depending on the test environment, so both are
+	 * allowed
+	 */
+	@Test
+	public void rootJSON() throws Exception {
+		final URI target = UriBuilder.fromUri(host).path("/testmode").build();
+		
+		final WebTarget wt = CLI.target(target);
+		
+		final Builder req = wt.request()
+				.accept(MediaType.APPLICATION_JSON);
+
+		final Response res = req.get();
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> json = res.readEntity(Map.class);
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		assertRootJSONCorrect(json);
 	}
 	
 	@Test

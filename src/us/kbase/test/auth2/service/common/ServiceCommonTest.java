@@ -12,7 +12,10 @@ import static org.mockito.Mockito.when;
 
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -42,6 +45,49 @@ import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.test.auth2.TestCommon;
 
 public class ServiceCommonTest {
+	
+	public static final String SERVICE_NAME = "Authentication Service";
+	public static final String SERVER_VER = "0.4.1";
+	public static final String GIT_ERR = 
+			"Missing git commit file gitcommit, should be in us.kbase.auth2";
+	
+	public static void assertGitCommitFromRootAcceptable(final String gitcommit) {
+		final boolean giterr = GIT_ERR.equals(gitcommit);
+		final Pattern githash = Pattern.compile("[a-f\\d]{40}");
+		final Matcher gitmatch = githash.matcher(gitcommit);
+		final boolean gitcommitmatch = gitmatch.matches();
+		
+		assertThat("gitcommithash is neither an appropriate error nor a git commit: [" +
+				gitcommit + "]",
+				giterr || gitcommitmatch, is(true));
+	}
+	
+	@Test
+	public void root() {
+		assertRootJSONCorrect(ServiceCommon.root());
+	}
+	
+	/* the value of the git commit from the root endpoint could either be
+	 * an error message or a git commit hash depending on the test environment, so both are
+	 * allowed
+	 */
+	public static void assertRootJSONCorrect(final Map<String, Object> rootJSON) {
+		// make a copy for mutability
+		final Map<String, Object> r = new HashMap<>(rootJSON);
+		final long servertime = (long) r.get("servertime");
+		r.remove("servertime");
+		TestCommon.assertCloseToNow(servertime);
+		
+		final String gitcommit = (String) r.get("gitcommithash");
+		r.remove("gitcommithash");
+		assertGitCommitFromRootAcceptable(gitcommit);
+		
+		final Map<String, Object> expected = ImmutableMap.of(
+				"version", SERVER_VER,
+				"servicename", SERVICE_NAME);
+		
+		assertThat("root json incorrect", r, is(expected));
+	}
 	
 	@Test
 	public void getToken() throws Exception {
