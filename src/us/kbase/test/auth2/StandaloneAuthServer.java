@@ -6,7 +6,6 @@ import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.servlet.ServletHolder;
 import org.glassfish.jersey.servlet.ServletContainer;
 
-import us.kbase.auth2.kbase.KBaseAuthConfig;
 //import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.service.AuthenticationService;
 
@@ -65,11 +64,11 @@ public class StandaloneAuthServer {
 	
 	public static void main(String[] args) throws Exception {
 		// option 1: use a config file to start the server
-		new StandaloneAuthServer(KBaseAuthConfig.class.getName()).start(Integer.valueOf(args[0]));
+//		new StandaloneAuthServer(KBaseAuthConfig.class.getName()).start(Integer.valueOf(args[0]));
 		
 		// option 2: use the test configurator class
 //		TestConfigurator.setConfig("localhost:27017", "auth_test_db", "templates");
 		// if setConfig isn't called, gets parameters from system props
-//		new StandaloneAuthServer(TestConfigurator.class.getName()).start(Integer.valueOf(args[0]));
+		new StandaloneAuthServer(TestConfigurator.class.getName()).start(Integer.valueOf(args[0]));
 	}
 }
