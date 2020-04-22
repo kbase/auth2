@@ -1,6 +1,12 @@
 Authentication Service MKII release notes
 =========================================
 
+0.4.2
+-----
+
+* Fixed a bug decoding Google JWT tokens, which could very rarely prevent users from
+  logging in.
+
 0.4.1
 -----
 

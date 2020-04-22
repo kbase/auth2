@@ -39,7 +39,7 @@ import us.kbase.auth2.service.exceptions.AuthConfigurationException;
  */
 public class ServiceCommon {
 	
-	private static final String VERSION = "0.4.1";
+	private static final String VERSION = "0.4.2";
 	// TODO FEATURE make configurable. Will need to make this a class & inject into deps
 	private static final String SERVICE_NAME = "Authentication Service";
 	private static final String HEADER_USER_AGENT = "user-agent";
