@@ -367,7 +367,7 @@ public class GoogleIdentityProviderTest {
 	
 	private String b64json(final Map<String, String> payload) throws Exception {
 		final String json = MAPPER.writeValueAsString(payload);
-		return Base64.getEncoder().encodeToString(json.getBytes());
+		return Base64.getUrlEncoder().encodeToString(json.getBytes());
 	}
 
 	@Test

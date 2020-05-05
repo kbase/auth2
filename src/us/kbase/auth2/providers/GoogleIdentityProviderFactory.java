@@ -187,8 +187,12 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 			}
 			final Map<String, Object> payload;
 			try {
+				// presumably we can trust the token given we just got it from Google
+				// presumably we can assume the email is verified since this is a Google account
+				// should really use a lib here but reading docs they all look like such a pain
+				// to use, given the operations here are so simple
 				// 2nd part of the JSON Web Token (between `.`) contains payload
-				final byte[] jsontoken = Base64.getDecoder().decode(idtoken.split("\\.")[1]);
+				final byte[] jsontoken = Base64.getUrlDecoder().decode(idtoken.split("\\.")[1]);
 				@SuppressWarnings("unchecked")
 				final Map<String, Object> temppayload = MAPPER.readValue(jsontoken, Map.class);
 				payload = temppayload;
