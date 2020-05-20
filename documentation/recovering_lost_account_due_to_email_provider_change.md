@@ -79,7 +79,7 @@ kbrs0:PRIMARY> db.users.update(
 WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 }) 
 ```
 
-Note that `fullname` and `email` are updated from the identity provider on login. After the
+Note that `uid`, `fullname` and `email` are updated from the identity provider on login. After the
 user logged in, the fields were updated as expected - in particular, the email address was updated
 to the trusted email.
 
