@@ -79,14 +79,22 @@ kbrs0:PRIMARY> db.users.update(
 WriteResult({ "nMatched" : 1, "nUpserted" : 0, "nModified" : 1 }) 
 ```
 
-Note that `uid`, `fullname` and `email` are updated from the identity provider on login. After the
-user logged in, the fields were updated as expected - in particular, the email address was updated
-to the trusted email.
+Note that `uid`, `fullname` and `email` are updated from the identity provider on login. After
+the user logged in, the fields were updated as expected - in particular, the email address was
+updated to the trusted email.
 
 It is important to be sure that the identity record is not duplicated within with user document.
 A unique index on the `idents.id` field prevents two users possessing the same identity
 (assuming the ID is correctly calculated), but there is no way to prevent duplicate records in the
 same array if the records are not completely identical.
+
+After executing the update query, check the user record in MongoDB for correctness, and
+query based on the `idents.prov_id` field to ensure no duplicate records. It is possible,
+but improbable, that different identity providers use the same `prov_id` for an account, so
+if multiple records result inspect them carefully.
+
+There is a unique index on `user` as well as `idents.id` and so duplicating the user record
+should be impossible.
 
 ## Recommendations
 
