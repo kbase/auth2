@@ -65,7 +65,8 @@ RemoteIdentityID [provider=OrcID, id=<users's OrcID>]
 Kbase identity ID <KBase identity ID>
 ```
 
-Then the user's record was then updated in the auth database:
+Before making any changes to the Auth database, the user's username was verified as
+correct and the user's record inspected. Then the record was updated:
 
 ```
 kbrs0:PRIMARY> db.users.update(
