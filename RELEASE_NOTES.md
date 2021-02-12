@@ -1,6 +1,11 @@
 Authentication Service MKII release notes
 =========================================
 
+0.4.3
+-----
+
+* Added the ability for the test auth controller to authenticate to MongoDB.
+
 0.4.2
 -----
 

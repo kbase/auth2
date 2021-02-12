@@ -9,6 +9,7 @@ import java.util.Set;
 
 import org.productivity.java.syslog4j.SyslogIF;
 
+// TODO CODE switch to the java supplied Optional. Will need changes throughout the code base
 import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -19,10 +20,22 @@ import us.kbase.common.service.JsonServerSyslog.RpcInfo;
 import us.kbase.common.service.JsonServerSyslog.SyslogOutput;
 
 public class TestConfigurator implements AuthStartupConfig {
+	/* This is a test class for very specialized test applications and so does not contain
+	 * a lot of documentation / safety checks / etc. It is expected that users are technically
+	 * able to resolve problems that arise.
+	 */
+	
+	public static final String MONGO_HOST_KEY = "AUTH2_TEST_MONGOHOST";
+	public static final String MONGO_DB_KEY = "AUTH2_TEST_MONGODB";
+	public static final String MONGO_TEMPLATES_KEY = "AUTH2_TEST_TEMPLATE_DIR";
+	public static final String MONGO_USER_KEY = "AUTH2_TEST_MONGOUSER";
+	public static final String MONGO_PWD_KEY = "AUTH2_TEST_MONGOPWD";
 	
 	private static String mongoHost = null;
 	private static String mongoDatabase = null;
 	private static String templatesDir = null;
+	private static Optional<String> mongoUser = Optional.absent();
+	private static Optional<char[]> mongoPwd = Optional.absent();
 	
 	public static void setConfig(
 			final String mongoHost,
@@ -31,6 +44,21 @@ public class TestConfigurator implements AuthStartupConfig {
 		TestConfigurator.mongoHost = mongoHost;
 		TestConfigurator.mongoDatabase = mongoDatabase;
 		TestConfigurator.templatesDir = templatesDir;
+		TestConfigurator.mongoUser = Optional.absent();
+		TestConfigurator.mongoPwd = Optional.absent();
+	}
+	
+	public static void setConfig(
+			final String mongoHost,
+			final String mongoDatabase,
+			final String templatesDir,
+			final String mongoUser,
+			final char[] mongoPwd) {
+		TestConfigurator.mongoHost = mongoHost;
+		TestConfigurator.mongoDatabase = mongoDatabase;
+		TestConfigurator.templatesDir = templatesDir;
+		TestConfigurator.mongoUser = Optional.fromNullable(mongoUser);
+		TestConfigurator.mongoPwd = Optional.fromNullable(mongoPwd);
 	}
 
 	private final SLF4JAutoLogger logger;
@@ -43,7 +71,7 @@ public class TestConfigurator implements AuthStartupConfig {
 		public TestLogger() {
 			logger = new JsonServerSyslog(
 					"AuthTestLogger",
-					//TODO KBASECOMMON allow null for the fake config prop arg
+					//TODO CODE update kbase-common and pass null instead
 					"thisisafakekeythatshouldntexistihope",
 					JsonServerSyslog.LOG_LEVEL_INFO, true);
 			logger.changeOutput(new SyslogOutput() {
@@ -100,21 +128,29 @@ public class TestConfigurator implements AuthStartupConfig {
 
 	@Override
 	public String getMongoHost() {
-		return mongoHost == null ? System.getProperty("AUTH2_TEST_MONGOHOST") : mongoHost;
+		return mongoHost == null ? System.getProperty(MONGO_HOST_KEY) : mongoHost;
 	}
 
 	@Override
 	public String getMongoDatabase() {
-		return mongoDatabase == null ? System.getProperty("AUTH2_TEST_MONGODB") : mongoDatabase;
+		return mongoDatabase == null ? System.getProperty(MONGO_DB_KEY) : mongoDatabase;
 	}
 
 	@Override
 	public Optional<String> getMongoUser() {
-		return Optional.absent();
+		return mongoUser.isPresent() ? mongoUser :
+			Optional.fromNullable(System.getProperty(MONGO_USER_KEY));
 	}
 
 	@Override
 	public Optional<char[]> getMongoPwd() {
+		if (mongoPwd.isPresent()) {
+			return mongoPwd;
+		}
+		final String mp = System.getProperty(MONGO_PWD_KEY);
+		if (mp != null) {
+			return Optional.of(mp.toCharArray());
+		}
 		return Optional.absent();
 	}
 
@@ -136,7 +172,7 @@ public class TestConfigurator implements AuthStartupConfig {
 	@Override
 	public Path getPathToTemplateDirectory() {
 		return Paths.get(templatesDir == null ?
-				System.getProperty("AUTH2_TEST_TEMPLATE_DIR") : templatesDir);
+				System.getProperty(MONGO_TEMPLATES_KEY) : templatesDir);
 	}
 
 	@Override

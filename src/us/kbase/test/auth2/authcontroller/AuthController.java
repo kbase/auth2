@@ -2,6 +2,11 @@ package us.kbase.test.auth2.authcontroller;
 
 import static us.kbase.common.test.controllers.ControllerCommon.findFreePort;
 import static us.kbase.common.test.controllers.ControllerCommon.makeTempDirs;
+import static us.kbase.test.auth2.TestConfigurator.MONGO_HOST_KEY;
+import static us.kbase.test.auth2.TestConfigurator.MONGO_DB_KEY;
+import static us.kbase.test.auth2.TestConfigurator.MONGO_TEMPLATES_KEY;
+import static us.kbase.test.auth2.TestConfigurator.MONGO_USER_KEY;
+import static us.kbase.test.auth2.TestConfigurator.MONGO_PWD_KEY;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,6 +18,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.LinkedList;
@@ -27,7 +33,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.collect.ImmutableList;
 
 import us.kbase.common.test.TestException;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -48,6 +53,20 @@ public class AuthController {
 			final String mongoDatabase,
 			final Path rootTempDir)
 			throws Exception {
+		this(jarsDir, mongoHost, mongoDatabase, rootTempDir, null, null);
+	}
+	
+	public AuthController(
+			final Path jarsDir,
+			final String mongoHost,
+			final String mongoDatabase,
+			final Path rootTempDir,
+			final String mongoUser,
+			final String mongoPwd)
+			throws Exception {
+		if (mongoUser == null ^ mongoPwd == null) {
+			throw new TestException("Both or neither of the mongo user / pwd must be provided");
+		}
 		final String classPath = getClassPath(jarsDir);
 		tempDir = makeTempDirs(rootTempDir, "AuthController-", Arrays.asList("templates"));
 		port = findFreePort();
@@ -55,14 +74,18 @@ public class AuthController {
 		final Path templateDir = tempDir.resolve("templates");
 		installTemplates(jarsDir, templateDir);
 		
-		final List<String> command = ImmutableList.of(
+		final List<String> command = new ArrayList<>(Arrays.asList(
 				"java",
 				"-classpath", classPath,
-				"-DAUTH2_TEST_MONGOHOST=" + mongoHost,
-				"-DAUTH2_TEST_MONGODB=" + mongoDatabase,
-				"-DAUTH2_TEST_TEMPLATE_DIR=" + templateDir.toString(),
-				AUTH_CLASS,
-				"" + port);
+				"-D" + MONGO_HOST_KEY + "=" + mongoHost,
+				"-D" + MONGO_DB_KEY + "=" + mongoDatabase,
+				"-D" + MONGO_TEMPLATES_KEY + "=" + templateDir.toString()));
+		if (mongoUser != null) {
+			command.add("-D" + MONGO_USER_KEY + "=" + mongoUser);
+			command.add("-D" + MONGO_PWD_KEY + "=" + mongoUser);
+		}
+		command.add(AUTH_CLASS);
+		command.add("" + port);
 		final ProcessBuilder servpb = new ProcessBuilder(command)
 				.redirectErrorStream(true)
 				.redirectOutput(tempDir.resolve("auth.log").toFile());
@@ -189,16 +212,17 @@ public class AuthController {
 	
 	public static void main(final String[] args) throws Exception {
 		final AuthController ac = new AuthController(
-				Paths.get("/home/crusherofheads/localgit/jars/lib/jars"),
+				Paths.get("/home/crushingismybusiness/github/mrcreosote/jars/lib/jars"),
 				"localhost:27017",
 				"AuthController",
-				Paths.get("authtesttemp"));
+				Paths.get("authtesttemp"),
+				"auth",
+				"auth");
 		System.out.println(ac.getServerPort());
 		System.out.println(ac.getTempDir());
 		System.out.println(ac.getVersion());
 		Scanner reader = new Scanner(System.in);
 		System.out.println("any char to shut down");
-		//get user input for a
 		reader.next();
 		ac.destroy(false);
 		reader.close();
