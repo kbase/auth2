@@ -1,0 +1,61 @@
+name: KBase Auth2 tests
+
+on:
+  push:
+    branches: [ master, develop ]
+  pull_request:
+
+jobs:
+
+  auth2_tests:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Note that there's a mongo-only ant test directive. Use that for all mongo versions
+        # except for one if there's > 1 mongo version to test. No need for testing code that
+        # doesn't touch mongo against multiple mongo versions
+        include:
+          - java: '8'
+            mongo: 'mongodb-linux-x86_64-3.6.23'
+            wired_tiger: 'false'
+          - java: '11'
+            mongo: 'mongodb-linux-x86_64-3.6.23'
+            wired_tiger: 'true'
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Setup java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: ${{matrix.java}}
+
+      - name: Clone jars as sister repo
+        shell: bash
+        run: |
+          cd ..
+          git clone https://github.com/kbase/jars
+          cd -
+
+      - name: Install mongo and set up test config
+        shell: bash
+        run: |
+          cd ..
+          wget http://fastdl.mongodb.org/linux/${{MONGODB_VER}}.tgz
+          tar xfz ${{MONGODB_VER}}.tgz
+          export MONGOD=`pwd`/${{MONGODB_VER}}/bin/mongod
+          cd -
+          cp -n test.cfg.example test.cfg
+          sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
+          sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
+          sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=${{WIRED_TIGER}}#" test.cfg
+          cat test.cfg
+         
+      - name: Run tests
+      - run: ant test
+          
+      - name: Upload coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          fail_ci_if_error: true
