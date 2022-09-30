@@ -53,7 +53,7 @@ jobs:
           cat test.cfg
          
       - name: Run tests
-      - run: ant test
+        run: ant test
           
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
