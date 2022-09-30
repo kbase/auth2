@@ -42,7 +42,7 @@ jobs:
         shell: bash
         run: |
           cd ..
-          wget http://fastdl.mongodb.org/linux/${{matrix.mongo}}.tgz
+          wget -q http://fastdl.mongodb.org/linux/${{matrix.mongo}}.tgz
           tar xfz ${{matrix.mongo}}.tgz
           export MONGOD=`pwd`/${{matrix.mongo}}/bin/mongod
           cd -
