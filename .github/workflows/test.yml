@@ -42,19 +42,19 @@ jobs:
         shell: bash
         run: |
           cd ..
-          wget http://fastdl.mongodb.org/linux/${{MONGODB_VER}}.tgz
-          tar xfz ${{MONGODB_VER}}.tgz
-          export MONGOD=`pwd`/${{MONGODB_VER}}/bin/mongod
+          wget http://fastdl.mongodb.org/linux/${{matrix.mongo}}.tgz
+          tar xfz ${{matrix.mongo}}.tgz
+          export MONGOD=`pwd`/${{matrix.mongo}}/bin/mongod
           cd -
           cp -n test.cfg.example test.cfg
           sed -i "s#^test.temp.dir=.*#test.temp.dir=temp_test_dir#" test.cfg
           sed -i "s#^test.mongo.exe.*#test.mongo.exe=$MONGOD#" test.cfg
-          sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=${{WIRED_TIGER}}#" test.cfg
+          sed -i "s#^test.mongo.wired_tiger.*#test.mongo.wired_tiger=${{matrix.wired_tiger}}#" test.cfg
           cat test.cfg
-         
+
       - name: Run tests
         run: ant test
-          
+
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
         with:
