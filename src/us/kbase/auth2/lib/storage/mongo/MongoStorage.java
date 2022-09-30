@@ -1622,7 +1622,7 @@ public class MongoStorage implements AuthStorage {
 		if (op.equals(Operation.ERROR)) {
 			tis = b.error(d.getString(Fields.TEMP_SESSION_ERROR),
 					ErrorType.fromErrorCode(d.getInteger(Fields.TEMP_SESSION_ERROR_TYPE)));
-		} else if (op.equals(Operation.LOGIN)) {
+		} else if (op.equals(Operation.LOGINIDENTS)) {
 			tis = b.login(toIdentities(ids));
 		} else if (op.equals(Operation.LINKSTART)) {
 			tis = b.link(getUserName(d.getString(Fields.TEMP_SESSION_USER)));

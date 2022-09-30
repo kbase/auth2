@@ -201,8 +201,8 @@ public class TemporarySessionData {
 	 *
 	 */
 	public static enum Operation {
-		/** The login operation. */
-		LOGIN,
+		/** The last step of the login operation, including identities. */
+		LOGINIDENTS,
 		/** The start of the link operation. */
 		LINKSTART,
 		/** The last step of the link operation, including identities. */
@@ -281,13 +281,14 @@ public class TemporarySessionData {
 					Optional.of(error), Optional.of(errorType));
 		}
 		
-		/** Create temporary session data for a login operation.
+		/** Create temporary session data for a login operation where remote identities are
+		 * involved.
 		 * @param identities the remote identities involved in the login.
 		 * @return the temporary session data.
 		 */
 		public TemporarySessionData login(final Set<RemoteIdentity> identities) {
 			return new TemporarySessionData(
-					Operation.LOGIN, id, created, expires, checkIdents(identities), user,
+					Operation.LOGINIDENTS, id, created, expires, checkIdents(identities), user,
 					error, errorType);
 		}
 

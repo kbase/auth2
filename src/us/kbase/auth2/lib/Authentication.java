@@ -1788,8 +1788,8 @@ public class Authentication {
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
-		final TemporarySessionData ids = getTemporaryIdentities(
-				Optional.absent(), Operation.LOGIN, token);
+		final TemporarySessionData ids = getTemporarySessionData(
+				Optional.absent(), Operation.LOGINIDENTS, token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
 				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
@@ -1811,7 +1811,7 @@ public class Authentication {
 		return builder.build();
 	}
 
-	private TemporarySessionData getTemporaryIdentities(
+	private TemporarySessionData getTemporarySessionData(
 			Optional<UserName> user,
 			final Operation expectedOperation,
 			final IncomingToken token)
@@ -1902,8 +1902,10 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException("Account creation is disabled");
 		}
-		final Set<RemoteIdentity> ids = new HashSet<>(getTemporaryIdentities(
-				Optional.absent(), Operation.LOGIN, token).getIdentities().get());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(
+				getTemporarySessionData(Optional.absent(), Operation.LOGINIDENTS, token)
+				.getIdentities().get());
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
@@ -2220,8 +2222,10 @@ public class Authentication {
 		nonNull(policyIDs, "policyIDs");
 		nonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
-		final Set<RemoteIdentity> ids = new HashSet<>(getTemporaryIdentities(
-				Optional.absent(), Operation.LOGIN, token).getIdentities().get());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(
+				getTemporarySessionData(Optional.absent(), Operation.LOGINIDENTS, token)
+				.getIdentities().get());
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
@@ -2413,7 +2417,7 @@ public class Authentication {
 			throw new MissingParameterException("authorization code");
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
-		final TemporarySessionData tids = getTemporaryIdentities(
+		final TemporarySessionData tids = getTemporarySessionData(
 				Optional.absent(), Operation.LINKSTART, token);
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		// UI shouldn't allow disabled users to link
@@ -2533,7 +2537,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final TemporarySessionData tids = getTemporaryIdentities(
+		final TemporarySessionData tids = getTemporarySessionData(
 				Optional.of(u.getUserName()), Operation.LINKIDENTS, linkToken);
 		checkIdentityAccess(u.getUserName(), tids);
 		final LinkIdentities linkIdentities = getLinkIdentities(u, tids);
@@ -2608,7 +2612,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final TemporarySessionData tids = getTemporaryIdentities(
+		final TemporarySessionData tids = getTemporarySessionData(
 				Optional.of(au.getUserName()), Operation.LINKIDENTS, linkToken);
 		storage.deleteTemporarySessionData(linkToken.getHashedToken());
 		checkIdentityAccess(au.getUserName(), tids);
@@ -2649,7 +2653,7 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					au.getUserName().getName());
 		}
-		final TemporarySessionData tids = getTemporaryIdentities(
+		final TemporarySessionData tids = getTemporarySessionData(
 				Optional.of(au.getUserName()), Operation.LINKIDENTS, linkToken);
 		storage.deleteTemporarySessionData(linkToken.getHashedToken());
 		checkIdentityAccess(au.getUserName(), tids);
