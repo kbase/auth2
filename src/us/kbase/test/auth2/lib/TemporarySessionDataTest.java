@@ -39,13 +39,13 @@ public class TemporarySessionDataTest {
 	}
 	
 	@Test
-	public void constructLogin() throws Exception {
+	public void constructLoginIdents() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData ti = TemporarySessionData.create(
 				id, now, now.plusMillis(100000)).login(set(REMOTE1, REMOTE2));
 		
-		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGIN));
+		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINIDENTS));
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(100000)));

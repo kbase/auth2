@@ -1075,7 +1075,7 @@ public class AuthenticationLoginTest {
 				"Temporary token operation type does not match expected operation"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
-				"User foo attempted operation LOGIN with a LINKSTART temporary token " + id,
+				"User foo attempted operation LOGINIDENTS with a LINKSTART temporary token " + id,
 						Authentication.class));
 	}
 	
@@ -1561,8 +1561,8 @@ public class AuthenticationLoginTest {
 						"Temporary token operation type does not match expected operation"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
-				"User foo attempted operation LOGIN with a LINKSTART temporary token " + tokenID,
-						Authentication.class));
+				"User foo attempted operation LOGINIDENTS with a LINKSTART temporary token "
+				+ tokenID, Authentication.class));
 	}
 	
 	@Test
@@ -2260,8 +2260,8 @@ public class AuthenticationLoginTest {
 				"Temporary token operation type does not match expected operation"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.ERROR,
-				"User whee attempted operation LOGIN with a LINKSTART temporary token " + tokenID,
-						Authentication.class));
+				"User whee attempted operation LOGINIDENTS with a LINKSTART temporary token "
+				+ tokenID, Authentication.class));
 	}
 	
 	@Test
