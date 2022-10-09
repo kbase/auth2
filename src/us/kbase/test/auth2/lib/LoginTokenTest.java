@@ -7,11 +7,10 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.tempToken;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.LoginToken;

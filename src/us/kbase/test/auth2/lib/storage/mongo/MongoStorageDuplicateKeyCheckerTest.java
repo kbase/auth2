@@ -7,11 +7,11 @@ import static org.junit.Assert.fail;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Optional;
 
 import org.bson.BsonDocument;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.mongodb.MongoWriteException;
 import com.mongodb.ServerAddress;
 import com.mongodb.WriteError;
@@ -50,7 +50,7 @@ public class MongoStorageDuplicateKeyCheckerTest {
 				"test_mongostorage.usersa.$identsa.id_1  ";
 		final String expectedCollection = "usersa";
 		final String expectedIndex = "identsa.id_1";
-		final Optional<Object> expectedKey = Optional.absent();
+		final Optional<Object> expectedKey = Optional.empty();
 		checkDuplicateViaConstructor(message, expectedCollection, expectedIndex, expectedKey);
 	}
 	
@@ -71,7 +71,7 @@ public class MongoStorageDuplicateKeyCheckerTest {
 				"test_mongostorage.usersc index: identsc.id_1 dup key";
 		final String expectedCollection = "usersc";
 		final String expectedIndex = "identsc.id_1";
-		final Optional<Object> expectedKey = Optional.absent();
+		final Optional<Object> expectedKey = Optional.empty();
 		checkDuplicateViaConstructor(message, expectedCollection, expectedIndex, expectedKey);
 	}
 	
@@ -117,9 +117,9 @@ public class MongoStorageDuplicateKeyCheckerTest {
 		final Optional<String> idx = runMethod(instance, "getIndex");
 		final Optional<String> key = runMethod(instance, "getKey");
 		assertThat("incorrect isDuplicate", runIsDuplicate(instance), is(false));
-		assertThat("incorrect collection", col, is(Optional.absent()));
-		assertThat("incorrect index", idx, is(Optional.absent()));
-		assertThat("incorrect key", key, is(Optional.absent()));
+		assertThat("incorrect collection", col, is(Optional.empty()));
+		assertThat("incorrect index", idx, is(Optional.empty()));
+		assertThat("incorrect key", key, is(Optional.empty()));
 	}
 	
 	@Test

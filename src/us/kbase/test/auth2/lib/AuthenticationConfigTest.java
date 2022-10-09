@@ -15,12 +15,12 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import ch.qos.logback.classic.Level;
@@ -245,7 +245,7 @@ public class AuthenticationConfigTest {
 		
 		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
 		
-		final Optional<Boolean> abs = Optional.absent();
+		final Optional<Boolean> abs = Optional.empty();
 		final AuthConfigUpdate<ExternalConfig> update =
 				AuthConfigUpdate.getBuilder()
 				.withLoginAllowed(true)
@@ -288,7 +288,7 @@ public class AuthenticationConfigTest {
 		
 		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
 		
-		final Optional<Boolean> abs = Optional.absent();
+		final Optional<Boolean> abs = Optional.empty();
 		final AuthConfigUpdate<ExternalConfig> update =
 				AuthConfigUpdate.getBuilder()
 				.withProviderUpdate("prov1", new ProviderUpdate(Optional.of(true), abs, abs))
@@ -324,7 +324,7 @@ public class AuthenticationConfigTest {
 		
 		setupValidUserResponses(storage, new UserName("foo"), Role.ADMIN, token);
 		
-		final Optional<Boolean> abs = Optional.absent();
+		final Optional<Boolean> abs = Optional.empty();
 		final AuthConfigUpdate<ExternalConfig> update =
 				AuthConfigUpdate.getBuilder()
 				.withProviderUpdate("prov1",

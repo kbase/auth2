@@ -2,7 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.token.TemporaryToken;
 
@@ -24,7 +24,7 @@ public class LinkToken {
 	 * actions are required.
 	 */
 	public LinkToken() {
-		this.token = Optional.absent();
+		this.token = Optional.empty();
 	}
 	
 	/** Create a LinkToken for the case where more actions are required, and thus a token is

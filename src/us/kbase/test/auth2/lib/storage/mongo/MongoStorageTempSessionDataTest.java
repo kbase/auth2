@@ -7,12 +7,11 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.bson.Document;
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
@@ -254,7 +253,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final Optional<UUID> retid = storage.deleteTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken());
 		
-		assertThat("incorrect token id", retid, is(Optional.absent()));
+		assertThat("incorrect token id", retid, is(Optional.empty()));
 	}
 	
 	@Test

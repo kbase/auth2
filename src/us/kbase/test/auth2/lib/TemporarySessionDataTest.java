@@ -7,12 +7,11 @@ import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.TemporarySessionData;
@@ -49,10 +48,10 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(inst(10000)));
 		assertThat("incorrect expires", ti.getExpires(), is(inst(20000)));
-		assertThat("incorrect user", ti.getUser(), is(Optional.absent()));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.absent()));
-		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
 	}
 	
@@ -67,10 +66,10 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(100000)));
-		assertThat("incorrect user", ti.getUser(), is(Optional.absent()));
+		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE2, REMOTE1))));
-		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
 		
 		assertImmutable(ti);
@@ -88,8 +87,8 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.absent()));
-		assertThat("incorrect user", ti.getUser(), is(Optional.absent()));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
+		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
 		assertThat("incorrect error", ti.getError(), is(Optional.of("foo")));
 		assertThat("incorrect error type", ti.getErrorType(), is(Optional.of(ErrorType.DISABLED)));
 		assertThat("incorrect has error", ti.hasError(), is(true));
@@ -106,10 +105,10 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.absent()));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
 	}
 	
@@ -128,8 +127,8 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
 		
 		assertImmutable(ti);
@@ -148,8 +147,8 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(Instant.MAX));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
 		
 		assertImmutable(ti);

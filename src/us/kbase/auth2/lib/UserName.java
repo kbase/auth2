@@ -2,10 +2,9 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -79,7 +78,7 @@ public class UserName extends Name {
 		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
 				.replaceAll("^[^a-z]+", "");
 		try {
-			return s.isEmpty() ? Optional.absent() : Optional.of(new UserName(s));
+			return s.isEmpty() ? Optional.empty() : Optional.of(new UserName(s));
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}

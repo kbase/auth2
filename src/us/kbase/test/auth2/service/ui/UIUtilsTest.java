@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -29,7 +30,6 @@ import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -350,7 +350,7 @@ public class UIUtilsTest {
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		when(headers.getHeaderString("myheader")).thenReturn(null);
 		final Optional<String> res = UIUtils.getValueFromHeaderOrString(headers, "myheader", null);
-		assertThat("incorrect value", res, is(Optional.absent()));
+		assertThat("incorrect value", res, is(Optional.empty()));
 	}
 	
 	@Test
@@ -359,7 +359,7 @@ public class UIUtilsTest {
 		when(headers.getHeaderString("myheader")).thenReturn("    \t    ");
 		final Optional<String> res = UIUtils.getValueFromHeaderOrString(
 				headers, "myheader", "    \t    ");
-		assertThat("incorrect value", res, is(Optional.absent()));
+		assertThat("incorrect value", res, is(Optional.empty()));
 	}
 	
 	@Test
@@ -528,7 +528,7 @@ public class UIUtilsTest {
 				MapBuilder.<String, Cookie>newHashMap().with("cookiename", null).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test
@@ -549,7 +549,7 @@ public class UIUtilsTest {
 						"cookiename", new Cookie("cookiename", null)).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test
@@ -571,7 +571,7 @@ public class UIUtilsTest {
 						"cookiename", new Cookie("cookiename", "   \n  \t   ")).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test

@@ -6,10 +6,10 @@ import static org.junit.Assert.fail;
 
 import java.net.InetAddress;
 import java.util.Collections;
+import java.util.Optional;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -28,12 +28,12 @@ public class TokenCreationContextTest {
 	@Test
 	public void buildMinimal() throws Exception {
 		final TokenCreationContext tcc = TokenCreationContext.getBuilder().build();
-		assertThat("incorrect device", tcc.getDevice(), is(Optional.absent()));
-		assertThat("incorrect os", tcc.getOS(), is(Optional.absent()));
-		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.absent()));
-		assertThat("incorrect agent", tcc.getAgent(), is(Optional.absent()));
-		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
-		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.absent()));
+		assertThat("incorrect device", tcc.getDevice(), is(Optional.empty()));
+		assertThat("incorrect os", tcc.getOS(), is(Optional.empty()));
+		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.empty()));
+		assertThat("incorrect agent", tcc.getAgent(), is(Optional.empty()));
+		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.empty()));
+		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.empty()));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
 	}
 	
@@ -65,12 +65,12 @@ public class TokenCreationContextTest {
 				.withNullableOS(null, "ov")
 				.withNullableIpAddress(null)
 				.build();
-		assertThat("incorrect device", tcc.getDevice(), is(Optional.absent()));
-		assertThat("incorrect os", tcc.getOS(), is(Optional.absent()));
-		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.absent()));
-		assertThat("incorrect agent", tcc.getAgent(), is(Optional.absent()));
-		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
-		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.absent()));
+		assertThat("incorrect device", tcc.getDevice(), is(Optional.empty()));
+		assertThat("incorrect os", tcc.getOS(), is(Optional.empty()));
+		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.empty()));
+		assertThat("incorrect agent", tcc.getAgent(), is(Optional.empty()));
+		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.empty()));
+		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.empty()));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
 	}
 	
@@ -82,11 +82,11 @@ public class TokenCreationContextTest {
 				.withNullableOS("   \t  ", "ov")
 				.withNullableIpAddress(InetAddress.getByName("2.2.2.2"))
 				.build();
-		assertThat("incorrect device", tcc.getDevice(), is(Optional.absent()));
-		assertThat("incorrect os", tcc.getOS(), is(Optional.absent()));
-		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.absent()));
-		assertThat("incorrect agent", tcc.getAgent(), is(Optional.absent()));
-		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
+		assertThat("incorrect device", tcc.getDevice(), is(Optional.empty()));
+		assertThat("incorrect os", tcc.getOS(), is(Optional.empty()));
+		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.empty()));
+		assertThat("incorrect agent", tcc.getAgent(), is(Optional.empty()));
+		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.empty()));
 		assertThat("incorrect ip", tcc.getIpAddress(),
 				is(Optional.of(InetAddress.getByName("2.2.2.2"))));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
@@ -98,12 +98,12 @@ public class TokenCreationContextTest {
 				.withNullableAgent("a", null)
 				.withNullableOS("o", null)
 				.build();
-		assertThat("incorrect device", tcc.getDevice(), is(Optional.absent()));
+		assertThat("incorrect device", tcc.getDevice(), is(Optional.empty()));
 		assertThat("incorrect os", tcc.getOS(), is(Optional.of("o")));
-		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.absent()));
+		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.empty()));
 		assertThat("incorrect agent", tcc.getAgent(), is(Optional.of("a")));
-		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
-		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.absent()));
+		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.empty()));
+		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.empty()));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
 	}
 	
@@ -113,12 +113,12 @@ public class TokenCreationContextTest {
 				.withNullableAgent("a", "   \t  ")
 				.withNullableOS("o", "   \t  ")
 				.build();
-		assertThat("incorrect device", tcc.getDevice(), is(Optional.absent()));
+		assertThat("incorrect device", tcc.getDevice(), is(Optional.empty()));
 		assertThat("incorrect os", tcc.getOS(), is(Optional.of("o")));
-		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.absent()));
+		assertThat("incorrect os ver", tcc.getOSVersion(), is(Optional.empty()));
 		assertThat("incorrect agent", tcc.getAgent(), is(Optional.of("a")));
-		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.absent()));
-		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.absent()));
+		assertThat("incorrect agent ver", tcc.getAgentVersion(), is(Optional.empty()));
+		assertThat("incorrect ip", tcc.getIpAddress(), is(Optional.empty()));
 		assertThat("incorrect custom", tcc.getCustomContext(), is(Collections.emptyMap()));
 	}
 	

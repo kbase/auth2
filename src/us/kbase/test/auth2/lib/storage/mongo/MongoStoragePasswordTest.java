@@ -6,12 +6,11 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Optional;
 import java.time.Instant;
 
 import org.bson.Document;
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
@@ -101,7 +100,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 				new UserName("foo"), new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.empty()));
 		
 		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);
@@ -130,7 +129,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 				new UserName("foo"), new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
-		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.absent()));
+		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.empty()));
 		
 		final byte[] newPasswordHash = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] newSalt = "wo2".getBytes(StandardCharsets.UTF_8);

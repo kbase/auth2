@@ -8,10 +8,9 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -253,10 +252,10 @@ public class TemporarySessionData {
 		private final UUID id;
 		private final Instant created;
 		private final Instant expires;
-		private final static Optional<Set<RemoteIdentity>> identities = Optional.absent();
-		private final static Optional<String> error = Optional.absent();
-		private final static Optional<ErrorType> errorType = Optional.absent();
-		private final static Optional<UserName> user = Optional.absent();
+		private final static Optional<Set<RemoteIdentity>> identities = Optional.empty();
+		private final static Optional<String> error = Optional.empty();
+		private final static Optional<ErrorType> errorType = Optional.empty();
+		private final static Optional<UserName> user = Optional.empty();
 		
 		private Builder(final UUID id, final Instant created, final Instant expires) {
 			nonNull(id, "id");

@@ -27,6 +27,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,7 +56,6 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -166,10 +166,10 @@ public class Login {
 				headers, cfg.getEnvironmentHeaderName(), environForm);
 		Utils.checkString(provider, Fields.PROVIDER);
 		
-		getRedirectURL(environment.orNull(), redirect); // check redirect url is ok
+		getRedirectURL(environment.orElse(null), redirect); // check redirect url is ok
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, false, environment.orNull()));
+				provider, state, false, environment.orElse(null)));
 		
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
@@ -177,7 +177,7 @@ public class Login {
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
-				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LOGIN_ROOT,
+				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LOGIN_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				.build();
 	}

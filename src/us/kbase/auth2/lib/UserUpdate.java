@@ -2,8 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import com.google.common.base.Optional;
-
+import java.util.Optional;
 /** This class represents an update to a user's details as submitted by a user.
  * @author gaprice@lbl.gov
  *
@@ -92,8 +91,8 @@ public class UserUpdate {
 	 */
 	public static class Builder {
 	
-		private Optional<DisplayName> displayName = Optional.absent();
-		private Optional<EmailAddress> email = Optional.absent();
+		private Optional<DisplayName> displayName = Optional.empty();
+		private Optional<EmailAddress> email = Optional.empty();
 		
 		private Builder() {}
 

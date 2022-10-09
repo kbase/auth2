@@ -2,7 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.user.AuthUser;
 
@@ -30,7 +30,7 @@ public class ViewableUser {
 		if (viewEmail) {
 			this.email = Optional.of(user.getEmail());
 		} else {
-			this.email = Optional.absent();
+			this.email = Optional.empty();
 		}
 	}
 

@@ -21,6 +21,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -28,7 +29,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import ch.qos.logback.classic.Level;
@@ -301,7 +301,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		final UUID tokenID = UUID.randomUUID();
@@ -364,7 +364,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"));
 		
-		when(storage.getUser(storageRemoteID1)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID1)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		final AuthUser user = AuthUser.getBuilder(new UserName("foo"),
@@ -527,11 +527,11 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"));
 		
 		
-		when(storage.getUser(storageRemoteID1)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID1)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		final UUID tokenID = UUID.randomUUID();
@@ -755,7 +755,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		final LoginState got = auth.getLoginState(token);
 		
@@ -797,11 +797,11 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		final LoginState got = auth.getLoginState(token);
 		
@@ -973,7 +973,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		
 		final LoginState got = auth.getLoginState(token);
@@ -1271,15 +1271,15 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com"))))
@@ -1751,11 +1751,11 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		doThrow(new NoSuchUserException("baz")).when(storage).link(
 				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -1800,11 +1800,11 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		doThrow(new LinkFailedException("local")).when(storage).link(
 				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
@@ -2072,15 +2072,15 @@ public class AuthenticationLoginTest {
 
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com"))))
@@ -2305,7 +2305,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@g.com"))))
-					.thenReturn(Optional.absent());
+					.thenReturn(Optional.empty());
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l, new AuthenticationException(
 				ErrorType.AUTHENTICATION_FAILED,
@@ -2454,7 +2454,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-					.thenReturn(Optional.absent());
+					.thenReturn(Optional.empty());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
@@ -2500,7 +2500,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
-					.thenReturn(Optional.absent());
+					.thenReturn(Optional.empty());
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(

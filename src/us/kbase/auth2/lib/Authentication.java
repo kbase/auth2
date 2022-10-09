@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -30,7 +31,6 @@ import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.slf4j.LoggerFactory;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.cryptutils.PasswordCrypt;
@@ -1133,7 +1133,7 @@ public class Authentication {
 			throws AuthStorageException {
 		nonNull(suggestedUserName, "suggestedUserName");
 		final Optional<UserName> target = UserName.sanitizeName(suggestedUserName);
-		Optional<UserName> availableUserName = Optional.absent();
+		Optional<UserName> availableUserName = Optional.empty();
 		if (target.isPresent()) {
 			availableUserName = getAvailableUserName(target.get(), false, true);
 		}
@@ -1175,7 +1175,7 @@ public class Authentication {
 		for (long i = start; i < Long.MAX_VALUE; i++) {
 			final String potential = sugStrip + i;
 			if (potential.length() > UserName.MAX_NAME_LENGTH) {
-				return Optional.absent();
+				return Optional.empty();
 			}
 			if (!names.contains(potential)) {
 				try {
@@ -1186,7 +1186,7 @@ public class Authentication {
 			}
 		}
 		// this means there's > 10^63 names in the database. Not testing this path.
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	/** Revoke a token.
@@ -1258,7 +1258,7 @@ public class Authentication {
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 	
 	/** Revoke the current token and deletes all temporary session data associated with the user.
@@ -1286,7 +1286,7 @@ public class Authentication {
 		} catch (NoSuchTokenException e) {
 			// no problem, continue
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	/** Revokes all of a user's tokens.
@@ -1789,7 +1789,7 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
 		final TemporarySessionData ids = getTemporarySessionData(
-				Optional.absent(), Operation.LOGINIDENTS, token);
+				Optional.empty(), Operation.LOGINIDENTS, token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
 				ids.getIdentities().get().size());
 		return getLoginState(ids.getIdentities().get(), ids.getExpires());
@@ -1904,7 +1904,7 @@ public class Authentication {
 		}
 		// allow mutation of the identity set
 		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.absent(), Operation.LOGINIDENTS, token)
+				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
 				.getIdentities().get());
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
@@ -2224,7 +2224,7 @@ public class Authentication {
 		noNulls(policyIDs, "null item in policyIDs");
 		// allow mutation of the identity set
 		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.absent(), Operation.LOGINIDENTS, token)
+				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
 				.getIdentities().get());
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
@@ -2269,7 +2269,7 @@ public class Authentication {
 				return Optional.of(ri);
 			}
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	// assumes inputs have been checked and the user exists
@@ -2418,7 +2418,7 @@ public class Authentication {
 		}
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final TemporarySessionData tids = getTemporarySessionData(
-				Optional.absent(), Operation.LINKSTART, token);
+				Optional.empty(), Operation.LINKSTART, token);
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		// UI shouldn't allow disabled users to link
 		final AuthUser u = getUser(tids.getUser().get());

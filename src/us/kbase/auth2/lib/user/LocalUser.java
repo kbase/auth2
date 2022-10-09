@@ -5,9 +5,8 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -118,7 +117,7 @@ public class LocalUser extends AuthUser {
 	public static class Builder extends AbstractBuilder<Builder> {
 		
 		private boolean forceReset = false;
-		private Optional<Instant> lastReset = Optional.absent();
+		private Optional<Instant> lastReset = Optional.empty();
 
 		private Builder(
 				final UserName userName,
