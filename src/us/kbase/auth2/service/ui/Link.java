@@ -113,12 +113,6 @@ public class Link {
 		return ret;
 	}
 	
-	/* this method intentionally does not check the user identity because UIs must use a browser
-	 * form submit rather than AJAX for the redirect to work correctly. Since it's a form submit
-	 * the UI cannot trap any errors, and an invalid token error would default to the built in
-	 * HTML UI. Hence, this method should only throw errors when the request absolutely cannot
-	 * continue.
-	 */
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_START)
@@ -167,6 +161,14 @@ public class Link {
 				UIConstants.SECURE_COOKIES);
 	}
 	
+	/* We don't necessarily have access to the user's token here since it's a redirect from the
+	 * 3rd party identity provider. If the UI is setting its own cookies for tokens (which is
+	 * what the current KBase UI does) then the server won't know about it.
+	 * Hence we trust the link in process cookie that we set at link start and which is
+	 * associated with the user name, which was extracted from their token at link start.
+	 * 
+	 * IOW, the link in process cookie is a proxy for the user's token.
+	 */
 	@GET
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
