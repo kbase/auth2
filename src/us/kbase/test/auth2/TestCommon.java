@@ -98,6 +98,10 @@ public class TestCommon {
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 	}
 	
+	public static Instant inst(final long epochMillis) {
+		return Instant.ofEpochMilli(epochMillis);
+	}
+	
 	public static void assertExceptionCorrect(
 			final Exception got,
 			final Exception expected) {

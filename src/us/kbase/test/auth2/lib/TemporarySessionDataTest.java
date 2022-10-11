@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
@@ -36,6 +37,23 @@ public class TemporarySessionDataTest {
 	@Test
 	public void equals() {
 		EqualsVerifier.forClass(TemporarySessionData.class).usingGetClass().verify();
+	}
+	
+	@Test
+	public void constructLoginStart() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final TemporarySessionData ti = TemporarySessionData.create(id, inst(10000), inst(20000))
+				.login();
+		
+		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINSTART));
+		assertThat("incorrect id", ti.getId(), is(id));
+		assertThat("incorrect created", ti.getCreated(), is(inst(10000)));
+		assertThat("incorrect expires", ti.getExpires(), is(inst(20000)));
+		assertThat("incorrect user", ti.getUser(), is(Optional.absent()));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.absent()));
+		assertThat("incorrect error", ti.getError(), is(Optional.absent()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.absent()));
+		assertThat("incorrect has error", ti.hasError(), is(false));
 	}
 	
 	@Test
@@ -188,15 +206,14 @@ public class TemporarySessionDataTest {
 	}
 	
 	@Test
-	public void constructLoginFailNulls() throws Exception {
-		failConstructLogin(null, new NullPointerException("identities"));
-		failConstructLogin(set(REMOTE1, null),
-				new NullPointerException("null item in identities"));
-		failConstructLogin(set(),
-				new IllegalArgumentException("empty identities"));
+	public void constructLoginIdentsFailNulls() throws Exception {
+		failConstructLoginIdents(null, new NullPointerException("identities"));
+		failConstructLoginIdents(
+				set(REMOTE1, null), new NullPointerException("null item in identities"));
+		failConstructLoginIdents(set(), new IllegalArgumentException("empty identities"));
 	}
 	
-	private void failConstructLogin(
+	private void failConstructLoginIdents(
 			final Set<RemoteIdentity> idents,
 			final Exception e) {
 		try {

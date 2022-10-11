@@ -3,7 +3,6 @@ package us.kbase.test.auth2.lib.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
-
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
@@ -38,7 +37,20 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 			new RemoteIdentityDetails("user2", "full2", "email2"));
 	
 	@Test
-	public void storeAndGetLogin() throws Exception {
+	public void storeAndGetLoginStart() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login();
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("whoo"));
+		
+		assertThat("incorrect session data", storage.getTemporarySessionData(
+						new IncomingToken("whoo").getHashedToken()),
+				is(TemporarySessionData.create(id, now, now.plusSeconds(10)).login()));
+	}
+	
+	@Test
+	public void storeAndGetLoginIdents() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))

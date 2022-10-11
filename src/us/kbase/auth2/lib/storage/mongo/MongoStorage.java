@@ -135,6 +135,7 @@ public class MongoStorage implements AuthStorage {
 	 */
 	
 	// TODO CODE switch dates to Instants
+	// TODO CODE switch optionals to java standard library implementation
 	
 	private static final int SCHEMA_VERSION = 1;
 	
@@ -1622,6 +1623,8 @@ public class MongoStorage implements AuthStorage {
 		if (op.equals(Operation.ERROR)) {
 			tis = b.error(d.getString(Fields.TEMP_SESSION_ERROR),
 					ErrorType.fromErrorCode(d.getInteger(Fields.TEMP_SESSION_ERROR_TYPE)));
+		} else if (op.equals(Operation.LOGINSTART)) {
+			tis = b.login();
 		} else if (op.equals(Operation.LOGINIDENTS)) {
 			tis = b.login(toIdentities(ids));
 		} else if (op.equals(Operation.LINKSTART)) {
