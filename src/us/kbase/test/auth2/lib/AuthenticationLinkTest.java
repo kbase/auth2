@@ -21,13 +21,13 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import ch.qos.logback.classic.Level;
@@ -238,7 +238,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("Prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty()).thenReturn(null);
 
 		when(storage.link(new UserName("baz"), storageRemoteID)).thenReturn(true);
 		
@@ -297,7 +297,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("Prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty()).thenReturn(null);
 		// 2nd identity would be added after this point but before the link call below
 
 		when(storage.link(new UserName("baz"), storageRemoteID)).thenReturn(false);
@@ -361,7 +361,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("Prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
 		
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.empty()).thenReturn(null);
 		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.of(AuthUser.getBuilder(
 				new UserName("whee"), new DisplayName("arg"), Instant.now())
 				.withIdentity(storageRemoteID3).build())).thenReturn(null);
@@ -433,7 +433,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty()).thenReturn(null);
 		
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
@@ -580,9 +580,9 @@ public class AuthenticationLinkTest {
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
 				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		final UUID tokenID = UUID.randomUUID();
@@ -1038,7 +1038,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("Prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty()).thenReturn(null);
 		
 		doThrow(new NoSuchUserException("baz"))
 				.when(storage).link(new UserName("baz"), storageRemoteID);
@@ -1087,7 +1087,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("Prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.absent()).thenReturn(null);
+		when(storage.getUser(storageRemoteID)).thenReturn(Optional.empty()).thenReturn(null);
 		
 		doThrow(new LinkFailedException("doodoo"))
 				.when(storage).link(new UserName("baz"), storageRemoteID);
@@ -1211,9 +1211,9 @@ public class AuthenticationLinkTest {
 				.withIdentity(storageRemoteID2).build();
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user2))
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		final LinkIdentities li = auth.getLinkState(userToken, tempToken);
@@ -2003,11 +2003,11 @@ public class AuthenticationLinkTest {
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
 				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID4)).thenReturn(Optional.empty())
 				.thenReturn(null);
-		when(storage.getUser(storageRemoteID5)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID5)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		doThrow(new IdentityLinkedException("foo")).when(storage)
@@ -2061,7 +2061,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
-		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.absent())
+		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
 		when(storage.link(new UserName("baz"), new RemoteIdentity(
@@ -2194,7 +2194,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
 		
-		when(storage.getUser(storageRemote3)).thenReturn(Optional.absent());
+		when(storage.getUser(storageRemote3)).thenReturn(Optional.empty());
 
 		doThrow(new NoSuchUserException("baz")).when(storage).link(new UserName("baz"),
 				storageRemote3);
@@ -2354,7 +2354,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "f3@g.com"));
 		
-		when(storage.getUser(storageRemote3)).thenReturn(Optional.absent());
+		when(storage.getUser(storageRemote3)).thenReturn(Optional.empty());
 
 		doThrow(new LinkFailedException("foobar"))
 				.when(storage).link(new UserName("baz"), storageRemote3);

@@ -17,6 +17,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.ws.rs.core.Cookie;
@@ -25,7 +26,6 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.UriInfo;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -245,13 +245,13 @@ public class UIUtils {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return Optional.absent();
+			return Optional.empty();
 		}
 		if (nullOrEmpty(c.getValue())) {
 			if (throwException) {
 				throw new NoTokenProvidedException("No user token provided");
 			}
-			return Optional.absent();
+			return Optional.empty();
 		}
 		try {
 			return Optional.of(new IncomingToken(c.getValue()));
@@ -263,14 +263,14 @@ public class UIUtils {
 	/** Get a header value from a header or an optional default.
 	 * Returns, in order of precedence, the value of the header given by headerName if not
 	 * null or whitespace only, the value of the stringValue if not null or whitespace only, or
-	 * {@link Optional#absent()}.
+	 * {@link Optional#empty()}.
 	 * 
 	 * All values are {@link String#trim()}ed before returning.
 	 * 
 	 * @param headers the headers to interrogate.
 	 * @param headerName the name of the header to retrieve.
 	 * @param stringValue the value to return if the header value is absent.
-	 * @return the header value, string value, or {@link Optional#absent()}.
+	 * @return the header value, string value, or {@link Optional#empty()}.
 	 */
 	public static Optional<String> getValueFromHeaderOrString(
 			final HttpHeaders headers,
@@ -284,7 +284,7 @@ public class UIUtils {
 		} else if (!nullOrEmpty(stringValue)) {
 			return Optional.of(stringValue.trim());
 		} else {
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 	

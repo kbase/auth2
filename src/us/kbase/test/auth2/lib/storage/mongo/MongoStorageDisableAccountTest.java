@@ -6,10 +6,9 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
 
 import java.time.Instant;
+import java.util.Optional;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserDisabledState;
@@ -116,7 +115,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.enableAccount(new UserName("foo"), new UserName("baz"));
 		
 		final UserDisabledState uds = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", uds.getDisabledReason(), is(Optional.empty()));
 		assertThat("incorrect disabled admin", uds.getByAdmin(),
 				is(Optional.of(new UserName("baz"))));
 		assertThat("incorrect disabled time", uds.getTime(), is(Optional.of(i)));
@@ -124,7 +123,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.enableAccount(new UserName("foo"), new UserName("bung"));
 		
 		final UserDisabledState uds2 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.empty()));
 		assertThat("incorrect disabled admin", uds2.getByAdmin(),
 				is(Optional.of(new UserName("bung"))));
 		assertThat("incorrect disabled time", uds2.getTime(), is(Optional.of(i2)));
@@ -184,7 +183,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 		storage.enableAccount(new UserName("foo"), new UserName("bat"));
 		
 		final UserDisabledState uds2 = storage.getUser(new UserName("foo")).getDisabledState();
-		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", uds2.getDisabledReason(), is(Optional.empty()));
 		assertThat("incorrect disabled admin", uds2.getByAdmin(),
 				is(Optional.of(new UserName("bat"))));
 		assertThat("incorrect disabled time", uds2.getTime(), is(Optional.of(i2)));

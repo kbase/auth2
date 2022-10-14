@@ -22,14 +22,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -165,7 +164,7 @@ public class AuthenticationPasswordLoginTest {
 		assertClear(hash);
 		assertClear(salt);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(false));
-		assertThat("incorrect username", t.getUserName(), is(Optional.absent()));
+		assertThat("incorrect username", t.getUserName(), is(Optional.empty()));
 		assertThat("incorrect token", t.getToken(), is(Optional.of(expectedToken)));
 		
 		assertLogEventsCorrect(logEvents,
@@ -208,7 +207,7 @@ public class AuthenticationPasswordLoginTest {
 		assertClear(salt);
 		assertThat("incorrect pwd required", t.isPwdResetRequired(), is(true));
 		assertThat("incorrect username", t.getUserName(), is(Optional.of(new UserName("foo"))));
-		assertThat("incorrect token", t.getToken(), is(Optional.absent()));
+		assertThat("incorrect token", t.getToken(), is(Optional.empty()));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Local user foo log in attempt. Password reset is required",

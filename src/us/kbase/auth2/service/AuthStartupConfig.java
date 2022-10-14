@@ -1,9 +1,8 @@
 package us.kbase.auth2.service;
 
 import java.nio.file.Path;
+import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 

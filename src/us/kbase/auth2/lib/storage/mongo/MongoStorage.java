@@ -19,6 +19,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -29,7 +30,6 @@ import java.util.stream.Collectors;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
-import com.google.common.base.Optional;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -135,7 +135,6 @@ public class MongoStorage implements AuthStorage {
 	 */
 	
 	// TODO CODE switch dates to Instants
-	// TODO CODE switch optionals to java standard library implementation
 	
 	private static final int SCHEMA_VERSION = 1;
 	
@@ -511,8 +510,8 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException {
 		try {
 			return UserDisabledState.create(
-					Optional.fromNullable(user.getString(Fields.USER_DISABLED_REASON)),
-					Optional.fromNullable(getUserNameAllowNull(
+					Optional.ofNullable(user.getString(Fields.USER_DISABLED_REASON)),
+					Optional.ofNullable(getUserNameAllowNull(
 							user.getString(Fields.USER_DISABLED_ADMIN))),
 					getOptionalDate(user, Fields.USER_DISABLED_DATE));
 		} catch (IllegalParameterException | MissingParameterException | IllegalStateException e) {
@@ -783,11 +782,11 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_TOKEN, hash)
 				.append(Fields.TOKEN_EXPIRY, Date.from(token.getExpirationDate()))
 				.append(Fields.TOKEN_CREATION, Date.from(token.getCreationDate()))
-				.append(Fields.TOKEN_AGENT, ctx.getAgent().orNull())
-				.append(Fields.TOKEN_AGENT_VER, ctx.getAgentVersion().orNull())
-				.append(Fields.TOKEN_OS, ctx.getOS().orNull())
-				.append(Fields.TOKEN_OS_VER, ctx.getOSVersion().orNull())
-				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orNull())
+				.append(Fields.TOKEN_AGENT, ctx.getAgent().orElse(null))
+				.append(Fields.TOKEN_AGENT_VER, ctx.getAgentVersion().orElse(null))
+				.append(Fields.TOKEN_OS, ctx.getOS().orElse(null))
+				.append(Fields.TOKEN_OS_VER, ctx.getOSVersion().orElse(null))
+				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orElse(null))
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
 				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
@@ -984,7 +983,7 @@ public class MongoStorage implements AuthStorage {
 		if (d.get(field) != null) {
 			return Optional.of(d.getDate(field).toInstant());
 		} else {
-			return Optional.absent();
+			return Optional.empty();
 		}
 	}
 	
@@ -1423,7 +1422,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.USER_SALT, 0);
 		final Document u = findOne(COL_USERS, query, projection);
 		if (u == null) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		AuthUser user = toUser(u, false);
 		/* could do a findAndModify to set the fields on the first query, but
@@ -1506,12 +1505,12 @@ public class MongoStorage implements AuthStorage {
 				if (keyMatcher.find()) {
 					key = Optional.of(keyMatcher.group(1));
 				} else { // some errors include the dup key, some don't
-					key = Optional.absent();
+					key = Optional.empty();
 				}
 			} else {
-				collection = Optional.absent();
-				index = Optional.absent();
-				key = Optional.absent();
+				collection = Optional.empty();
+				index = Optional.empty();
+				key = Optional.empty();
 			}
 			
 		}
@@ -1664,7 +1663,7 @@ public class MongoStorage implements AuthStorage {
 					new FindOneAndDeleteOptions().projection(
 							new Document(Fields.TEMP_SESSION_ID, 1)));
 			if (tempIds == null) {
-				return Optional.absent();
+				return Optional.empty();
 			} else {
 				return Optional.of(UUID.fromString(tempIds.getString(Fields.TEMP_SESSION_ID)));
 			}

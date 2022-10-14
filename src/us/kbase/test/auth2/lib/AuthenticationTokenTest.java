@@ -19,14 +19,13 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.spi.ILoggingEvent;
@@ -371,7 +370,7 @@ public class AuthenticationTokenTest {
 		
 		final Optional<StoredToken> res = auth.logout(t);
 		
-		assertThat("incorrect token", res, is(Optional.absent()));
+		assertThat("incorrect token", res, is(Optional.empty()));
 		
 		verify(storage, never()).deleteToken(any(), any());
 		verify(storage, never()).deleteTemporarySessionData((UserName) any());
@@ -428,7 +427,7 @@ public class AuthenticationTokenTest {
 		
 		verify(storage, never()).deleteToken(any(), any());
 		
-		assertThat("incorrect token", res, is(Optional.absent()));
+		assertThat("incorrect token", res, is(Optional.empty()));
 	}
 	
 	@Test
@@ -1177,7 +1176,7 @@ public class AuthenticationTokenTest {
 		final IncomingToken t = new IncomingToken("foobar");
 		
 		when(storage.deleteTemporarySessionData(new IncomingToken("foobar").getHashedToken()))
-				.thenReturn(Optional.absent());
+				.thenReturn(Optional.empty());
 		
 		auth.deleteLinkOrLoginState(t);
 		

@@ -21,6 +21,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -46,7 +47,6 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -137,11 +137,11 @@ public class Link {
 		}
 		final String state = auth.getBareToken();
 		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, true, environment.orNull()));
+				provider, state, true, environment.orElse(null)));
 		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
 		return Response.seeOther(target)
 				.cookie(getStateCookie(state))
-				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LINK_ROOT,
+				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LINK_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				/* the link in process token must be a session token so that if a user closes the
 				 * browser and thus logs themselves out, the link session token disappears.
@@ -194,7 +194,7 @@ public class Link {
 			final IncomingToken token = getLinkInProcessToken(userCookie);
 			final LinkToken lt = auth.link(token, provider, authcode, environment);
 			if (lt.isLinked()) {
-				tt = Optional.absent();
+				tt = Optional.empty();
 			} else {
 				tt = Optional.of(lt.getTemporaryToken().get());
 			}
@@ -346,7 +346,7 @@ public class Link {
 			identityID = null;
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		pickAccount(token, linktoken, Optional.fromNullable(identityID));
+		pickAccount(token, linktoken, Optional.ofNullable(identityID));
 		final URI postLinkURI = getExternalConfigURI(
 				auth,
 				cfg-> cfg.getURLSetOrDefault(environment).getPostLinkRedirect(),

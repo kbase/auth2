@@ -10,12 +10,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.TemporarySessionData;
@@ -166,7 +165,7 @@ public class TokenTest {
 		final StoredToken ht = StoredToken.getBuilder(TokenType.LOGIN, id, new UserName("whee"))
 				.withLifeTime(Instant.ofEpochMilli(1000), 4000).build();
 		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
-		assertThat("incorrect token name", ht.getTokenName(), is(Optional.absent()));
+		assertThat("incorrect token name", ht.getTokenName(), is(Optional.empty()));
 		assertThat("incorrect token id", ht.getId(), is(id));
 		assertThat("incorrect user", ht.getUserName(), is(new UserName("whee")));
 		assertThat("incorrect creation date", ht.getCreationDate(),
@@ -223,8 +222,7 @@ public class TokenTest {
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
 				.withNullableTokenName(null).build();
 		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
-		assertThat("incorrect token name", ht2.getTokenName(),
-				is(Optional.absent()));
+		assertThat("incorrect token name", ht2.getTokenName(), is(Optional.empty()));
 		assertThat("incorrect token id", ht2.getId(), is(id2));
 		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
 		assertThat("incorrect creation date", ht2.getCreationDate(),
