@@ -253,10 +253,10 @@ public class TemporarySessionData {
 		private final UUID id;
 		private final Instant created;
 		private final Instant expires;
-		private Optional<Set<RemoteIdentity>> identities = Optional.absent();
-		private Optional<String> error = Optional.absent();
-		private Optional<ErrorType> errorType = Optional.absent();
-		private Optional<UserName> user = Optional.absent();
+		private final static Optional<Set<RemoteIdentity>> identities = Optional.absent();
+		private final static Optional<String> error = Optional.absent();
+		private final static Optional<ErrorType> errorType = Optional.absent();
+		private final static Optional<UserName> user = Optional.absent();
 		
 		private Builder(final UUID id, final Instant created, final Instant expires) {
 			nonNull(id, "id");
@@ -288,7 +288,7 @@ public class TemporarySessionData {
 		 */
 		public TemporarySessionData login() {
 			return new TemporarySessionData(
-					Operation.LOGINSTART, id, created, expires, identities, Optional.absent(),
+					Operation.LOGINSTART, id, created, expires, identities, user,
 					error, errorType);
 		}
 		
