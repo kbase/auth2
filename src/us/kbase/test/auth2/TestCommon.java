@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -155,6 +156,12 @@ public class TestCommon {
 	@SafeVarargs
 	public static <T> Set<T> set(T... objects) {
 		return new HashSet<T>(Arrays.asList(objects));
+	}
+	
+	public static final Optional<String> ES = Optional.empty();
+	
+	public static <T> Optional<T> opt(final T obj) {
+		return Optional.of(obj);
 	}
 	
 	public static void assertClear(final byte[] bytes) {
@@ -300,7 +307,7 @@ public class TestCommon {
 			final String token)
 			throws Exception {
 		final TemporarySessionData data = TemporarySessionData.create(id, created, lifetimeMS)
-				.link(new UserName("foo"));
+				.link("fakestate", new UserName("foo"));
 		return new TemporaryToken(data, token);
 	}
 }

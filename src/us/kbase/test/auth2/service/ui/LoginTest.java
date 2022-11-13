@@ -308,6 +308,8 @@ public class LoginTest {
 		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LOGINSTART));
+		assertThat("incorrect state",
+				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
 		
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));

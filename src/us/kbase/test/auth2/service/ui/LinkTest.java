@@ -322,8 +322,9 @@ public class LinkTest {
 		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LINKSTART));
-		assertThat("incorrect temporary identities", ti.getUser(),
-				is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect state",
+				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
 	}
 	
 	@Test
@@ -487,7 +488,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(new UserName("u1")),
+				.link("state", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -538,7 +539,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(new UserName("u1")),
+				.link("state", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -587,7 +588,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(nt.getStoredToken().getUserName()),
+				.link("state", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -661,7 +662,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(nt.getStoredToken().getUserName()),
+				.link("state", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -792,7 +793,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(nt.getStoredToken().getUserName()),
+				.link("state", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -1149,7 +1150,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.link(nt.getStoredToken().getUserName()),
+				.link("state", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -1172,7 +1173,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.link(nt.getStoredToken().getUserName()),
+				.link("state", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)

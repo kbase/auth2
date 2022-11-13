@@ -1556,6 +1556,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TEMP_SESSION_TOKEN, hash)
 				.append(Fields.TEMP_SESSION_EXPIRY, Date.from(data.getExpires()))
 				.append(Fields.TEMP_SESSION_CREATION, Date.from(data.getCreated()))
+				.append(Fields.TEMP_SESSION_OAUTH2STATE, data.getOAuth2State().orElse(null))
 				.append(Fields.TEMP_SESSION_ERROR,
 						data.getError().isPresent() ? data.getError().get() : null)
 				.append(Fields.TEMP_SESSION_ERROR_TYPE, data.getErrorType().isPresent() ?
@@ -1625,11 +1626,14 @@ public class MongoStorage implements AuthStorage {
 			tis = b.error(d.getString(Fields.TEMP_SESSION_ERROR),
 					ErrorType.fromErrorCode(d.getInteger(Fields.TEMP_SESSION_ERROR_TYPE)));
 		} else if (op.equals(Operation.LOGINSTART)) {
-			tis = b.login();
+			tis = b.login(d.getString(Fields.TEMP_SESSION_OAUTH2STATE));
 		} else if (op.equals(Operation.LOGINIDENTS)) {
 			tis = b.login(toIdentities(ids));
 		} else if (op.equals(Operation.LINKSTART)) {
-			tis = b.link(getUserName(d.getString(Fields.TEMP_SESSION_USER)));
+			tis = b.link(
+					d.getString(Fields.TEMP_SESSION_OAUTH2STATE),
+					getUserName(d.getString(Fields.TEMP_SESSION_USER))
+			);
 		} else if (op.equals(Operation.LINKIDENTS)) {
 			tis = b.link(getUserName(d.getString(Fields.TEMP_SESSION_USER)),
 					toIdentities(ids));

@@ -40,12 +40,13 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.login();
+				.login("stateystate");
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("whoo"));
 		
 		assertThat("incorrect session data", storage.getTemporarySessionData(
 						new IncomingToken("whoo").getHashedToken()),
-				is(TemporarySessionData.create(id, now, now.plusSeconds(10)).login()));
+				is(TemporarySessionData.create(
+						id, now, now.plusSeconds(10)).login("stateystate")));
 	}
 	
 	@Test
@@ -81,13 +82,13 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("otherstate", new UserName("whee"));
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
 		
 		assertThat("incorrect session data", storage.getTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken()), is(
 						TemporarySessionData.create(id, now, now.plusSeconds(10))
-							.link(new UserName("whee"))));
+							.link("otherstate", new UserName("whee"))));
 	}
 	
 	@Test
@@ -109,7 +110,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 		failStoreTemporarySessionData(null, "foo", new NullPointerException("data"));
 		failStoreTemporarySessionData(tsd, null,
 				new IllegalArgumentException("Missing argument: hash"));
@@ -122,9 +123,9 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 		final TemporarySessionData data2 = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee2"));
+				.link("state", new UserName("whee2"));
 		storage.storeTemporarySessionData(data, "whee");
 		failStoreTemporarySessionData(data2, "whee2", new IllegalArgumentException(
 				"Temporary token ID " + id + " already exists in the database"));
@@ -136,10 +137,10 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id2 = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 		final TemporarySessionData data2 = TemporarySessionData
 				.create(id2, now, now.plusSeconds(10))
-				.link(new UserName("whee2"));
+				.link("state", new UserName("whee2"));
 		storage.storeTemporarySessionData(data, "whee");
 		failStoreTemporarySessionData(data2, "whee", new IllegalArgumentException(
 				"Token hash for temporary token ID " + id2 +
@@ -178,7 +179,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		 */
 		final UUID id = UUID.randomUUID();
 		final TemporarySessionData data = TemporarySessionData.create(id, Instant.now(), 0)
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 
 		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
 		
@@ -205,7 +206,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id2 = UUID.randomUUID();
 		final TemporarySessionData tsd2 = TemporarySessionData
 				.create(id2, now, now.plusSeconds(10))
-				.link(new UserName("foo"));
+				.link("state", new UserName("foo"));
 		storage.storeTemporarySessionData(tsd2, IncomingToken.hash("foobar2"));
 		
 		db.getCollection("tempdata").updateOne(new Document("id", id2.toString()),
@@ -232,7 +233,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 
 		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
 		
@@ -261,7 +262,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 
 		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
 		// check token is there
@@ -279,7 +280,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData data = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.link(new UserName("whee"));
+				.link("state", new UserName("whee"));
 
 		storage.storeTemporarySessionData(data, IncomingToken.hash("foobar"));
 		// check token is there
@@ -296,7 +297,7 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 	public void deleteTwoTempDatasByUser() throws Exception {
 		final Instant now = Instant.now();
 		final TemporarySessionData data1 = TemporarySessionData.create(UUID.randomUUID(),
-				now, now.plusSeconds(10)).link(new UserName("whee"));
+				now, now.plusSeconds(10)).link("state", new UserName("whee"));
 		final TemporarySessionData data2 = TemporarySessionData.create(UUID.randomUUID(),
 				now, now.plusSeconds(10)).link(new UserName("whee"), set(REMOTE1));
 		
