@@ -16,6 +16,7 @@ import static us.kbase.test.auth2.TestCommon.tempToken;
 import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
@@ -37,6 +38,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserDisabledState;
 import us.kbase.auth2.lib.UserName;
@@ -96,12 +98,28 @@ public class AuthenticationLinkTest {
 	}
 	
 	@Test
-	public void linkStart() throws Exception {
-		final TestMocks testauth = initTestMocks();
+	public void linkStartDefaultEnv() throws Exception {
+		linkStart("ip1", null, "https://defaultenv.com");
+	}
+	@Test
+	public void linkStartUpperCaseProviderDefaultEnv() throws Exception {
+		// test case insensitivity for providers
+		linkStart("Ip1", null, "https://defaultenv.com");
+	}
+	
+	@Test
+	public void linkStartSpecifyEnv() throws Exception {
+		linkStart("ip1", "env2", "https://env2.com");
+	}
+	
+	private void linkStart(final String provider, final String env, final String expectedURI)
+			throws Exception {
+		final TestMocks testauth = initTestMocks(false, true);
 		final AuthStorage storage = testauth.storageMock;
 		final RandomDataGenerator rand = testauth.randGenMock;
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
+		final IdentityProvider ip = testauth.prov1;
 		
 		final IncomingToken userToken = new IncomingToken("user");
 		
@@ -114,15 +132,24 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
+		when(rand.getToken())
+				.thenReturn("statetokenhere").thenReturn("sometoken").thenReturn(null);
+		when(ip.getLoginURI("statetokenhere", true, null))
+				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
+		when(ip.getLoginURI("statetokenhere", true, "env2"))
+				.thenReturn(new URI("https://env2.com")).thenReturn(null);
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID);
-		when(rand.getToken()).thenReturn("sometoken");
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
 		
-		final TemporaryToken tt = auth.linkStart(userToken, 60);
+		final OAuth2StartData sd = auth.linkStart(userToken, 60, provider, env);
 		
-		assertThat("incorrect token", tt,
-				is(tempToken(tokenID, Instant.ofEpochMilli(20000), 60000, "sometoken")));
+		assertThat("incorrect start data", sd,
+				is(OAuth2StartData.build(
+						new URI(expectedURI),
+						tempToken(tokenID, Instant.ofEpochMilli(20000), 60000, "sometoken"),
+						"statetokenhere")
+				));
 				
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).link(new UserName("baz")),
@@ -138,8 +165,13 @@ public class AuthenticationLinkTest {
 		AuthenticationTester.executeStandardUserCheckingTests(new AbstractAuthOperation() {
 			
 			@Override
+			public TestMocks getTestMocks() throws Exception {
+				return initTestMocks(false, true);
+			}
+			
+			@Override
 			public void execute(final Authentication auth) throws Exception {
-				auth.linkStart(getIncomingToken(), 120);
+				auth.linkStart(getIncomingToken(), 120, "Ip1", "environment");
 			}
 
 			@Override
@@ -160,19 +192,61 @@ public class AuthenticationLinkTest {
 		
 		final IncomingToken t = new IncomingToken("foo");
 		
-		failLinkStart(auth, null, 60, new NullPointerException("token"));
-		failLinkStart(auth, t, 59,
+		failLinkStart(auth, null, 60, "id", "env", new NullPointerException("token"));
+		failLinkStart(auth, t, 59, "id", "env",
 				new IllegalArgumentException("lifetimeSec must be at least 60"));
+		failLinkStart(auth, t, 60, null, "env", new MissingParameterException("provider"));
+		failLinkStart(auth, t, 60, "   \t   \n  ", "env",
+				new MissingParameterException("provider"));
+	}
+	
+	@Test
+	public void linkStartFailNoProvider() throws Exception {
+		linkStartFailNoProvider("Prov3", new NoSuchIdentityProviderException("Prov3"));
+		linkStartFailNoProvider("Prov2", new NoSuchIdentityProviderException("Prov2"));
+	}
+	
+	private void linkStartFailNoProvider(final String provider, final Exception expected)
+			throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		when(idp1.getProviderName()).thenReturn("Prov1");
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		when(idp2.getProviderName()).thenReturn("Prov2");
+
+		final TestMocks mocks = initTestMocks(set(idp1, idp2));
+		
+		final Authentication auth = mocks.auth;
+		final AuthStorage storage = mocks.storageMock;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final IncomingToken token = new IncomingToken("foobar");
+		
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov1", new ProviderConfig(true, false, false),
+				"Prov2", new ProviderConfig(false, false, false) // disabled
+		);
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failLinkStart(auth, token, 120, provider, null, expected);
 	}
 	
 	@Test
 	public void linkStartFailLocalUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
+		final TestMocks testauth = initTestMocks(false, true);
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
 		
 		final IncomingToken userToken = new IncomingToken("user");
 		
+		when(testauth.randGenMock.getToken())
+				.thenReturn("statetokenhere").thenReturn(null);
+		when(testauth.prov1.getLoginURI("statetokenhere", true, null))
+				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
 		when(storage.getToken(userToken.getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
 						.withLifeTime(Instant.now(), Instant.now()).build())
@@ -182,7 +256,7 @@ public class AuthenticationLinkTest {
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.build()).thenReturn(null);
 		
-		failLinkStart(auth, userToken, 120, new LinkFailedException(
+		failLinkStart(auth, userToken, 120, "ip1", "env", new LinkFailedException(
 				"Cannot link identities to local account baz"));
 	}
 	
@@ -190,9 +264,11 @@ public class AuthenticationLinkTest {
 			final Authentication auth,
 			final IncomingToken token,
 			final int lifetimeSec,
+			final String idProvider,
+			final String environment,
 			final Exception e) {
 		try {
-			auth.linkStart(token, lifetimeSec);
+			auth.linkStart(token, lifetimeSec, idProvider, environment);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -641,9 +717,10 @@ public class AuthenticationLinkTest {
 		
 		failLinkWithToken(auth, null, "prov", "foo", null,
 				new NullPointerException("Temporary token"));
-		failLinkWithToken(auth, token, null, "foo", null, new NullPointerException("provider"));
+		failLinkWithToken(auth, token, null, "foo", null,
+				new MissingParameterException("provider"));
 		failLinkWithToken(auth, token, "  \t ", "foo", null,
-				new NoSuchIdentityProviderException("  \t "));
+				new MissingParameterException("provider"));
 		failLinkWithToken(auth, token, "prov", null, null,
 				new MissingParameterException("authorization code"));
 		failLinkWithToken(auth, token, "prov", "  \n  ", null,

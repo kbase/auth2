@@ -13,7 +13,6 @@ import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getValueFromHeaderOrString;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
-import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
 import java.net.URI;
 import java.security.NoSuchProviderException;
@@ -52,6 +51,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -135,12 +135,10 @@ public class Link {
 		} else {
 			token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		}
-		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, true, environment.orElse(null)));
-		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
-		return Response.seeOther(target)
-				.cookie(getStateCookie(state))
+		final OAuth2StartData oa2sd = auth.linkStart(
+				token, PROVIDER_RETURN_EXPIRATION_SEC, provider, environment.orElse(null));
+		return Response.seeOther(oa2sd.getRedirectURI())
+				.cookie(getStateCookie(oa2sd.getState()))
 				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LINK_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				/* the link in process token must be a session token so that if a user closes the
@@ -149,7 +147,7 @@ public class Link {
 				 * them as the first user and proceed with the linking process, thus linking their
 				 * remote account to the first user's account.
 				 */
-				.cookie(getLinkInProcessCookie(tt))
+				.cookie(getLinkInProcessCookie(oa2sd.getTemporaryToken()))
 				.build();
 	}
 

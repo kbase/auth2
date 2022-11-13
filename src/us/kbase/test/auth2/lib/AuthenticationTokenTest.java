@@ -320,17 +320,6 @@ public class AuthenticationTokenTest {
 	}
 	
 	@Test
-	public void getBareToken() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final Authentication auth = testauth.auth;
-		final RandomDataGenerator rand = testauth.randGenMock;
-		
-		when(rand.getToken()).thenReturn("foobar");
-		
-		assertThat("incorrect token", auth.getBareToken(), is("foobar"));
-	}
-	
-	@Test
 	public void logout() throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;

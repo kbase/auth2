@@ -17,7 +17,6 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.setLoginCompleteRedir
 import static us.kbase.test.auth2.service.ServiceTestUtils.setEnvironment;
 
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
@@ -89,7 +88,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LoginTest {
 	
-	//TODO TEST convert most of these to unit tests
+	//TODO TEST convert most of these to unit tests, but keep enough for integration tests
 	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
@@ -280,8 +279,8 @@ public class LoginTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(false), eq(expectedEnv)))
-				.thenReturn(new URL(url));
+		when(provmock.getLoginURI(argThat(stateMatcher), eq(false), eq(expectedEnv)))
+				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
 		final Builder b = wt.request();
@@ -298,13 +297,23 @@ public class LoginTest {
 				"/login/complete", null, "loginstate", 30 * 60, false);
 		assertThat("incorrect state cookie", state, is(expectedstate));
 		
+		assertEnvironmentCookieCorrect(res, expectedEnv, 30 * 60);
+		
+		final NewCookie process = res.getCookies().get("in-process-login-token");
+		final NewCookie expectedprocess = new NewCookie("in-process-login-token",
+				process.getValue(),
+				"/login", null, "logintoken", -1, false);
+		assertThat("incorrect login process cookie", process, is(expectedprocess));
+		
+		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
+				new IncomingToken(process.getValue()).getHashedToken());
+		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LOGINSTART));
+		
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));
 		
 		final NewCookie redirect = res.getCookies().get("loginredirect");
 		assertThat("incorrect redirect cookie", redirect, is(expectedredirect));
-		
-		assertEnvironmentCookieCorrect(res, expectedEnv, 30 * 60);
 	}
 	
 	@Test

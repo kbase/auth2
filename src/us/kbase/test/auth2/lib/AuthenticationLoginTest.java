@@ -16,6 +16,7 @@ import static us.kbase.test.auth2.TestCommon.tempToken;
 import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Collections;
@@ -39,6 +40,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TemporarySessionData;
@@ -103,6 +105,114 @@ public class AuthenticationLoginTest {
 	@Before
 	public void before() {
 		logEvents.clear();
+	}
+	
+	@Test
+	public void loginStartDefaultEnv() throws Exception {
+		loginStart("ip1", null, "https://defaultenv.com");
+	}
+	@Test
+	public void loginStartUpperCaseProviderDefaultEnv() throws Exception {
+		// test case insensitivity for providers
+		loginStart("Ip1", null, "https://defaultenv.com");
+	}
+	
+	@Test
+	public void loginStartSpecifyEnv() throws Exception {
+		loginStart("ip1", "env2", "https://env2.com");
+	}
+	
+	private void loginStart(final String provider, final String env, final String expectedURI)
+			throws Exception {
+		final TestMocks testauth = initTestMocks(false, true);
+		final AuthStorage storage = testauth.storageMock;
+		final RandomDataGenerator rand = testauth.randGenMock;
+		final Clock clock = testauth.clockMock;
+		final Authentication auth = testauth.auth;
+		final IdentityProvider ip = testauth.prov1;
+		
+		when(rand.getToken())
+				.thenReturn("statetokenhere").thenReturn("sometoken").thenReturn(null);
+		when(ip.getLoginURI("statetokenhere", false, null))
+				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
+		when(ip.getLoginURI("statetokenhere", false, "env2"))
+				.thenReturn(new URI("https://env2.com")).thenReturn(null);
+		final UUID tokenID = UUID.randomUUID();
+		when(rand.randomUUID()).thenReturn(tokenID);
+		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000));
+		
+		final OAuth2StartData sd = auth.loginStart(60, provider, env);
+		
+		assertThat("incorrect start data", sd,
+				is(OAuth2StartData.build(
+						new URI(expectedURI),
+						tempToken(tokenID, Instant.ofEpochMilli(20000), 60000, "sometoken"),
+						"statetokenhere")
+				));
+				
+		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
+				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).login(),
+				IncomingToken.hash("sometoken"));
+		
+		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+				"Created temporary login token %s", tokenID), Authentication.class));
+	}
+	
+	@Test
+	public void loginStartFailBadInput() throws Exception {
+		final Authentication auth = initTestMocks().auth;
+		
+		failloginStart(auth, 59, "id", "env",
+				new IllegalArgumentException("lifetimeSec must be at least 60"));
+		failloginStart(auth, 60, null, "env", new MissingParameterException("provider"));
+		failloginStart(auth, 60, "   \t   \n  ", "env", new MissingParameterException("provider"));
+	}
+	
+	@Test
+	public void loginStartFailNoProvider() throws Exception {
+		loginStartFailNoProvider("Prov3", new NoSuchIdentityProviderException("Prov3"));
+		loginStartFailNoProvider("Prov2", new NoSuchIdentityProviderException("Prov2"));
+	}
+	
+	private void loginStartFailNoProvider(final String provider, final Exception expected)
+			throws Exception {
+		final IdentityProvider idp1 = mock(IdentityProvider.class);
+		when(idp1.getProviderName()).thenReturn("Prov1");
+		final IdentityProvider idp2 = mock(IdentityProvider.class);
+		when(idp2.getProviderName()).thenReturn("Prov2");
+
+		final TestMocks mocks = initTestMocks(set(idp1, idp2));
+		
+		final Authentication auth = mocks.auth;
+		final AuthStorage storage = mocks.storageMock;
+		
+		AuthenticationTester.setConfigUpdateInterval(auth, -1);
+
+		final Map<String, ProviderConfig> providers = ImmutableMap.of(
+				"Prov1", new ProviderConfig(true, false, false),
+				"Prov2", new ProviderConfig(false, false, false) // disabled
+		);
+
+		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+						new AuthConfig(false, providers, null),
+						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		failloginStart(auth, 120, provider, null, expected);
+	}
+	
+	private void failloginStart(
+			final Authentication auth,
+			final int lifetimeSec,
+			final String idProvider,
+			final String environment,
+			final Exception e) {
+		try {
+			auth.loginStart(lifetimeSec, idProvider, environment);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
 	}
 	
 	@Test
@@ -566,9 +676,9 @@ public class AuthenticationLoginTest {
 		
 		final Authentication auth = initTestMocks(set(idp)).auth;
 		
-		failLogin(auth, null, "foo", null, CTX, new NullPointerException("provider"));
+		failLogin(auth, null, "foo", null, CTX, new MissingParameterException("provider"));
 		failLogin(auth, "   \t  \n   ", "foo", null, CTX,
-				new NoSuchIdentityProviderException("   \t  \n   "));
+				new MissingParameterException("provider"));
 		failLogin(auth, "prov", null, null, CTX,
 				new MissingParameterException("authorization code"));
 		failLogin(auth, "prov", "    \t \n   ", null, CTX,
