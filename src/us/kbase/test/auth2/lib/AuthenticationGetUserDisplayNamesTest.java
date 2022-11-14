@@ -169,7 +169,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpec() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
@@ -185,7 +185,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsAdmin() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -203,7 +203,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsCreate() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -221,7 +221,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecWithRootAsRoot() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				UserName.ROOT, new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -250,7 +250,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 				final AuthUser user = AuthUser.getBuilder(
 						r == Role.ROOT ? UserName.ROOT : new UserName("foo"),
 						new DisplayName("foo"), Instant.now())
-						.withEmailAddress(new EmailAddress("f@g.com"))
+						.withEmailAddress(new EmailAddress("f@h.com"))
 						.withRole(r).build();
 				
 				final Map<UserName, DisplayName> expected = new HashMap<>();
@@ -278,7 +278,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailRegex() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				UserName.ROOT, new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
@@ -321,7 +321,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserCustomRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -335,7 +335,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -349,7 +349,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserNoPrefix() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().build();
@@ -362,7 +362,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserIncludeRoot() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")
@@ -376,7 +376,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	public void getDisplayNamesSpecFailStdUserIncludeDisabled() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("foo"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo")

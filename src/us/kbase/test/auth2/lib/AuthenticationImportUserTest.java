@@ -62,13 +62,13 @@ public class AuthenticationImportUserTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-				new RemoteIdentityDetails("user", "full", "f@g.com")));
+				new RemoteIdentityDetails("user", "full", "f@h.com")));
 		
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("full"),
 				Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user", "full", "f@g.com")))
-				.withEmailAddress(new EmailAddress("f@g.com"))
+						new RemoteIdentityDetails("user", "full", "f@h.com")))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
@@ -90,13 +90,13 @@ public class AuthenticationImportUserTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-				new RemoteIdentityDetails("user", fullname, "f@g.com")));
+				new RemoteIdentityDetails("user", fullname, "f@h.com")));
 		
 		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"),
 				new DisplayName("unknown"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user", fullname, "f@g.com")))
-				.withEmailAddress(new EmailAddress("f@g.com"))
+						new RemoteIdentityDetails("user", fullname, "f@h.com")))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build());
 	}
 

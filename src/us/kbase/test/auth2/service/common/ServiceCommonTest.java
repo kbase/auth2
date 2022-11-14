@@ -128,10 +128,10 @@ public class ServiceCommonTest {
 	@Test
 	public void updateUserValidInput() throws Exception {
 		final Authentication auth = mock(Authentication.class);
-		ServiceCommon.updateUser(auth, new IncomingToken("foo"), "my name", "f@g.com");
+		ServiceCommon.updateUser(auth, new IncomingToken("foo"), "my name", "f@h.com");
 		verify(auth).updateUser(new IncomingToken("foo"), UserUpdate.getBuilder()
 				.withDisplayName(new DisplayName("my name"))
-				.withEmail(new EmailAddress("f@g.com"))
+				.withEmail(new EmailAddress("f@h.com"))
 				.build());
 	}
 	
@@ -140,7 +140,7 @@ public class ServiceCommonTest {
 		final Authentication auth = mock(Authentication.class);
 		final IncomingToken token = new IncomingToken("foo");
 		final String displayName = "foo";
-		final String email = "f@g.com";
+		final String email = "f@h.com";
 		failUpdateUser(null, token, displayName, email, new NullPointerException("auth"));
 		failUpdateUser(auth, null, displayName, email, new NullPointerException("token"));
 		failUpdateUser(auth, token, "foo\nbar", email,
@@ -154,7 +154,7 @@ public class ServiceCommonTest {
 		final Authentication auth = mock(Authentication.class);
 		final IncomingToken token = new IncomingToken("foo");
 		final String displayName = "foo\nbar";
-		final String email = "f@g.com";
+		final String email = "f@h.com";
 		failUpdateUser(auth, token, displayName, email,
 				new IllegalParameterException("display name contains control characters"));
 	}

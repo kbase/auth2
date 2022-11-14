@@ -84,7 +84,7 @@ public class ServiceTestUtils {
 				TokenCreationContext.getBuilder().build()).getToken().get().getToken();
 		final Password admintemppwd = auth.createLocalUser(
 				new IncomingToken(roottoken), new UserName("admin"), new DisplayName("a"),
-				new EmailAddress("f@g.com"));
+				new EmailAddress("f@h.com"));
 		auth.updateRoles(new IncomingToken(roottoken), new UserName("admin"),
 				set(Role.CREATE_ADMIN), set());
 		final String adminpwd = "foobarwhoowhee2";

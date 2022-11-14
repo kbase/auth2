@@ -45,10 +45,10 @@ public class LoginStateTest {
 		try {
 			AUTH_USER1 = NewUser.getBuilder(
 					new UserName("foo4"), new DisplayName("bar4"), Instant.now(), REMOTE1)
-					.withEmailAddress(new EmailAddress("f@g.com")).build();
+					.withEmailAddress(new EmailAddress("f@h.com")).build();
 			AUTH_USER2 = AuthUser.getBuilder(
 					new UserName("foo5"), new DisplayName("bar5"), Instant.now())
-					.withEmailAddress(new EmailAddress("f@g5.com"))
+					.withEmailAddress(new EmailAddress("f@h5.com"))
 					.withIdentity(REMOTE2).withIdentity(REMOTE3)
 					.withRole(Role.ADMIN)
 					.build();

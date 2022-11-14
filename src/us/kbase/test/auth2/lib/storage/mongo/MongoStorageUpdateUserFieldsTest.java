@@ -103,7 +103,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateFailNulls() throws Exception {
 		failUpdateUser(null, UserUpdate.getBuilder()
-						.withEmail(new EmailAddress("f@g.com")).build(),
+						.withEmail(new EmailAddress("f@h.com")).build(),
 				new NullPointerException("userName"));
 		failUpdateUser(new UserName("foo"), null, new NullPointerException("update"));
 	}
@@ -111,7 +111,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateFailNoSuchUser() throws Exception {
 		failUpdateUser(new UserName("foo"), UserUpdate.getBuilder()
-				.withEmail(new EmailAddress("f@g.com")).build(), new NoSuchUserException("foo"));
+				.withEmail(new EmailAddress("f@h.com")).build(), new NoSuchUserException("foo"));
 	}
 	
 	private void failUpdateUser(final UserName name, final UserUpdate uu, final Exception e) {

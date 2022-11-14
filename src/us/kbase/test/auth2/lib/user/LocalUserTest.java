@@ -69,7 +69,7 @@ public class LocalUserTest {
 	public void constructMaximal() throws Exception {
 		final LocalUser lu = LocalUser.getLocalUserBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN)
 				.withCustomRole("foobar")
 				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(70000))
@@ -91,7 +91,7 @@ public class LocalUserTest {
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
 				new UserName("who"), Instant.ofEpochMilli(10000))));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
-		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@h.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(),
 				is(Optional.of(Instant.ofEpochMilli(10000))));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(), is(set(Role.ADMIN)));
