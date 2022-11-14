@@ -135,6 +135,8 @@ public class MongoStorage implements AuthStorage {
 	 */
 	
 	// TODO CODE switch dates to Instants
+	// Except that as of now the most recent mongo driver version is 4.7 and STILL only has a 
+	// getDate() method and no getInstant() method... not really worth doing until then
 	
 	private static final int SCHEMA_VERSION = 1;
 	

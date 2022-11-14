@@ -63,6 +63,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -167,18 +168,18 @@ public class Login {
 		Utils.checkString(provider, Fields.PROVIDER);
 		
 		getRedirectURL(environment.orElse(null), redirect); // check redirect url is ok
-		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, false, environment.orElse(null)));
+		final OAuth2StartData oa2sd = auth.loginStart(
+				PROVIDER_RETURN_EXPIRATION_SEC, provider, environment.orElse(null));
 		
-		return Response.seeOther(target)
-				.cookie(getStateCookie(state))
+		return Response.seeOther(oa2sd.getRedirectURI())
+				.cookie(getStateCookie(oa2sd.getState()))
 				.cookie(getSessionChoiceCookie(nullOrEmpty(stayLoggedIn),
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
 				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LOGIN_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
+				.cookie(getLoginInProcessCookie(oa2sd.getTemporaryToken()))
 				.build();
 	}
 	

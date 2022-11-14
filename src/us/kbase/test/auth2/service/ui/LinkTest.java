@@ -14,7 +14,6 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.setLinkCompleteRedire
 import static us.kbase.test.auth2.service.ServiceTestUtils.setPostLinkRedirect;
 
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Path;
 import java.time.Instant;
 import java.util.Arrays;
@@ -80,7 +79,8 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class LinkTest {
 	
-	//TODO TEST convert most of these to unit tests
+	//TODO TEST convert most of these to unit tests (but make sure to leave reasonable
+	// integration tests)
 	
 	private static final String DB_NAME = "test_link_ui";
 	private static final String COOKIE_NAME = "login-cookie";
@@ -293,8 +293,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(expectedEnvVal)))
-				.thenReturn(new URL(url));
+		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq(expectedEnvVal)))
+				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Builder b = wt.request();
@@ -342,8 +342,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq("myenv")))
-				.thenReturn(new URL(url));
+		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq("myenv")))
+				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Response res = wt.request()
@@ -391,8 +391,8 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURL(argThat(stateMatcher), eq(true), eq(null)))
-				.thenReturn(new URL(url));
+		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq(null)))
+				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
 		final Response res = wt.request()

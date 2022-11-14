@@ -6,7 +6,7 @@ import static us.kbase.auth2.lib.Utils.clear;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
-import java.net.URL;
+import java.net.URI;
 import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
@@ -769,13 +769,6 @@ public class Authentication {
 					"Something is very broken. User should exist but doesn't: "
 							+ e.getMessage(), e);
 		}
-	}
-
-	/** Get a random token. This token is not persisted in the storage system.
-	 * @return a token.
-	 */
-	public String getBareToken() {
-		return randGen.getToken();
 	}
 
 	/** Get the tokens associated with a user account associated with a possessed token.
@@ -1619,8 +1612,9 @@ public class Authentication {
 	
 	// looks up the provider, case insensitive 
 	private IdentityProvider getIdentityProvider(final String provider)
-			throws NoSuchIdentityProviderException, AuthStorageException {
-		nonNull(provider, "provider");
+			throws NoSuchIdentityProviderException, AuthStorageException,
+				MissingParameterException {
+		checkString(provider, "provider");
 		final IdentityProvider idp = idProviderSet.get(provider);
 		if (idp == null) {
 			throw new NoSuchIdentityProviderException(provider);
@@ -1631,30 +1625,38 @@ public class Authentication {
 		return idp;
 	}
 	
-	/** Get a redirection url for an identity provider.
-	 * Applications should redirect to this url to initiate an OAuth2 flow.
-	 * @param provider the name of the provider that will service the OAuth2 request.
-	 * @param state the OAuth2 state variable to send with the request.
-	 * @param link true if the action is a link request rather than a login request.
-	 * @param environment the name of the current environment. This determines which set of
-	 * redirect urls will be used to redirect back to the auth service from the identity
-	 * provider.
-	 * @return the redirect url.
-	 * @throws NoSuchIdentityProviderException if the provider does not exist or is not enabled.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider.
+	/** Start the OAuth2 login process.
+	 * @param lifetimeSec the lifetime of the temporary token to be returned.
+	 * @param provider the name of the 3rd party identity provider to login with.
+	 * @param string the auth environment in which the login is taking place, or null for the
+	 * default environment.
+	 * @return data to start the login process.
+	 * @throws AuthStorageException if an error occurs accessing the storage system.
+	 * @throws NoSuchEnvironmentException if there is no such configured environment.
+	 * @throws NoSuchIdentityProviderException if there is no such configured identify provider.
+	 * @throws MissingParameterException if the provider is null or whitespace only.
 	 */
-	public URL getIdentityProviderURL(
+	public OAuth2StartData loginStart(
+			final int lifetimeSec,
 			final String provider,
-			final String state,
-			final boolean link,
 			final String environment)
-			throws NoSuchIdentityProviderException, AuthStorageException,
-			NoSuchEnvironmentException {
-		if (state == null || state.trim().isEmpty()) {
-			throw new IllegalArgumentException("state cannot be null or empty");
+			throws NoSuchIdentityProviderException, NoSuchEnvironmentException,
+				AuthStorageException, MissingParameterException {
+		checkLifeTimeSec(lifetimeSec);
+		final String state = randGen.getToken();
+		final URI target = getIdentityProvider(provider).getLoginURI(state, false, environment);
+		final TemporarySessionData data = TemporarySessionData.create(
+				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
+				.login();
+		final TemporaryToken tt = storeTemporarySessionData(data);
+		logInfo("Created temporary login token {}", tt.getId());
+		return OAuth2StartData.build(target, tt, state);
+	}
+	
+	private void checkLifeTimeSec(final int lifetimeSec) {
+		if (lifetimeSec < 60) {
+			throw new IllegalArgumentException("lifetimeSec must be at least 60");
 		}
-		return getIdentityProvider(provider).getLoginURL(state, link, environment);
 	}
 	
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -1765,9 +1767,8 @@ public class Authentication {
 	private TemporaryToken storeTemporarySessionData(final TemporarySessionData data)
 			throws AuthStorageException {
 		final String token = randGen.getToken();
-		final TemporaryToken tt = new TemporaryToken(data, token);
 		storage.storeTemporarySessionData(data, IncomingToken.hash(token));
-		return tt;
+		return new TemporaryToken(data, token);
 	}
 
 	/** Get the current state of a login process associated with a temporary token.
@@ -2188,7 +2189,6 @@ public class Authentication {
 			throw new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled");
 		}
 	}
-	
 
 	/** Complete the OAuth2 login process.
 	 * 
@@ -2309,19 +2309,31 @@ public class Authentication {
 	/** Start the account linking process.
 	 * @param token the user's token.
 	 * @param lifetimeSec the lifetime of the temporary token to be returned.
-	 * @return a temporary token for tracking the user through the linking process.
+	 * @param provider the name of the 3rd party identity provider to link with.
+	 * @param environment the auth environment in which the link is taking place, or null for the
+	 * default environment.
+	 * @return data to start the linking process.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws AuthStorageException if an error occurs accessing the storage system.
 	 * @throws LinkFailedException if the user is a local user 
+	 * @throws NoSuchEnvironmentException if there is no such configured environment.
+	 * @throws NoSuchIdentityProviderException if there is no such configured identify provider.
+	 * @throws MissingParameterException if the provider is null or whitespace only
 	 */
-	public TemporaryToken linkStart(final IncomingToken token, final int lifetimeSec)
+	public OAuth2StartData linkStart(
+			final IncomingToken token,
+			final int lifetimeSec,
+			final String provider,
+			final String environment)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
-				LinkFailedException {
+				LinkFailedException, NoSuchIdentityProviderException, NoSuchEnvironmentException,
+				MissingParameterException {
 		nonNull(token, "token");
-		if (lifetimeSec < 60) {
-			throw new IllegalArgumentException("lifetimeSec must be at least 60");
-		}
+		checkLifeTimeSec(lifetimeSec);
+		final String state = randGen.getToken();
+		// check provider & env before pulling user from DB
+		final URI target = getIdentityProvider(provider).getLoginURI(state, true, environment);
 		final AuthUser user = getUser(token, new OpReqs("start link").types(TokenType.LOGIN));
 		if (user.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
@@ -2334,7 +2346,7 @@ public class Authentication {
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary link token {} associated with user {}",
 				tt.getId(), user.getUserName().getName());
-		return tt;
+		return OAuth2StartData.build(target, tt, state);
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party

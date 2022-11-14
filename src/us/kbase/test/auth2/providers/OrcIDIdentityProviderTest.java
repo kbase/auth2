@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
@@ -116,24 +117,24 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = gc.configure(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", false, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", true, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", false, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", true, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
@@ -145,24 +146,24 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURL("foo5", false, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo5", false, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo6", true, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo6", true, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", false, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", true, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));

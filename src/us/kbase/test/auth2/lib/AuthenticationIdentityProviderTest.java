@@ -10,7 +10,6 @@ import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
-import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
@@ -25,7 +24,6 @@ import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.CollectingExternalConfig.CollectingExternalConfigMapper;
-import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.test.auth2.TestCommon;
@@ -100,131 +98,4 @@ public class AuthenticationIdentityProviderTest {
 					"accessible in the storage system"));
 		}
 	}
-	
-	@Test
-	public void getURL() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-		
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final Map<String, ProviderConfig> providers = new HashMap<>();
-		providers.put("prov", new ProviderConfig(true, true, true));
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(idp.getLoginURL("foobarbaz", true, null)).thenReturn(new URL("https://test.com"));
-		
-		assertThat("incorrect url", auth.getIdentityProviderURL("prov", "foobarbaz", true, null),
-				is(new URL("https://test.com")));
-		//test with alternate case
-		assertThat("incorrect url", auth.getIdentityProviderURL("Prov", "foobarbaz", true, null),
-				is(new URL("https://test.com")));
-		
-		// test with environment
-		when(idp.getLoginURL("foobarbaz", false, "env1")).thenReturn(new URL("https://test2.com"));
-		assertThat("incorrect url",
-				auth.getIdentityProviderURL("prov", "foobarbaz", false, "env1"),
-				is(new URL("https://test2.com")));
-		
-	}
-	
-	@Test
-	public void getURLFailNulls() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-		
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final Map<String, ProviderConfig> providers = new HashMap<>();
-		providers.put("prov", new ProviderConfig(true, true, true));
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		failGetURL(auth, null, "foo", new NullPointerException("provider"));
-		failGetURL(auth, "   \t   \n   ", "foo",
-				new NoSuchIdentityProviderException("   \t   \n   "));
-		failGetURL(auth, "prov", null,
-				new IllegalArgumentException("state cannot be null or empty"));
-		failGetURL(auth, "prov", "    \t    \n    ",
-				new IllegalArgumentException("state cannot be null or empty"));
-	}
-	
-	@Test
-	public void getURLFailNoProvider() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-		
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final Map<String, ProviderConfig> providers = new HashMap<>();
-		providers.put("prov", new ProviderConfig(true, true, true));
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		failGetURL(auth, "provs", "foobar", new NoSuchIdentityProviderException("provs"));
-	}
-	
-	@Test
-	public void getURLFailNotEnabled() throws Exception {
-		final IdentityProvider idp = mock(IdentityProvider.class);
-		
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
-		
-		final Map<String, ProviderConfig> providers = new HashMap<>();
-		providers.put("prov", new ProviderConfig(false, true, true));
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(false, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		failGetURL(auth, "prov", "foobar", new NoSuchIdentityProviderException("prov"));
-	}
-	
-	public void failGetURL(
-			final Authentication auth,
-			final String provider,
-			final String state,
-			final Exception e)
-			throws Exception {
-		try {
-			auth.getIdentityProviderURL(provider, state, true, null);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-
 }

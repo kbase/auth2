@@ -16,9 +16,11 @@ import java.time.Clock;
 import java.time.Instant;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -45,6 +47,7 @@ import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfigSet;
 import us.kbase.auth2.lib.config.CollectingExternalConfig;
 import us.kbase.auth2.lib.config.ExternalConfig;
+import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -68,6 +71,11 @@ import us.kbase.test.auth2.lib.config.TestExternalConfig;
 
 public class AuthenticationTester {
 	
+	public static final String IDPROV_NAME1 = "ip1";
+	public static final String IDPROV_NAME2 = "ip2";
+	public static final String IDPROV_ENV1 = "env1";
+	public static final String IDPROV_ENV2 = "env2";
+	
 	public static final TestExternalConfig<Action> TEST_EXTERNAL_CONFIG =
 			new TestExternalConfig<>(ConfigItem.set("foo"));
 
@@ -76,16 +84,22 @@ public class AuthenticationTester {
 		final RandomDataGenerator randGenMock;
 		final Authentication auth;
 		final Clock clockMock;
+		final IdentityProvider prov1;
+		final IdentityProvider prov2;
 		
 		public TestMocks(
 				final AuthStorage storageMock,
 				final RandomDataGenerator randGenMock,
 				final Authentication auth, // not a mock
-				final Clock clockMock) {
+				final Clock clockMock,
+				final IdentityProvider prov1,
+				final IdentityProvider prov2) {
 			this.storageMock = storageMock;
 			this.randGenMock = randGenMock;
 			this.auth = auth;
 			this.clockMock = clockMock;
+			this.prov1 = prov1;
+			this.prov2 = prov2;
 		}
 	}
 	
@@ -94,23 +108,50 @@ public class AuthenticationTester {
 	}
 	
 	public static TestMocks initTestMocks(final Set<IdentityProvider> providers) throws Exception {
-		return initTestMocks(providers, false);
+		return initTestMocks(providers, false, false);
 	}
 	
 	public static TestMocks initTestMocks(final boolean testMode) throws Exception {
-		return initTestMocks(Collections.emptySet(), testMode);
+		return initTestMocks(Collections.emptySet(), testMode, false);
+	}
+	
+	public static TestMocks initTestMocks(
+			final boolean testMode,
+			final boolean mockAndEnableProviders)
+			throws Exception {
+		return initTestMocks(Collections.emptySet(), testMode, mockAndEnableProviders);
 	}
 	
 	public static TestMocks initTestMocks(
 			final Set<IdentityProvider> providers,
-			final boolean testMode)
+			final boolean testMode,
+			final boolean mockAndEnableProviders)
 			throws Exception {
 		final AuthStorage storage = mock(AuthStorage.class);
 		final RandomDataGenerator randGen = mock(RandomDataGenerator.class);
 		final Clock clock = mock(Clock.class);
+		IdentityProvider ip1 = null;
+		IdentityProvider ip2 = null;
 		
-		final AuthConfig ac =  new AuthConfig(AuthConfig.DEFAULT_LOGIN_ALLOWED, null,
-				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS);
+		final Set<IdentityProvider> provs = new HashSet<>();
+		if (providers != null) {
+			provs.addAll(providers);
+		}
+		if (mockAndEnableProviders) {
+			ip1 = mock(IdentityProvider.class);
+			ip2 = mock(IdentityProvider.class);
+			when(ip1.getProviderName()).thenReturn(IDPROV_NAME1);
+			when(ip2.getProviderName()).thenReturn(IDPROV_NAME2);
+			when(ip1.getEnvironments()).thenReturn(set(IDPROV_ENV1, IDPROV_ENV2));
+			when(ip2.getEnvironments()).thenReturn(set(IDPROV_ENV1, IDPROV_ENV2));
+			provs.add(ip1);
+			provs.add(ip2);
+		}
+		final AuthConfig ac =  new AuthConfig(
+				AuthConfig.DEFAULT_LOGIN_ALLOWED,
+				null,
+				AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS
+				);
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class))).thenReturn(
 				new AuthConfigSet<>(ac, new CollectingExternalConfig(
 						ImmutableMap.of("thing", ConfigItem.state("foo")))));
@@ -119,10 +160,26 @@ public class AuthenticationTester {
 				AuthStorage.class, Set.class, ExternalConfig.class, boolean.class,
 				RandomDataGenerator.class, Clock.class);
 		c.setAccessible(true);
-		final Authentication instance = c.newInstance(storage, providers,
+		final Authentication instance = c.newInstance(storage, provs,
 				TEST_EXTERNAL_CONFIG, testMode, randGen, clock);
 		reset(storage);
-		return new TestMocks(storage, randGen, instance, clock);
+		if (mockAndEnableProviders) {
+			// some tests need non-enabled providers, so we support both
+			AuthenticationTester.setConfigUpdateInterval(instance, -1);
+			final Map<String, ProviderConfig> provconf = ImmutableMap.of(
+					"ip1", new ProviderConfig(true, false, false),
+					"ip2", new ProviderConfig(true, false, false)
+			);
+			when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+					.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+							new AuthConfig(
+									AuthConfig.DEFAULT_LOGIN_ALLOWED,
+									provconf,
+									AuthConfig.DEFAULT_TOKEN_LIFETIMES_MS
+							),
+							new CollectingExternalConfig(Collections.emptyMap())));
+		}
+		return new TestMocks(storage, randGen, instance, clock, ip1, ip2);
 	}
 	
 	public static void setConfigUpdateInterval(final Authentication auth, final int millis)
