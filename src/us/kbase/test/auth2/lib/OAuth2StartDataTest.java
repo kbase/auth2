@@ -27,7 +27,7 @@ public class OAuth2StartDataTest {
 	public void construct() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final TemporaryToken tt = new TemporaryToken(
-				TemporarySessionData.create(id, inst(40000), inst(70000)).login(),
+				TemporarySessionData.create(id, inst(40000), inst(70000)).login("state"),
 				"sometoken");
 		final OAuth2StartData oa2sd = OAuth2StartData.build(
 				new URI("https://loldemocracy.com"), tt, "somestatevariable");
@@ -35,7 +35,7 @@ public class OAuth2StartDataTest {
 		assertThat("incorrect uri", oa2sd.getRedirectURI(),
 				is(new URI("https://loldemocracy.com")));
 		assertThat("incorrect token", oa2sd.getTemporaryToken(), is(new TemporaryToken(
-				TemporarySessionData.create(id, inst(40000), inst(70000)).login(),
+				TemporarySessionData.create(id, inst(40000), inst(70000)).login("otherstate"),
 				"sometoken")));
 		assertThat("incorrect state", oa2sd.getState(), is("somestatevariable"));
 	}
@@ -43,7 +43,8 @@ public class OAuth2StartDataTest {
 	@Test
 	public void constructFail() throws Exception {
 		final TemporaryToken tt = new TemporaryToken(
-				TemporarySessionData.create(UUID.randomUUID(), inst(40000), inst(70000)).login(),
+				TemporarySessionData.create(UUID.randomUUID(), inst(40000), inst(70000))
+						.login("state"),
 				"sometoken");
 		failConstruct(null, tt, new NullPointerException("redirectURI"));
 		failConstruct(

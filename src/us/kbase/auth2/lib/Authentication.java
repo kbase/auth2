@@ -1647,7 +1647,7 @@ public class Authentication {
 		final URI target = getIdentityProvider(provider).getLoginURI(state, false, environment);
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
-				.login();
+				.login(state);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary login token {}", tt.getId());
 		return OAuth2StartData.build(target, tt, state);
@@ -2342,7 +2342,7 @@ public class Authentication {
 		}
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
-				.link(user.getUserName());
+				.link(state, user.getUserName());
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary link token {} associated with user {}",
 				tt.getId(), user.getUserName().getName());

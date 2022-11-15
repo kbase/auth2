@@ -151,7 +151,7 @@ public class AuthenticationLoginTest {
 				));
 				
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
-				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).login(),
+				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).login("statetokenhere"),
 				IncomingToken.hash("sometoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
@@ -1178,7 +1178,7 @@ public class AuthenticationLoginTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, SMALL, 10000)
-						.link(new UserName("foo")))
+						.link("state", new UserName("foo")))
 				.thenReturn(null);
 
 		failGetLoginState(auth, token, new InvalidTokenException(
@@ -1656,7 +1656,7 @@ public class AuthenticationLoginTest {
 		final UUID tokenID = UUID.randomUUID();
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tokenID, SMALL, 10000)
-						.link(new UserName("foo")))
+						.link("state", new UserName("foo")))
 				.thenReturn(null);
 		
 		final String id = "bar";
@@ -2363,7 +2363,7 @@ public class AuthenticationLoginTest {
 		final UUID tokenID = UUID.randomUUID();
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tokenID, SMALL, 10000)
-						.link(new UserName("whee")))
+						.link("state", new UserName("whee")))
 				.thenReturn(null);
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l, new InvalidTokenException(

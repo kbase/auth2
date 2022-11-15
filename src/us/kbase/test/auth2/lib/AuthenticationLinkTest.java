@@ -152,7 +152,8 @@ public class AuthenticationLinkTest {
 				));
 				
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
-				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).link(new UserName("baz")),
+					tokenID, Instant.ofEpochMilli(20000), 60 * 1000)
+				.link("statetokenhere", new UserName("baz")),
 				IncomingToken.hash("sometoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
@@ -299,7 +300,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -358,7 +359,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -415,7 +416,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -494,7 +495,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -560,7 +561,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -628,7 +629,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -709,7 +710,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -924,7 +925,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
 		
@@ -956,7 +957,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("f"), Instant.now())
@@ -992,7 +993,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("foo")));
+						.link("state", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
@@ -1025,7 +1026,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("foo")));
+						.link("state", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
@@ -1062,7 +1063,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("foo")));
+						.link("state", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
@@ -1100,7 +1101,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -1149,7 +1150,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link(new UserName("baz")));
+						.link("state", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))

@@ -131,7 +131,7 @@ public class TokenTest {
 		final Instant i = Instant.ofEpochMilli(4000);
 		final UUID id = UUID.randomUUID();
 		final TemporarySessionData data = TemporarySessionData.create(id, i, 5)
-				.link(new UserName("a"));
+				.link("state", new UserName("a"));
 		final TemporaryToken tt = new TemporaryToken(data, "foobar");
 		assertThat("incorrect token string", tt.getToken(), is("foobar"));
 		assertThat("incorrect ID", tt.getId(), is(UUID.fromString(id.toString())));
