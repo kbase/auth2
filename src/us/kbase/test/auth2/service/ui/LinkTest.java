@@ -306,11 +306,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		final NewCookie state = res.getCookies().get("linkstatevar");
-		final NewCookie expectedstate = new NewCookie("linkstatevar", stateMatcher.capturedState,
-				"/link/complete", null, "linkstate", 30 * 60, false);
-		assertThat("incorrect state cookie", state, is(expectedstate));
-		
 		assertEnvironmentCookieCorrect(res, expectedEnvVal, 30 * 60);
 		
 		final NewCookie process = res.getCookies().get("in-process-link-token");
@@ -322,8 +317,8 @@ public class LinkTest {
 		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LINKSTART));
-		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("u1"))));
-		assertThat("incorrect state",
+		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect temp state",
 				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
 	}
 	
@@ -353,11 +348,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		final NewCookie state = res.getCookies().get("linkstatevar");
-		final NewCookie expectedstate = new NewCookie("linkstatevar", stateMatcher.capturedState,
-				"/link/complete", null, "linkstate", 30 * 60, false);
-		assertThat("incorrect state cookie", state, is(expectedstate));
-		
 		final NewCookie process = res.getCookies().get("in-process-link-token");
 		final NewCookie expectedprocess = new NewCookie("in-process-link-token",
 				process.getValue(),
@@ -367,8 +357,9 @@ public class LinkTest {
 		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LINKSTART));
-		assertThat("incorrect temporary identities", ti.getUser(),
-				is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect temp state",
+				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
 	}
 	
 	//TODO CODE try and merge these 3 link start tests a bit rather than duping code
@@ -403,11 +394,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		final NewCookie state = res.getCookies().get("linkstatevar");
-		final NewCookie expectedstate = new NewCookie("linkstatevar", stateMatcher.capturedState,
-				"/link/complete", null, "linkstate", 30 * 60, false);
-		assertThat("incorrect state cookie", state, is(expectedstate));
-		
 		final NewCookie process = res.getCookies().get("in-process-link-token");
 		final NewCookie expectedprocess = new NewCookie("in-process-link-token",
 				process.getValue(),
@@ -417,8 +403,9 @@ public class LinkTest {
 		final TemporarySessionData ti = manager.storage.getTemporarySessionData(
 				new IncomingToken(process.getValue()).getHashedToken());
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LINKSTART));
-		assertThat("incorrect temporary identities", ti.getUser(),
-				is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
+		assertThat("incorrect temp state",
+				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
 	}
 	
 	@Test
@@ -488,12 +475,11 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("state", new UserName("u1")),
+				.link(state, new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("linkstatevar", state)
 				.cookie(COOKIE_NAME, nt.getToken())
 				.cookie("in-process-link-token", "foobartoken");
 		if (env != null) {
@@ -503,7 +489,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		assertLinkStateCookieRemoved(res);
 		assertLinkProcessTokenRemoved(res);
 		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
@@ -539,12 +524,11 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("state", new UserName("u1")),
+				.link(state, new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("linkstatevar", state)
 				.cookie(COOKIE_NAME, nt.getToken())
 				.cookie("in-process-link-token", "foobartoken");
 		if (env != null) {
@@ -555,7 +539,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		assertLinkStateCookieRemoved(res);
 		assertLinkProcessTokenRemoved(res);
 		assertEnvironmentCookieRemoved(res);
 		assertNoTempToken("foobartoken");
@@ -588,12 +571,11 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("state", nt.getStoredToken().getUserName()),
+				.link(state, nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("linkstatevar", state)
 				.cookie("in-process-link-token", "foobartoken");
 		if (env != null) {
 			b.cookie("environment", env);
@@ -603,7 +585,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/link/choice")));
 		
-		assertLinkStateCookieRemoved(res);
 		assertEnvironmentCookieCorrect(res, env, 10 * 60);
 		
 		final String token = assertLinkTempTokenCorrect(res);
@@ -662,12 +643,11 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("state", nt.getStoredToken().getUserName()),
+				.link(state, nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("linkstatevar", state)
 				.cookie("in-process-link-token", "foobartoken");
 		if (env != null) {
 			b.cookie("environment", env);
@@ -677,7 +657,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		assertLinkStateCookieRemoved(res);
 		assertEnvironmentCookieCorrect(res, env, 10 * 60);
 		
 		final String token = assertLinkTempTokenCorrect(res);
@@ -705,8 +684,6 @@ public class LinkTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/link/choice")));
 		
-		assertLinkStateCookieRemoved(res);
-		
 		final String token = assertLinkTempTokenCorrect(res);
 		
 		final TemporarySessionData tis = manager.storage.getTemporarySessionData(
@@ -717,36 +694,37 @@ public class LinkTest {
 	}
 	
 	@Test
-	public void linkCompleteFailNoStateCookie() throws Exception {
-		final WebTarget wt = linkCompleteSetUpWebTarget("foobarcode", "foobarstate");
-		final Builder request = wt.request()
-				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("issessiontoken", "false");
-		
-		final MissingParameterException e = new MissingParameterException(
-				"Couldn't retrieve state value from cookie");
-
-		failRequestJSON(request.get(), 400, "Bad Request", e);
-
-		request.cookie("linkstatevar", "   \t   ");
-		
-		failRequestJSON(request.get(), 400, "Bad Request", e);
-	}
-	
-	@Test
 	public void linkCompleteFailStateMismatch() throws Exception {
-		final WebTarget wt = linkCompleteSetUpWebTarget("foobarcode", "foobarstate");
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		
+		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
+		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
+				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
+				.link("mynicestate", nt.getStoredToken().getUserName()),
+				IncomingToken.hash("foobartoken"));
+		
+		final WebTarget wt = linkCompleteSetUpWebTarget("foobarcode", "nonmatchingstate");
 		final Builder request = wt.request()
-				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("linkstatevar", "this doesn't match");
+				.cookie("in-process-link-token", "foobartoken")
+				.header("accept", MediaType.APPLICATION_JSON);
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
 	}
 	
 	@Test
 	public void linkCompleteFailNoProviderState() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		
+		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
+		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
+				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
+				.link("mynicestate", nt.getStoredToken().getUserName()),
+				IncomingToken.hash("foobartoken"));
+		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/link/complete/prov1")
 				.queryParam("code", "foocode")
@@ -755,12 +733,12 @@ public class LinkTest {
 		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
 		
 		final Builder request = wt.request()
-				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("linkstatevar", "somestate");
+				.cookie("in-process-link-token", "foobartoken")
+				.header("accept", MediaType.APPLICATION_JSON);
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
 	}
 	
 	@Test
@@ -777,8 +755,7 @@ public class LinkTest {
 		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
 		
 		final Builder request = wt.request()
-				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("linkstatevar", "somestate");
+				.header("accept", MediaType.APPLICATION_JSON);
 		
 		failRequestJSON(request.get(), 400, "Bad Request",
 				new NoTokenProvidedException("Missing in-process-link-token"));
@@ -805,8 +782,7 @@ public class LinkTest {
 		
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("in-process-link-token", "foobartoken")
-				.cookie("linkstatevar", "somestate");
+				.cookie("in-process-link-token", "foobartoken");
 		
 		failRequestJSON(request.get(), 400, "Bad Request",
 				new MissingParameterException("authorization code"));
@@ -829,13 +805,6 @@ public class LinkTest {
 				.build();
 		
 		return CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
-	}
-	
-	private void assertLinkStateCookieRemoved(final Response res) {
-		final NewCookie expectedstate = new NewCookie("linkstatevar", "no state",
-				"/link/complete", null, "linkstate", 0, false);
-		final NewCookie statecookie = res.getCookies().get("linkstatevar");
-		assertThat("incorrect state cookie", statecookie, is(expectedstate));
 	}
 	
 	private void assertLinkProcessTokenRemoved(final Response res) {

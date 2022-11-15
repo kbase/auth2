@@ -71,6 +71,7 @@ import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -292,11 +293,6 @@ public class LoginTest {
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		final NewCookie state = res.getCookies().get("loginstatevar");
-		final NewCookie expectedstate = new NewCookie("loginstatevar", stateMatcher.capturedState,
-				"/login/complete", null, "loginstate", 30 * 60, false);
-		assertThat("incorrect state cookie", state, is(expectedstate));
-		
 		assertEnvironmentCookieCorrect(res, expectedEnv, 30 * 60);
 		
 		final NewCookie process = res.getCookies().get("in-process-login-token");
@@ -419,11 +415,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		loginCompleteImmediateLoginStoreUser(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("loginstatevar", state);
+				.cookie("in-process-login-token", "foobartoken");
 		if (env != null) {
 			b.cookie("environment", env);
 		}
@@ -456,11 +454,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		loginCompleteImmediateLoginStoreUser(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTargetEmptyError(authcode, state);
 		final Response res = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", "   \t   ")
 				.cookie("issessiontoken", "    \t   ")
 				.get();
@@ -505,11 +505,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		loginCompleteImmediateLoginStoreUser(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", url)
 				.cookie("issessiontoken", "true");
 		if (env != null) {
@@ -543,11 +545,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		loginCompleteImmediateLoginStoreUser(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
 				.cookie("issessiontoken", "false")
 				.get();
@@ -605,11 +609,6 @@ public class LoginTest {
 	}
 
 	private void assertLoginProcessTokensRemoved(final Response res) {
-		final NewCookie expectedstate = new NewCookie("loginstatevar", "no state",
-				"/login/complete", null, "loginstate", 0, false);
-		final NewCookie statecookie = res.getCookies().get("loginstatevar");
-		assertThat("incorrect state cookie", statecookie, is(expectedstate));
-		
 		final NewCookie expectedsession = new NewCookie("issessiontoken", "no session",
 				"/login", null, "session choice", 0, false);
 		final NewCookie session = res.getCookies().get("issessiontoken");
@@ -670,11 +669,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("loginstatevar", state);
+				.cookie("in-process-login-token", "foobartoken");
 		if (env != null) {
 			b.cookie("environment", env);
 		}
@@ -726,11 +727,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", "   \t   ")
 				.cookie("issessiontoken", "    \t   ");
 		if (env != null) {
@@ -789,11 +792,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", redirectURL)
 				.cookie("issessiontoken", "true");
 		if (env != null) {
@@ -835,11 +840,13 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
+		saveTemporarySessionData(state, "foobartoken");
+		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
-				.cookie("loginstatevar", state)
+				.cookie("in-process-login-token", "foobartoken")
 				.cookie("loginredirect", "https://foobar.com/thingy/stuff")
 				.cookie("issessiontoken", "false")
 				.get();
@@ -868,11 +875,6 @@ public class LoginTest {
 			final RemoteIdentity remoteIdentity,
 			final Response res)
 			throws Exception {
-		
-		final NewCookie expectedstate = new NewCookie("loginstatevar", "no state",
-				"/login/complete", null, "loginstate", 0, false);
-		final NewCookie statecookie = res.getCookies().get("loginstatevar");
-		assertThat("incorrect state cookie", statecookie, is(expectedstate));
 		
 		final NewCookie tempCookie = res.getCookies().get("in-process-login-token");
 		final NewCookie expectedtemp = new NewCookie("in-process-login-token",
@@ -921,6 +923,14 @@ public class LoginTest {
 		return remoteIdentity;
 	}
 	
+	public void saveTemporarySessionData(final String state, final String token)
+			throws AuthStorageException {
+		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
+				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
+				.login(state),
+				IncomingToken.hash(token));
+	}
+	
 	@Test
 	public void loginCompleteProviderError() throws Exception {
 		// the various input paths for the redirect cookie and the session cookie are exactly
@@ -932,9 +942,7 @@ public class LoginTest {
 				.build();
 		
 		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
-		final Response res = wt.request()
-				.cookie("loginstatevar", "somestate")
-				.get();
+		final Response res = wt.request().get();
 		
 		assertThat("incorrect status code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/login/choice")));
@@ -948,11 +956,6 @@ public class LoginTest {
 				"/login", null, "session choice", 0, false);
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));
-		
-		final NewCookie expectedstate = new NewCookie("loginstatevar", "no state",
-				"/login/complete", null, "loginstate", 0, false);
-		final NewCookie statecookie = res.getCookies().get("loginstatevar");
-		assertThat("incorrect state cookie", statecookie, is(expectedstate));
 		
 		final NewCookie tempCookie = res.getCookies().get("in-process-login-token");
 		final NewCookie expectedtemp = new NewCookie("in-process-login-token",
@@ -968,37 +971,28 @@ public class LoginTest {
 	}
 	
 	@Test
-	public void loginCompleteFailNoStateCookie() throws Exception {
-		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
-		final Builder request = wt.request()
-				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("issessiontoken", "false");
-		
-		final MissingParameterException e = new MissingParameterException(
-				"Couldn't retrieve state value from cookie");
-
-		failRequestJSON(request.get(), 400, "Bad Request", e);
-
-		request.cookie("loginstatevar", "   \t   ");
-		
-		failRequestJSON(request.get(), 400, "Bad Request", e);
-	}
-	
-	@Test
 	public void loginCompleteFailStateMismatch() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		saveTemporarySessionData("important state", "foobartoken");
+		
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("issessiontoken", "false")
-				.cookie("loginstatevar", "this doesn't match");
+				.cookie("in-process-login-token", "foobartoken")
+				.cookie("issessiontoken", "false");
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
 	}
 	
 	@Test
 	public void loginCompleteFailNoProviderState() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		saveTemporarySessionData("important state", "foobartoken");
+		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/complete/prov1")
 				.queryParam("code", "foocode")
@@ -1009,11 +1003,30 @@ public class LoginTest {
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("issessiontoken", "false")
-				.cookie("loginstatevar", "somestate");
+				.cookie("in-process-login-token", "foobartoken");
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
+	}
+	
+	@Test
+	public void loginCompleteFailNoToken() throws Exception {
+		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
+		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
+		
+		final URI target = UriBuilder.fromUri(host)
+				.path("/login/complete/prov1")
+				.queryParam("state", "somestate")
+				.build();
+		
+		final WebTarget wt = CLI.target(target).property(ClientProperties.FOLLOW_REDIRECTS, false);
+		
+		final Builder request = wt.request()
+				.header("accept", MediaType.APPLICATION_JSON);
+		
+		failRequestJSON(request.get(), 400, "Bad Request",
+				new NoTokenProvidedException("Missing in-process-login-token"));
 	}
 	
 	@Test
@@ -1028,7 +1041,7 @@ public class LoginTest {
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
 				.cookie("issessiontoken", "false")
-				.cookie("loginstatevar", "somestate");
+				.cookie("in-process-login-token", "foobartoken");
 		
 		failRequestJSON(request.get(), 400, "Bad Request",
 				new MissingParameterException("authorization code"));
@@ -1044,7 +1057,7 @@ public class LoginTest {
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("loginstatevar", "foobarstate");
+				.cookie("in-process-login-token", "foobartoken");
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new NoSuchIdentityProviderException("prov1"));
@@ -1055,7 +1068,6 @@ public class LoginTest {
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("loginstatevar", "foobarstate")
 				.cookie("environment", "env3")
 				.cookie("loginredirect", "http://foo.com");
 		
@@ -1067,7 +1079,6 @@ public class LoginTest {
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
 				.header("accept", MediaType.APPLICATION_JSON)
-				.cookie("loginstatevar", "foobarstate")
 				.cookie("loginredirect", "not a url no sir");
 		
 		failRequestJSON(request.get(), 400, "Bad Request",

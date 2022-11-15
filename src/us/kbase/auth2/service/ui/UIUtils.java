@@ -33,8 +33,6 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.config.ConfigAction.State;
-import us.kbase.auth2.lib.exceptions.AuthenticationException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
@@ -87,25 +85,6 @@ public class UIUtils {
 		return rel;
 	}
 	
-	/** Check that the OAuth2 state returned from an identity provider matches the expected state.
-	 * @param cookieSessionState the state as stored in a cookie.
-	 * @param providerSuppliedState the state returned from the provider.
-	 * @throws MissingParameterException if the state from the cookie is missing.
-	 * @throws AuthenticationException if the state values don't match.
-	 */
-	public static void checkState(
-			final String cookieSessionState,
-			final String providerSuppliedState)
-			throws MissingParameterException, AuthenticationException {
-		if (nullOrEmpty(cookieSessionState)) {
-			throw new MissingParameterException("Couldn't retrieve state value from cookie");
-		}
-		if (!cookieSessionState.equals(providerSuppliedState)) {
-			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"State values do not match, this may be a CXRF attack");
-		}
-	}
-
 	/** Create a login cookie from a token that immediately expires.
 	 * @param cookieName the name to give the cookie.
 	 * @return a new cookie that immediately expires and contains a nonsense token.

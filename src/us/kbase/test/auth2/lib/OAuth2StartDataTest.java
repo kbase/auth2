@@ -30,14 +30,13 @@ public class OAuth2StartDataTest {
 				TemporarySessionData.create(id, inst(40000), inst(70000)).login("state"),
 				"sometoken");
 		final OAuth2StartData oa2sd = OAuth2StartData.build(
-				new URI("https://loldemocracy.com"), tt, "somestatevariable");
+				new URI("https://loldemocracy.com"), tt);
 		
 		assertThat("incorrect uri", oa2sd.getRedirectURI(),
 				is(new URI("https://loldemocracy.com")));
 		assertThat("incorrect token", oa2sd.getTemporaryToken(), is(new TemporaryToken(
 				TemporarySessionData.create(id, inst(40000), inst(70000)).login("otherstate"),
 				"sometoken")));
-		assertThat("incorrect state", oa2sd.getState(), is("somestatevariable"));
 	}
 	
 	@Test
@@ -56,8 +55,7 @@ public class OAuth2StartDataTest {
 			final TemporaryToken tt,
 			final Exception expected) {
 		try {
-			OAuth2StartData.build(
-					uri, tt, "the state var should be removed from this class very soon");
+			OAuth2StartData.build(uri, tt);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

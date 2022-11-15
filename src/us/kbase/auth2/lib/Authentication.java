@@ -1,5 +1,6 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.clear;
@@ -1650,7 +1651,7 @@ public class Authentication {
 				.login(state);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary login token {}", tt.getId());
-		return OAuth2StartData.build(target, tt, state);
+		return OAuth2StartData.build(target, tt);
 	}
 	
 	private void checkLifeTimeSec(final int lifetimeSec) {
@@ -1692,35 +1693,45 @@ public class Authentication {
 	 * the URL will contain the identity provider authcode, and so the user should be redirected
 	 * to a new URL that does not contain said authcode as soon as possible.
 	 * 
+	 * @param token the temporary token returned by the {@link #loginStart(int, String, String)}
+	 * method.
 	 * @param provider the name of the identity provider that is servicing the login request.
 	 * @param authcode the authcode provided by the provider.
 	 * @param environment the environment in which the login request is occurring. Null for the
 	 * default environment.
 	 * @param tokenCtx the context under which the token will be created.
+	 * @param oauth2State the state value returned by the 3rd party identity provider.
 	 * @return either a login token or temporary token.
 	 * @throws MissingParameterException if the authcode is missing.
 	 * @throws IdentityRetrievalException if an error occurred when trying to retrieve identities
 	 * from the provider.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws NoSuchIdentityProviderException if there is no provider by the given name.
-	 * @throws NoSuchEnvironmentException if no such environment is configured. 
+	 * @throws NoSuchEnvironmentException if no such environment is configured.
+	 * @throws InvalidTokenException if the token is invalid.
+	 * @throws AuthenticationException if the state doesn't match the expected state.
 	 */
-	public LoginToken login(
+	public LoginToken login( // enough args here to start considering a builder
+			final IncomingToken token,
 			final String provider,
 			final String authcode,
 			final String environment,
-			final TokenCreationContext tokenCtx)
+			final TokenCreationContext tokenCtx,
+			final String oauth2State)
 			throws MissingParameterException, IdentityRetrievalException,
-			AuthStorageException, NoSuchIdentityProviderException, NoSuchEnvironmentException {
-		nonNull(tokenCtx, "tokenCtx");
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
+				AuthStorageException, NoSuchIdentityProviderException, NoSuchEnvironmentException,
+				InvalidTokenException, AuthenticationException {
+		requireNonNull(tokenCtx, "tokenCtx");
+		checkString(authcode, "authorization code");
 		final IdentityProvider idp = getIdentityProvider(provider);
+		final TemporarySessionData tids = getTemporarySessionData(
+				Optional.empty(), Operation.LOGINSTART, token);
+		checkState(tids, oauth2State);
+		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false, environment);
 		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
-		final LoginToken token;
+		final LoginToken loginToken;
 		if (lstate.getUsers().size() == 1 &&
 				lstate.getIdentities().isEmpty() &&
 				!pc.isForceLoginChoice()) {
@@ -1737,18 +1748,26 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				token = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate);
 			} else if (user.isDisabled()) {
-				token = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate);
 			} else {
-				token = new LoginToken(login(user.getUserName(), tokenCtx));
+				loginToken = new LoginToken(login(user.getUserName(), tokenCtx));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			token = storeIdentitiesTemporarily(lstate);
+			loginToken = storeIdentitiesTemporarily(lstate);
 		}
-		return token;
+		return loginToken;
+	}
+	
+	private void checkState(final TemporarySessionData tids, final String state)
+			throws AuthenticationException {
+		if (!tids.getOAuth2State().get().equals(state)) {
+			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
+					"State values do not match, this may be a CSRF attack");
+		}
 	}
 
 	// ignores expiration date of login state
@@ -1816,9 +1835,8 @@ public class Authentication {
 			Optional<UserName> user,
 			final Operation expectedOperation,
 			final IncomingToken token)
-			throws AuthStorageException, IdentityProviderErrorException, InvalidTokenException,
-				UnauthorizedException {
-		nonNull(token, "Temporary token");
+			throws AuthStorageException, IdentityProviderErrorException, InvalidTokenException {
+		requireNonNull(token, "Temporary token");
 		try {
 			final TemporarySessionData tis = storage.getTemporarySessionData(
 					token.getHashedToken());
@@ -2346,7 +2364,7 @@ public class Authentication {
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary link token {} associated with user {}",
 				tt.getId(), user.getUserName().getName());
-		return OAuth2StartData.build(target, tt, state);
+		return OAuth2StartData.build(target, tt);
 	}
 	
 	/** Continue the local portion of an OAuth2 link flow after redirection from a 3rd party
@@ -2402,6 +2420,7 @@ public class Authentication {
 	 * @param authcode the authcode provided by the provider.
 	 * @param environment the environment in which the link request is proceeding. Null for the
 	 * default environment.
+	 * @param oauth2State the OAuth2 state value.
 	 * @return a temporary token if required.
 	 * @throws InvalidTokenException if the token is invalid.
 	 * @throws MissingParameterException if the authcode is missing.
@@ -2414,23 +2433,24 @@ public class Authentication {
 	 * @throws UnauthorizedException if the token is not a login token.
 	 * @throws IdentityProviderErrorException if the incoming token is associated with an
 	 * identity provider error.
-	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider. 
+	 * @throws NoSuchEnvironmentException if no such environment is configured for the provider.
+	 * @throws AuthenticationException if the state value doesn't match the expected value.
 	 */
-	public LinkToken link(
+	public LinkToken link(  // enough args here to start considering a builder
 			final IncomingToken token,
 			final String provider,
 			final String authcode,
-			final String environment)
-			throws InvalidTokenException, AuthStorageException,
+			final String environment,
+			final String oauth2State)
+			throws InvalidTokenException, AuthStorageException, AuthenticationException,
 				MissingParameterException, IdentityRetrievalException,
 				LinkFailedException, NoSuchIdentityProviderException, DisabledUserException,
 				UnauthorizedException, IdentityProviderErrorException, NoSuchEnvironmentException {
-		if (authcode == null || authcode.trim().isEmpty()) {
-			throw new MissingParameterException("authorization code");
-		}
+		checkString(authcode, "authorization code");
 		final IdentityProvider idp = getIdentityProvider(provider);
 		final TemporarySessionData tids = getTemporarySessionData(
 				Optional.empty(), Operation.LINKSTART, token);
+		checkState(tids, oauth2State);
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		// UI shouldn't allow disabled users to link
 		final AuthUser u = getUser(tids.getUser().get());

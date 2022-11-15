@@ -164,6 +164,10 @@ public class TestCommon {
 		return Optional.of(obj);
 	}
 	
+	public static Instant now() {
+		return Instant.now();
+	}
+	
 	public static void assertClear(final byte[] bytes) {
 		for (int i = 0; i < bytes.length; i++) {
 			if (bytes[i] != 0) {
