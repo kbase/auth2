@@ -43,11 +43,12 @@ public class IncomingToken {
 		return new IncomingHashedToken(hash(token));
 	}
 	
-	/** Get a SHA-256 hash of a token.
+	/** Get a SHA-256 hash of a token encoded in Base64.
 	 * @param token the token to hash.
-	 * @return the hash of the token when encoded as UTF-8.
+	 * @return the hash of the token when encoded as UTF-8 Base64.
 	 */
 	public static String hash(final String token) {
+		// TODO NOW need Base64 URL encoding for PKCE, add a bool toggle
 		checkStringNoCheckedException(token, "token");
 		final MessageDigest digest;
 		try {
