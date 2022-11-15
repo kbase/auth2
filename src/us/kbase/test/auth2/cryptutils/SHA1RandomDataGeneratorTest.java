@@ -5,6 +5,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
+import java.util.Arrays;
 import java.util.UUID;
 
 import org.apache.commons.codec.binary.Base32;
@@ -19,10 +20,17 @@ public class SHA1RandomDataGeneratorTest {
 	
 	@Test
 	public void getToken() throws Exception {
-		// not much to test here other than it's base32 compatible and 160 bits
-		final String t = new SHA1RandomDataGenerator().getToken();
+		// not much to test here other than it's base32 compatible and the right # of bytes
+		final SHA1RandomDataGenerator gen = new SHA1RandomDataGenerator();
+		final String t = gen.getToken();
 		final byte[] b = new Base32().decode(t);
-		assertThat("incorrect bit count", b.length, is(20));
+		assertThat("incorrect byte count", b.length, is(20));
+		
+		for (final int size: Arrays.asList(1, 2, 3, 4, 5, 8, 10, 20)) {
+			final String tok = gen.getToken(size);
+			final byte[] dec = new Base32().decode(tok);
+			assertThat("incorrect byte count", dec.length, is(5 * size));
+		}
 	}
 	
 	@Test
