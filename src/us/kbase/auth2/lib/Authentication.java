@@ -1766,7 +1766,7 @@ public class Authentication {
 			throws AuthenticationException {
 		if (!tids.getOAuth2State().get().equals(state)) {
 			throw new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-					"State values do not match, this may be a CXRF attack");
+					"State values do not match, this may be a CSRF attack");
 		}
 	}
 

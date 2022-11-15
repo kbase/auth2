@@ -918,7 +918,7 @@ public class AuthenticationLinkTest {
 			failLinkWithToken(
 					mocks.auth, token, "ip1", "foo", null, state, new AuthenticationException(
 							ErrorType.AUTHENTICATION_FAILED,
-							"State values do not match, this may be a CXRF attack"));
+							"State values do not match, this may be a CSRF attack"));
 		}
 	}
 	

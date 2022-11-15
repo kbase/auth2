@@ -856,7 +856,7 @@ public class AuthenticationLoginTest {
 			failLoginContinue(
 					mocks.auth, token, "ip1", "foo", null, CTX, state, new AuthenticationException(
 							ErrorType.AUTHENTICATION_FAILED,
-							"State values do not match, this may be a CXRF attack"));
+							"State values do not match, this may be a CSRF attack"));
 		}
 	}
 	

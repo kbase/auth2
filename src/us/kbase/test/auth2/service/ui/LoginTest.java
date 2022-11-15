@@ -984,7 +984,7 @@ public class LoginTest {
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
 	}
 	
 	@Test
@@ -1007,7 +1007,7 @@ public class LoginTest {
 		
 		failRequestJSON(request.get(), 401, "Unauthorized",
 				new AuthenticationException(ErrorType.AUTHENTICATION_FAILED,
-						"State values do not match, this may be a CXRF attack"));
+						"State values do not match, this may be a CSRF attack"));
 	}
 	
 	@Test
