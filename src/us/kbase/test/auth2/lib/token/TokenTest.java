@@ -293,14 +293,32 @@ public class TokenTest {
 	public void hashingTokens() throws Exception {
 		assertThat("incorrect hash", IncomingToken.hash("whee"),
 				is("bG4rDP2oAAfmk9UrWVYIPqaHcOExDQ7QLRlcsUETsoQ="));
-		failHashToken(null);
-		failHashToken("");
-		failHashToken("   \n");
+		assertThat("incorrect hash", IncomingToken.hash("wheex?xx>"),
+				is("QO/Z+7OUGd3vNCsVujaaXee+iC8I8SwwehT+c8dDI68="));
+		assertThat("incorrect hash", IncomingToken.hash("wheex?xx>", false),
+				is("QO/Z+7OUGd3vNCsVujaaXee+iC8I8SwwehT+c8dDI68="));
+		assertThat("incorrect hash", IncomingToken.hash("wheex?xx>", true),
+				is("QO_Z-7OUGd3vNCsVujaaXee-iC8I8SwwehT-c8dDI68="));
+		for (final String s: Arrays.asList(null, "", "   \n   ")) {
+			failHashToken(s);
+			failHashToken(s, true);
+			failHashToken(s, false);
+		}
 	}
 
 	private void failHashToken(final String token) {
 		try {
 			IncomingToken.hash(token);
+			fail("hashed bad input");
+		} catch (IllegalArgumentException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					is("Missing argument: token"));
+		}
+	}
+	
+	private void failHashToken(final String token, final boolean urlEncoding) {
+		try {
+			IncomingToken.hash(token, urlEncoding);
 			fail("hashed bad input");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
