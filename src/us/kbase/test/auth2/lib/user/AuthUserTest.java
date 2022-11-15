@@ -75,7 +75,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = AuthUser.getBuilder(UserName.ROOT, new DisplayName("bar1"), NOW)
-				.withEmailAddress(new EmailAddress("f@g1.com"))
+				.withEmailAddress(new EmailAddress("f@h1.com"))
 				.withCustomRole("foo")
 				.withCustomRole("bar")
 				.withLastLogin(ll.get())
@@ -89,7 +89,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				"reason", new UserName("whee"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar1")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g1.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h1.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
@@ -110,7 +110,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
-				.withEmailAddress(new EmailAddress("f@g2.com"))
+				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.SERV_TOKEN)
@@ -129,7 +129,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h2.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
@@ -184,7 +184,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser pre = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
-				.withEmailAddress(new EmailAddress("f@g2.com"))
+				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.SERV_TOKEN)
@@ -210,7 +210,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h2.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
@@ -296,7 +296,7 @@ public class AuthUserTest {
 	@Test
 	public void constructFail() throws Exception {
 		final UserName un = new UserName("foo");
-		final EmailAddress email = new EmailAddress("f@g.com");
+		final EmailAddress email = new EmailAddress("f@h.com");
 		final DisplayName dn = new DisplayName("bar");
 		final RemoteIdentity id = REMOTE;
 		final Role role = Role.DEV_TOKEN;

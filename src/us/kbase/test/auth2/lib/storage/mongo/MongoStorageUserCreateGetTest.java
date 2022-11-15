@@ -103,7 +103,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), Instant.ofEpochMilli(5000))
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("foo").withCustomRole("bar")
 				.withPolicyID(new PolicyID("pfoo"), Instant.ofEpochMilli(4000))
@@ -138,7 +138,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
 				"reason", new UserName("bap"), Instant.ofEpochMilli(20000))));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bang")));
-		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@h.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(),
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
@@ -186,7 +186,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
 				
@@ -220,7 +220,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
 		
@@ -252,7 +252,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final Instant create = Instant.ofEpochMilli(1000);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), create)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(5000))
 				.withForceReset(true)
 				.build();
@@ -267,7 +267,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bang")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));

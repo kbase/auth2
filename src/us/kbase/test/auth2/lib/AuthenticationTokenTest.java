@@ -233,7 +233,7 @@ public class AuthenticationTokenTest {
 	public void getTokensUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		getTokensUser(admin);
@@ -527,7 +527,7 @@ public class AuthenticationTokenTest {
 	public void revokeTokenAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 
 		revokeTokenAdmin(admin);
@@ -587,7 +587,7 @@ public class AuthenticationTokenTest {
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
@@ -716,7 +716,7 @@ public class AuthenticationTokenTest {
 	public void revokeAllTokensAdminAll() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		revokeAllTokensAdminAll(admin);
@@ -801,7 +801,7 @@ public class AuthenticationTokenTest {
 	public void revokeAllTokensAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		revokeAllTokensAdminUser(admin);
@@ -911,7 +911,7 @@ public class AuthenticationTokenTest {
 	public void createDevToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV);
@@ -921,7 +921,7 @@ public class AuthenticationTokenTest {
 	public void createDevTokenAltLifetime() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
@@ -933,7 +933,7 @@ public class AuthenticationTokenTest {
 	public void createDevTokenWithServRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV);
@@ -943,7 +943,7 @@ public class AuthenticationTokenTest {
 	public void createServToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
 		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, TokenType.SERV);
@@ -953,7 +953,7 @@ public class AuthenticationTokenTest {
 	public void createServTokenWithAdminRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, TokenType.SERV);
@@ -963,7 +963,7 @@ public class AuthenticationTokenTest {
 	public void createServTokenWithAltLifetime() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
@@ -1003,7 +1003,7 @@ public class AuthenticationTokenTest {
 	public void createTokenFailNoDevRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		failCreateToken(user, TokenType.DEV, new UnauthorizedException(ErrorType.UNAUTHORIZED,
@@ -1014,7 +1014,7 @@ public class AuthenticationTokenTest {
 	public void createTokenFailNoServRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.CREATE_ADMIN).build();
 		

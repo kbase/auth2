@@ -35,7 +35,7 @@ public class NewUserTest {
 		final Instant now = Instant.now();
 		final NewUser u = NewUser.getBuilder(
 				new UserName("foo"), new DisplayName("bar"), now, REMOTE)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
+				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
@@ -43,7 +43,7 @@ public class NewUserTest {
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));

@@ -329,7 +329,7 @@ public class TokenEndpointTest {
 	private NewToken setUpUser() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000))
-				.withEmailAddress(new EmailAddress("f@g.com")).build(),
+				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "zz".getBytes()));
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("foo"))
@@ -497,7 +497,7 @@ public class TokenEndpointTest {
 				ImmutableMap.of(
 						"user_id", "foo",
 						"name", "bar",
-						"email", "f@g.com",
+						"email", "f@h.com",
 						"token", nt.getToken()));
 	}
 	
@@ -525,7 +525,7 @@ public class TokenEndpointTest {
 		kbaseTokenSuccess("  \t   , email  ", nt,
 				ImmutableMap.of(
 						"user_id", "foo",
-						"email", "f@g.com"));
+						"email", "f@h.com"));
 	}
 	
 	@Test
