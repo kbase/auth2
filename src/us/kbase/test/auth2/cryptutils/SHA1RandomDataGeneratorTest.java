@@ -12,6 +12,7 @@ import org.apache.commons.codec.binary.Base32;
 import org.junit.Test;
 
 import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
+import us.kbase.test.auth2.TestCommon;
 
 public class SHA1RandomDataGeneratorTest {
 	
@@ -31,6 +32,21 @@ public class SHA1RandomDataGeneratorTest {
 			final byte[] dec = new Base32().decode(tok);
 			assertThat("incorrect byte count", dec.length, is(5 * size));
 		}
+	}
+	
+	@Test
+	public void getTokenFail() throws Exception {
+		final SHA1RandomDataGenerator gen = new SHA1RandomDataGenerator();
+		for (final int size: Arrays.asList(0, -1, -5, -10, -100, -1000, Integer.MIN_VALUE)) {
+			try {
+				gen.getToken(size);
+				fail("expected exception");
+			} catch (Exception got) {
+				TestCommon.assertExceptionCorrect(
+						got, new IllegalArgumentException("sizeMultiple must be > 0"));
+			}
+		}
+		
 	}
 	
 	@Test
