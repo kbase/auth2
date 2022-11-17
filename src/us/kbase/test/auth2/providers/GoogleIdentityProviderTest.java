@@ -202,9 +202,9 @@ public class GoogleIdentityProviderTest {
 	@Test
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
-		failGetIdentities(idp, null, true, new IllegalArgumentException(
+		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
-		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
+		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
 	}
 	
@@ -212,26 +212,30 @@ public class GoogleIdentityProviderTest {
 	public void noSuchEnvironment() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
 		
-		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
-		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", true, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", false, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final Exception exception) throws Exception {
-		failGetIdentities(idp, authcode, link, null, exception);
+		failGetIdentities(idp, authcode, pkce, link, null, exception);
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final String env,
 			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link, env);
+			idp.getIdentities(authcode, pkce, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -265,37 +269,37 @@ public class GoogleIdentityProviderTest {
 		final String authCode = "foo10";
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Response: " + STRING1000));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Truncated response: " + STRING1000));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
 				"from Google service: 500."));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
 				"response body from Google service: 500."));
 		
 		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500,
 				"{\"error\":\"whee!\",\"error_description\":\"whoo!\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Google service returned an error. HTTP code: 500. " +
 				"Error: whee!. Error description: whoo!"));
 	}
@@ -310,16 +314,16 @@ public class GoogleIdentityProviderTest {
 		final String authCode = "foo11";
 		
 		setUpOAuthCall(authCode, null, redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"No ID token in response from Google"));
 		
 		setUpOAuthCall(authCode, "    \t    ", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"No ID token in response from Google"));
 		
 		setUpOAuthCall(authCode, "foo", redir, cliid, clisec);
 		try {
-			idp.getIdentities(authCode, false, null);
+			idp.getIdentities(authCode, "pkce", false, null);
 			fail("got identities with bad setup");
 		} catch (Exception got) {
 			final String prefix = "10030 Identity retrieval failed: Unable to decode JWT: ";
@@ -332,13 +336,13 @@ public class GoogleIdentityProviderTest {
 		}
 		
 		setUpOAuthCall(authCode, "foo.7.bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Unable to decode JWT: Input byte[] should at least have 2 bytes " +
 				"for base64 bytes"));
 		
 		setUpOAuthCall(authCode, "foo.notjson.bar", redir, cliid, clisec);
 		try {
-			idp.getIdentities(authCode, false, null);
+			idp.getIdentities(authCode, "pkce", false, null);
 			fail("got identities with bad setup");
 		} catch (IdentityRetrievalException e) {
 			assertThat("incorrect error", e.getMessage(), containsString(
@@ -352,17 +356,17 @@ public class GoogleIdentityProviderTest {
 		final Map<String, String> payload = new HashMap<>();
 		
 		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
 		payload.put("email", null);
 		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
 		payload.put("email", "   \t    ");
 		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 	}
 	
@@ -392,7 +396,7 @@ public class GoogleIdentityProviderTest {
 		
 		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, env);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
@@ -433,7 +437,7 @@ public class GoogleIdentityProviderTest {
 		
 		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),

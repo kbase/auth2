@@ -108,7 +108,7 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws NoSuchEnvironmentException {
-			// TODO PKCE include code challenge here & accept code verifier below
+			// TODO PKCE include code challenge here
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
@@ -141,12 +141,14 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
+			// TODO PKCE include code verifier
 			final RemoteIdentity ri = getIdentity(authcode, link, environment);
 			return new HashSet<>(Arrays.asList(ri));
 		}

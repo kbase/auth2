@@ -313,15 +313,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("mystate", "pkceverifier", new UserName("baz")));
+						.link("mystate", "pkceverifiedforyourcomfort", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkceverifiedforyourcomfort", true, null))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("Prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
@@ -372,15 +373,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("somestate", "pkceverifier", new UserName("baz")));
+						.link("somestate", "pkcecuresacne", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkcecuresacne", true, null))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("Prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
@@ -429,18 +431,22 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stateish", "pkceverifier", new UserName("baz")));
+						.link("stateish", "pkceambrosiaofthegods", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-				new RemoteIdentity(
-						new RemoteIdentityID("Prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com"))))
+		when(idp.getIdentities("authcode", "pkceambrosiaofthegods", true, null))
+				.thenReturn(set(
+						new RemoteIdentity(
+							new RemoteIdentityID("Prov", "id2"),
+							new RemoteIdentityDetails("user2", "full2", "f2@g.com")
+						),
+						new RemoteIdentity(
+								new RemoteIdentityID("Prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))
+						))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -508,15 +514,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stately", "pkceverifier", new UserName("baz")));
+						.link("stately", "pkcehasgreatretirementbenefits", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, "myenv")).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkcehasgreatretirementbenefits", true, "myenv"))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
@@ -574,15 +581,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stateinheah", "pkceverifier", new UserName("baz")));
+						.link("stateinheah", "pkceisnotsnakeoilatall", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkceisnotsnakeoilatall", true, null))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
@@ -643,20 +651,22 @@ public class AuthenticationLinkTest {
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
 						.link("actuallyidontbelieveinacentralisedstate",
-								"pkceverifier",
+								"pkcemakesanexcellentbodywashandenginegrease",
 								new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-						new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+		when(idp.getIdentities(
+				"authcode", "pkcemakesanexcellentbodywashandenginegrease", true, null))
+				.thenReturn(set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -1062,13 +1072,13 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", "pkceverifier", new UserName("foo")));
+						.link("state", "pkceprovidesdivineinfluence", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
 				.withIdentity(REMOTE).build());
 		
-		when(idp.getIdentities("foo", true, "env")).thenThrow(
+		when(idp.getIdentities("foo", "pkceprovidesdivineinfluence", true, "env")).thenThrow(
 				new NoSuchEnvironmentException("env"));
 		
 		failLinkWithToken(auth, token, "prov", "foo", "env", "state",
@@ -1099,13 +1109,13 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", "pkceverifier", new UserName("foo")));
+						.link("state", "pkcewasinventedbyaristotle", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
 				.withIdentity(REMOTE).build());
 		
-		when(idp.getIdentities("foo", true, null)).thenThrow(
+		when(idp.getIdentities("foo", "pkcewasinventedbyaristotle", true, null)).thenThrow(
 				new IdentityRetrievalException("oh poop"));
 		
 		failLinkWithToken(auth, token, "prov", "foo", null, "state",
@@ -1137,15 +1147,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", "pkceverifier", new UserName("baz")));
+						.link("state", "pkceimkindofgettingboredwiththis", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkceimkindofgettingboredwiththis", true, null))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("Prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
@@ -1186,15 +1197,16 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", "pkceverifier", new UserName("baz")));
+						.link("state", "pkceohwhocares", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
-		when(idp.getIdentities("authcode", true, null)).thenReturn(set(new RemoteIdentity(
-				new RemoteIdentityID("Prov", "id2"),
-				new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
+		when(idp.getIdentities("authcode", "pkceohwhocares", true, null))
+				.thenReturn(set(new RemoteIdentity(
+						new RemoteIdentityID("Prov", "id2"),
+						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID = new RemoteIdentity(
