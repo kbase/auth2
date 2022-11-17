@@ -421,9 +421,9 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkceohgodohgod", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, env);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkceohgodohgod", env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -460,9 +460,9 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkcethisisinhumane", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, null);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkcethisisinhumane", null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTargetEmptyError(authcode, state);
 		final Response res = wt.request()
@@ -511,9 +511,9 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkcepkcepkcepkce", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, env);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkcepkcepkcepkce", env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -551,9 +551,9 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkceoohhooohhhmm", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, null);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkceoohhooohhhmm", null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -580,10 +580,11 @@ public class LoginTest {
 
 	private void loginCompleteImmediateLoginStoreUser(
 			final String authcode,
+			final String pkce,
 			final String environment)
 			throws Exception {
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, environment);
+				authcode, pkce, environment);
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
@@ -675,9 +676,10 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkceopraisethedarkgodsbelow", "foobartoken");
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
+				authcode, "pkceopraisethedarkgodsbelow", env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -733,9 +735,10 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkceisinmybrainicanseeall", "foobartoken");
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
+				authcode, "pkceisinmybrainicanseeall", env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -798,9 +801,10 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkcuwgahngalftaghn", "foobartoken");
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, env);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
+				authcode, "pkcuwgahngalftaghn", env);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -846,9 +850,10 @@ public class LoginTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		saveTemporarySessionData(state, "foobartoken");
+		saveTemporarySessionData(state, "pkceifeelmoistandsprightly", "foobartoken");
 		
-		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(authcode, null);
+		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
+				authcode, "pkceifeelmoistandsprightly", null);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -918,6 +923,7 @@ public class LoginTest {
 
 	private RemoteIdentity loginCompleteSetUpProviderMock(
 			final String authcode,
+			final String pkce,
 			final String environment)
 			throws Exception {
 		
@@ -925,15 +931,16 @@ public class LoginTest {
 		final RemoteIdentity remoteIdentity = new RemoteIdentity(
 				new RemoteIdentityID("prov1", "prov1id"),
 				new RemoteIdentityDetails("user", "full", "email@email.com"));
-		when(provmock.getIdentities(authcode, false, environment)).thenReturn(set(remoteIdentity));
+		when(provmock.getIdentities(authcode, pkce, false, environment))
+				.thenReturn(set(remoteIdentity));
 		return remoteIdentity;
 	}
 	
-	public void saveTemporarySessionData(final String state, final String token)
+	public void saveTemporarySessionData(final String state, final String pkce, final String token)
 			throws AuthStorageException {
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.login(state, "pkcechallenge"),
+				.login(state, pkce),
 				IncomingToken.hash(token));
 	}
 	
@@ -980,7 +987,7 @@ public class LoginTest {
 	public void loginCompleteFailStateMismatch() throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
-		saveTemporarySessionData("important state", "foobartoken");
+		saveTemporarySessionData("important state", "pkce", "foobartoken");
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget("foobarcode", "foobarstate");
 		final Builder request = wt.request()
@@ -997,7 +1004,7 @@ public class LoginTest {
 	public void loginCompleteFailNoProviderState() throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		enableProvider(host, COOKIE_NAME, admintoken, "prov1");
-		saveTemporarySessionData("important state", "foobartoken");
+		saveTemporarySessionData("important state", "pkce", "foobartoken");
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/complete/prov1")

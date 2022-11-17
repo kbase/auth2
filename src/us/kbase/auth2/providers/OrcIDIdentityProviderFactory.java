@@ -136,9 +136,12 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
+			// note that OrcID does not currently implement PKCE so we ignore the code
+			// verifier: https://github.com/ORCID/ORCID-Source/issues/5977
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}

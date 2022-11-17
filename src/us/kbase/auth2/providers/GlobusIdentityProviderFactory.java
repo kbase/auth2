@@ -109,7 +109,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws NoSuchEnvironmentException {
-			// TODO PKCE include code challenge here & accept code verifier below
+			// TODO PKCE include code challenge here
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
@@ -152,6 +152,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
@@ -161,6 +162,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}
+			// TODO PKCE include code verifier here
 			final String accessToken = getAccessToken(authcode, link, environment);
 			final Idents idents = getPrimaryIdentity(accessToken, ignoreSecondaries);
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(

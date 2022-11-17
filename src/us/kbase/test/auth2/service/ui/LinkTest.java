@@ -488,14 +488,15 @@ public class LinkTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
-		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1, REMOTE2));
-		
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, "pkceverifier", new UserName("u1")),
+				.link(state, "pkceisgoodfordiptheria", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
+
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, "pkceisgoodfordiptheria", true, env))
+				.thenReturn(set(REMOTE1, REMOTE2));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -536,15 +537,16 @@ public class LinkTest {
 		
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
-		
-		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
-		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1, REMOTE3));
-		
+
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, "pkceverifier", new UserName("u1")),
+				.link(state, "pkcebludgeonsjoyintoyoursoul", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
+		
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, "pkcebludgeonsjoyintoyoursoul", true, env))
+				.thenReturn(set(REMOTE1, REMOTE3));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -584,14 +586,15 @@ public class LinkTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
-		when(provmock.getIdentities(authcode, true, env)).thenReturn(set(REMOTE1));
-		
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, "pkceverifier", nt.getStoredToken().getUserName()),
+				.link(state, "pkcewhateverfeckit", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
+
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, "pkcewhateverfeckit", true, env))
+				.thenReturn(set(REMOTE1));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -655,15 +658,15 @@ public class LinkTest {
 		final String authcode = "foobarcode";
 		final String state = "foobarstate";
 		
-		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
-		when(provmock.getIdentities(authcode, true, env)).thenReturn(
-				set(REMOTE1, REMOTE2, REMOTE3));
-		
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, "pkceverifier", nt.getStoredToken().getUserName()),
+				.link(state, "pkcewowbaggerismyhomie", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
+
+		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
+		when(provmock.getIdentities(authcode, "pkcewowbaggerismyhomie", true, env)).thenReturn(
+				set(REMOTE1, REMOTE2, REMOTE3));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()

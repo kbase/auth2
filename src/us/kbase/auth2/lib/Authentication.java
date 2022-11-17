@@ -1649,8 +1649,6 @@ public class Authentication {
 		// Since it's all in the internal logic YAGNI for now
 		final String pkceVerifier = generatePKCECodeVerifier();
 		final String pkceChallenge = generatePKCECodeChallenge(pkceVerifier);
-		// TODO PKCE pass the pkce code, pulled from the DB, to the provider in the continue
-		// link and login methods
 		final URI target = getIdentityProvider(provider).getLoginURI(
 				state, pkceChallenge, false, environment);
 		final TemporarySessionData data = TemporarySessionData.create(
@@ -1752,7 +1750,8 @@ public class Authentication {
 				Optional.empty(), Operation.LOGINSTART, token);
 		checkState(tids, oauth2State);
 		storage.deleteTemporarySessionData(token.getHashedToken());
-		final Set<RemoteIdentity> ris = idp.getIdentities(authcode, false, environment);
+		final Set<RemoteIdentity> ris = idp.getIdentities(
+				authcode, tids.getPKCECodeVerifier().get(), false, environment);
 		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken loginToken;
@@ -2486,7 +2485,8 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = idp.getIdentities(authcode, true, environment);
+		final Set<RemoteIdentity> ids = idp.getIdentities(
+				authcode, tids.getPKCECodeVerifier().get(), true, environment);
 		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
 		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in

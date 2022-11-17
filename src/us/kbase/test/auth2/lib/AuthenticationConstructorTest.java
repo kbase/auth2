@@ -151,7 +151,7 @@ public class AuthenticationConstructorTest {
 		@Override
 		public URI getLoginURI(
 				final String state,
-				final String pckeChallenge,
+				final String pkceChallenge,
 				final boolean link,
 				final String environment) {
 			return null;
@@ -160,6 +160,7 @@ public class AuthenticationConstructorTest {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException {

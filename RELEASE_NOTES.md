@@ -10,6 +10,7 @@ Authentication Service MKII release notes
   collection to avoid server errors for in flight login or link flows.
 * Added PKCE to the login and link OAuth2 flows. See https://www.oauth.com/oauth2-servers/pkce/
   for details.
+* The OAuth2 state value is now stored in the database rather than in a cookie.
 
 0.4.3
 -----
