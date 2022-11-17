@@ -1645,10 +1645,17 @@ public class Authentication {
 				AuthStorageException, MissingParameterException {
 		checkLifeTimeSec(lifetimeSec);
 		final String state = randGen.getToken();
-		final URI target = getIdentityProvider(provider).getLoginURI(state, false, environment);
+		// May want to make classes for the verifier & challenge to prevent them being swapped.
+		// Since it's all in the internal logic YAGNI for now
+		final String pkceVerifier = generatePKCECodeVerifier();
+		final String pkceChallenge = generatePKCECodeChallenge(pkceVerifier);
+		// TODO PKCE pass the pkce code, pulled from the DB, to the provider in the continue
+		// link and login methods
+		final URI target = getIdentityProvider(provider).getLoginURI(
+				state, pkceChallenge, false, environment);
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
-				.login(state);
+				.login(state, pkceVerifier);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary login token {}", tt.getId());
 		return OAuth2StartData.build(target, tt);
@@ -1658,6 +1665,23 @@ public class Authentication {
 		if (lifetimeSec < 60) {
 			throw new IllegalArgumentException("lifetimeSec must be at least 60");
 		}
+	}
+	
+	private String generatePKCECodeVerifier() {
+		// https://www.oauth.com/oauth2-servers/pkce/authorization-request/
+		// size of 6 = 30 bytes = 240 bits = 48 chars which is > 43 required.
+		// 240 bits of info seems like plenty for a random key
+		return randGen.getToken(6); 
+	}
+	
+	private String generatePKCECodeChallenge(final String codeVerifier) {
+		// https://www.oauth.com/oauth2-servers/pkce/authorization-request/
+		// SHA-256 hash, then Base64 URL encoded
+		final String hashed = IncomingToken.hash(codeVerifier, true);
+		// = is only used for padding, so safe to do a global replace
+		// performance wise, right strip vs. global replace would be faster, but trivial
+		// speed increase vs the oauth2 flow, db access, etc. so YAGNI
+		return hashed.replace("=", "");
 	}
 	
 	/** Continue the local portion of an OAuth2 login flow after redirection from a 3rd party
@@ -2350,8 +2374,11 @@ public class Authentication {
 		nonNull(token, "token");
 		checkLifeTimeSec(lifetimeSec);
 		final String state = randGen.getToken();
+		final String pkceVerifier = generatePKCECodeVerifier();
+		final String pkceChallenge = generatePKCECodeChallenge(pkceVerifier);
 		// check provider & env before pulling user from DB
-		final URI target = getIdentityProvider(provider).getLoginURI(state, true, environment);
+		final URI target = getIdentityProvider(provider).getLoginURI(
+				state, pkceChallenge, true, environment);
 		final AuthUser user = getUser(token, new OpReqs("start link").types(TokenType.LOGIN));
 		if (user.isLocal()) {
 			// the ui shouldn't allow local users to link accounts, so ok to throw this
@@ -2360,7 +2387,7 @@ public class Authentication {
 		}
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), lifetimeSec * 1000L)
-				.link(state, user.getUserName());
+				.link(state, pkceVerifier, user.getUserName());
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Created temporary link token {} associated with user {}",
 				tt.getId(), user.getUserName().getName());

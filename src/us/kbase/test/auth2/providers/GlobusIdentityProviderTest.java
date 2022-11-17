@@ -122,23 +122,23 @@ public class GlobusIdentityProviderTest {
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURI("foo2", false, null),
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkce", false, null),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURI("foo3", true, null),
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkce", true, null),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
 						"&response_type=code&client_id=foo")));
 		
-		assertThat("incorrect login url", gip.getLoginURI("foo2", false, "myenv"),
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkce", false, "myenv"),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURI("foo3", true, "myenv"),
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkce", true, "myenv"),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +
@@ -152,23 +152,23 @@ public class GlobusIdentityProviderTest {
 		final IdentityProvider gip = new GlobusIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURI("foo2", false, null),
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkce", false, null),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURI("foo3", true, null),
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkce", true, null),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
 						"&response_type=code&client_id=foo")));
 		
-		assertThat("incorrect login url", gip.getLoginURI("foo2", false, "myenv"),
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkce", false, "myenv"),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
 						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURI("foo3", true, "myenv"),
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkce", true, "myenv"),
 				is(new URI("https://login.com/v2/oauth2/authorize?" +
 						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
 						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +

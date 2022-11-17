@@ -25,6 +25,8 @@ public interface IdentityProvider {
 	/** Get the URI to which a user should be redirected to log in to the identity provider.
 	 * @param state the OAuth2 state variable, generally random data large enough to be
 	 * unguessable. The state will be URL encoded.
+	 * @param pkceCodeChallenge the OAuth2 PKCE code challenge.
+	 * See https://www.oauth.com/oauth2-servers/pkce/authorization-request/
 	 * @param link whether the user should be redirected to a login or link URL after completion of
 	 * login at the identity provider.
 	 * @param environment the name of the environment to use when configuring the redirect
@@ -32,7 +34,7 @@ public interface IdentityProvider {
 	 * @return a login URI for the identity provider.
 	 * @throws NoSuchEnvironmentException if there is no such environment configured.
 	 */
-	URI getLoginURI(String state, boolean link, String environment)
+	URI getLoginURI(String state, String pkceCodeChallenge, boolean link, String environment)
 			throws NoSuchEnvironmentException;
 	
 	/** Get a set of identities from an identity provider given an identity provider authcode.

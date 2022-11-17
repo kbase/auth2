@@ -136,9 +136,12 @@ public class AuthenticationLinkTest {
 		
 		when(rand.getToken())
 				.thenReturn("statetokenhere").thenReturn("sometoken").thenReturn(null);
-		when(ip.getLoginURI("statetokenhere", true, null))
+		when(rand.getToken(6)).thenReturn("pkcecodeherexy").thenReturn(null);
+		// picked code so that challenge would have url encoded chars in output, e.g. - and _
+		final String challenge = "93eNWC3_ZBRlzoDXl-6pF7DlgtyJ4ug_SgjhBvSY8Jk";
+		when(ip.getLoginURI("statetokenhere", challenge, true, null))
 				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
-		when(ip.getLoginURI("statetokenhere", true, "env2"))
+		when(ip.getLoginURI("statetokenhere", challenge, true, "env2"))
 				.thenReturn(new URI("https://env2.com")).thenReturn(null);
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID);
@@ -154,7 +157,7 @@ public class AuthenticationLinkTest {
 				
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 					tokenID, Instant.ofEpochMilli(20000), 60 * 1000)
-				.link("statetokenhere", new UserName("baz")),
+				.link("statetokenhere", "pkcecodeherexy", new UserName("baz")),
 				IncomingToken.hash("sometoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
@@ -168,7 +171,9 @@ public class AuthenticationLinkTest {
 			
 			@Override
 			public TestMocks getTestMocks() throws Exception {
-				return initTestMocks(false, true);
+				final TestMocks mocks = initTestMocks(false, true);
+				when(mocks.randGenMock.getToken(6)).thenReturn("pkcecode");
+				return mocks;
 			}
 			
 			@Override
@@ -190,7 +195,10 @@ public class AuthenticationLinkTest {
 	
 	@Test
 	public void linkStartFailBadInput() throws Exception {
-		final Authentication auth = initTestMocks().auth;
+		final TestMocks mocks = initTestMocks();
+		final Authentication auth = mocks.auth;
+		
+		when(mocks.randGenMock.getToken(6)).thenReturn("somepkcetoken");
 		
 		final IncomingToken t = new IncomingToken("foo");
 		
@@ -233,21 +241,25 @@ public class AuthenticationLinkTest {
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
+
+		when(mocks.randGenMock.getToken(6)).thenReturn("somepkcetoken");
 		
 		failLinkStart(auth, token, 120, provider, null, expected);
 	}
 	
 	@Test
 	public void linkStartFailLocalUser() throws Exception {
-		final TestMocks testauth = initTestMocks(false, true);
-		final AuthStorage storage = testauth.storageMock;
-		final Authentication auth = testauth.auth;
+		final TestMocks mocks = initTestMocks(false, true);
+		final AuthStorage storage = mocks.storageMock;
+		final Authentication auth = mocks.auth;
 		
 		final IncomingToken userToken = new IncomingToken("user");
 		
-		when(testauth.randGenMock.getToken())
+		when(mocks.randGenMock.getToken())
 				.thenReturn("statetokenhere").thenReturn(null);
-		when(testauth.prov1.getLoginURI("statetokenhere", true, null))
+		when(mocks.randGenMock.getToken(6)).thenReturn("pkcecodeorsumthin");
+		when(mocks.prov1.getLoginURI(
+				"statetokenhere", "uiCa5J5KnW2_kGkUvfqufCLUax9FddpOG1dRRfB88Zg", true, null))
 				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
 		when(storage.getToken(userToken.getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), new UserName("baz"))
@@ -301,7 +313,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("mystate", new UserName("baz")));
+						.link("mystate", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -360,7 +372,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("somestate", new UserName("baz")));
+						.link("somestate", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.now())
@@ -417,7 +429,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stateish", new UserName("baz")));
+						.link("stateish", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -496,7 +508,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stately", new UserName("baz")));
+						.link("stately", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -562,7 +574,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("stateinheah", new UserName("baz")));
+						.link("stateinheah", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -630,7 +642,9 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("actuallyidontbelieveinacentralisedstate", new UserName("baz")));
+						.link("actuallyidontbelieveinacentralisedstate",
+								"pkceverifier",
+								new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -712,7 +726,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("baz")));
+						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -912,7 +926,7 @@ public class AuthenticationLinkTest {
 			
 			when(mocks.storageMock.getTemporarySessionData(token.getHashedToken())).thenReturn(
 					TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-					.link("other state", new UserName("whee")))
+					.link("other state", "pkceverifier", new UserName("whee")))
 					.thenReturn(null);
 			
 			failLinkWithToken(
@@ -946,7 +960,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("baz")));
+						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenThrow(new NoSuchUserException("baz"));
 		
@@ -978,7 +992,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("baz")));
+						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("f"), Instant.now())
@@ -1015,7 +1029,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("foo")));
+						.link("state", "pkceverifier", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
@@ -1048,7 +1062,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("foo")));
+						.link("state", "pkceverifier", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
@@ -1085,7 +1099,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("foo")));
+						.link("state", "pkceverifier", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foo"), new DisplayName("f"), Instant.now())
@@ -1123,7 +1137,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("baz")));
+						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
@@ -1172,7 +1186,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-						.link("state", new UserName("baz")));
+						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
 				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
