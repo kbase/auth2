@@ -13,7 +13,7 @@ public class PKCEChallengeMatcher implements ArgumentMatcher<String> {
 	@Override
 	public boolean matches(final String pkceChallenge) {
 		assertThat("invalid PKCE challenge value",
-				pkceChallenge, RegexMatcher.matches("[a-zA-Z0-9-_]{43}"));
+				pkceChallenge, RegexMatcher.matches("^[a-zA-Z0-9-_]{43}$"));
 		capturedChallenge = pkceChallenge;
 		return true;
 	}
