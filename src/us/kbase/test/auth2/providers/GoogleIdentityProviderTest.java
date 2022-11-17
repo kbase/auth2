@@ -121,23 +121,23 @@ public class GoogleIdentityProviderTest {
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURI("foo3", false, null),
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkce", false, null),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURI("foo4", true, null),
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkce", true, null),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fglinkredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 		
-		assertThat("incorrect login url", gip.getLoginURI("foo3", false, "myenv"),
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURI("foo4", true, "myenv"),
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
@@ -150,23 +150,23 @@ public class GoogleIdentityProviderTest {
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURI("foo5", false, null),
+		assertThat("incorrect login url", gip.getLoginURI("foo5", "pkce", false, null),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fgloginredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURI("foo6", true, null),
+		assertThat("incorrect link url", gip.getLoginURI("foo6", "pkce", true, null),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Fglinkredir.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
 		
-		assertThat("incorrect login url", gip.getLoginURI("foo3", false, "myenv"),
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
 						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURI("foo4", true, "myenv"),
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://glogin.com/o/oauth2/v2/auth?" +
 						"scope=profile+email" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +

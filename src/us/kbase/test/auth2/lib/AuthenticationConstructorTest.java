@@ -149,7 +149,11 @@ public class AuthenticationConstructorTest {
 		}
 
 		@Override
-		public URI getLoginURI(final String state, final boolean link, final String environment) {
+		public URI getLoginURI(
+				final String state,
+				final String pckeChallenge,
+				final boolean link,
+				final String environment) {
 			return null;
 		}
 

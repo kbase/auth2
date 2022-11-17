@@ -117,23 +117,23 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = gc.configure(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURI("foo3", false, null),
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURI("foo4", true, null),
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURI("foo3", false, "myenv"),
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURI("foo4", true, "myenv"),
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
@@ -146,23 +146,23 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURI("foo5", false, null),
+		assertThat("incorrect login url", oip.getLoginURI("foo5", "pkce", false, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURI("foo6", true, null),
+		assertThat("incorrect link url", oip.getLoginURI("foo6", "pkce", true, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURI("foo3", false, "myenv"),
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURI("foo4", true, "myenv"),
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +

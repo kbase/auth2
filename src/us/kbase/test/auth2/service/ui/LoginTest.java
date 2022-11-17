@@ -6,7 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
-
+import static us.kbase.test.auth2.TestCommon.calculatePKCEChallenge;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.service.ServiceTestUtils.enableLogin;
 import static us.kbase.test.auth2.service.ServiceTestUtils.enableProvider;
@@ -280,7 +280,9 @@ public class LoginTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURI(argThat(stateMatcher), eq(false), eq(expectedEnv)))
+		final PKCEChallengeMatcher pkceMatcher = new PKCEChallengeMatcher();
+		when(provmock.getLoginURI(
+				argThat(stateMatcher), argThat(pkceMatcher), eq(false), eq(expectedEnv)))
 				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/login/start");
@@ -306,6 +308,10 @@ public class LoginTest {
 		assertThat("incorrect temp op", ti.getOperation(), is(Operation.LOGINSTART));
 		assertThat("incorrect state",
 				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
+		assertThat("incorrect pkce challenge",
+				calculatePKCEChallenge(ti.getPKCECodeVerifier().get()),
+				is(pkceMatcher.capturedChallenge)
+		);
 		
 		final NewCookie session = res.getCookies().get("issessiontoken");
 		assertThat("incorrect session cookie", session, is(expectedsession));
@@ -927,7 +933,7 @@ public class LoginTest {
 			throws AuthStorageException {
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.login(state),
+				.login(state, "pkcechallenge"),
 				IncomingToken.hash(token));
 	}
 	

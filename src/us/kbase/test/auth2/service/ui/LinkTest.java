@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.calculatePKCEChallenge;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.service.ServiceTestUtils.enableProvider;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
@@ -293,7 +294,9 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq(expectedEnvVal)))
+		final PKCEChallengeMatcher pkceMatcher = new PKCEChallengeMatcher();
+		when(provmock.getLoginURI(
+				argThat(stateMatcher), argThat(pkceMatcher), eq(true), eq(expectedEnvVal)))
 				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
@@ -320,6 +323,10 @@ public class LinkTest {
 		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
 		assertThat("incorrect temp state",
 				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
+		assertThat("incorrect pkce challenge",
+				calculatePKCEChallenge(ti.getPKCECodeVerifier().get()),
+				is(pkceMatcher.capturedChallenge)
+		);
 	}
 	
 	@Test
@@ -338,7 +345,9 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq("myenv")))
+		final PKCEChallengeMatcher pkceMatcher = new PKCEChallengeMatcher();
+		when(provmock.getLoginURI(
+				argThat(stateMatcher), argThat(pkceMatcher), eq(true), eq("myenv")))
 				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
@@ -360,6 +369,10 @@ public class LinkTest {
 		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
 		assertThat("incorrect temp state",
 				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
+		assertThat("incorrect pkce challenge",
+				calculatePKCEChallenge(ti.getPKCECodeVerifier().get()),
+				is(pkceMatcher.capturedChallenge)
+		);
 	}
 	
 	//TODO CODE try and merge these 3 link start tests a bit rather than duping code
@@ -383,7 +396,9 @@ public class LinkTest {
 		final String url = "https://foo.com/someurlorother";
 		
 		final StateMatcher stateMatcher = new StateMatcher();
-		when(provmock.getLoginURI(argThat(stateMatcher), eq(true), eq(null)))
+		final PKCEChallengeMatcher pkceMatcher = new PKCEChallengeMatcher();
+		when(provmock.getLoginURI(
+				argThat(stateMatcher), argThat(pkceMatcher), eq(true), eq(null)))
 				.thenReturn(new URI(url));
 		
 		final WebTarget wt = CLI.target(host + "/link/start");
@@ -406,6 +421,10 @@ public class LinkTest {
 		assertThat("incorrect temp user", ti.getUser(), is(Optional.of(new UserName("u1"))));
 		assertThat("incorrect temp state",
 				ti.getOAuth2State(), is(Optional.of(stateMatcher.capturedState)));
+		assertThat("incorrect pkce challenge",
+				calculatePKCEChallenge(ti.getPKCECodeVerifier().get()),
+				is(pkceMatcher.capturedChallenge)
+		);
 	}
 	
 	@Test
@@ -475,7 +494,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, new UserName("u1")),
+				.link(state, "pkceverifier", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -524,7 +543,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); //uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, new UserName("u1")),
+				.link(state, "pkceverifier", new UserName("u1")),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -571,7 +590,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken();
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, nt.getStoredToken().getUserName()),
+				.link(state, "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -643,7 +662,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(state, nt.getStoredToken().getUserName()),
+				.link(state, "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
@@ -701,7 +720,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("mynicestate", nt.getStoredToken().getUserName()),
+				.link("mynicestate", "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget("foobarcode", "nonmatchingstate");
@@ -722,7 +741,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("mynicestate", nt.getStoredToken().getUserName()),
+				.link("mynicestate", "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -770,7 +789,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link("state", nt.getStoredToken().getUserName()),
+				.link("state", "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -1119,7 +1138,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.link("state", nt.getStoredToken().getUserName()),
+				.link("state", "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)
@@ -1142,7 +1161,7 @@ public class LinkTest {
 		final NewToken nt = setUpLinkUserAndToken(); // uses REMOTE1
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.link("state", nt.getStoredToken().getUserName()),
+				.link("state", "pkceverifier", nt.getStoredToken().getUserName()),
 				IncomingToken.hash("foobartoken"));
 		
 		final URI target = UriBuilder.fromUri(host)

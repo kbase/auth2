@@ -151,6 +151,8 @@ public class Fields {
 	public static final String TEMP_SESSION_CREATION = "create";
 	/** The OAuth2 request state associated with the temporary session. */
 	public static final String TEMP_SESSION_OAUTH2STATE = "oa2state";
+	/** The OAuth2 PKCE code verifier associated with the temporary session. */
+	public static final String TEMP_SESSION_PKCE_CODE_VERIFIER = "pkcecode";
 	/** The user associated with the temporary token. */
 	public static final String TEMP_SESSION_USER = "user";
 	/** The remote identities associated with the temporary token. */

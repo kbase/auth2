@@ -135,9 +135,12 @@ public class AuthenticationLoginTest {
 		
 		when(rand.getToken())
 				.thenReturn("statetokenhere").thenReturn("sometoken").thenReturn(null);
-		when(ip.getLoginURI("statetokenhere", false, null))
+		when(rand.getToken(6)).thenReturn("pkceverifiercode").thenReturn(null);
+		// picked code so challenge has url encoded chars, e.g. _ and -
+		final String challenge = "_Sf7XxCzzOwvs-af1KMtt6uldTIMykdv6EaLYU1vYb4";
+		when(ip.getLoginURI("statetokenhere", challenge, false, null))
 				.thenReturn(new URI("https://defaultenv.com")).thenReturn(null);
-		when(ip.getLoginURI("statetokenhere", false, "env2"))
+		when(ip.getLoginURI("statetokenhere", challenge, false, "env2"))
 				.thenReturn(new URI("https://env2.com")).thenReturn(null);
 		final UUID tokenID = UUID.randomUUID();
 		when(rand.randomUUID()).thenReturn(tokenID);
@@ -152,7 +155,8 @@ public class AuthenticationLoginTest {
 				));
 				
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
-				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).login("statetokenhere"),
+				tokenID, Instant.ofEpochMilli(20000), 60 * 1000).login(
+						"statetokenhere", "pkceverifiercode"),
 				IncomingToken.hash("sometoken"));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
@@ -161,7 +165,10 @@ public class AuthenticationLoginTest {
 	
 	@Test
 	public void loginStartFailBadInput() throws Exception {
-		final Authentication auth = initTestMocks().auth;
+		final TestMocks mocks = initTestMocks();
+		final Authentication auth = mocks.auth;
+		
+		when(mocks.randGenMock.getToken(6)).thenReturn("somepkcecraps");
 		
 		failloginStart(auth, 59, "id", "env",
 				new IllegalArgumentException("lifetimeSec must be at least 60"));
@@ -198,6 +205,8 @@ public class AuthenticationLoginTest {
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
 						new AuthConfig(false, providers, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
+		
+		when(mocks.randGenMock.getToken(6)).thenReturn("somepkcecraps");
 		
 		failloginStart(auth, 120, provider, null, expected);
 	}
@@ -253,7 +262,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("suporstate"));
+				.login("suporstate", "pkceverifier"));
 
 		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
@@ -354,7 +363,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("suporstate2"));
+				.login("suporstate2", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
@@ -428,7 +437,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("veryneatstate"));
+				.login("veryneatstate", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, "env2")).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
@@ -493,7 +502,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("somestate"));
+				.login("somestate", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, null)).thenReturn(set(new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
@@ -571,7 +580,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("suporstateystate"));
+				.login("suporstateystate", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, null)).thenReturn(set(
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -665,7 +674,7 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("state.thatisall"));
+				.login("state.thatisall", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, null)).thenReturn(set(
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -850,7 +859,7 @@ public class AuthenticationLoginTest {
 			
 			when(mocks.storageMock.getTemporarySessionData(token.getHashedToken())).thenReturn(
 					TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-					.login("other state"))
+					.login("other state", "pkceverifier"))
 					.thenReturn(null);
 			
 			failLoginContinue(
@@ -884,7 +893,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("state"));
+				.login("state", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, null)).thenThrow(
 				new IdentityRetrievalException("foo"));
@@ -917,7 +926,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("state"));
+				.login("state", "pkceverifier"));
 		
 		when(idp.getIdentities("foobar", false, "env1")).thenThrow(
 				new NoSuchEnvironmentException("env1"));
@@ -1334,7 +1343,7 @@ public class AuthenticationLoginTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, SMALL, 10000)
-						.link("state", new UserName("foo")))
+						.link("state", "pkceverifier", new UserName("foo")))
 				.thenReturn(null);
 
 		failGetLoginState(auth, token, new InvalidTokenException(
@@ -1812,7 +1821,7 @@ public class AuthenticationLoginTest {
 		final UUID tokenID = UUID.randomUUID();
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tokenID, SMALL, 10000)
-						.link("state", new UserName("foo")))
+						.link("state", "pkceverifier", new UserName("foo")))
 				.thenReturn(null);
 		
 		final String id = "bar";
@@ -2519,7 +2528,7 @@ public class AuthenticationLoginTest {
 		final UUID tokenID = UUID.randomUUID();
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tokenID, SMALL, 10000)
-						.link("state", new UserName("whee")))
+						.link("state", "pkceverifier", new UserName("whee")))
 				.thenReturn(null);
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l, new InvalidTokenException(

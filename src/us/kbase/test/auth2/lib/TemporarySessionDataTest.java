@@ -44,13 +44,14 @@ public class TemporarySessionDataTest {
 	public void constructLoginStart() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final TemporarySessionData ti = TemporarySessionData.create(id, inst(10000), inst(20000))
-				.login("stategoeshere");
+				.login("stategoeshere", "pkcegoeshere");
 		
 		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINSTART));
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(inst(10000)));
 		assertThat("incorrect expires", ti.getExpires(), is(inst(20000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(opt("stategoeshere")));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(opt("pkcegoeshere")));
 		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
@@ -70,6 +71,7 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(100000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE2, REMOTE1))));
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
@@ -92,6 +94,7 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
 		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
 		assertThat("incorrect error", ti.getError(), is(Optional.of("foo")));
@@ -104,13 +107,14 @@ public class TemporarySessionDataTest {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData ti = TemporarySessionData.create(
-				id, now, now.plusMillis(10000)).link("somestate", new UserName("bar"));
+				id, now, now.plusMillis(10000)).link("somestate", "pkce", new UserName("bar"));
 		
 		assertThat("incorrect op", ti.getOperation(), is(Operation.LINKSTART));
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(opt("somestate")));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(opt("pkce")));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
@@ -132,6 +136,7 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect created", ti.getCreated(), is(now));
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
@@ -153,6 +158,7 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect created", ti.getCreated(), is(create));
 		assertThat("incorrect expires", ti.getExpires(), is(Instant.MAX));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
@@ -215,15 +221,22 @@ public class TemporarySessionDataTest {
 	@Test
 	public void constructLoginStartFailBadInput() throws Exception {
 		failConstructLoginStart(
-				null, new IllegalArgumentException("Missing argument: oauth2State"));
+				null, "p", new IllegalArgumentException("Missing argument: oauth2State"));
 		failConstructLoginStart(
-				" \t   ", new IllegalArgumentException("Missing argument: oauth2State"));
+				" \t   ", "p", new IllegalArgumentException("Missing argument: oauth2State"));
+		failConstructLoginStart(
+				"s", null, new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
+		failConstructLoginStart("s", "  \n   \t ",
+				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
 	}
 	
-	private void failConstructLoginStart(final String state, final Exception expected) {
+	private void failConstructLoginStart(
+			final String state,
+			final String pkce,
+			final Exception expected) {
 		try {
 			TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-					.login(state);
+					.login(state, pkce);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
@@ -251,20 +264,25 @@ public class TemporarySessionDataTest {
 	@Test
 	public void constructLinkStartFailBadInput() throws Exception {
 		final UserName u = new UserName("foo");
-		failConstructLinkStart(null, "state", new NullPointerException("userName"));
 		failConstructLinkStart(
-				u, null, new IllegalArgumentException("Missing argument: oauth2State"));
-		failConstructLinkStart(
-				u, " \t   ", new IllegalArgumentException("Missing argument: oauth2State"));
+				null, "pcke", u, new IllegalArgumentException("Missing argument: oauth2State"));
+		failConstructLinkStart(" \t   ", "pkce", u,
+				new IllegalArgumentException("Missing argument: oauth2State"));
+		failConstructLinkStart("state", null, u,
+				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
+		failConstructLinkStart("state", " ", u,
+				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
+		failConstructLinkStart("state", "pkce", null, new NullPointerException("userName"));
 	}
 	
 	private void failConstructLinkStart(
-			final UserName name,
 			final String state,
+			final String pkce,
+			final UserName name,
 			final Exception e) {
 		try {
 			TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-					.link(state, name);
+					.link(state, pkce, name);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

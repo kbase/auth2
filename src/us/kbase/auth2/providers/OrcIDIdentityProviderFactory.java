@@ -97,8 +97,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 
 		// state will be url encoded
 		@Override
-		public URI getLoginURI(final String state, final boolean link, final String environment)
+		public URI getLoginURI(
+				final String state,
+				final String pkceCodeChallenge,
+				final boolean link,
+				final String environment)
 				throws NoSuchEnvironmentException {
+			// note that OrcID does not currently implement PKCE so we ignore the code
+			// challenge: https://github.com/ORCID/ORCID-Source/issues/5977
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
