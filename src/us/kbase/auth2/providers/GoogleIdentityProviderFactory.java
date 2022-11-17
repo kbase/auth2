@@ -1,6 +1,7 @@
 package us.kbase.auth2.providers;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.io.IOException;
 import java.net.URI;
@@ -108,11 +109,12 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws NoSuchEnvironmentException {
-			// TODO PKCE include code challenge here
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
+					.queryParam("code_challenge", pkceCodeChallenge)
+					.queryParam("code_challenge_method", "S256")
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
@@ -145,22 +147,22 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
-			if (authcode == null || authcode.trim().isEmpty()) {
-				throw new IllegalArgumentException("authcode cannot be null or empty");
-			}
-			// TODO PKCE include code verifier
-			final RemoteIdentity ri = getIdentity(authcode, link, environment);
+			checkStringNoCheckedException(authcode, "authcode");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
+			final RemoteIdentity ri = getIdentity(authcode, pkceCodeVerifier, link, environment);
 			return new HashSet<>(Arrays.asList(ri));
 		}
 	
 		private RemoteIdentity getIdentity(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			final MultivaluedMap<String, String> formParameters =
 					new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
+			formParameters.add("code_verifier", pkceCodeVerifier);
 			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			formParameters.add("client_id", cfg.getClientID());
