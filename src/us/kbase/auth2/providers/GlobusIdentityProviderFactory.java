@@ -1,5 +1,6 @@
 package us.kbase.auth2.providers;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.io.IOException;
@@ -109,11 +110,12 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws NoSuchEnvironmentException {
-			// TODO PKCE include code challenge here
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
+					.queryParam("code_challenge", pkceCodeChallenge)
+					.queryParam("code_challenge_method", "S256")
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
@@ -159,11 +161,10 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			/* Note authcode only works once. After that globus returns
 			 * {error=invalid_grant}
 			 */
-			if (authcode == null || authcode.trim().isEmpty()) {
-				throw new IllegalArgumentException("authcode cannot be null or empty");
-			}
-			// TODO PKCE include code verifier here
-			final String accessToken = getAccessToken(authcode, link, environment);
+			checkStringNoCheckedException(authcode, "authcode");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
+			final String accessToken = getAccessToken(
+					authcode, pkceCodeVerifier, link, environment);
 			final Idents idents = getPrimaryIdentity(accessToken, ignoreSecondaries);
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 					accessToken, idents.secondaryIDs);
@@ -288,12 +289,14 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 	
 		private String getAccessToken(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			
 			final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
+			formParameters.add("code_verifier", pkceCodeVerifier);
 			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			
