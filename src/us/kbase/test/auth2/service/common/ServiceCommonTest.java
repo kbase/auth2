@@ -47,7 +47,7 @@ import us.kbase.test.auth2.TestCommon;
 public class ServiceCommonTest {
 	
 	public static final String SERVICE_NAME = "Authentication Service";
-	public static final String SERVER_VER = "0.5.0-dev1";
+	public static final String SERVER_VER = "0.5.0";
 	public static final String GIT_ERR = 
 			"Missing git commit file gitcommit, should be in us.kbase.auth2";
 	
