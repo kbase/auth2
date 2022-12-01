@@ -5,11 +5,10 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.LocalLoginResult;
 import us.kbase.auth2.lib.UserName;
@@ -24,7 +23,7 @@ public class LocalLoginResultTest {
 		final LocalLoginResult llr = new LocalLoginResult(new UserName("foo"));
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(true));
 		assertThat("incorrect username", llr.getUserName(), is(Optional.of(new UserName("foo"))));
-		assertThat("incorrect token", llr.getToken(), is(Optional.absent()));
+		assertThat("incorrect token", llr.getToken(), is(Optional.empty()));
 	}
 
 	@Test
@@ -36,7 +35,7 @@ public class LocalLoginResultTest {
 		final LocalLoginResult llr = new LocalLoginResult(nt);
 		assertThat("incorrect reset required", llr.isPwdResetRequired(), is(false));
 		assertThat("incorrect token", llr.getToken(), is(Optional.of(nt)));
-		assertThat("incorrect username",  llr.getUserName(), is(Optional.absent()));
+		assertThat("incorrect username",  llr.getUserName(), is(Optional.empty()));
 	}
 	
 	@Test

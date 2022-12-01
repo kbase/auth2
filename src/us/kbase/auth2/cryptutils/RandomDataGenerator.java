@@ -12,6 +12,13 @@ public interface RandomDataGenerator {
 	 * @return a token.
 	 */
 	String getToken();
+	
+	
+	/** Generate a random token encoded in Base32 in multiples of 40 bits / 8 characters.
+	 * @param sizeMultiple the size of the token in 40 bit / 8 character increments.
+	 * @return a token.
+	 */
+	String getToken(int sizeMultiple);
 
 	/** Generate a random password consisting of upper and lower case ascii letters excluding
 	 * lower case l and o and uppercase I and O, digits excluding one and zero, and the symbols

@@ -6,7 +6,7 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserName;
@@ -107,7 +107,7 @@ public class UserNameTest {
 		assertThat("incorrect santize", UserName.sanitizeName("  999aFA8 ea6t  \t   ѱ ** J(())"),
 				is(Optional.of(new UserName("afa8ea6tj"))));
 		assertThat("incorrect santize", UserName.sanitizeName("999  8 6  \t   ѱ ** (())"),
-				is(Optional.absent()));
+				is(Optional.empty()));
 	}
 	
 	@Test

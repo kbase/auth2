@@ -6,7 +6,8 @@ import static org.junit.Assert.fail;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
+
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -63,10 +64,10 @@ public class IncomingJSONTest {
 	@Test
 	public void getOptionalStringAbsent() throws Exception {
 		final Optional<String> res = new IncomingJSONSub().getOptionalString(null);
-		assertThat("incorrect string", res, is(Optional.absent()));
+		assertThat("incorrect string", res, is(Optional.empty()));
 		
 		final Optional<String> res2 = new IncomingJSONSub().getOptionalString("   \t    \n   ");
-		assertThat("incorrect string", res2, is(Optional.absent()));
+		assertThat("incorrect string", res2, is(Optional.empty()));
 	}
 	
 	@Test

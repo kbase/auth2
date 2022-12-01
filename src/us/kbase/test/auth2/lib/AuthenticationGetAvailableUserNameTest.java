@@ -10,11 +10,10 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.lang.reflect.Method;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;

@@ -10,10 +10,10 @@ import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Optional;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.CustomRole;
@@ -73,22 +73,22 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect password salt",
 				new String(creds.getSalt(), StandardCharsets.UTF_8), is("whee"));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
-		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.absent()));
+		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.empty()));
 		assertThat("incorrect disable admin", lu.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect creation", lu.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", lu.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", lu.getEmail(), is(EmailAddress.UNKNOWN));
 		assertThat("incorrect enable toggle date",
-				lu.getEnableToggleDate(), is(Optional.absent()));
+				lu.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", lu.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect policy ids", lu.getPolicyIDs(), is(Collections.emptyMap()));
-		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", lu.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", lu.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", lu.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", lu.getUserName(), is(new UserName("local")));
 		assertThat("incorrect is disabled", lu.isDisabled(), is(false));
@@ -103,7 +103,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), Instant.ofEpochMilli(5000))
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("foo").withCustomRole("bar")
 				.withPolicyID(new PolicyID("pfoo"), Instant.ofEpochMilli(4000))
@@ -138,7 +138,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect disabled state", lu.getDisabledState(), is(new UserDisabledState(
 				"reason", new UserName("bap"), Instant.ofEpochMilli(20000))));
 		assertThat("incorrect display name", lu.getDisplayName(), is(new DisplayName("bang")));
-		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@g.com")));
+		assertThat("incorrect email", lu.getEmail(), is(new EmailAddress("f@h.com")));
 		assertThat("incorrect enable toggle date", lu.getEnableToggleDate(),
 				is(Optional.of(Instant.ofEpochMilli(20000))));
 		assertThat("incorrect grantable roles", lu.getGrantableRoles(),
@@ -186,7 +186,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
 				
@@ -220,7 +220,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
 		
@@ -252,7 +252,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final Instant create = Instant.ofEpochMilli(1000);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
 				new UserName("baz"), new DisplayName("bang"), create)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(5000))
 				.withForceReset(true)
 				.build();
@@ -262,20 +262,20 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final AuthUser u = storage.getUser(new UserName("baz"));
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(create));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bang")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g.com")));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h.com")));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(ImmutableMap.of(
 				new PolicyID("baz"), Instant.ofEpochMilli(5000))));
-		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("baz")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -311,19 +311,19 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final AuthUser u = storage.getUser(new UserName("user"));
 
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(EmailAddress.UNKNOWN));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
-		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("user")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -474,19 +474,19 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		
 		final AuthUser u = storage.getUser(REMOTE1).get();
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar1")));
 		assertThat("incorrect email", u.getEmail(), is(EmailAddress.UNKNOWN));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(),
 				is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE1)));
 		assertThat("incorrect policy ids", u.getPolicyIDs(), is(Collections.emptyMap()));
-		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("user1")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -549,7 +549,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
-		assertThat("incorrect user", storage.getUser(REMOTE2), is(Optional.absent()));
+		assertThat("incorrect user", storage.getUser(REMOTE2), is(Optional.empty()));
 	}
 	
 	@Test

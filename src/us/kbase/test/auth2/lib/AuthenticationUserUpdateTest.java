@@ -64,14 +64,14 @@ public class AuthenticationUserUpdateTest {
 		
 		auth.updateUser(token, UserUpdate.getBuilder()
 				.withDisplayName(new DisplayName("bar"))
-				.withEmail(new EmailAddress("f@g.com")).build());
+				.withEmail(new EmailAddress("f@h.com")).build());
 		
 		verify(storage).updateUser(new UserName("foo"), UserUpdate.getBuilder()
 				.withDisplayName(new DisplayName("bar"))
-				.withEmail(new EmailAddress("f@g.com")).build());
+				.withEmail(new EmailAddress("f@h.com")).build());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-				"Updated user details for user foo. Display name: bar Email: f@g.com",
+				"Updated user details for user foo. Display name: bar Email: f@h.com",
 				Authentication.class));
 	}
 	
@@ -115,13 +115,13 @@ public class AuthenticationUserUpdateTest {
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken);
 		
 		auth.updateUser(token, UserUpdate.getBuilder()
-				.withEmail(new EmailAddress("f@g.com")).build());
+				.withEmail(new EmailAddress("f@h.com")).build());
 		
 		verify(storage).updateUser(new UserName("foo"), UserUpdate.getBuilder()
-				.withEmail(new EmailAddress("f@g.com")).build());
+				.withEmail(new EmailAddress("f@h.com")).build());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-				"Updated user details for user foo. Email: f@g.com",
+				"Updated user details for user foo. Email: f@h.com",
 				Authentication.class));
 	}
 	
@@ -191,10 +191,10 @@ public class AuthenticationUserUpdateTest {
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).updateUser(new UserName("foo"),
 				UserUpdate.getBuilder()
-					.withEmail(new EmailAddress("f@g.com")).build());
+					.withEmail(new EmailAddress("f@h.com")).build());
 		
 		failUpdateUser(auth, token, UserUpdate.getBuilder()
-					.withEmail(new EmailAddress("f@g.com")).build(), new RuntimeException(
+					.withEmail(new EmailAddress("f@h.com")).build(), new RuntimeException(
 							"There seems to be an error in the " +
 									"storage system. Token was valid, but no user"));
 	}

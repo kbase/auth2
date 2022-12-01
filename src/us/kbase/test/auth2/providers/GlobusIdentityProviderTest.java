@@ -7,6 +7,7 @@ import static org.mockserver.model.NottableString.not;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ArrayList;
@@ -121,27 +122,40 @@ public class GlobusIdentityProviderTest {
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
-						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true, null),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
-						"&response_type=code&client_id=foo")));
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkceuhuhuh", false, null),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo2"
+						+ "&code_challenge=pkceuhuhuh&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Floginredir.com"
+						+ "&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkcemyman", true, null),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo3"
+						+ "&code_challenge=pkcemyman&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Flinkredir.com"
+						+ "&response_type=code&client_id=foo")));
 		
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false, "myenv"),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
-						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true, "myenv"),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +
-						"&response_type=code&client_id=foo")));
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkcemywoman", false, "myenv"),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo2"
+						+ "&code_challenge=pkcemywoman&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmyloginred.com"
+						+ "&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURI(
+				"foo3", "pkcemybarnyardanimal", true, "myenv"),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo3"
+						+ "&code_challenge=pkcemybarnyardanimal&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmylinkred.com"
+						+ "&response_type=code&client_id=foo")));
 		
 	}
 	
@@ -151,27 +165,39 @@ public class GlobusIdentityProviderTest {
 		final IdentityProvider gip = new GlobusIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Globus"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false, null),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo2&redirect_uri=https%3A%2F%2Floginredir.com" +
-						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true, null),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo3&redirect_uri=https%3A%2F%2Flinkredir.com" +
-						"&response_type=code&client_id=foo")));
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkceuno", false, null),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo2"
+						+ "&code_challenge=pkceuno&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Floginredir.com"
+						+ "&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkcedos", true, null),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo3"
+						+ "&code_challenge=pkcedos&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Flinkredir.com"
+						+ "&response_type=code&client_id=foo")));
 		
-		assertThat("incorrect login url", gip.getLoginURL("foo2", false, "myenv"),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo2&redirect_uri=https%3A%2F%2Fmyloginred.com" +
-						"&response_type=code&client_id=foo")));
-		assertThat("incorrect link url", gip.getLoginURL("foo3", true, "myenv"),
-				is(new URL("https://login.com/v2/oauth2/authorize?" +
-						"scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+" +
-						"email&state=foo3&redirect_uri=https%3A%2F%2Fmylinkred.com" +
-						"&response_type=code&client_id=foo")));
+		assertThat("incorrect login url", gip.getLoginURI("foo2", "pkcetres", false, "myenv"),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo2"
+						+ "&code_challenge=pkcetres&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmyloginred.com"
+						+ "&response_type=code&client_id=foo")));
+		assertThat("incorrect link url", gip.getLoginURI("foo3", "pkcecuatro", true, "myenv"),
+				is(new URI(
+						"https://login.com/v2/oauth2/authorize?"
+						+ "scope=urn%3Aglobus%3Aauth%3Ascope%3Aauth.globus.org%3Aview_identities+"
+						+ "email&state=foo3"
+						+ "&code_challenge=pkcecuatro&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmylinkred.com"
+						+ "&response_type=code&client_id=foo")));
 	}
 	
 	@Test
@@ -202,18 +228,29 @@ public class GlobusIdentityProviderTest {
 	@Test
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
-		failGetIdentities(idp, null, true, new IllegalArgumentException(
-				"authcode cannot be null or empty"));
-		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
-				"authcode cannot be null or empty"));
+		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
+				"Missing argument: authcode"));
+		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
+				"Missing argument: authcode"));
+	}
+	
+	@Test
+	public void illegalPKCEVerifier() throws Exception {
+		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
+		failGetIdentities(idp, "p", null, true, new IllegalArgumentException(
+				"Missing argument: pkceCodeVerifier"));
+		failGetIdentities(idp, "p", "  \t  \n  ", true, new IllegalArgumentException(
+				"Missing argument: pkceCodeVerifier"));
 	}
 	
 	@Test
 	public void noSuchEnvironment() throws Exception {
 		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
 		
-		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
-		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", true, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", false, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	@Test
@@ -224,10 +261,10 @@ public class GlobusIdentityProviderTest {
 		final String bauth = getBasicAuth(testIDConfig);
 		final IdentityRetrievalException e =
 				new IdentityRetrievalException("No access token was returned by Globus");
-		setUpCallAuthToken("authcode3", null, redir, bauth);
-		failGetIdentities(idp, "authcode3", false, e);
-		setUpCallAuthToken("authcode3", "     \n    ", redir, bauth);
-		failGetIdentities(idp, "authcode3", false, e);
+		setUpCallAuthToken("authcode3", "pkce1", null, redir, bauth);
+		failGetIdentities(idp, "authcode3", "pkce1", false, e);
+		setUpCallAuthToken("authcode3", "pkce2", "     \n    ", redir, bauth);
+		failGetIdentities(idp, "authcode3", "pkce2", false, e);
 	}
 	
 	@Test
@@ -237,38 +274,40 @@ public class GlobusIdentityProviderTest {
 		final String redir = testIDConfig.getLoginRedirectURL().toString();
 		final String bauth = getBasicAuth(testIDConfig);
 		final String authCode = "foo";
+		final String pkce1 = "pkcegoeshere";
+		final String pkce2 = "pkcegoeshere2";
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 200, "foo bar");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce1, redir, bauth, APP_JSON, 200, "foo bar");
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Globus service."));
 		
-		setUpCallAuthToken(authCode, redir, bauth, "text/html", 200,
+		setUpCallAuthToken(authCode, pkce1, redir, bauth, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Globus service."));
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce2, redir, bauth, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Globus service: 500. Response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce2, redir, bauth, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Globus service: 500. Truncated response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce1, redir, bauth, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
 				"from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce2, redir, bauth, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
 				"response body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, redir, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpCallAuthToken(authCode, pkce1, redir, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Globus service returned an error. HTTP code: 500. " +
 				"Error: whee!."));
 	}
@@ -281,7 +320,7 @@ public class GlobusIdentityProviderTest {
 		final String bauth = getBasicAuth(testIDConfig);
 		final String authCode = "foo2";
 		final String authtoken = "footoken";
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, "pixydust", authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 					.put("aud", Arrays.asList("thisisabadaudience"))
@@ -292,7 +331,7 @@ public class GlobusIdentityProviderTest {
 					.put("identities_set",
 							Arrays.asList("ident1", "anID", "ident2"))
 					.build()));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pixydust", false, new IdentityRetrievalException(
 				"The audience for the Globus request does not include this client"));
 	}
 	
@@ -304,47 +343,49 @@ public class GlobusIdentityProviderTest {
 		final String bauth = getBasicAuth(testIDConfig);
 		final String authCode = "foo";
 		final String authtoken = "bartoken";
+		final String pkce1 = "pkceisgettingold";
+		final String pkce2 = "andmusty";
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, "bleah");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Unable to parse response from Globus " +
 				"service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, "text/html", 200, MAPPER.writeValueAsString(
 				map("aud", testIDConfig.getClientID())));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Unable to parse response from Globus " +
 				"service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Got unexpected HTTP code and unparseable " +
 				"response from Globus service: 500. Response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Got unexpected HTTP code and unparseable " +
 				"response from Globus service: 500. Truncated response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Got unexpected HTTP code with no response " +
 				"body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Got unexpected HTTP code with no error in " +
 				"the response body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 500, "{\"error\":\"whee!\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Primary identity retrieval failed: Globus service returned an error. " +
 				"HTTP code: 500. Error: whee!."));
 	}
@@ -358,7 +399,7 @@ public class GlobusIdentityProviderTest {
 		final String authCode = "foo";
 		final String authtoken = "bartoken";
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, "pixygodimsotiredofthis", authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 				.put("aud", Arrays.asList(testIDConfig.getClientID()))
@@ -377,9 +418,10 @@ public class GlobusIdentityProviderTest {
 		setupCallSecondaryID(authtoken, "^id2,id1|id1,id2$", APP_JSON, 200,
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 		
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
-				"Requested secondary identities do not match recieved: " +
-				"[id1, id2] vs [id1, id2, id3]"));
+		failGetIdentities(idp, authCode, "pixygodimsotiredofthis", false,
+				new IdentityRetrievalException(
+						"Requested secondary identities do not match recieved: " +
+						"[id1, id2] vs [id1, id2, id3]"));
 	}
 	
 	@Test
@@ -389,6 +431,8 @@ public class GlobusIdentityProviderTest {
 		final String redir = testIDConfig.getLoginRedirectURL().toString();
 		final String bauth = getBasicAuth(testIDConfig);
 		final String authCode = "foo5";
+		final String pkce1 = "pkceyetagain";
+		final String pkce2 = "pkceandagain";
 		final String authtoken = "bartoken5";
 		final String idRegex = "^id1$";
 		final String primaryResp = MAPPER.writeValueAsString(
@@ -402,71 +446,71 @@ public class GlobusIdentityProviderTest {
 						Arrays.asList("id1  ", "anID"))
 				.build());
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 200, "bleah");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Unable to parse response from Globus " +
 				"service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, "text/html", 200, MAPPER.writeValueAsString(
 				map("identities", new ArrayList<String>())));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Unable to parse response from Globus " +
 				"service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code and unparseable " +
 				"response from Globus service: 500. Response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code and unparseable " +
 				"response from Globus service: 500. Truncated response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code with no response " +
 				"body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code with no error in " +
 				"the response body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
 				map("errors", null)));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code with null error " +
 				"in the response body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce1, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
 				map("errors", new ArrayList<String>())));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce1, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Got unexpected HTTP code with null error " +
 				"in the response body from Globus service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, bauth);
+		setUpCallAuthToken(authCode, pkce2, authtoken, redir, bauth);
 		setUpCallPrimaryID(authtoken, bauth, APP_JSON, 200, primaryResp);
 		setupCallSecondaryID(authtoken, idRegex, APP_JSON, 500, MAPPER.writeValueAsString(
 				map("errors", Arrays.asList(
 						map("code", "code1", "id", "id1", "detail", "detail1")))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Secondary identity retrieval failed: Globus service returned an error. " +
 				"HTTP code: 500. Error code1: detail1; id: id1"));
 	}
@@ -521,19 +565,21 @@ public class GlobusIdentityProviderTest {
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final Exception exception) throws Exception {
-		failGetIdentities(idp, authcode, link, null, exception);
+		failGetIdentities(idp, authcode, pkce, link, null, exception);
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final String env,
 			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link, env);
+			idp.getIdentities(authcode, pkce, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -570,6 +616,7 @@ public class GlobusIdentityProviderTest {
 
 	private void setUpCallAuthToken(
 			final String authCode,
+			final String pkceVerifier,
 			final String authtoken,
 			final String redirect,
 			final String basicAuth)
@@ -582,6 +629,7 @@ public class GlobusIdentityProviderTest {
 					.withHeader("Authorization", basicAuth)
 					.withBody(new ParameterBody(
 							new Parameter("code", authCode),
+							new Parameter("code_verifier", pkceVerifier),
 							new Parameter("grant_type", "authorization_code"),
 							new Parameter("redirect_uri", redirect))
 					),
@@ -596,6 +644,7 @@ public class GlobusIdentityProviderTest {
 	
 	private void setUpCallAuthToken(
 			final String authCode,
+			final String pkceVerifier,
 			final String redirect,
 			final String basicAuth,
 			final String contentType,
@@ -615,6 +664,7 @@ public class GlobusIdentityProviderTest {
 					.withHeader("Authorization", basicAuth)
 					.withBody(new ParameterBody(
 							new Parameter("code", authCode),
+							new Parameter("code_verifier", pkceVerifier),
 							new Parameter("grant_type", "authorization_code"),
 							new Parameter("redirect_uri", redirect))
 					),
@@ -632,7 +682,7 @@ public class GlobusIdentityProviderTest {
 		final String token = "footoken";
 		final int respCode = 200;
 
-		setUpCallAuthToken(authCode, token, "https://lor2.com", bauth);
+		setUpCallAuthToken(authCode, "pixypixy", token, "https://lor2.com", bauth);
 		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 						.put("aud", Arrays.asList(testIDConfig.getClientID()))
@@ -651,7 +701,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, "myenv");
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pixypixy", false, "myenv");
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -672,7 +722,7 @@ public class GlobusIdentityProviderTest {
 		final String token = "footoken";
 		final int respCode = 200;
 
-		setUpCallAuthToken(authCode, token, "https://loginredir.com", bauth);
+		setUpCallAuthToken(authCode, "pkce", token, "https://loginredir.com", bauth);
 		setUpCallPrimaryID(token, bauth, APP_JSON, respCode, MAPPER.writeValueAsString(
 				new ImmutableMap.Builder<String, Object>()
 						.put("aud", Arrays.asList(testIDConfig.getClientID()))
@@ -691,7 +741,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, null);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -747,7 +797,7 @@ public class GlobusIdentityProviderTest {
 		final IdentityProvider idp = new GlobusIdentityProvider(idconfig);
 		final String bauth = getBasicAuth(idconfig);
 		
-		setUpCallAuthToken(authCode, "footoken2", linkURL, bauth);
+		setUpCallAuthToken(authCode, "pkcepkcepkcepkcepkcepkce", "footoken2", linkURL, bauth);
 		setUpCallPrimaryID("footoken2", bauth, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("aud", Arrays.asList(clientID),
 					"sub", "anID2",
@@ -755,7 +805,8 @@ public class GlobusIdentityProviderTest {
 					"name", null,
 					"email", null,
 					"identities_set", Arrays.asList("anID2  \n"))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
+		final Set<RemoteIdentity> rids = idp.getIdentities(
+				authCode, "pkcepkcepkcepkcepkcepkce", true, env);
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
 				new RemoteIdentityDetails("aUsername2", null, null)));

@@ -5,7 +5,6 @@ import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LINK_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.ENVIRONMENT_COOKIE;
-import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getEnvironmentCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLinkInProcessCookie;
@@ -13,7 +12,6 @@ import static us.kbase.auth2.service.ui.UIUtils.getMaxCookieAge;
 import static us.kbase.auth2.service.ui.UIUtils.getTokenFromCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getValueFromHeaderOrString;
 import static us.kbase.auth2.service.ui.UIUtils.relativize;
-import static us.kbase.auth2.service.ui.UIUtils.toURI;
 
 import java.net.URI;
 import java.security.NoSuchProviderException;
@@ -21,6 +19,7 @@ import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import javax.inject.Inject;
 import javax.ws.rs.Consumes;
@@ -34,11 +33,9 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
-import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
-import javax.ws.rs.core.NewCookie;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 
@@ -46,12 +43,12 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.LinkIdentities;
 import us.kbase.auth2.lib.LinkToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.Utils;
 import us.kbase.auth2.lib.exceptions.AuthenticationException;
@@ -80,8 +77,6 @@ public class Link {
 
 	//TODO JAVADOC or swagger
 	
-	private static final String LINK_STATE_COOKIE = "linkstatevar";
-
 	@Inject
 	private Authentication auth;
 	
@@ -113,12 +108,6 @@ public class Link {
 		return ret;
 	}
 	
-	/* this method intentionally does not check the user identity because UIs must use a browser
-	 * form submit rather than AJAX for the redirect to work correctly. Since it's a form submit
-	 * the UI cannot trap any errors, and an invalid token error would default to the built in
-	 * HTML UI. Hence, this method should only throw errors when the request absolutely cannot
-	 * continue.
-	 */
 	@POST
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	@Path(UIPaths.LINK_START)
@@ -141,13 +130,10 @@ public class Link {
 		} else {
 			token = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		}
-		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, true, environment.orNull()));
-		final TemporaryToken tt = auth.linkStart(token, PROVIDER_RETURN_EXPIRATION_SEC);
-		return Response.seeOther(target)
-				.cookie(getStateCookie(state))
-				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LINK_ROOT,
+		final OAuth2StartData oa2sd = auth.linkStart(
+				token, PROVIDER_RETURN_EXPIRATION_SEC, provider, environment.orElse(null));
+		return Response.seeOther(oa2sd.getRedirectURI())
+				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LINK_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				/* the link in process token must be a session token so that if a user closes the
 				 * browser and thus logs themselves out, the link session token disappears.
@@ -155,23 +141,22 @@ public class Link {
 				 * them as the first user and proceed with the linking process, thus linking their
 				 * remote account to the first user's account.
 				 */
-				.cookie(getLinkInProcessCookie(tt))
+				.cookie(getLinkInProcessCookie(oa2sd.getTemporaryToken()))
 				.build();
 	}
 
-	private NewCookie getStateCookie(final String state) {
-		return new NewCookie(new Cookie(LINK_STATE_COOKIE,
-				state == null ? "no state" : state, UIPaths.LINK_ROOT_COMPLETE, null),
-				"linkstate",
-				state == null ? 0 : PROVIDER_RETURN_EXPIRATION_SEC,
-				UIConstants.SECURE_COOKIES);
-	}
-	
+	/* We don't necessarily have access to the user's token here since it's a redirect from the
+	 * 3rd party identity provider. If the UI is setting its own cookies for tokens (which is
+	 * what the current KBase UI does) then the server won't know about it.
+	 * Hence we trust the link in process cookie that we set at link start and which is
+	 * associated with the user name, which was extracted from their token at link start.
+	 * 
+	 * IOW, the link in process cookie is a proxy for the user's token.
+	 */
 	@GET
 	@Path(UIPaths.LINK_COMPLETE_PROVIDER)
 	public Response link(
 			@PathParam(Fields.PROVIDER) final String provider,
-			@CookieParam(LINK_STATE_COOKIE) final String state,
 			@CookieParam(IN_PROCESS_LINK_COOKIE) final String userCookie,
 			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
@@ -188,11 +173,10 @@ public class Link {
 		if (!nullOrEmpty(error)) {
 			tt = Optional.of(auth.linkProviderError(error));
 		} else {
-			checkState(state, retstate);
 			final IncomingToken token = getLinkInProcessToken(userCookie);
-			final LinkToken lt = auth.link(token, provider, authcode, environment);
+			final LinkToken lt = auth.link(token, provider, authcode, environment, retstate);
 			if (lt.isLinked()) {
-				tt = Optional.absent();
+				tt = Optional.empty();
 			} else {
 				tt = Optional.of(lt.getTemporaryToken().get());
 			}
@@ -209,7 +193,6 @@ public class Link {
 			final int age = getMaxCookieAge(tt.get());
 			r = Response.seeOther(completeURI)
 					.cookie(getLinkInProcessCookie(tt.get()))
-					.cookie(getStateCookie(null))
 					.cookie(getEnvironmentCookie(environment, UIPaths.LINK_ROOT, age))
 					.build();
 		} else {
@@ -219,7 +202,6 @@ public class Link {
 					UIPaths.ME_ROOT);
 			r = Response.seeOther(postLinkURI)
 					.cookie(getLinkInProcessCookie(null))
-					.cookie(getStateCookie(null))
 					.cookie(getEnvironmentCookie(null, UIPaths.LINK_ROOT, 0))
 					.build();
 		}
@@ -344,7 +326,7 @@ public class Link {
 			identityID = null;
 		}
 		final IncomingToken token = getTokenFromCookie(headers, cfg.getTokenCookieName());
-		pickAccount(token, linktoken, Optional.fromNullable(identityID));
+		pickAccount(token, linktoken, Optional.ofNullable(identityID));
 		final URI postLinkURI = getExternalConfigURI(
 				auth,
 				cfg-> cfg.getURLSetOrDefault(environment).getPostLinkRedirect(),

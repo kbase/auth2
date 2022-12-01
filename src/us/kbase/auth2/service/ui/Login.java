@@ -7,7 +7,6 @@ import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.PROVIDER_RETURN_EXPIRATION_SEC;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LOGIN_COOKIE;
 import static us.kbase.auth2.service.ui.UIUtils.ENVIRONMENT_COOKIE;
-import static us.kbase.auth2.service.ui.UIUtils.checkState;
 import static us.kbase.auth2.service.ui.UIUtils.getEnvironmentCookie;
 import static us.kbase.auth2.service.ui.UIUtils.getExternalConfigURI;
 import static us.kbase.auth2.service.ui.UIUtils.getLoginCookie;
@@ -27,6 +26,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -55,7 +55,6 @@ import org.glassfish.jersey.server.mvc.Template;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -63,6 +62,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -100,7 +100,6 @@ public class Login {
 
 	//TODO JAVADOC or swagger
 	
-	private static final String LOGIN_STATE_COOKIE = "loginstatevar";
 	private static final String SESSION_CHOICE_COOKIE = "issessiontoken";
 	private static final String REDIRECT_COOKIE = "loginredirect";
 	
@@ -166,19 +165,18 @@ public class Login {
 				headers, cfg.getEnvironmentHeaderName(), environForm);
 		Utils.checkString(provider, Fields.PROVIDER);
 		
-		getRedirectURL(environment.orNull(), redirect); // check redirect url is ok
-		final String state = auth.getBareToken();
-		final URI target = toURI(auth.getIdentityProviderURL(
-				provider, state, false, environment.orNull()));
+		getRedirectURL(environment.orElse(null), redirect); // check redirect url is ok
+		final OAuth2StartData oa2sd = auth.loginStart(
+				PROVIDER_RETURN_EXPIRATION_SEC, provider, environment.orElse(null));
 		
-		return Response.seeOther(target)
-				.cookie(getStateCookie(state))
+		return Response.seeOther(oa2sd.getRedirectURI())
 				.cookie(getSessionChoiceCookie(nullOrEmpty(stayLoggedIn),
 						PROVIDER_RETURN_EXPIRATION_SEC))
 				// will remove redirect cookie if redirect isn't set and one exists
 				.cookie(getRedirectCookie(redirect, PROVIDER_RETURN_EXPIRATION_SEC))
-				.cookie(getEnvironmentCookie(environment.orNull(), UIPaths.LOGIN_ROOT,
+				.cookie(getEnvironmentCookie(environment.orElse(null), UIPaths.LOGIN_ROOT,
 						PROVIDER_RETURN_EXPIRATION_SEC))
+				.cookie(getLoginInProcessCookie(oa2sd.getTemporaryToken()))
 				.build();
 	}
 	
@@ -223,14 +221,6 @@ public class Login {
 				UIConstants.SECURE_COOKIES);
 	}
 
-	private NewCookie getStateCookie(final String state) {
-		return new NewCookie(new Cookie(LOGIN_STATE_COOKIE,
-				state == null ? "no state" : state, UIPaths.LOGIN_ROOT_COMPLETE, null),
-				"loginstate",
-				state == null ? 0 : PROVIDER_RETURN_EXPIRATION_SEC,
-				UIConstants.SECURE_COOKIES);
-	}
-	
 	private NewCookie getSessionChoiceCookie(final String session, final int expirationTimeSec) {
 		if (TRUE.equals(session)) {
 			return getSessionChoiceCookie(true, expirationTimeSec);
@@ -255,14 +245,15 @@ public class Login {
 	public Response login(
 			@Context final HttpServletRequest req,
 			@PathParam(Fields.PROVIDER) final String provider,
-			@CookieParam(LOGIN_STATE_COOKIE) final String state,
+			@CookieParam(IN_PROCESS_LOGIN_COOKIE) final String userCookie,
 			@CookieParam(REDIRECT_COOKIE) final String redirect,
 			@CookieParam(SESSION_CHOICE_COOKIE) final String session,
 			@CookieParam(ENVIRONMENT_COOKIE) final String environment,
 			@Context final UriInfo uriInfo)
 			throws MissingParameterException, AuthStorageException,
 				IllegalParameterException, UnauthorizedException, NoSuchIdentityProviderException,
-				IdentityRetrievalException, AuthenticationException, NoSuchEnvironmentException {
+				IdentityRetrievalException, AuthenticationException, NoSuchEnvironmentException,
+				NoTokenProvidedException {
 		
 		// provider cannot be null or empty since it's a path param
 		// fail early
@@ -275,10 +266,10 @@ public class Login {
 		if (!nullOrEmpty(error)) {
 			lr = auth.loginProviderError(error);
 		} else {
-			checkState(state, retstate);
+			final IncomingToken token = getLoginInProcessToken(userCookie);
 			final TokenCreationContext tcc = getTokenContext(
 					userAgentParser, req, isIgnoreIPsInHeaders(auth), Collections.emptyMap());
-			lr = auth.login(provider, authcode, environment, tcc);
+			lr = auth.login(token, provider, authcode, environment, tcc, retstate);
 		}
 		final Response r;
 		// always redirect so the authcode doesn't remain in the title bar
@@ -294,7 +285,6 @@ public class Login {
 					UIPaths.LOGIN_ROOT_CHOICE);
 			r = Response.seeOther(completeURI)
 					.cookie(getLoginInProcessCookie(lr.getTemporaryToken().get()))
-					.cookie(getStateCookie(null))
 					.cookie(getRedirectCookie(redirect, age))
 					.cookie(getSessionChoiceCookie(session, age))
 					.cookie(getEnvironmentCookie(environment, UIPaths.LOGIN_ROOT, age))
@@ -324,7 +314,6 @@ public class Login {
 		return resp.cookie(getSessionChoiceCookie((Boolean) null, 0))
 				.cookie(getEnvironmentCookie(null, UIPaths.LOGIN_ROOT, 0))
 				.cookie(getLoginInProcessCookie(null))
-				.cookie(getStateCookie(null))
 				.cookie(getRedirectCookie(null, 0));
 	}
 	

@@ -3,7 +3,6 @@ package us.kbase.auth2.providers;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -98,9 +97,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 
 		// state will be url encoded
 		@Override
-		public URL getLoginURL(final String state, final boolean link, final String environment)
+		public URI getLoginURI(
+				final String state,
+				final String pkceCodeChallenge,
+				final boolean link,
+				final String environment)
 				throws NoSuchEnvironmentException {
-			final URI target = UriBuilder.fromUri(toURI(cfg.getLoginURL()))
+			// note that OrcID does not currently implement PKCE so we ignore the code
+			// challenge: https://github.com/ORCID/ORCID-Source/issues/5977
+			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
@@ -108,7 +113,6 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
 					.build();
-			return toURL(target);
 		}
 		
 		private URL getRedirectURL(final boolean link, final String environment)
@@ -120,15 +124,6 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				cfg.getLoginRedirectURL(environment);
 		}
 		
-		//Assumes valid URL in URI form
-		private URL toURL(final URI baseURI) {
-			try {
-				return baseURI.toURL();
-			} catch (MalformedURLException e) {
-				throw new RuntimeException("This should be impossible", e);
-			}
-		}
-	
 		//Assumes valid URI in URL form
 		private URI toURI(final URL loginURL) {
 			try {
@@ -141,9 +136,12 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
+			// note that OrcID does not currently implement PKCE so we ignore the code
+			// verifier: https://github.com/ORCID/ORCID-Source/issues/5977
 			if (authcode == null || authcode.trim().isEmpty()) {
 				throw new IllegalArgumentException("authcode cannot be null or empty");
 			}

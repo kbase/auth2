@@ -13,6 +13,7 @@ import static org.mockito.Mockito.when;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
+import java.net.URI;
 import java.net.URL;
 import java.util.Collections;
 import java.util.HashMap;
@@ -148,13 +149,18 @@ public class AuthenticationConstructorTest {
 		}
 
 		@Override
-		public URL getLoginURL(final String state, final boolean link, final String environment) {
+		public URI getLoginURI(
+				final String state,
+				final String pkceChallenge,
+				final boolean link,
+				final String environment) {
 			return null;
 		}
 
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException {

@@ -11,13 +11,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.lang.reflect.Field;
 import java.net.ServerSocket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.security.MessageDigest;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -98,6 +102,10 @@ public class TestCommon {
 				.setLevel(ch.qos.logback.classic.Level.OFF);
 	}
 	
+	public static Instant inst(final long epochMillis) {
+		return Instant.ofEpochMilli(epochMillis);
+	}
+	
 	public static void assertExceptionCorrect(
 			final Exception got,
 			final Exception expected) {
@@ -151,6 +159,16 @@ public class TestCommon {
 	@SafeVarargs
 	public static <T> Set<T> set(T... objects) {
 		return new HashSet<T>(Arrays.asList(objects));
+	}
+	
+	public static final Optional<String> ES = Optional.empty();
+	
+	public static <T> Optional<T> opt(final T obj) {
+		return Optional.of(obj);
+	}
+	
+	public static Instant now() {
+		return Instant.now();
 	}
 	
 	public static void assertClear(final byte[] bytes) {
@@ -273,6 +291,13 @@ public class TestCommon {
 		return IOUtils.toString(is);
 	}
 	
+	public static String calculatePKCEChallenge(final String pkceVerifier) throws Exception{
+		final MessageDigest digest = MessageDigest.getInstance("SHA-256");
+		final byte[] hash = digest.digest(pkceVerifier.getBytes(StandardCharsets.UTF_8));
+		final String prestrip = Base64.getUrlEncoder().encodeToString(hash);
+		return prestrip.replace("=", "");
+	}
+	
 	public static void assertCloseToNow(final long epochMillis) {
 		final long now = Instant.now().toEpochMilli();
 		assertThat(String.format("time (%s) not within 10000ms of now: %s", epochMillis, now),
@@ -296,7 +321,7 @@ public class TestCommon {
 			final String token)
 			throws Exception {
 		final TemporarySessionData data = TemporarySessionData.create(id, created, lifetimeMS)
-				.link(new UserName("foo"));
+				.link("fakestate", "fakepkce", new UserName("foo"));
 		return new TemporaryToken(data, token);
 	}
 }

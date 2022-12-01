@@ -76,7 +76,7 @@ public class AuthenticationCreateLocalUserTest {
 	public void createWithAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 				
 		create(admin);
@@ -86,7 +86,7 @@ public class AuthenticationCreateLocalUserTest {
 	public void createWithCreateAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		create(admin);
@@ -96,7 +96,7 @@ public class AuthenticationCreateLocalUserTest {
 	public void createWithRootUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
 				UserName.ROOT, new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com")).build();
+				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		create(admin);
 	}
@@ -130,7 +130,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final LocalUser expected = LocalUser.getLocalUserBuilder(
 				new UserName("foo"), new DisplayName("bar"), create)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true).build();
 		
 		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(
@@ -140,7 +140,7 @@ public class AuthenticationCreateLocalUserTest {
 				any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		final Password pwd = auth.createLocalUser(
-				token, new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@g.com"));
+				token, new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"));
 		assertThat("incorrect pwd", pwd.getPassword(), is(pwdChar));
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);
@@ -177,7 +177,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
@@ -192,7 +192,7 @@ public class AuthenticationCreateLocalUserTest {
 				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new UserExistsException("foo"));
+				new EmailAddress("f@h.com"), new UserExistsException("foo"));
 	}
 	
 	@Test
@@ -215,7 +215,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
@@ -230,7 +230,7 @@ public class AuthenticationCreateLocalUserTest {
 				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new RuntimeException("didn't supply any roles"));
+				new EmailAddress("f@h.com"), new RuntimeException("didn't supply any roles"));
 	}
 	
 	@Test
@@ -250,7 +250,7 @@ public class AuthenticationCreateLocalUserTest {
 
 		final AuthUser admin = AuthUser.getBuilder(
 				new UserName("admin"), new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
@@ -258,7 +258,7 @@ public class AuthenticationCreateLocalUserTest {
 		when(rand.getTemporaryPassword(10)).thenThrow(new RuntimeException("booga"));
 		
 		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new RuntimeException("booga"));
+				new EmailAddress("f@h.com"), new RuntimeException("booga"));
 	}
 	
 	@Test
@@ -274,7 +274,7 @@ public class AuthenticationCreateLocalUserTest {
 			@Override
 			public void execute(final Authentication auth) throws Exception {
 				auth.createLocalUser(token, new UserName("whee"), new DisplayName("bar"),
-						new EmailAddress("f@g.com"));
+						new EmailAddress("f@h.com"));
 			}
 
 			@Override
@@ -295,14 +295,14 @@ public class AuthenticationCreateLocalUserTest {
 		final Authentication auth = testauth.auth;
 		
 		failCreateLocalUser(auth, null, new UserName("foo"), new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new NullPointerException("token"));
+				new EmailAddress("f@h.com"), new NullPointerException("token"));
 		
 		failCreateLocalUser(auth, new IncomingToken("whee"), null,
-				new DisplayName("bar"), new EmailAddress("f@g.com"),
+				new DisplayName("bar"), new EmailAddress("f@h.com"),
 				new NullPointerException("userName"));
 		
 		failCreateLocalUser(auth, new IncomingToken("whee"), new UserName("foo"),
-				null, new EmailAddress("f@g.com"),
+				null, new EmailAddress("f@h.com"),
 				new NullPointerException("displayName"));
 		
 		failCreateLocalUser(auth, new IncomingToken("whee"), new UserName("foo"),
@@ -326,13 +326,13 @@ public class AuthenticationCreateLocalUserTest {
 
 		final AuthUser admin = AuthUser.getBuilder(
 				UserName.ROOT, new DisplayName("foo"), NOW)
-				.withEmailAddress(new EmailAddress("f@g.com"))
+				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ROOT).build();
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		
 		failCreateLocalUser(auth, token, UserName.ROOT, new DisplayName("bar"),
-				new EmailAddress("f@g.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
+				new EmailAddress("f@h.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Cannot create ROOT user"));
 		
 		assertLogEventsCorrect(logEvents,

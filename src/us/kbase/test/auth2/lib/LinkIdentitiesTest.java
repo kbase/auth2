@@ -41,7 +41,7 @@ public class LinkIdentitiesTest {
 		try {
 			AUTH_USER = AuthUser.getBuilder(
 					new UserName("foo"), new DisplayName("bar"), Instant.now())
-					.withEmailAddress(new EmailAddress("f@g.com"))
+					.withEmailAddress(new EmailAddress("f@h.com"))
 					.withIdentity(REMOTE1).build();
 		} catch (Exception e) {
 			throw new RuntimeException("fix yer tests newb", e);

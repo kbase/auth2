@@ -9,6 +9,7 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.inject.Inject;
@@ -26,7 +27,6 @@ import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.config.ConfigAction.State;
@@ -110,19 +110,19 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 
 	private Optional<MediaType> getMediaTypeFromMethodAnnotation(final ResourceInfo resourceInfo) {
 		
-		final Optional<Method> method = Optional.fromNullable(
+		final Optional<Method> method = Optional.ofNullable(
 				resourceInfo.getResourceMethod());
 		if (!method.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
-		Optional<Produces> produces = Optional.fromNullable(
+		Optional<Produces> produces = Optional.ofNullable(
 				method.get().getAnnotation(Produces.class));
 		if (!produces.isPresent()) {
 			final Class<?> cls = resourceInfo.getResourceClass();
-			produces = Optional.fromNullable((Produces) cls.getAnnotation(Produces.class));
+			produces = Optional.ofNullable((Produces) cls.getAnnotation(Produces.class));
 		}
 		if (!produces.isPresent()) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		final List<String> mediaTypes = new LinkedList<>();
 		for (final String mtlist: produces.get().value()) { // comma separated list
@@ -149,7 +149,7 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 						method.get().toGenericString(), mtype));
 			}
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	/* JAX-RS will cause an error to be thrown if the Accept header does not contain a supported
@@ -157,7 +157,7 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 	 */
 	private Optional<MediaType> getMediaTypeFromHeaders(final HttpHeaders headers) {
 		//sorted by q-value
-		final Optional<List<MediaType>> mtypes = Optional.fromNullable(
+		final Optional<List<MediaType>> mtypes = Optional.ofNullable(
 				headers.getAcceptableMediaTypes());
 		if (mtypes.isPresent()) {
 			for (final MediaType m: mtypes.get()) {
@@ -166,6 +166,6 @@ public class ExceptionHandler implements ExceptionMapper<Throwable> {
 				}
 			}
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 }

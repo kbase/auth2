@@ -2,7 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
@@ -30,7 +30,7 @@ public class LoginToken {
 	public LoginToken(final TemporaryToken token) {
 		nonNull(token, "token");
 		this.temporaryToken = Optional.of(token);
-		this.token = Optional.absent();
+		this.token = Optional.empty();
 	}
 	
 	/** Create a LoginToken with a new token, indicating the login process is complete.
@@ -38,7 +38,7 @@ public class LoginToken {
 	 */
 	public LoginToken(final NewToken token) {
 		nonNull(token, "token");
-		this.temporaryToken = Optional.absent();
+		this.temporaryToken = Optional.empty();
 		this.token = Optional.of(token);
 	}
 

@@ -320,7 +320,7 @@ public class SimpleEndpointsTest {
 		
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(new UserName("whoo")), IncomingToken.hash("foo"));
+				.link("state", "pkce", new UserName("whoo")), IncomingToken.hash("foo"));
 		
 		final WebTarget wt = CLI.target(target);
 		
@@ -351,7 +351,7 @@ public class SimpleEndpointsTest {
 	
 		manager.storage.storeTemporarySessionData(TemporarySessionData.create(
 				UUID.randomUUID(), Instant.now(), Instant.now().plusSeconds(10))
-				.link(new UserName("whoo")), IncomingToken.hash("foo"));
+				.link("state", "pkce", new UserName("whoo")), IncomingToken.hash("foo"));
 		
 		final WebTarget wt = CLI.target(target);
 		

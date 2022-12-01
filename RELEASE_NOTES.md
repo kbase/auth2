@@ -1,6 +1,18 @@
 Authentication Service MKII release notes
 =========================================
 
+0.5.0
+-----
+
+* BACKWARDS INCOMPATIBILITY - any in flight login or link flows will fail after the server is
+  upgraded to 0.5.0.
+* ADMIN ACTION REQUIRED - before starting the upgraded server, remove all data from the `tempdata`
+  collection to avoid server errors for in flight login or link flows.
+* Added PKCE to the login and link OAuth2 flows for Google and Globus.
+  * See https://www.oauth.com/oauth2-servers/pkce/ for details.
+  * OrcID currently does not support PKCE, see https://github.com/ORCID/ORCID-Source/issues/5977
+* The OAuth2 state value is now stored in the database rather than in a cookie.
+
 0.4.3
 -----
 

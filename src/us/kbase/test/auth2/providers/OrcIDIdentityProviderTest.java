@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
@@ -116,24 +117,24 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = gc.configure(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
@@ -145,24 +146,24 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", oip.getLoginURL("foo5", false, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo5", "pkce", false, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo6", true, null),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo6", "pkce", true, null),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
-		assertThat("incorrect login url", oip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
-		assertThat("incorrect link url", oip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://ologin.com/oauth/authorize?" +
+		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
+				is(new URI("https://ologin.com/oauth/authorize?" +
 						"scope=%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
@@ -197,9 +198,9 @@ public class OrcIDIdentityProviderTest {
 	@Test
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new OrcIDIdentityProvider(CFG);
-		failGetIdentities(idp, null, true, new IllegalArgumentException(
+		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
-		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
+		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
 	}
 	
@@ -207,27 +208,31 @@ public class OrcIDIdentityProviderTest {
 	public void noSuchEnvironment() throws Exception {
 		final IdentityProvider idp = new OrcIDIdentityProvider(CFG);
 		
-		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
-		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", true, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", false, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final Exception exception) throws Exception {
-		failGetIdentities(idp, authcode, link, null, exception);
+		failGetIdentities(idp, authcode, pkce, link, null, exception);
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final String env,
 			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link, env);
+			idp.getIdentities(authcode, pkce, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -261,15 +266,15 @@ public class OrcIDIdentityProviderTest {
 				new IdentityRetrievalException("No access token was returned by OrcID");
 		
 		setUpCallAuthToken(acode, null, redir, cliid, clisec, "name", "fake ID");
-		failGetIdentities(idp, acode, false, e);
+		failGetIdentities(idp, acode, "pkce", false, e);
 		setUpCallAuthToken(acode, "\t  ", redir, cliid, clisec, "name", "fake ID");
-		failGetIdentities(idp, acode, false, e);
+		failGetIdentities(idp, acode, "pkce", false, e);
 		
 		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", null);
-		failGetIdentities(idp, acode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, acode, "pkce", false, new IdentityRetrievalException(
 				"No id was returned by OrcID"));
 		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", "   \t  \n  ");
-		failGetIdentities(idp, acode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, acode, "pkce", false, new IdentityRetrievalException(
 				"No id was returned by OrcID"));
 	}
 	
@@ -283,37 +288,37 @@ public class OrcIDIdentityProviderTest {
 		final String authCode = "foo10";
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from OrcID service."));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from OrcID service."));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from OrcID service: 500. Response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from OrcID service: 500. Truncated response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
 				"from OrcID service: 500."));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
 				"response body from OrcID service: 500."));
 		
 		setUpCallAuthToken(authCode, redir, cliid, clisec, APP_JSON, 500,
 				"{\"error\":\"whee!\",\"error_description\":\"whoo!\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: OrcID service returned an error. HTTP code: 500. " +
 				"Error: whee!. Error description: whoo!"));
 	}
@@ -331,44 +336,44 @@ public class OrcIDIdentityProviderTest {
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 200, "bleah");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Unable to parse response from OrcID service."));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, "text/html", 200, MAPPER.writeValueAsString(
 				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
 						map("value", "email1")))));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Unable to parse response from OrcID service."));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code and unparseable " +
 				"response from OrcID service: 500. Response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code and unparseable " +
 				"response from OrcID service: 500. Truncated response: " + STRING1000));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code with no response " +
 				"body from OrcID service: 500."));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code with no error in " +
 				"the response body from OrcID service: 500."));
 		
 		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
 		setupCallID(authtoken, orcID, APP_JSON, 401, MAPPER.writeValueAsString(
 				map("error", "whee!", "error_description", "whoo!")));
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"OrcID service returned an error. HTTP code: 401. " +
 				"Error: whee!. Error description: whoo!"));
 	}
@@ -394,7 +399,7 @@ public class OrcIDIdentityProviderTest {
 		setUpCallAuthToken(authCode, "footoken3", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, null);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
@@ -413,7 +418,7 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email7")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, "e3");
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, "e3");
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
@@ -452,7 +457,7 @@ public class OrcIDIdentityProviderTest {
 				null, orcID);
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, null);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
@@ -481,7 +486,7 @@ public class OrcIDIdentityProviderTest {
 				null, orcID);
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email4")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, "e3");
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, "e3");
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),

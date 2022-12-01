@@ -15,6 +15,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import javax.ws.rs.client.Client;
@@ -31,8 +32,6 @@ import org.junit.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -91,12 +90,12 @@ public class LoggingFilterTest {
 
 		@Override
 		public Optional<String> getMongoUser() {
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		@Override
 		public Optional<char[]> getMongoPwd() {
-			return Optional.absent();
+			return Optional.empty();
 		}
 
 		@Override

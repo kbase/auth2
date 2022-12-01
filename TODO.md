@@ -3,6 +3,7 @@ Auth2 TODO list
 
 Auth service work
 -----------------
+* When OrcID supports PKCE, implement: https://github.com/ORCID/ORCID-Source/issues/5977
 * Include users's identities in admin user view
 * Complete rich UI (code not in this repo)
   * Currently only covers login, link, me, and tokens.

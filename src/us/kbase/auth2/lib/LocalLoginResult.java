@@ -2,7 +2,7 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.token.NewToken;
 
@@ -25,7 +25,7 @@ public class LocalLoginResult {
 	public LocalLoginResult(final UserName userName) {
 		nonNull(userName, "userName");
 		this.userName = Optional.of(userName);
-		token = Optional.absent();
+		token = Optional.empty();
 	}
 	
 	/** Create a login result where the login is complete.
@@ -33,7 +33,7 @@ public class LocalLoginResult {
 	 */
 	public LocalLoginResult(final NewToken token) {
 		nonNull(token, "token");
-		userName = Optional.absent();
+		userName = Optional.empty();
 		this.token = Optional.of(token);
 	}
 

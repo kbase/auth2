@@ -7,8 +7,7 @@ import java.net.InetAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -190,12 +189,12 @@ public class TokenCreationContext {
 		private static final int MAX_CUSTOM_CONTEXT_VALUE_LENGTH = 80;
 		private static final int MAX_CUSTOM_CONTEXT_KEY_LENGTH = 20;
 		
-		private Optional<String> os = Optional.absent();
-		private Optional<String> osVersion = Optional.absent();
-		private Optional<String> agent = Optional.absent();
-		private Optional<String> agentVersion = Optional.absent();
-		private Optional<String> device = Optional.absent();
-		private Optional<InetAddress> ipAddress = Optional.absent();
+		private Optional<String> os = Optional.empty();
+		private Optional<String> osVersion = Optional.empty();
+		private Optional<String> agent = Optional.empty();
+		private Optional<String> agentVersion = Optional.empty();
+		private Optional<String> device = Optional.empty();
+		private Optional<InetAddress> ipAddress = Optional.empty();
 		private Map<String, String> customContext = new HashMap<>();
 		
 		private Builder() {};
@@ -210,13 +209,13 @@ public class TokenCreationContext {
 		 */
 		public Builder withNullableOS(final String os, final String version) {
 			if (os == null || os.trim().isEmpty()) {
-				this.os = Optional.absent();
-				osVersion = Optional.absent();
+				this.os = Optional.empty();
+				osVersion = Optional.empty();
 				return this;
 			}
 			this.os = Optional.of(os);
 			if (version == null || version.trim().isEmpty()) {
-				osVersion = Optional.absent();
+				osVersion = Optional.empty();
 				return this;
 			}
 			osVersion = Optional.of(version);
@@ -233,13 +232,13 @@ public class TokenCreationContext {
 		 */
 		public Builder withNullableAgent(final String agent, final String version) {
 			if (agent == null || agent.trim().isEmpty()) {
-				this.agent = Optional.absent();
-				agentVersion = Optional.absent();
+				this.agent = Optional.empty();
+				agentVersion = Optional.empty();
 				return this;
 			}
 			this.agent = Optional.of(agent);
 			if (version == null || version.trim().isEmpty()) {
-				agentVersion = Optional.absent();
+				agentVersion = Optional.empty();
 				return this;
 			}
 			agentVersion = Optional.of(version);
@@ -253,7 +252,7 @@ public class TokenCreationContext {
 		 */
 		public Builder withNullableDevice(final String device) {
 			if (device == null || device.trim().isEmpty()) {
-				this.device = Optional.absent();
+				this.device = Optional.empty();
 			} else {
 				this.device = Optional.of(device);
 			}
@@ -277,7 +276,7 @@ public class TokenCreationContext {
 		 */
 		public Builder withNullableIpAddress(final InetAddress ipAddress) {
 			if (ipAddress == null) {
-				this.ipAddress = Optional.absent();
+				this.ipAddress = Optional.empty();
 			} else {
 				this.ipAddress = Optional.of(ipAddress);
 			}
