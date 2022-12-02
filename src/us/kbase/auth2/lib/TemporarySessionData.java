@@ -8,10 +8,10 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -27,24 +27,30 @@ public class TemporarySessionData {
 	private final UUID id;
 	private final Instant created;
 	private final Instant expires;
-	private final Optional<Set<RemoteIdentity>> identities;
-	private final Optional<String> error;
-	private final Optional<ErrorType> errorType;
-	private final Optional<UserName> user;
+	private final String oauth2State;
+	private final String pkceCodeVerifier;
+	private final Set<RemoteIdentity> identities;
+	private final String error;
+	private final ErrorType errorType;
+	private final UserName user;
 	
 	private TemporarySessionData(
 			final Operation op,
 			final UUID id,
 			final Instant created,
 			final Instant expires,
-			final Optional<Set<RemoteIdentity>> identities,
-			final Optional<UserName> user,
-			final Optional<String> error,
-			final Optional<ErrorType> errorType) {
+			final String oauth2State,
+			final String pkceCodeVerifier,
+			final Set<RemoteIdentity> identities,
+			final UserName user,
+			final String error,
+			final ErrorType errorType) {
 		this.op = op;
 		this.id = id;
 		this.created = created;
 		this.expires = expires;
+		this.oauth2State = oauth2State;
+		this.pkceCodeVerifier = pkceCodeVerifier;
 		this.identities = identities;
 		this.user = user;
 		this.error = error;
@@ -69,7 +75,7 @@ public class TemporarySessionData {
 	 * @return the identities.
 	 */
 	public Optional<Set<RemoteIdentity>> getIdentities() {
-		return identities;
+		return Optional.ofNullable(identities);
 	}
 
 	/** Get the date of creation for the session data.
@@ -86,47 +92,55 @@ public class TemporarySessionData {
 		return expires;
 	}
 	
+	/** Get the state value for the OAuth2 request associated with this temporary data, if any.
+	 * @return the state value.
+	 */
+	public Optional<String> getOAuth2State() {
+		return Optional.ofNullable(oauth2State);
+	}
+	
+	/** Get the PKCE code verifier for the OAuth2 request associated with this temporary data,
+	 * if any.
+	 * 
+	 * See https://www.oauth.com/oauth2-servers/pkce/authorization-request/
+	 * @return the PKCE code verifier.
+	 */
+	public Optional<String> getPKCECodeVerifier() {
+		return Optional.ofNullable(pkceCodeVerifier);
+	}
+	
 	/** Get the name of the user associated with the session data, if any.
 	 * @return the user name.
 	 */
 	public Optional<UserName> getUser() {
-		return user;
+		return Optional.ofNullable(user);
 	}
 	
 	/** Returns the error, if any.
 	 * @return the error.
 	 */
 	public Optional<String> getError() {
-		return error;
+		return Optional.ofNullable(error);
 	}
 	
 	/** Get the type of the error, if any.
 	 * @return the error type.
 	 */
 	public Optional<ErrorType> getErrorType() {
-		return errorType;
+		return Optional.ofNullable(errorType);
 	}
 	
 	/** Returns true if an error is present.
 	 * @return true if an error is present.
 	 */
 	public boolean hasError() {
-		return error.isPresent();
+		return error != null;
 	}
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((created == null) ? 0 : created.hashCode());
-		result = prime * result + ((error == null) ? 0 : error.hashCode());
-		result = prime * result + ((errorType == null) ? 0 : errorType.hashCode());
-		result = prime * result + ((expires == null) ? 0 : expires.hashCode());
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
-		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
-		result = prime * result + ((op == null) ? 0 : op.hashCode());
-		result = prime * result + ((user == null) ? 0 : user.hashCode());
-		return result;
+		return Objects.hash(created, error, errorType, expires, id, identities, oauth2State, op, pkceCodeVerifier,
+				user);
 	}
 
 	@Override
@@ -141,59 +155,11 @@ public class TemporarySessionData {
 			return false;
 		}
 		TemporarySessionData other = (TemporarySessionData) obj;
-		if (created == null) {
-			if (other.created != null) {
-				return false;
-			}
-		} else if (!created.equals(other.created)) {
-			return false;
-		}
-		if (error == null) {
-			if (other.error != null) {
-				return false;
-			}
-		} else if (!error.equals(other.error)) {
-			return false;
-		}
-		if (errorType == null) {
-			if (other.errorType != null) {
-				return false;
-			}
-		} else if (!errorType.equals(other.errorType)) {
-			return false;
-		}
-		if (expires == null) {
-			if (other.expires != null) {
-				return false;
-			}
-		} else if (!expires.equals(other.expires)) {
-			return false;
-		}
-		if (id == null) {
-			if (other.id != null) {
-				return false;
-			}
-		} else if (!id.equals(other.id)) {
-			return false;
-		}
-		if (identities == null) {
-			if (other.identities != null) {
-				return false;
-			}
-		} else if (!identities.equals(other.identities)) {
-			return false;
-		}
-		if (op != other.op) {
-			return false;
-		}
-		if (user == null) {
-			if (other.user != null) {
-				return false;
-			}
-		} else if (!user.equals(other.user)) {
-			return false;
-		}
-		return true;
+		return Objects.equals(created, other.created) && Objects.equals(error, other.error)
+				&& errorType == other.errorType && Objects.equals(expires, other.expires)
+				&& Objects.equals(id, other.id) && Objects.equals(identities, other.identities)
+				&& Objects.equals(oauth2State, other.oauth2State) && op == other.op
+				&& Objects.equals(pkceCodeVerifier, other.pkceCodeVerifier) && Objects.equals(user, other.user);
 	}
 	
 	/** The operation this session data is associated with.
@@ -201,8 +167,10 @@ public class TemporarySessionData {
 	 *
 	 */
 	public static enum Operation {
-		/** The login operation. */
-		LOGIN,
+		/** The start of the login operation. */
+		LOGINSTART,
+		/** The last step of the login operation, including identities. */
+		LOGINIDENTS,
 		/** The start of the link operation. */
 		LINKSTART,
 		/** The last step of the link operation, including identities. */
@@ -251,10 +219,6 @@ public class TemporarySessionData {
 		private final UUID id;
 		private final Instant created;
 		private final Instant expires;
-		private Optional<Set<RemoteIdentity>> identities = Optional.absent();
-		private Optional<String> error = Optional.absent();
-		private Optional<ErrorType> errorType = Optional.absent();
-		private Optional<UserName> user = Optional.absent();
 		
 		private Builder(final UUID id, final Instant created, final Instant expires) {
 			nonNull(id, "id");
@@ -277,38 +241,65 @@ public class TemporarySessionData {
 			checkStringNoCheckedException(error, "error");
 			nonNull(errorType, "errorType");
 			return new TemporarySessionData(
-					Operation.ERROR, id, created, expires, identities, user,
-					Optional.of(error), Optional.of(errorType));
+					Operation.ERROR, id, created, expires,
+					null, null, null, null, error, errorType);
 		}
 		
-		/** Create temporary session data for a login operation.
+		/** Create temporary session data for the start of a login operation.
+		 * @param oauth2State the OAuth2 session state value.
+		 * @param pkceCodeVerifier the OAuth2 PKCE code verifier.
+		 * See https://www.oauth.com/oauth2-servers/pkce/authorization-request/
+		 * @return the temporary session data.
+		 */
+		public TemporarySessionData login(
+				final String oauth2State,
+				final String pkceCodeVerifier) {
+			checkStringNoCheckedException(oauth2State, "oauth2State");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
+			return new TemporarySessionData(
+					Operation.LOGINSTART, id, created, expires,
+					oauth2State, pkceCodeVerifier, null, null, null, null);
+		}
+		
+		/** Create temporary session data for a login operation where remote identities are
+		 * involved.
 		 * @param identities the remote identities involved in the login.
 		 * @return the temporary session data.
 		 */
 		public TemporarySessionData login(final Set<RemoteIdentity> identities) {
 			return new TemporarySessionData(
-					Operation.LOGIN, id, created, expires, checkIdents(identities), user,
-					error, errorType);
+					Operation.LOGINIDENTS, id, created, expires,
+					null, null, checkIdents(identities), null, null, null);
 		}
 
-		private Optional<Set<RemoteIdentity>> checkIdents(final Set<RemoteIdentity> identities) {
+		private Set<RemoteIdentity> checkIdents(final Set<RemoteIdentity> identities) {
 			nonNull(identities, "identities");
 			noNulls(identities, "null item in identities");
 			if (identities.isEmpty()) {
 				throw new IllegalArgumentException("empty identities");
 			}
-			return Optional.of(Collections.unmodifiableSet(new HashSet<>(identities)));
+			return Collections.unmodifiableSet(new HashSet<>(identities));
 		}
 		
 		/** Create temporary session data for the start of a linking operation.
+		 * @param oauth2State the OAuth2 session state value.
+		 * @param pkceCodeVerifier the OAuth2 PKCE code verifier.
+		 * See https://www.oauth.com/oauth2-servers/pkce/authorization-request/
 		 * @param userName the user that is performing the linking operation.
 		 * @return the temporary session data.
 		 */
-		public TemporarySessionData link(final UserName userName) {
+		public TemporarySessionData link(
+				final String oauth2State,
+				// could make a pckecodeverifier class that checks string contents vs spec
+				// since core auth logic is generating the verifier seems pointless
+				final String pkceCodeVerifier,
+				final UserName userName) {
+			checkStringNoCheckedException(oauth2State, "oauth2State");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
 			nonNull(userName, "userName");
 			return new TemporarySessionData(
-					Operation.LINKSTART, id, created, expires, identities, Optional.of(userName),
-					error, errorType);
+					Operation.LINKSTART, id, created, expires,
+					oauth2State, pkceCodeVerifier, null, userName, null, null);
 		}
 		
 		/** Create temporary session data for a linking operation when remote identities are
@@ -322,8 +313,8 @@ public class TemporarySessionData {
 				final Set<RemoteIdentity> identities) {
 			nonNull(userName, "userName");
 			return new TemporarySessionData(
-					Operation.LINKIDENTS, id, created, expires, checkIdents(identities),
-					Optional.of(userName), error, errorType);
+					Operation.LINKIDENTS, id, created, expires,
+					null, null, checkIdents(identities), userName, null, null);
 		}
 	}
 }

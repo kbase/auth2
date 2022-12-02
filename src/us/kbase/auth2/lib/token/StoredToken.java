@@ -3,9 +3,8 @@ package us.kbase.auth2.lib.token;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
@@ -235,7 +234,7 @@ public class StoredToken {
 		
 		private final UUID id;
 		private final TokenType type;
-		private Optional<TokenName> tokenName = Optional.absent();
+		private Optional<TokenName> tokenName = Optional.empty();
 		private TokenCreationContext context = TokenCreationContext.getBuilder().build();
 		private final UserName userName;
 		private Instant creationDate;
@@ -259,7 +258,7 @@ public class StoredToken {
 		
 		@Override
 		public OptionalsStep withNullableTokenName(final TokenName tokenName) {
-			this.tokenName = Optional.fromNullable(tokenName);
+			this.tokenName = Optional.ofNullable(tokenName);
 			return this;
 		}
 		

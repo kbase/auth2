@@ -5,10 +5,10 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.config.AuthConfig;
@@ -216,7 +216,7 @@ public class MongoStorageConfigTest extends MongoStorageTester {
 				.build();
 		storage.updateConfig(cfgUp, false);
 		
-		final Optional<Boolean> ab = Optional.absent();
+		final Optional<Boolean> ab = Optional.empty();
 		final AuthConfigUpdate<ExternalConfig> cfgUp2 = AuthConfigUpdate.getBuilder()
 				// leave out login allowed = absent value supplied
 				.withProviderUpdate("prov2", new ProviderUpdate(ab, ab, ab))

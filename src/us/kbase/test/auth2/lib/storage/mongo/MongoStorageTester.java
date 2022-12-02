@@ -18,7 +18,7 @@ public class MongoStorageTester {
 	
 	static MongoStorageTestManager manager;
 
-	//keeping these so the tests don't have to be refactored. Should really just use the manager
+	// TODO TEST remove these proxies and just access via the manager
 	static MongoController mongo;
 	static MongoClient mc;
 	static MongoDatabase db;
@@ -38,6 +38,7 @@ public class MongoStorageTester {
 		mockClock = manager.mockClock;
 		mongoDBVer = manager.mongoDBVer;
 		indexVer = manager.indexVer;
+		// TODO MONGO stop supporting mongo 2 and remove mongo 2 specific code
 		includeSystemIndexes = mongoDBVer.lessThan(Version.forIntegers(3, 2)) &&
 				!manager.wiredTiger;
 	}

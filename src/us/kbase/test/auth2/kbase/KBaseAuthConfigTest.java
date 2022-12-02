@@ -10,13 +10,12 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
+import java.util.Optional;
 
 import org.apache.commons.io.FileUtils;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -79,8 +78,8 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
-		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
-		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.empty()));
+		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.empty()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set()));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));
@@ -225,8 +224,8 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
-		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.absent()));
-		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.absent()));
+		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.empty()));
+		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.empty()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
 		assertThat("incorrect id providers", cfg.getIdentityProviderConfigs(), is(set()));
 		assertThat("incorrect envs", cfg.getEnvironments(), is(set()));

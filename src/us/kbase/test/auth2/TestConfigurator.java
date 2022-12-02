@@ -5,12 +5,10 @@ import java.io.PrintWriter;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 
 import org.productivity.java.syslog4j.SyslogIF;
-
-// TODO CODE switch to the java supplied Optional. Will need changes throughout the code base
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.service.AuthStartupConfig;
@@ -34,8 +32,8 @@ public class TestConfigurator implements AuthStartupConfig {
 	private static String mongoHost = null;
 	private static String mongoDatabase = null;
 	private static String templatesDir = null;
-	private static Optional<String> mongoUser = Optional.absent();
-	private static Optional<char[]> mongoPwd = Optional.absent();
+	private static Optional<String> mongoUser = Optional.empty();
+	private static Optional<char[]> mongoPwd = Optional.empty();
 	
 	public static void setConfig(
 			final String mongoHost,
@@ -44,8 +42,8 @@ public class TestConfigurator implements AuthStartupConfig {
 		TestConfigurator.mongoHost = mongoHost;
 		TestConfigurator.mongoDatabase = mongoDatabase;
 		TestConfigurator.templatesDir = templatesDir;
-		TestConfigurator.mongoUser = Optional.absent();
-		TestConfigurator.mongoPwd = Optional.absent();
+		TestConfigurator.mongoUser = Optional.empty();
+		TestConfigurator.mongoPwd = Optional.empty();
 	}
 	
 	public static void setConfig(
@@ -57,8 +55,8 @@ public class TestConfigurator implements AuthStartupConfig {
 		TestConfigurator.mongoHost = mongoHost;
 		TestConfigurator.mongoDatabase = mongoDatabase;
 		TestConfigurator.templatesDir = templatesDir;
-		TestConfigurator.mongoUser = Optional.fromNullable(mongoUser);
-		TestConfigurator.mongoPwd = Optional.fromNullable(mongoPwd);
+		TestConfigurator.mongoUser = Optional.ofNullable(mongoUser);
+		TestConfigurator.mongoPwd = Optional.ofNullable(mongoPwd);
 	}
 
 	private final SLF4JAutoLogger logger;
@@ -139,7 +137,7 @@ public class TestConfigurator implements AuthStartupConfig {
 	@Override
 	public Optional<String> getMongoUser() {
 		return mongoUser.isPresent() ? mongoUser :
-			Optional.fromNullable(System.getProperty(MONGO_USER_KEY));
+			Optional.ofNullable(System.getProperty(MONGO_USER_KEY));
 	}
 
 	@Override
@@ -151,7 +149,7 @@ public class TestConfigurator implements AuthStartupConfig {
 		if (mp != null) {
 			return Optional.of(mp.toCharArray());
 		}
-		return Optional.absent();
+		return Optional.empty();
 	}
 
 	@Override

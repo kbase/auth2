@@ -17,6 +17,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -36,7 +37,6 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.TextNode;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import de.danielbechler.diff.ObjectDifferBuilder;
@@ -84,7 +84,7 @@ public class ServiceTestUtils {
 				TokenCreationContext.getBuilder().build()).getToken().get().getToken();
 		final Password admintemppwd = auth.createLocalUser(
 				new IncomingToken(roottoken), new UserName("admin"), new DisplayName("a"),
-				new EmailAddress("f@g.com"));
+				new EmailAddress("f@h.com"));
 		auth.updateRoles(new IncomingToken(roottoken), new UserName("admin"),
 				set(Role.CREATE_ADMIN), set());
 		final String adminpwd = "foobarwhoowhee2";
@@ -277,7 +277,7 @@ public class ServiceTestUtils {
 		
 		final Optional<TokenName> tn;
 		if (name == null) {
-			tn = Optional.absent();
+			tn = Optional.empty();
 		} else {
 			tn = Optional.of(new TokenName(name));
 		}
@@ -318,7 +318,7 @@ public class ServiceTestUtils {
 		
 		final Optional<TokenName> tn;
 		if (name == null) {
-			tn = Optional.absent();
+			tn = Optional.empty();
 		} else {
 			tn = Optional.of(new TokenName(name));
 		}

@@ -9,10 +9,10 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -429,7 +429,7 @@ public class AuthConfigTest {
 	
 	@Test
 	public void updateConfigProviderConstructOptionalAbsent() throws Exception {
-		final Optional<Boolean> abs = Optional.absent();
+		final Optional<Boolean> abs = Optional.empty();
 		final ProviderUpdate pu = new ProviderUpdate(abs, abs, abs);
 		assertThat("incorrect enabled", pu.getEnabled(), is(abs));
 		assertThat("incorrect force login", pu.getForceLoginChoice(), is(abs));
@@ -485,8 +485,8 @@ public class AuthConfigTest {
 	@Test
 	public void updateConfigMinimal() throws Exception {
 		final AuthConfigUpdate<ExternalConfig> acu = AuthConfigUpdate.getBuilder().build();
-		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.absent()));
-		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.absent()));
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.empty()));
+		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.empty()));
 		assertThat("incorrect providers", acu.getProviders(), is(Collections.emptyMap()));
 		assertThat("incorrect token lifetimes", acu.getTokenLifetimeMS(), is(Collections.emptyMap()));
 	}
@@ -517,7 +517,7 @@ public class AuthConfigTest {
 				.build();
 		
 		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.of(false)));
-		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.absent()));
+		assertThat("incorrect ext cfg", acu.getExternalConfig(), is(Optional.empty()));
 		assertThat("incorrect providers", acu.getProviders(), is(Collections.emptyMap()));
 		assertThat("incorrect token lifetime", acu.getTokenLifetimeMS(), is(ImmutableMap.of(
 				TokenLifetimeType.LOGIN, 60000L,
@@ -533,7 +533,7 @@ public class AuthConfigTest {
 				.withNullableLoginAllowed(null)
 				.build();
 		
-		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.absent()));
+		assertThat("incorrect login", acu.getLoginAllowed(), is(Optional.empty()));
 		
 		final AuthConfigUpdate<ExternalConfig> acu2 = AuthConfigUpdate.getBuilder()
 				.withNullableLoginAllowed(false)

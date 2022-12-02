@@ -7,12 +7,11 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -413,7 +412,7 @@ public class AuthUser {
 		final Set<Role> roles = new TreeSet<>();
 		final Set<String> customRoles = new TreeSet<>();
 		final Map<PolicyID, Instant> policyIDs = new TreeMap<>();
-		Optional<Instant> lastLogin = Optional.absent();
+		Optional<Instant> lastLogin = Optional.empty();
 		UserDisabledState disabledState = new UserDisabledState();
 		
 		AbstractBuilder(

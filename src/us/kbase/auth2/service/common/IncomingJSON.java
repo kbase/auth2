@@ -4,11 +4,11 @@ import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.TreeMap;
 
 import com.fasterxml.jackson.annotation.JsonAnyGetter;
 import com.fasterxml.jackson.annotation.JsonAnySetter;
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -30,7 +30,7 @@ public class IncomingJSON {
 
 	protected Optional<String> getOptionalString(final String string) {
 		if (nullOrEmpty(string)) {
-			return Optional.absent();
+			return Optional.empty();
 		}
 		return Optional.of(string.trim());
 	}

@@ -9,6 +9,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Base64;
@@ -120,27 +121,35 @@ public class GoogleIdentityProviderTest {
 		final IdentityProvider gip = gc.configure(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURL("foo3", false, null),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo3&redirect_uri=https%3A%2F%2Fgloginredir.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo4", true, null),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo4&redirect_uri=https%3A%2F%2Fglinkredir.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkceisreallyneat", false, null),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo3"
+						+ "&code_challenge=pkceisreallyneat&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fgloginredir.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkcehovercrafteels", true, null),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo4"
+						+ "&code_challenge=pkcehovercrafteels&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fglinkredir.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
 		
-		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkcechallenge", false, "myenv"),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo3"
+						+ "&code_challenge=pkcechallenge&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmygloginred.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkcefoobarbaz", true, "myenv"),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo4"
+						+ "&code_challenge=pkcefoobarbaz&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmyglinkred.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
 	}
 	
 	@Test
@@ -149,27 +158,35 @@ public class GoogleIdentityProviderTest {
 		final IdentityProvider gip = new GoogleIdentityProvider(CFG);
 		assertThat("incorrect provider name", gip.getProviderName(), is("Google"));
 		assertThat("incorrect environments", gip.getEnvironments(), is(set("myenv")));
-		assertThat("incorrect login url", gip.getLoginURL("foo5", false, null),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo5&redirect_uri=https%3A%2F%2Fgloginredir.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo6", true, null),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo6&redirect_uri=https%3A%2F%2Fglinkredir.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect login url", gip.getLoginURI("foo5", "pkceisverynice", false, null),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo5"
+						+ "&code_challenge=pkceisverynice&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fgloginredir.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURI("foo6", "pkcewhoopwhoop", true, null),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo6"
+						+ "&code_challenge=pkcewhoopwhoop&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fglinkredir.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
 		
-		assertThat("incorrect login url", gip.getLoginURL("foo3", false, "myenv"),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo3&redirect_uri=https%3A%2F%2Fmygloginred.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
-		assertThat("incorrect link url", gip.getLoginURL("foo4", true, "myenv"),
-				is(new URL("https://glogin.com/o/oauth2/v2/auth?" +
-						"scope=profile+email" +
-						"&state=foo4&redirect_uri=https%3A%2F%2Fmyglinkred.com" +
-						"&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect login url", gip.getLoginURI("foo3", "pkcestuffhere", false, "myenv"),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo3"
+						+ "&code_challenge=pkcestuffhere&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmygloginred.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
+		assertThat("incorrect link url", gip.getLoginURI("foo4", "pkcethingamajig", true, "myenv"),
+				is(new URI(
+						"https://glogin.com/o/oauth2/v2/auth?"
+						+ "scope=profile+email&state=foo4"
+						+ "&code_challenge=pkcethingamajig&code_challenge_method=S256"
+						+ "&redirect_uri=https%3A%2F%2Fmyglinkred.com"
+						+ "&response_type=code&client_id=gfoo&prompt=select_account")));
 		
 	}
 	
@@ -201,36 +218,49 @@ public class GoogleIdentityProviderTest {
 	@Test
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
-		failGetIdentities(idp, null, true, new IllegalArgumentException(
-				"authcode cannot be null or empty"));
-		failGetIdentities(idp, "  \t  \n  ", true, new IllegalArgumentException(
-				"authcode cannot be null or empty"));
+		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
+				"Missing argument: authcode"));
+		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
+				"Missing argument: authcode"));
+	}
+	
+	@Test
+	public void illegalPKCEVerifer() throws Exception {
+		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
+		failGetIdentities(idp, "c", null, true, new IllegalArgumentException(
+				"Missing argument: pkceCodeVerifier"));
+		failGetIdentities(idp, "c", "  \t  \n  ", true, new IllegalArgumentException(
+				"Missing argument: pkceCodeVerifier"));
 	}
 	
 	@Test
 	public void noSuchEnvironment() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
 		
-		failGetIdentities(idp, "foo", true, "myenv1", new NoSuchEnvironmentException("myenv1"));
-		failGetIdentities(idp, "foo", false, "myenv1", new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", true, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
+		failGetIdentities(idp, "foo", "pkce", false, "myenv1",
+				new NoSuchEnvironmentException("myenv1"));
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final Exception exception) throws Exception {
-		failGetIdentities(idp, authcode, link, null, exception);
+		failGetIdentities(idp, authcode, pkce, link, null, exception);
 	}
 	
 	private void failGetIdentities(
 			final IdentityProvider idp,
 			final String authcode,
+			final String pkce,
 			final boolean link,
 			final String env,
 			final Exception exception) throws Exception {
 		try {
-			idp.getIdentities(authcode, link, env);
+			idp.getIdentities(authcode, pkce, link, env);
 			fail("got identities with bad setup");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -262,39 +292,41 @@ public class GoogleIdentityProviderTest {
 		final String cliid = cfg.getClientID();
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo10";
+		final String pkce = "somepkceverifier";
+		final String pkce2 = "anotherpkceverifier";
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 200, "foo bar");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, redir, cliid, clisec, APP_JSON, 200, "foo bar");
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, "text/html", 200,
+		setUpOAuthCall(authCode, pkce2, redir, cliid, clisec, "text/html", 200,
 				"{\"access_token\":\"foobar\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Unable to parse response from Google service."));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1000);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, redir, cliid, clisec, APP_JSON, 500, STRING1000);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Response: " + STRING1000));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, STRING1001);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce2, redir, cliid, clisec, APP_JSON, 500, STRING1001);
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code and unparseable response " +
 				"from Google service: 500. Truncated response: " + STRING1000));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, null);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, redir, cliid, clisec, APP_JSON, 500, null);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no response body " +
 				"from Google service: 500."));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500, "{}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce2, redir, cliid, clisec, APP_JSON, 500, "{}");
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Got unexpected HTTP code with no error in the " +
 				"response body from Google service: 500."));
 		
-		setUpOAuthCall(authCode, redir, cliid, clisec, APP_JSON, 500,
+		setUpOAuthCall(authCode, pkce2, redir, cliid, clisec, APP_JSON, 500,
 				"{\"error\":\"whee!\",\"error_description\":\"whoo!\"}");
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"Authtoken retrieval failed: Google service returned an error. HTTP code: 500. " +
 				"Error: whee!. Error description: whoo!"));
 	}
@@ -307,18 +339,20 @@ public class GoogleIdentityProviderTest {
 		final String cliid = cfg.getClientID();
 		final String clisec = cfg.getClientSecret();
 		final String authCode = "foo11";
+		final String pkce = "whoopkce";
+		final String pkce2 = "whoopkce2";
 		
-		setUpOAuthCall(authCode, null, redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, null, redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"No ID token in response from Google"));
 		
-		setUpOAuthCall(authCode, "    \t    ", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce2, "    \t    ", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"No ID token in response from Google"));
 		
-		setUpOAuthCall(authCode, "foo", redir, cliid, clisec);
+		setUpOAuthCall(authCode, pkce2, "foo", redir, cliid, clisec);
 		try {
-			idp.getIdentities(authCode, false, null);
+			idp.getIdentities(authCode, pkce2, false, null);
 			fail("got identities with bad setup");
 		} catch (Exception got) {
 			final String prefix = "10030 Identity retrieval failed: Unable to decode JWT: ";
@@ -330,14 +364,14 @@ public class GoogleIdentityProviderTest {
 					instanceOf(IdentityRetrievalException.class));
 		}
 		
-		setUpOAuthCall(authCode, "foo.7.bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, "foo.7.bar", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"Unable to decode JWT: Input byte[] should at least have 2 bytes " +
 				"for base64 bytes"));
 		
-		setUpOAuthCall(authCode, "foo.notjson.bar", redir, cliid, clisec);
+		setUpOAuthCall(authCode, pkce, "foo.notjson.bar", redir, cliid, clisec);
 		try {
-			idp.getIdentities(authCode, false, null);
+			idp.getIdentities(authCode, pkce, false, null);
 			fail("got identities with bad setup");
 		} catch (IdentityRetrievalException e) {
 			assertThat("incorrect error", e.getMessage(), containsString(
@@ -350,18 +384,18 @@ public class GoogleIdentityProviderTest {
 		
 		final Map<String, String> payload = new HashMap<>();
 		
-		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
 		payload.put("email", null);
-		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 		
 		payload.put("email", "   \t    ");
-		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
-		failGetIdentities(idp, authCode, false, new IdentityRetrievalException(
+		setUpOAuthCall(authCode, pkce2, "foo." + b64json(payload) + ".bar", redir, cliid, clisec);
+		failGetIdentities(idp, authCode, pkce2, false, new IdentityRetrievalException(
 				"No username included in response from Google"));
 	}
 	
@@ -389,9 +423,9 @@ public class GoogleIdentityProviderTest {
 				"sub", "id7",
 				"email", "email3");
 		
-		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
+		setUpOAuthCall(authCode, "pkcewithstuff", "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, false, env);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkcewithstuff", false, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
@@ -430,9 +464,9 @@ public class GoogleIdentityProviderTest {
 				"email", "email1",
 				"name", "dispname1");
 		
-		setUpOAuthCall(authCode, "foo." + b64json(payload) + ".bar", url,
+		setUpOAuthCall(authCode, "pixy", "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, true, env);
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pixy", true, env);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),
@@ -442,6 +476,7 @@ public class GoogleIdentityProviderTest {
 	
 	private void setUpOAuthCall(
 			final String authCode,
+			final String pkceVerifier,
 			final String idtoken,
 			final String redirect,
 			final String clientID,
@@ -454,6 +489,7 @@ public class GoogleIdentityProviderTest {
 					.withHeader(ACCEPT, APP_JSON)
 					.withBody(new ParameterBody(
 							new Parameter("code", authCode),
+							new Parameter("code_verifier", pkceVerifier),
 							new Parameter("grant_type", "authorization_code"),
 							new Parameter("redirect_uri", redirect),
 							new Parameter("client_id", clientID),
@@ -470,6 +506,7 @@ public class GoogleIdentityProviderTest {
 	
 	private void setUpOAuthCall(
 			final String authCode,
+			final String pkceVerifier,
 			final String redirect,
 			final String clientID,
 			final String clientSecret,
@@ -491,6 +528,7 @@ public class GoogleIdentityProviderTest {
 					.withHeader(ACCEPT, APP_JSON)
 					.withBody(new ParameterBody(
 							new Parameter("code", authCode),
+							new Parameter("code_verifier", pkceVerifier),
 							new Parameter("grant_type", "authorization_code"),
 							new Parameter("redirect_uri", redirect),
 							new Parameter("client_id", clientID),

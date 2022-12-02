@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -29,7 +30,6 @@ import javax.ws.rs.core.UriInfo;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
@@ -37,10 +37,7 @@ import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.ConfigItem;
-import us.kbase.auth2.lib.exceptions.AuthException;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
-import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
@@ -139,34 +136,6 @@ public class UIUtilsTest {
 			final Exception e) {
 		try {
 			UIUtils.relativize(uriInfo, target);
-			fail("expected exception");
-		} catch (Exception got) {
-			TestCommon.assertExceptionCorrect(got, e);
-		}
-	}
-	
-	@Test
-	public void checkState() throws Exception {
-		UIUtils.checkState("foo", "foo"); // expect nothing to happen
-	}
-	
-	@Test
-	public void checkStateFailNulls() {
-		failCheckState(null, "foo",
-				new MissingParameterException("Couldn't retrieve state value from cookie"));
-		failCheckState("foo", null, new AuthException(ErrorType.AUTHENTICATION_FAILED,
-				"State values do not match, this may be a CXRF attack"));
-	}
-	
-	@Test
-	public void checkStateFailNoMatch() {
-		failCheckState("foo", "bar", new AuthException(ErrorType.AUTHENTICATION_FAILED,
-				"State values do not match, this may be a CXRF attack"));
-	}
-	
-	private void failCheckState(final String cookie, final String state, final Exception e) {
-		try {
-			UIUtils.checkState(cookie, state);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);
@@ -350,7 +319,7 @@ public class UIUtilsTest {
 		final HttpHeaders headers = mock(HttpHeaders.class);
 		when(headers.getHeaderString("myheader")).thenReturn(null);
 		final Optional<String> res = UIUtils.getValueFromHeaderOrString(headers, "myheader", null);
-		assertThat("incorrect value", res, is(Optional.absent()));
+		assertThat("incorrect value", res, is(Optional.empty()));
 	}
 	
 	@Test
@@ -359,7 +328,7 @@ public class UIUtilsTest {
 		when(headers.getHeaderString("myheader")).thenReturn("    \t    ");
 		final Optional<String> res = UIUtils.getValueFromHeaderOrString(
 				headers, "myheader", "    \t    ");
-		assertThat("incorrect value", res, is(Optional.absent()));
+		assertThat("incorrect value", res, is(Optional.empty()));
 	}
 	
 	@Test
@@ -528,7 +497,7 @@ public class UIUtilsTest {
 				MapBuilder.<String, Cookie>newHashMap().with("cookiename", null).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test
@@ -549,7 +518,7 @@ public class UIUtilsTest {
 						"cookiename", new Cookie("cookiename", null)).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test
@@ -571,7 +540,7 @@ public class UIUtilsTest {
 						"cookiename", new Cookie("cookiename", "   \n  \t   ")).build());
 		
 		final Optional<IncomingToken> t = UIUtils.getTokenFromCookie(h, "cookiename", false);
-		assertThat("incorrect token", t, is(Optional.absent()));
+		assertThat("incorrect token", t, is(Optional.empty()));
 	}
 	
 	@Test

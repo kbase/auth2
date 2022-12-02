@@ -10,10 +10,10 @@ import java.time.Instant;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
+import java.util.Optional;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
@@ -49,18 +49,18 @@ public class AuthUserTest {
 				.build();
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar")));
 		assertThat("incorrect email", u.getEmail(), is(EmailAddress.UNKNOWN));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
 		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
-		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("foo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -75,7 +75,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = AuthUser.getBuilder(UserName.ROOT, new DisplayName("bar1"), NOW)
-				.withEmailAddress(new EmailAddress("f@g1.com"))
+				.withEmailAddress(new EmailAddress("f@h1.com"))
 				.withCustomRole("foo")
 				.withCustomRole("bar")
 				.withLastLogin(ll.get())
@@ -89,7 +89,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				"reason", new UserName("whee"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar1")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g1.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h1.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(set(Role.CREATE_ADMIN)));
 		assertThat("incorrect identities", u.getIdentities(), is(Collections.emptySet()));
@@ -110,7 +110,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser u = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
-				.withEmailAddress(new EmailAddress("f@g2.com"))
+				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.SERV_TOKEN)
@@ -129,7 +129,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h2.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE)));
@@ -137,7 +137,7 @@ public class AuthUserTest {
 				new PolicyID("bar"), Instant.ofEpochMilli(40000),
 				new PolicyID("foo"), Instant.ofEpochMilli(30000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -159,18 +159,18 @@ public class AuthUserTest {
 				.withIdentity(ri2).build();
 		
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
-				is(Optional.absent()));
+				is(Optional.empty()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
 		assertThat("incorrect custom roles", u.getCustomRoles(), is(Collections.emptySet()));
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState()));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
 		assertThat("incorrect email", u.getEmail(), is(EmailAddress.UNKNOWN));
-		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.absent()));
+		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.empty()));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
 		assertThat("incorrect policy IDs", u.getPolicyIDs(), is(Collections.emptyMap()));
-		assertThat("incorrect last login", u.getLastLogin(), is(Optional.absent()));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect last login", u.getLastLogin(), is(Optional.empty()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(Collections.emptySet()));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -184,7 +184,7 @@ public class AuthUserTest {
 		final Instant d = ll.get().plusMillis(2);
 		
 		final AuthUser pre = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
-				.withEmailAddress(new EmailAddress("f@g2.com"))
+				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.SERV_TOKEN)
@@ -210,7 +210,7 @@ public class AuthUserTest {
 		assertThat("incorrect disabled state", u.getDisabledState(), is(new UserDisabledState(
 				new UserName("whee1"), d)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("bar3")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@g2.com")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("f@h2.com")));
 		assertThat("incorrect enable toggle date", u.getEnableToggleDate(), is(Optional.of(d)));
 		assertThat("incorrect grantable roles", u.getGrantableRoles(), is(Collections.emptySet()));
 		assertThat("incorrect identities", u.getIdentities(), is(set(ri2)));
@@ -218,7 +218,7 @@ public class AuthUserTest {
 				new PolicyID("bar"), Instant.ofEpochMilli(40000),
 				new PolicyID("foo"), Instant.ofEpochMilli(30000))));
 		assertThat("incorrect last login", u.getLastLogin(), is(ll));
-		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.absent()));
+		assertThat("incorrect disabled reason", u.getReasonForDisabled(), is(Optional.empty()));
 		assertThat("incorrect roles", u.getRoles(), is(set(Role.SERV_TOKEN, Role.DEV_TOKEN)));
 		assertThat("incorrect user name", u.getUserName(), is(new UserName("whoo")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
@@ -296,7 +296,7 @@ public class AuthUserTest {
 	@Test
 	public void constructFail() throws Exception {
 		final UserName un = new UserName("foo");
-		final EmailAddress email = new EmailAddress("f@g.com");
+		final EmailAddress email = new EmailAddress("f@h.com");
 		final DisplayName dn = new DisplayName("bar");
 		final RemoteIdentity id = REMOTE;
 		final Role role = Role.DEV_TOKEN;

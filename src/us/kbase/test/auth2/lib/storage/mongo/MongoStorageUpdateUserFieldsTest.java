@@ -11,11 +11,11 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Optional;
 import java.util.Set;
 
 import org.junit.Test;
 
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.DisplayName;
@@ -103,7 +103,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateFailNulls() throws Exception {
 		failUpdateUser(null, UserUpdate.getBuilder()
-						.withEmail(new EmailAddress("f@g.com")).build(),
+						.withEmail(new EmailAddress("f@h.com")).build(),
 				new NullPointerException("userName"));
 		failUpdateUser(new UserName("foo"), null, new NullPointerException("update"));
 	}
@@ -111,7 +111,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateFailNoSuchUser() throws Exception {
 		failUpdateUser(new UserName("foo"), UserUpdate.getBuilder()
-				.withEmail(new EmailAddress("f@g.com")).build(), new NoSuchUserException("foo"));
+				.withEmail(new EmailAddress("f@h.com")).build(), new NoSuchUserException("foo"));
 	}
 	
 	private void failUpdateUser(final UserName name, final UserUpdate uu, final Exception e) {

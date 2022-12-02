@@ -9,14 +9,13 @@ import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.ini4j.Ini;
 import org.slf4j.LoggerFactory;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
@@ -99,8 +98,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			templateDir = Paths.get(getString(KEY_TEMPLATE_DIR, cfg, true));
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
-			mongoUser = Optional.fromNullable(getString(KEY_MONGO_USER, cfg));
-			Optional<String> mongop = Optional.fromNullable(getString(KEY_MONGO_PWD, cfg));
+			mongoUser = Optional.ofNullable(getString(KEY_MONGO_USER, cfg));
+			Optional<String> mongop = Optional.ofNullable(getString(KEY_MONGO_PWD, cfg));
 			if (mongoUser.isPresent() ^ mongop.isPresent()) {
 				mongop = null; //GC
 				throw new AuthConfigurationException(String.format(
@@ -109,7 +108,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 						KEY_MONGO_USER, KEY_MONGO_PWD, cfg.get(TEMP_KEY_CFG_FILE), CFG_LOC));
 			}
 			mongoPwd = mongop.isPresent() ?
-					Optional.of(mongop.get().toCharArray()) : Optional.absent();
+					Optional.of(mongop.get().toCharArray()) : Optional.empty();
 			mongop = null; //GC
 			cookieName = getString(KEY_COOKIE_NAME, cfg, true);
 			environmentHeader = getEnvironmentHeader(cfg);

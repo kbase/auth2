@@ -2,9 +2,8 @@ package us.kbase.auth2.lib;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
 
+import java.util.Optional;
 import java.time.Instant;
-
-import com.google.common.base.Optional;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -50,16 +49,16 @@ public class UserDisabledState {
 	public UserDisabledState(final UserName byAdmin, final Instant time) {
 		nonNull(byAdmin, "byAdmin");
 		nonNull(time, "time");
-		this.disabledReason = Optional.absent();
+		this.disabledReason = Optional.empty();
 		this.byAdmin = Optional.of(byAdmin);
 		this.time = Optional.of(time);
 	}
 	
 	/** Create a state object for a user that has never been disabled. */
 	public UserDisabledState() {
-		disabledReason = Optional.absent();
-		byAdmin = Optional.absent();
-		time = Optional.absent();
+		disabledReason = Optional.empty();
+		byAdmin = Optional.empty();
+		time = Optional.empty();
 	}
 	
 	/** Whether the user is disabled.

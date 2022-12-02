@@ -12,7 +12,7 @@ public class StateMatcher implements ArgumentMatcher<String> {
 	
 	@Override
 	public boolean matches(String state) {
-		assertThat("invalid state value", state, RegexMatcher.matches("[A-Z2-7]{32}"));
+		assertThat("invalid state value", state, RegexMatcher.matches("^[A-Z2-7]{32}$"));
 		capturedState = state;
 		return true;
 	}

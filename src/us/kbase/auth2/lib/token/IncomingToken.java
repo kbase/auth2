@@ -43,11 +43,21 @@ public class IncomingToken {
 		return new IncomingHashedToken(hash(token));
 	}
 	
-	/** Get a SHA-256 hash of a token.
+	/** Get a SHA-256 hash of a token encoded in Base64.
 	 * @param token the token to hash.
-	 * @return the hash of the token when encoded as UTF-8.
+	 * @return the hash of the token when encoded as UTF-8 Base64.
 	 */
 	public static String hash(final String token) {
+		return hash(token, false);
+	}
+		
+	/** Get a SHA-256 hash of a token encoded in Base64.
+	 * @param token the token to hash.
+	 * @param base64URLEncoding encode the token in the Base64 URL variant rather than the
+	 * standard variant if true.
+	 * @return the hash of the token when encoded as UTF-8 Base64.
+	 */
+	public static String hash(final String token, final boolean base64URLEncoding) {
 		checkStringNoCheckedException(token, "token");
 		final MessageDigest digest;
 		try {
@@ -56,7 +66,11 @@ public class IncomingToken {
 			throw new RuntimeException("This should be impossible", e);
 		}
 		final byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
-		return Base64.getEncoder().encodeToString(hash);
+		if (base64URLEncoding) {
+			return Base64.getUrlEncoder().encodeToString(hash);
+		} else {
+			return Base64.getEncoder().encodeToString(hash);
+		}
 	}
 
 	@Override

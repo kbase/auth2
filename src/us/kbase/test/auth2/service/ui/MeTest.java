@@ -235,7 +235,7 @@ public class MeTest {
 		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user1", "full1", "f@g.com")))
+						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withCustomRole("whoo")
 				.withCustomRole("whee")
 				.withEmailAddress(new EmailAddress("a@g.com"))
@@ -306,7 +306,7 @@ public class MeTest {
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
 				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
-						.withEmailAddress(new EmailAddress("f@g.com"))
+						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
 	}
 	
@@ -327,7 +327,7 @@ public class MeTest {
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
 				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
-						.withEmailAddress(new EmailAddress("f@g.com"))
+						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
 	}
 	
@@ -473,7 +473,7 @@ public class MeTest {
 		final us.kbase.auth2.lib.user.LocalUser.Builder builder =
 				LocalUser.getLocalUserBuilder(new UserName("foobar"),
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
-				.withEmailAddress(new EmailAddress("f@g.com"));
+				.withEmailAddress(new EmailAddress("f@h.com"));
 		for (final Role r: roles) {
 			builder.withRole(r);
 		}

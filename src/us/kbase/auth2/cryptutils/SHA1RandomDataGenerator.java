@@ -34,7 +34,15 @@ public class SHA1RandomDataGenerator implements RandomDataGenerator {
 	
 	@Override
 	public String getToken() {
-		final byte[] b = new byte[20]; //160 bits so 32 b32 chars
+		return getToken(4); //160 bits so 32 b32 chars
+	}
+	
+	@Override
+	public String getToken(final int sizeMultiple) {
+		if (sizeMultiple < 1) {
+			throw new IllegalArgumentException("sizeMultiple must be > 0");
+		}
+		final byte[] b = new byte[sizeMultiple * 5]; // 40 bits / 8 b32 chars per sizeMultiple
 		random.nextBytes(b);
 		return new Base32().encodeAsString(b);
 	}

@@ -1,9 +1,9 @@
 package us.kbase.auth2.providers;
 
 import static us.kbase.auth2.lib.Utils.nonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -103,18 +103,23 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		
 		// state will be url encoded
 		@Override
-		public URL getLoginURL(final String state, final boolean link, final String environment)
+		public URI getLoginURI(
+				final String state,
+				final String pkceCodeChallenge,
+				final boolean link,
+				final String environment)
 				throws NoSuchEnvironmentException {
-			final URI target = UriBuilder.fromUri(toURI(cfg.getLoginURL()))
+			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
+					.queryParam("code_challenge", pkceCodeChallenge)
+					.queryParam("code_challenge_method", "S256")
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
 					.queryParam("prompt", "select_account")
 					.build();
-			return toURL(target);
 		}
 
 		private URL getRedirectURL(final boolean link, final String environment)
@@ -126,15 +131,6 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 				cfg.getLoginRedirectURL(environment);
 		}
 		
-		//Assumes valid URL in URI form
-		private URL toURL(final URI baseURI) {
-			try {
-				return baseURI.toURL();
-			} catch (MalformedURLException e) {
-				throw new RuntimeException("This should be impossible", e);
-			}
-		}
-	
 		//Assumes valid URI in URL form
 		private URI toURI(final URL loginURL) {
 			try {
@@ -147,24 +143,26 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
-			if (authcode == null || authcode.trim().isEmpty()) {
-				throw new IllegalArgumentException("authcode cannot be null or empty");
-			}
-			final RemoteIdentity ri = getIdentity(authcode, link, environment);
+			checkStringNoCheckedException(authcode, "authcode");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
+			final RemoteIdentity ri = getIdentity(authcode, pkceCodeVerifier, link, environment);
 			return new HashSet<>(Arrays.asList(ri));
 		}
 	
 		private RemoteIdentity getIdentity(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			final MultivaluedMap<String, String> formParameters =
 					new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
+			formParameters.add("code_verifier", pkceCodeVerifier);
 			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			formParameters.add("client_id", cfg.getClientID());

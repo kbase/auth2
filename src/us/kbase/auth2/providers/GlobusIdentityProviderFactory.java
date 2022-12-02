@@ -1,9 +1,9 @@
 package us.kbase.auth2.providers;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -104,17 +104,22 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		
 		// state will be url encoded.
 		@Override
-		public URL getLoginURL(final String state, final boolean link, final String environment)
+		public URI getLoginURI(
+				final String state,
+				final String pkceCodeChallenge,
+				final boolean link,
+				final String environment)
 				throws NoSuchEnvironmentException {
-			final URI target = UriBuilder.fromUri(toURI(cfg.getLoginURL()))
+			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
 					.queryParam("scope", SCOPE)
 					.queryParam("state", state)
+					.queryParam("code_challenge", pkceCodeChallenge)
+					.queryParam("code_challenge_method", "S256")
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
 					.queryParam("client_id", cfg.getClientID())
 					.build();
-			return toURL(target);
 		}
 		
 		private URL getRedirectURL(final boolean link, final String environment)
@@ -126,15 +131,6 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 				cfg.getLoginRedirectURL(environment);
 		}
 		
-		//Assumes valid URL in URI form
-		private URL toURL(final URI baseURI) {
-			try {
-				return baseURI.toURL();
-			} catch (MalformedURLException e) {
-				throw new RuntimeException("This should be impossible", e);
-			}
-		}
-	
 		//Assumes valid URI in URL form
 		private URI toURI(final URL loginURL) {
 			try {
@@ -158,16 +154,17 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		@Override
 		public Set<RemoteIdentity> getIdentities(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			/* Note authcode only works once. After that globus returns
 			 * {error=invalid_grant}
 			 */
-			if (authcode == null || authcode.trim().isEmpty()) {
-				throw new IllegalArgumentException("authcode cannot be null or empty");
-			}
-			final String accessToken = getAccessToken(authcode, link, environment);
+			checkStringNoCheckedException(authcode, "authcode");
+			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
+			final String accessToken = getAccessToken(
+					authcode, pkceCodeVerifier, link, environment);
 			final Idents idents = getPrimaryIdentity(accessToken, ignoreSecondaries);
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 					accessToken, idents.secondaryIDs);
@@ -292,12 +289,14 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 	
 		private String getAccessToken(
 				final String authcode,
+				final String pkceCodeVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException, NoSuchEnvironmentException {
 			
 			final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 			formParameters.add("code", authcode);
+			formParameters.add("code_verifier", pkceCodeVerifier);
 			formParameters.add("redirect_uri", getRedirectURL(link, environment).toString());
 			formParameters.add("grant_type", "authorization_code");
 			

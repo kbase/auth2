@@ -7,8 +7,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-
-import com.google.common.base.Optional;
+import java.util.Optional;
 
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -279,10 +278,10 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 	 */
 	public static class Builder<T extends ExternalConfig> {
 		
-		private Optional<Boolean> loginAllowed = Optional.absent();
+		private Optional<Boolean> loginAllowed = Optional.empty();
 		private final Map<String, ProviderUpdate> providers = new HashMap<>();
 		private final Map<TokenLifetimeType, Long> tokenLifetimeMS = new HashMap<>();
-		private Optional<T> external = Optional.absent();
+		private Optional<T> external = Optional.empty();
 		
 		private Builder() {}
 		
@@ -307,7 +306,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		 * @return this builder.
 		 */
 		public Builder<T> withNullableLoginAllowed(final Boolean nonAdminLoginAllowed) {
-			loginAllowed = Optional.fromNullable(nonAdminLoginAllowed);
+			loginAllowed = Optional.ofNullable(nonAdminLoginAllowed);
 			return this;
 		}
 		

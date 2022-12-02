@@ -4,9 +4,8 @@ import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.Optional;
 import java.util.Set;
-
-import com.google.common.base.Optional;
 
 /** A specification for how a user search should be conducted.
  * 
@@ -254,7 +253,7 @@ public class UserSearchSpec {
 	 */
 	public static class Builder {
 		
-		private Optional<String> prefix = Optional.absent();
+		private Optional<String> prefix = Optional.empty();
 		private boolean searchUser = false;
 		private boolean searchDisplayName = false;
 		private final Set<Role> searchRoles = new HashSet<>();
