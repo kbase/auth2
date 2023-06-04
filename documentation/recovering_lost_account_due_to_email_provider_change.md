@@ -114,6 +114,10 @@ should be impossible.
    we need a plan to respond. This includes verification of ownership of the account,
    verification of ownership of a new account to be linked, and linking the new account, at a
    minimum.
+5. Consider implementing account recovery tokens (e.g. similar to GitHub and other sites) that
+   allow linking a new identity to an account without logging into the account. This
+   needs careful thought and design as leaking tokens would mean an account could be entirely
+   hijacked.
    
 ## Appendix: Linking Google and Globus accounts manually
 
