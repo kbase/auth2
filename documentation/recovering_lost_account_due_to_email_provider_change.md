@@ -106,7 +106,9 @@ should be impossible.
    trusted information needed to restore access to an account.
 3. Develop and deploy user documentation recommending that users always have at least one
    personal account entirely under their control linked to their KBase account.
-4. Consider account recovery in general. Currently, KBase outsources account handling, and
+4. Similarly, encourage users to have more than one account linked to their KBase account so that
+   if they lose access to one account they can log in via the other.
+5. Consider account recovery in general. Currently, KBase outsources account handling, and
    therefore account recovery, to third parties (e.g. Google, Globus, OrcID). This is because
    these 3rd parties will always be much better at account security and recovery than KBase will
    be, and user accounts are not a differentiating feature for KBase. However, if users lose
@@ -114,7 +116,14 @@ should be impossible.
    we need a plan to respond. This includes verification of ownership of the account,
    verification of ownership of a new account to be linked, and linking the new account, at a
    minimum.
-   
+6. Consider implementing account recovery tokens (e.g. similar to GitHub and other sites) that
+   allow linking a new identity to an account without logging into the account. This
+   needs careful thought and design as leaking tokens would mean an account could be entirely
+   hijacked.
+
+See https://www.twilio.com/blog/best-practices-multi-factor-authentication-mfa-account-recovery
+for more information around account recovery.
+
 ## Appendix: Linking Google and Globus accounts manually
 
 In the case presented here, the user had an unused OrcID account, and since the OrcID unique ID
