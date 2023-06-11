@@ -1,7 +1,11 @@
 package us.kbase.auth2.lib;
 
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
+
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Set;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -27,37 +31,33 @@ public class DisplayName extends Name {
 		super(name, "display name", MAX_NAME_LENGTH);
 	}
 	
-	/** Get the canonical display name for this name. Returns a list of the whitespace separated
-	 * tokens in the display name. The tokens are lowercased and punctuation on either side of the
-	 * token is removed.
+	/** Get the canonical display name for a string. Returns a list of the whitespace separated
+	 * tokens in the name. The tokens are lowercased, punctuation in the token is removed, and
+	 * non-unique elements are removed.
 	 * @return the canonical display name.
 	 */
-	public List<String> getCanonicalDisplayName() {
-		final String[] tokens = getName().toLowerCase().split("\\s+");
-		final List<String> ret = new LinkedList<>();
+	public static List<String> getCanonicalDisplayName(final String name) {
+		checkStringNoCheckedException(name, "name");
+		final String[] tokens = name.toLowerCase().split("\\s+");
+		final Set<String> ret = new LinkedHashSet<>();
 		for (final String t: tokens) {
-			final int[] codepoints = t.codePoints().toArray();
-			int start;
-			for (start = 0; start < codepoints.length; start++) {
-				if (Character.isLetterOrDigit(codepoints[start])) {
-					break;
-				}
-			}
-			int end;
-			for (end = codepoints.length - 1; end > start; end--) {
-				if (Character.isLetterOrDigit(codepoints[end])) {
-					break;
-				}
-			}
-			if (start <= end) {
-				final StringBuilder sb = new StringBuilder();
-				for (int i = start; i <= end; i++) {
-					sb.appendCodePoint(codepoints[i]);
-				}
+			final StringBuilder sb = new StringBuilder();
+			t.codePoints().filter(cp -> Character.isLetterOrDigit(cp))
+					.forEach(cp -> sb.appendCodePoint(cp));
+			if (sb.length() > 0) {
 				ret.add(sb.toString());
 			}
 		}
-		return ret;
+		return new LinkedList<>(ret);
+	}
+	
+	/** Get the canonical display name for this name. Returns a list of the whitespace separated
+	 * tokens in the display name. The tokens are lowercased, punctuation in the token is removed,
+	 * and non-unique elements are removed.
+	 * @return the canonical display name.
+	 */
+	public List<String> getCanonicalDisplayName() {
+		return getCanonicalDisplayName(getName());
 	}
 	
 	@Override
