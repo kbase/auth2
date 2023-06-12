@@ -281,10 +281,10 @@ public class AuthenticationGetUserDisplayNamesTest {
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
-		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
-		final Field m = spec.getClass().getDeclaredField("isRegex");
+		final UserSearchSpec spec = UserSearchSpec.getBuilder().withIncludeDisabled(true).build();
+		final Field m = spec.getClass().getDeclaredField("regex");
 		m.setAccessible(true);
-		m.set(spec, true);
+		m.set(spec, "foo");
 		
 		failGetDisplayNamesSpec(user, spec, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Regex search is currently for internal use only"));
