@@ -445,8 +445,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		
 
 		final Map<UserName, DisplayName> expected = new HashMap<>();
-		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
-		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Doug~ie Howser"));
 		expected.put(new UserName("u3"), new DisplayName("al douglas"));
 		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
 		
@@ -464,8 +464,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		
 
 		final Map<UserName, DisplayName> expected = new HashMap<>();
-		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
-		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Doug~ie Howser"));
 		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
@@ -482,8 +482,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		
 
 		final Map<UserName, DisplayName> expected = new HashMap<>();
-		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
-		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Doug~ie Howser"));
 		expected.put(new UserName("u4"), new DisplayName("Albert HevensyDouglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
@@ -593,9 +593,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
 		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
 		
-		// TODO NAMESEARCHBUGFIX put punctuation back in
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("wh").withSearchOnDisplayName(true).build(), -1),
+				.withSearchPrefix("wh+").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -611,9 +610,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("foo"), new DisplayName("(wh+ee) ++bun+k]՞ fwhoo"));
 		
-		// TODO NAMESEARCHBUGFIX put punctuation back in
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("whe").withSearchOnDisplayName(true).build(), -1),
+				.withSearchPrefix("wh+e").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -629,9 +627,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		final Map<UserName, DisplayName> expected = new HashMap<>();
 		expected.put(new UserName("whee"), new DisplayName("*&wbar#@  *&wh+oo;; "));
 		
-		// TODO NAMESEARCHBUGFIX put punctuation back in
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
-				.withSearchPrefix("who").withSearchOnDisplayName(true).build(), -1),
+				.withSearchPrefix("wh+o").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
 	
@@ -654,8 +651,8 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		createUsersForCanonicalSearch();
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
-		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
-		expected.put(new UserName("u2"), new DisplayName("Herbert Dougie Howser"));
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("u2"), new DisplayName("Herbert Doug~ie Howser"));
 		expected.put(new UserName("u3"), new DisplayName("al douglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
@@ -668,7 +665,7 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		createUsersForCanonicalSearch();
 		
 		final Map<UserName, DisplayName> expected = new HashMap<>();
-		expected.put(new UserName("u1"), new DisplayName("Douglas J Adams"));
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
 		expected.put(new UserName("u3"), new DisplayName("al douglas"));
 		
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
@@ -700,12 +697,77 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 				.withSearchPrefix("Alb").withSearchOnDisplayName(true).build(), -1),
 				is(expected));
 	}
+	
+	@Test
+	public void canonicalSearchMultitokenAndPunctuation() throws Exception {
+		createUsersForCanonicalSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("u3"), new DisplayName("al douglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("D'oug A*").withSearchOnDisplayName(true).build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalAndUserMultitokenSearch1() throws Exception {
+		createUsersForCanonicalAndUserSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("adamsly"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("adamsly2"), new DisplayName("Herbert Doug~ie Howser"));
+		expected.put(new UserName("ada"), new DisplayName("al douglas"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("ada*").build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalAndUserMultitokenSearch2() throws Exception {
+		createUsersForCanonicalAndUserSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("adamsly"), new DisplayName("Dou*glas J Ad()ams"));
+		expected.put(new UserName("adamsly2"), new DisplayName("Herbert Doug~ie Howser"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("a'dams").build(), -1),
+				is(expected));
+	}
+	
+	@Test
+	public void canonicalAndUserMultitokenSearch3() throws Exception {
+		createUsersForCanonicalAndUserSearch();
+		
+		final Map<UserName, DisplayName> expected = new HashMap<>();
+		expected.put(new UserName("adamsly"), new DisplayName("Dou*glas J Ad()ams"));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("ada* Dougl").build(), -1),
+				is(expected));
+	}
+	
+	private void createUsersForCanonicalAndUserSearch() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("adamsly"), new DisplayName("Dou*glas J Ad()ams"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("adamsly2"), new DisplayName("Herbert Doug~ie Howser"), NOW, REMOTE2)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("ada"), new DisplayName("al douglas"), NOW, REMOTE3).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("adlbert"), new DisplayName("Albert HevensyDouglas"), NOW, REMOTE4)
+				.build());
+	}
 
 	private void createUsersForCanonicalSearch() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("u1"), new DisplayName("Douglas J Adams"), NOW, REMOTE1).build());
+				new UserName("u1"), new DisplayName("Dou*glas J Ad()ams"), NOW, REMOTE1).build());
 		storage.createUser(NewUser.getBuilder(
-				new UserName("u2"), new DisplayName("Herbert Dougie Howser"), NOW, REMOTE2)
+				new UserName("u2"), new DisplayName("Herbert Doug~ie Howser"), NOW, REMOTE2)
 				.build());
 		storage.createUser(NewUser.getBuilder(
 				new UserName("u3"), new DisplayName("al douglas"), NOW, REMOTE3).build());

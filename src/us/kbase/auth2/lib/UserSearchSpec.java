@@ -3,7 +3,6 @@ package us.kbase.auth2.lib;
 import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
@@ -258,9 +257,7 @@ public class UserSearchSpec {
 		 */
 		public Builder withSearchPrefix(final String prefix) {
 			checkStringNoCheckedException(prefix, "prefix");
-			this.prefixes = Arrays.asList(prefix.toLowerCase());
-			// TODO NAMESEARCHBUGFIX use this line instead & update tests.
-			//this.prefixes = DisplayName.getCanonicalDisplayName(prefix);
+			this.prefixes = DisplayName.getCanonicalDisplayName(prefix);
 			// TODO NAMESEARCHBUGFIX add a cli command to update canonical names in the db.
 			// TODO NAMESEARCHBUGFIX release notes & version bump
 			this.regex = null;

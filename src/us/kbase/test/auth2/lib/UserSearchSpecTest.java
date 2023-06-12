@@ -34,7 +34,7 @@ public class UserSearchSpecTest {
 	@Test
 	public void buildWithEverything() {
 		final UserSearchSpec uss = UserSearchSpec.getBuilder()
-				.withSearchPrefix("Foo bar")
+				.withSearchPrefix("F*oo bar  *()")
 				.withSearchOnUserName(true)
 				.withSearchOnDisplayName(true)
 				.withSearchOnRole(Role.ADMIN)
@@ -45,7 +45,7 @@ public class UserSearchSpecTest {
 				.withIncludeDisabled(true)
 				.build();
 		
-		assertThat("incorrect prefix", uss.getSearchPrefixes(), is(list("foo bar")));
+		assertThat("incorrect prefix", uss.getSearchPrefixes(), is(list("foo", "bar")));
 		assertThat("incorrect regex", uss.getSearchRegex(), is(MT));
 		assertThat("incorrect has prefixes", uss.hasSearchPrefixes(), is(true));
 		assertThat("incorrect has regex", uss.hasSearchRegex(), is(false));

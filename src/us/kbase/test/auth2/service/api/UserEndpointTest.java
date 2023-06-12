@@ -94,6 +94,7 @@ public class UserEndpointTest {
 			Thread.sleep(1000);
 		}
 		port = server.getPort();
+		System.out.println("Server started on port " + port);
 		host = "http://localhost:" + port;
 	}
 	
@@ -595,7 +596,7 @@ public class UserEndpointTest {
 				"foobarbazbing".getBytes(), "aa".getBytes());
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foo"),
-				new DisplayName("bar"), Instant.ofEpochMilli(20000))
+				new DisplayName("bar *thing*"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("baz"),
@@ -670,12 +671,12 @@ public class UserEndpointTest {
 	
 	@Test
 	public void searchUsersBlankFields() throws Exception {
-		searchUsers("f", "   \t ,   ", ImmutableMap.of("foo", "bar", "baz", "fuz"));
+		searchUsers("f", "   \t ,   ", ImmutableMap.of("foo", "bar *thing*", "baz", "fuz"));
 	}
 	
 	@Test
 	public void searchUsersUserName() throws Exception {
-		searchUsers("f", " username  ,  \t  ", ImmutableMap.of("foo", "bar"));
+		searchUsers("f", " username  ,  \t  ", ImmutableMap.of("foo", "bar *thing*"));
 	}
 	
 	@Test
@@ -686,7 +687,24 @@ public class UserEndpointTest {
 	@Test
 	public void searchUsersBothFields() throws Exception {
 		searchUsers("f", " displayname   \t ,   \t username   ",
-				ImmutableMap.of("foo", "bar", "baz", "fuz"));
+				ImmutableMap.of("foo", "bar *thing*", "baz", "fuz"));
+	}
+	
+	@Test
+	public void searchUsersBothFields2() throws Exception {
+		searchUsers("b", " displayname   \t ,   \t username   ",
+				ImmutableMap.of("foo", "bar *thing*", "baz", "fuz", "toobar", "bleah2"));
+	}
+	
+	@Test
+	public void searchUsersMultitoken() throws Exception {
+		searchUsers("b th", " displayname   \t ,   \t username   ",
+				ImmutableMap.of("foo", "bar *thing*"));
+	}
+	
+	@Test
+	public void searchUsersMultitoken2() throws Exception {
+		searchUsers("b%20th", "", ImmutableMap.of("foo", "bar *thing*"));
 	}
 	
 	private void searchUsers(
