@@ -52,8 +52,10 @@ public class DisplayNameTest {
 	
 	@Test
 	public void getCanonicalDisplayName() throws Exception {
-		final String input = "whEe1   ΅·   +΅BA՞+R·   (bleΔah)  ՞  wuΞgga    bA()*&R";
-		final List<String> expected = Arrays.asList("whee1", "bar", "bleδah", "wuξgga");
+		final String input =
+				"whEe1   ΅·   +΅BA՞+R·   (bleΔah)  ՞  wuΞgga  wentworth-fungus   bA()*&R";
+		final List<String> expected = Arrays.asList(
+				"whee1", "bar", "bleδah", "wuξgga", "wentworth", "fungus");
 		final DisplayName dn = new DisplayName(input);
 		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(), is(expected));
 		assertThat("incorrect canonical name", DisplayName.getCanonicalDisplayName(input),

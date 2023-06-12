@@ -249,8 +249,8 @@ public class UserSearchSpec {
 		/** Set a prefix by which the user name and / or tokenized display name will be searched.
 		 * The prefix will replace the search regex, if any.
 		 * The prefix matches the start of the username or the start of any part of the whitespace
-		 * tokenized display name.
-		 * The prefix is always split by whitespace, punctuation removed, and
+		 * and hyphen tokenized display name.
+		 * The prefix is always split by whitespace and hyphens, punctuation removed, and
 		 * converted to lower case.
 		 * Once the prefix or search regex is set in this builder it cannot be removed.
 		 * @param prefix the prefix.

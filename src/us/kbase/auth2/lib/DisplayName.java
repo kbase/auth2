@@ -31,14 +31,14 @@ public class DisplayName extends Name {
 		super(name, "display name", MAX_NAME_LENGTH);
 	}
 	
-	/** Get the canonical display name for a string. Returns a list of the whitespace separated
-	 * tokens in the name. The tokens are lowercased, punctuation in the token is removed, and
-	 * non-unique elements are removed.
+	/** Get the canonical display name for a string. Returns a list of the whitespace and hyphen
+	 * separated tokens in the name. The tokens are lowercased, punctuation in the token is
+	 * removed, and non-unique elements are removed.
 	 * @return the canonical display name.
 	 */
 	public static List<String> getCanonicalDisplayName(final String name) {
 		checkStringNoCheckedException(name, "name");
-		final String[] tokens = name.toLowerCase().split("\\s+");
+		final String[] tokens = name.toLowerCase().split("[-\\s]");
 		final Set<String> ret = new LinkedHashSet<>();
 		for (final String t: tokens) {
 			final StringBuilder sb = new StringBuilder();
@@ -51,9 +51,9 @@ public class DisplayName extends Name {
 		return new LinkedList<>(ret);
 	}
 	
-	/** Get the canonical display name for this name. Returns a list of the whitespace separated
-	 * tokens in the display name. The tokens are lowercased, punctuation in the token is removed,
-	 * and non-unique elements are removed.
+	/** Get the canonical display name for this name. Returns a list of the whitespace and hyphen
+	 * separated tokens in the display name. The tokens are lowercased, punctuation in the token
+	 * is removed, and non-unique elements are removed.
 	 * @return the canonical display name.
 	 */
 	public List<String> getCanonicalDisplayName() {
