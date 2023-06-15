@@ -1052,6 +1052,12 @@ public class MongoStorage implements AuthStorage {
 		m.put(UserSearchSpec.SearchField.CUSTOMROLE, Fields.USER_CUSTOM_ROLES);
 		SEARCHFIELD_TO_FIELD = m;
 	}
+	
+	private Document andRegexes(final String field, final List<Document> regexes) {
+		return new Document("$and", regexes.stream()
+				.map(regex -> new Document(field, regex))
+				.collect(Collectors.toList()));
+	}
 
 	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(
@@ -1060,23 +1066,30 @@ public class MongoStorage implements AuthStorage {
 			throws AuthStorageException {
 		nonNull(spec, "spec");
 		final Document query = new Document();
-		if (spec.getSearchPrefix().isPresent()) {
-			final String prefix = spec.getSearchPrefix().get();
+		if (spec.hasSearchPrefixes()) {
+			final List<Document> regexes = spec.getSearchPrefixes().stream()
+					.map(token -> new Document("$regex", "^" + Pattern.quote(token)))
+					.collect(Collectors.toList());
 			final List<Document> queries = new LinkedList<>();
-			final Document regex = new Document("$regex", spec.isRegex() ? prefix :
-				"^" + Pattern.quote(prefix.toLowerCase()));
+			if (spec.isDisplayNameSearch()) {
+				queries.add(andRegexes(Fields.USER_DISPLAY_NAME_CANONICAL, regexes));
+			}
+			if (spec.isUserNameSearch() ) {
+				// this means if there's > 1 token nothing will match, but that seems right
+				queries.add(andRegexes(Fields.USER_NAME, regexes));
+			}
+			query.put("$or", queries);
+		}
+		else if (spec.hasSearchRegex()) {
+			final Document regex = new Document("$regex", spec.getSearchRegex().get());
+			final List<Document> queries = new LinkedList<>();
 			if (spec.isDisplayNameSearch()) {
 				queries.add(new Document(Fields.USER_DISPLAY_NAME_CANONICAL, regex));
 			}
 			if (spec.isUserNameSearch()) {
 				queries.add(new Document(Fields.USER_NAME, regex));
 			}
-			if (queries.size() == 1) {
-				query.putAll(queries.get(0));
-			} else {
-				query.put("$or", queries);
-			}
-			
+			query.put("$or", queries);
 		}
 		if (spec.isRoleSearch()) {
 			query.put(Fields.USER_ROLES, new Document("$all", spec.getSearchRoles()

@@ -1092,7 +1092,7 @@ public class Authentication {
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
 		nonNull(spec, "spec");
-		if (spec.isRegex()) {
+		if (spec.hasSearchRegex()) {
 			throw new UnauthorizedException("Regex search is currently for internal use only");
 		}
 		final AuthUser user = getUser(token, new OpReqs("search users"));
@@ -1100,7 +1100,7 @@ public class Authentication {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
 				throw new UnauthorizedException("Only admins may search on roles");
 			}
-			if (!spec.getSearchPrefix().isPresent()) {
+			if (!spec.hasSearchPrefixes()) {
 				throw new UnauthorizedException("Only admins may search without a prefix");
 			}
 			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
