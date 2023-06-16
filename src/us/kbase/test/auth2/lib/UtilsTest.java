@@ -142,7 +142,8 @@ public class UtilsTest {
 	
 	@Test
 	public void nonNull() {
-		Utils.nonNull(new Object(), "foo"); // should work
+		assertThat("incorrect return", Utils.nonNull(78, "foo"), is(78));
+		assertThat("incorrect return", Utils.nonNull("whee", "foo"), is("whee"));
 	}
 	
 	@Test

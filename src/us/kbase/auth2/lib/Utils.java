@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
+
 import java.util.Collection;
 
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -116,10 +118,10 @@ public class Utils {
 	/** Throws a null pointer exception if an object is null.
 	 * @param o the object to check.
 	 * @param message the message for the exception.
+	 * @return the object.
 	 */
-	public static void nonNull(final Object o, final String message) {
-		if (o == null) {
-			throw new NullPointerException(message);
-		}
+	public static <T> T nonNull(final T o, final String message) {
+		// TODO CODE inline this in its own PR (will be big)
+		return requireNonNull(o, message);
 	}
 }

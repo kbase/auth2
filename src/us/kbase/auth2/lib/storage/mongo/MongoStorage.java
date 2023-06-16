@@ -30,6 +30,7 @@ import java.util.stream.Collectors;
 import org.bson.Document;
 import org.bson.types.ObjectId;
 
+import com.github.zafarkhaja.semver.Version;
 import com.mongodb.ErrorCategory;
 import com.mongodb.MongoException;
 import com.mongodb.MongoWriteException;
@@ -2123,6 +2124,76 @@ public class MongoStorage implements AuthStorage {
 					mapper.fromMap(ext));
 		} catch (MongoException e) {
 			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	private String getRecanonicalizationFlag(final Version version) {
+		return "_recanonicalized_for_version_" +
+				nonNull(version, "version").toString().replace(".", "_");
+	}
+
+	@Override
+	public long removeDisplayNameRecanonicalizationFlag(final Version version)
+			throws AuthStorageException {
+		final String flag = getRecanonicalizationFlag(version);
+		try {
+			final UpdateResult res = db.getCollection(COL_USERS).updateMany(
+					new Document(flag, true), new Document("$unset", new Document(flag, "")));
+			return res.getModifiedCount();
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+
+	private final static Document RECANONICALIZE_PROJECTION = new Document(
+			Fields.USER_DISPLAY_NAME, 1).append(Fields.USER_NAME, 1);
+	
+	@Override
+	public long recanonicalizeDisplayNames(final Version version) throws AuthStorageException {
+		final String flag = getRecanonicalizationFlag(version);
+		long count = 0;
+		try {
+			final FindIterable<Document> users = db.getCollection(COL_USERS)
+					.find(new Document(flag, new Document("$exists", false)))
+					.projection(RECANONICALIZE_PROJECTION);
+			for (final Document user: users) {
+				updateUserCanonicalDisplayName(flag, user, 1);
+				count++;
+			}
+		} catch (MongoException e) {
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+		return count;
+	}
+
+	private void updateUserCanonicalDisplayName(
+			final String flag,
+			Document user,
+			final int attempt)
+			throws AuthStorageException {
+		final String userName = user.getString(Fields.USER_NAME);
+		if (attempt > 5) {
+			throw new AuthStorageException(
+					String.format("Failed to recanonicalize user %s after 5 attempts", userName));
+		}
+		final MongoCollection<Document> col = db.getCollection(COL_USERS);
+		final String displayName = user.getString(Fields.USER_DISPLAY_NAME);
+		final UpdateResult res = col.updateOne(
+				new Document(Fields.USER_NAME, userName)
+						// ensure name hasn't changed since pulling from DB to avoid
+						// race condition
+						.append(Fields.USER_DISPLAY_NAME, displayName),
+				new Document("$set",
+						new Document(flag, true)
+								.append(Fields.USER_DISPLAY_NAME_CANONICAL,
+										DisplayName.getCanonicalDisplayName(displayName))
+				)
+		);
+		if (res.getMatchedCount() != 1) {
+			// display name was updated since pulling from the db in the prior method 
+			user = col.find(new Document(Fields.USER_NAME, userName))
+					.projection(RECANONICALIZE_PROJECTION).first();
+			updateUserCanonicalDisplayName(flag, user, attempt + 1);
 		}
 	}
 }

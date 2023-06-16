@@ -6,6 +6,8 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
+import com.github.zafarkhaja.semver.Version;
+
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
@@ -537,11 +539,28 @@ public interface AuthStorage {
 	 * @return the sysetem configuration.
 	 * @throws ExternalConfigMappingException if the mapper failed to transform the external config
 	 * map into the external config class.
-	 * @throws AuthStorageException if a problem connecting with the storage
-	 * system occurs.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
 	 */
 	<T extends ExternalConfig> AuthConfigSet<T> getConfig(
 			ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException;
+
+	/** Remove the flag from user records that denotes that the display name has been
+	 * recanonicalized for a particular version.
+	 * @param version the server version under which the display name was recanonicalized.
+	 * @return the number of flags removed.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	long removeDisplayNameRecanonicalizationFlag(Version version)
+			throws AuthStorageException;
+
+	/** Rerun the canonicalization algorithm on all user display names that are not marked
+	 * with the given version. The mark denotes that the user display name has already been
+	 * recanonicalized.
+	 * @param version the server version to use for the mark.
+	 * @return the number of users processed, whether the name changed or not.
+	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
+	 */
+	long recanonicalizeDisplayNames(Version version) throws AuthStorageException;
 
 }
