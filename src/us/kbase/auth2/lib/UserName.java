@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.util.regex.Matcher;
@@ -74,7 +74,7 @@ public class UserName extends Name {
 	 * @return the new user name, or absent if mutation proved impossible.
 	 */
 	public static Optional<UserName> sanitizeName(final String suggestedUserName) {
-		nonNull(suggestedUserName, "suggestedUserName");
+		requireNonNull(suggestedUserName, "suggestedUserName");
 		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
 				.replaceAll("^[^a-z]+", "");
 		try {

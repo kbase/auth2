@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 /** This class represents an update to a user's details as submitted by a user.
@@ -101,7 +101,7 @@ public class UserUpdate {
 		 * @return this Builder.
 		 */
 		public Builder withDisplayName(final DisplayName displayName) {
-			nonNull(displayName, "displayName");
+			requireNonNull(displayName, "displayName");
 			this.displayName = Optional.of(displayName);
 			return this;
 		}
@@ -111,7 +111,7 @@ public class UserUpdate {
 		 * @return this Builder.
 		 */
 		public Builder withEmail(final EmailAddress email) {
-			nonNull(email, "email");
+			requireNonNull(email, "email");
 			this.email = Optional.of(email);
 			return this;
 		}

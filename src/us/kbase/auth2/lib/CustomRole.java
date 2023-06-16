@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkString;
-import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -75,7 +75,7 @@ public class CustomRole implements Comparable<CustomRole> {
 
 	@Override
 	public int compareTo(final CustomRole customRole) {
-		nonNull(customRole, "customRole");
+		requireNonNull(customRole, "customRole");
 		final int c = id.compareTo(customRole.getID());
 		if (c != 0) {
 			return c;

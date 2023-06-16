@@ -1,6 +1,6 @@
 package us.kbase.auth2.providers;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.io.IOException;
@@ -81,7 +81,7 @@ public class GoogleIdentityProviderFactory implements IdentityProviderFactory {
 		 * @param idc the configuration for this provider.
 		 */
 		public GoogleIdentityProvider(final IdentityProviderConfig idc) {
-			nonNull(idc, "idc");
+			requireNonNull(idc, "idc");
 			if (!GoogleIdentityProviderFactory.class.getName().equals(
 					idc.getIdentityProviderFactoryClassName())) {
 				throw new IllegalArgumentException(

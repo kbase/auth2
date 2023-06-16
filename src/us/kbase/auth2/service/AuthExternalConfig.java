@@ -1,6 +1,6 @@
 package us.kbase.auth2.service;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.MalformedURLException;
@@ -62,7 +62,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 	 * @return the configuration.
 	 */
 	public static AuthExternalConfig<Action> getDefaultConfig(final Set<String> environments) {
-		nonNull(environments, "environments");
+		requireNonNull(environments, "environments");
 		noNulls(environments, "null item in environments");
 		final Builder<Action> b = AuthExternalConfig.getBuilder(
 				URLSet.remove(), SET_FALSE, SET_FALSE);
@@ -312,11 +312,11 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 				final URLSet<T> urlSet,
 				final ConfigItem<Boolean, T> ignoreIPHeaders,
 				final ConfigItem<Boolean, T> includeStackTraceInResponse) {
-			nonNull(urlSet, "urlSet");
+			requireNonNull(urlSet, "urlSet");
 			this.urlSet = urlSet;
-			nonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
+			requireNonNull(ignoreIPHeaders, IGNORE_IP_HEADERS);
 			this.ignoreIPHeaders = ignoreIPHeaders;
-			nonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
+			requireNonNull(includeStackTraceInResponse, INCLUDE_STACK_TRACE_IN_RESPONSE);
 			this.includeStackTraceInResponse = includeStackTraceInResponse;
 		}
 		
@@ -329,7 +329,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 			if (environment == null || environment.trim().isEmpty()) {
 				throw new IllegalArgumentException("environment cannot be null or empty");
 			}
-			nonNull(urlSet, "urlSet");
+			requireNonNull(urlSet, "urlSet");
 			this.environments.put(environment, urlSet);
 			return this;
 		}
@@ -379,16 +379,16 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 				final ConfigItem<URL, T> postLinkRedirect,
 				final ConfigItem<URL, T> completeLinkRedirect)
 				throws IllegalParameterException {
-			nonNull(allowedPostLoginRedirectPrefix, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
+			requireNonNull(allowedPostLoginRedirectPrefix, ALLOWED_POST_LOGIN_REDIRECT_PREFIX);
 			checkURI(allowedPostLoginRedirectPrefix);
 			this.allowedPostLoginRedirectPrefix = allowedPostLoginRedirectPrefix;
-			nonNull(completeLoginRedirect, COMPLETE_LOGIN_REDIRECT);
+			requireNonNull(completeLoginRedirect, COMPLETE_LOGIN_REDIRECT);
 			checkURI(completeLoginRedirect);
 			this.completeLoginRedirect = completeLoginRedirect;
-			nonNull(postLinkRedirect, POST_LINK_REDIRECT);
+			requireNonNull(postLinkRedirect, POST_LINK_REDIRECT);
 			checkURI(postLinkRedirect);
 			this.postLinkRedirect = postLinkRedirect;
-			nonNull(completeLinkRedirect, COMPLETE_LINK_REDIRECT);
+			requireNonNull(completeLinkRedirect, COMPLETE_LINK_REDIRECT);
 			checkURI(completeLinkRedirect);
 			this.completeLinkRedirect = completeLinkRedirect;
 		}
@@ -554,7 +554,7 @@ public class AuthExternalConfig<T extends ConfigAction> implements ExternalConfi
 		 * @param environments the environments the mapper will include in the configuration.
 		 */
 		public AuthExternalConfigMapper(final Set<String> environments) {
-			nonNull(environments, "environments");
+			requireNonNull(environments, "environments");
 			noNulls(environments, "null item in environments");
 			this.environments = environments;
 		}

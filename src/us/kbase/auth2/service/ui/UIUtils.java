@@ -3,7 +3,7 @@ package us.kbase.auth2.service.ui;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LINK_COOKIE;
 import static us.kbase.auth2.service.ui.UIConstants.IN_PROCESS_LOGIN_COOKIE;
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.net.URI;
@@ -66,8 +66,8 @@ public class UIUtils {
 	 * @throws InvalidPathException if the target is not a valid path.
 	 */
 	public static String relativize(final UriInfo current, final String target) {
-		nonNull(current, "current");
-		nonNull(target, "target");
+		requireNonNull(current, "current");
+		requireNonNull(target, "target");
 		final Path t = Paths.get(target);
 		if (!t.isAbsolute()) {
 			throw new IllegalArgumentException("target must be absolute: " + target);
@@ -170,7 +170,7 @@ public class UIUtils {
 	 * @return the maximum cookie age in seconds.
 	 */
 	public static int getMaxCookieAge(final TemporaryToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		return getMaxCookieAge(token.getExpirationDate(), false);
 	}
 
@@ -217,7 +217,7 @@ public class UIUtils {
 			final String tokenCookieName,
 			final boolean throwException)
 			throws NoTokenProvidedException {
-		nonNull(headers, "headers");
+		requireNonNull(headers, "headers");
 		checkStringNoCheckedException(tokenCookieName, "tokenCookieName");
 		final Cookie c = headers.getCookies().get(tokenCookieName);
 		if (c == null) {
@@ -255,7 +255,7 @@ public class UIUtils {
 			final HttpHeaders headers,
 			final String headerName,
 			final String stringValue) {
-		nonNull(headers, "headers");
+		requireNonNull(headers, "headers");
 		checkStringNoCheckedException(headerName, "headerName");
 		final String headerEnv = headers.getHeaderString(headerName);
 		if (!nullOrEmpty(headerEnv)) {
@@ -273,7 +273,7 @@ public class UIUtils {
 	 * @return the roles.
 	 */
 	public static Set<Role> getRolesFromForm(final MultivaluedMap<String, String> form) {
-		nonNull(form, "form");
+		requireNonNull(form, "form");
 		final Set<Role> roles = new HashSet<>();
 		for (final Role r: Role.values()) {
 			if (form.get(r.getID()) != null) {
@@ -288,10 +288,10 @@ public class UIUtils {
 	 * @return a list of maps.
 	 */
 	public static List<Map<String, String>> customRolesToList(final Set<CustomRole> roles) {
-		nonNull(roles, "roles");
+		requireNonNull(roles, "roles");
 		final List<Map<String, String>> ret = new LinkedList<>();
 		for (final CustomRole cr: roles) {
-			nonNull(cr, "null role in set");
+			requireNonNull(cr, "null role in set");
 			ret.add(ImmutableMap.of(
 					Fields.DESCRIPTION, cr.getDesc(),
 					Fields.ID, cr.getID()));
@@ -331,8 +331,8 @@ public class UIUtils {
 			final ExteralConfigURLSelector selector,
 			final String deflt)
 			throws AuthStorageException, NoSuchEnvironmentException {
-		nonNull(auth, "auth");
-		nonNull(selector, "selector");
+		requireNonNull(auth, "auth");
+		requireNonNull(selector, "selector");
 		checkStringNoCheckedException(deflt, "deflt");
 		final ConfigItem<URL, State> url;
 		try {

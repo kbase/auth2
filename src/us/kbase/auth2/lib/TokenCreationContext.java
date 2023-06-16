@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkString;
-import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.net.InetAddress;
 import java.util.Collections;
@@ -264,7 +264,7 @@ public class TokenCreationContext {
 		 * @return this builder.
 		 */
 		public Builder withIpAddress(final InetAddress ipAddress) {
-			nonNull(ipAddress, "ipAddress");
+			requireNonNull(ipAddress, "ipAddress");
 			this.ipAddress = Optional.of(ipAddress);
 			return this;
 		}

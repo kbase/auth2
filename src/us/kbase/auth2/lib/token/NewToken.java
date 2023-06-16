@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.token;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.nonNull;
 
 /** A new token associated with a user.
  * @author gaprice@lbl.gov
@@ -17,7 +17,7 @@ public class NewToken {
 	 * @param token the token string.
 	 */
 	public NewToken(final StoredToken storedToken, final String token) {
-		nonNull(storedToken, "storedToken");
+		requireNonNull(storedToken, "storedToken");
 		checkStringNoCheckedException(token, "token");
 		this.st = storedToken;
 		this.token = token;

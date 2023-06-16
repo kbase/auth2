@@ -139,21 +139,4 @@ public class UtilsTest {
 			assertThat("incorrect exception message", npe.getMessage(), is(message));
 		}
 	}
-	
-	@Test
-	public void nonNull() {
-		assertThat("incorrect return", Utils.nonNull(78, "foo"), is(78));
-		assertThat("incorrect return", Utils.nonNull("whee", "foo"), is("whee"));
-	}
-	
-	@Test
-	public void failNonNull() {
-		try {
-			Utils.nonNull(null, "foo");
-			fail("expected exception");
-		} catch (NullPointerException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("foo"));
-		}
-	}
-	
 }

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
@@ -33,7 +33,7 @@ public class LinkToken {
 	 * storage system.
 	 */
 	public LinkToken(final TemporaryToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		this.token = Optional.of(token);
 	}
 

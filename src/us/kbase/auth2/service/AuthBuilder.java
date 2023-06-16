@@ -1,6 +1,6 @@
 package us.kbase.auth2.service;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -37,8 +37,8 @@ public class AuthBuilder {
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
-		nonNull(cfg, "cfg");
-		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		requireNonNull(cfg, "cfg");
+		requireNonNull(defaultExternalConfig, "defaultExternalConfig");
 		mc = buildMongo(cfg);
 		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}
@@ -48,9 +48,9 @@ public class AuthBuilder {
 			final ExternalConfig defaultExternalConfig,
 			final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
-		nonNull(cfg, "cfg");
-		nonNull(defaultExternalConfig, "defaultExternalConfig");
-		nonNull(mc, "mc");
+		requireNonNull(cfg, "cfg");
+		requireNonNull(defaultExternalConfig, "defaultExternalConfig");
+		requireNonNull(mc, "mc");
 		this.mc = mc;
 		auth = buildAuth(cfg, mc, defaultExternalConfig);
 	}

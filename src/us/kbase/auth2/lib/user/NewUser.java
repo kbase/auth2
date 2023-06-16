@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.user;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -83,7 +83,7 @@ public class NewUser extends AuthUser {
 			if (UserName.ROOT.equals(userName)) {
 				throw new IllegalArgumentException("Standard users cannot be root");
 			}
-			nonNull(remoteIdentity, "remoteIdentity");
+			requireNonNull(remoteIdentity, "remoteIdentity");
 			this.remoteIdentity = remoteIdentity;
 		}
 		

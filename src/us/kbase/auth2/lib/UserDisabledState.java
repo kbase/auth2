@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 import java.time.Instant;
@@ -34,8 +34,8 @@ public class UserDisabledState {
 			final Instant time)
 			throws IllegalParameterException, MissingParameterException {
 		Utils.checkString(disabledReason, "Disabled reason", MAX_DISABLED_REASON_LENGTH);
-		nonNull(byAdmin, "byAdmin");
-		nonNull(time, "time");
+		requireNonNull(byAdmin, "byAdmin");
+		requireNonNull(time, "time");
 		this.disabledReason = Optional.of(disabledReason.trim());
 		this.byAdmin = Optional.of(byAdmin);
 		this.time = Optional.of(time);
@@ -47,8 +47,8 @@ public class UserDisabledState {
 	 * @param time the time at which the user was enabled.
 	 */
 	public UserDisabledState(final UserName byAdmin, final Instant time) {
-		nonNull(byAdmin, "byAdmin");
-		nonNull(time, "time");
+		requireNonNull(byAdmin, "byAdmin");
+		requireNonNull(time, "time");
 		this.disabledReason = Optional.empty();
 		this.byAdmin = Optional.of(byAdmin);
 		this.time = Optional.of(time);
@@ -105,9 +105,9 @@ public class UserDisabledState {
 			final Optional<UserName> byAdmin,
 			final Optional<Instant> time)
 			throws IllegalParameterException, MissingParameterException {
-		nonNull(disabledReason, "disabledReason");
-		nonNull(byAdmin, "byAdmin");
-		nonNull(time, "time");
+		requireNonNull(disabledReason, "disabledReason");
+		requireNonNull(byAdmin, "byAdmin");
+		requireNonNull(time, "time");
 		if (!disabledReason.isPresent()) {
 			if (!byAdmin.isPresent()) {
 				if (time.isPresent()) {

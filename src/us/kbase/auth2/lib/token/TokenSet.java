@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.Comparator;
@@ -35,15 +35,15 @@ public class TokenSet {
 	public TokenSet(
 			final StoredToken current,
 			final Set<StoredToken> tokens) {
-		nonNull(current, "current");
-		nonNull(tokens, "tokens");
+		requireNonNull(current, "current");
+		requireNonNull(tokens, "tokens");
 		this.currentToken = current;
 		// in case incoming set is unmodifiable
 		final Set<StoredToken> putative = new HashSet<>(tokens);
 		final Iterator<StoredToken> i = putative.iterator();
 		while (i.hasNext()) {
 			final StoredToken ht = i.next();
-			nonNull(ht, "One of the tokens in the incoming set is null");
+			requireNonNull(ht, "One of the tokens in the incoming set is null");
 			if (!ht.getUserName().equals(current.getUserName())) {
 				throw new IllegalArgumentException(
 						"Mixing tokens from different users is not allowed");

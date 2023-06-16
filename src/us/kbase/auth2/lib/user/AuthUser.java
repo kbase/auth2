@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.user;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -383,7 +383,7 @@ public class AuthUser {
 			if (userName.equals(UserName.ROOT)) {
 				throw new IllegalStateException("Root user cannot have identities");
 			}
-			nonNull(remoteIdentity, "remoteIdentity");
+			requireNonNull(remoteIdentity, "remoteIdentity");
 			identities.add(remoteIdentity);
 			return this;
 		}
@@ -419,9 +419,9 @@ public class AuthUser {
 				final UserName userName,
 				final DisplayName displayName,
 				final Instant created) {
-			nonNull(userName, "userName");
-			nonNull(displayName, "displayName");
-			nonNull(created, "created");
+			requireNonNull(userName, "userName");
+			requireNonNull(displayName, "displayName");
+			requireNonNull(created, "created");
 			this.userName = userName;
 			this.displayName = displayName;
 			this.created = created;
@@ -437,7 +437,7 @@ public class AuthUser {
 		 * @return this builder.
 		 */
 		public T withEmailAddress(final EmailAddress email) {
-			nonNull(email, "email");
+			requireNonNull(email, "email");
 			this.email = email;
 			return getThis();
 		}
@@ -450,7 +450,7 @@ public class AuthUser {
 		 * @return this builder.
 		 */
 		public T withRole(final Role role) {
-			nonNull(role, "role");
+			requireNonNull(role, "role");
 			if (UserName.ROOT.equals(userName) && !Role.ROOT.equals(role)) {
 				throw new IllegalStateException("Root username must only have the ROOT role");
 			}
@@ -466,7 +466,7 @@ public class AuthUser {
 		 * @return this class.
 		 */
 		public T withCustomRole(final String customRole) {
-			nonNull(customRole, "customRole");
+			requireNonNull(customRole, "customRole");
 			customRoles.add(customRole);
 			return getThis();
 		}
@@ -477,8 +477,8 @@ public class AuthUser {
 		 * @return this builder.
 		 */
 		public T withPolicyID(final PolicyID policyID, final Instant agreedOn) {
-			nonNull(policyID, "policyID");
-			nonNull(agreedOn, "agreedOn");
+			requireNonNull(policyID, "policyID");
+			requireNonNull(agreedOn, "agreedOn");
 			policyIDs.put(policyID, agreedOn);
 			return getThis();
 		}
@@ -488,7 +488,7 @@ public class AuthUser {
 		 * @return this builder.
 		 */
 		public T withLastLogin(final Instant lastLogin) {
-			nonNull(lastLogin, "lastLogin");
+			requireNonNull(lastLogin, "lastLogin");
 			if (created.isAfter(lastLogin)) {
 				this.lastLogin = Optional.of(created);
 			} else {
@@ -502,7 +502,7 @@ public class AuthUser {
 		 * @return this builder.
 		 */
 		public T withUserDisabledState(final UserDisabledState disabledState) {
-			nonNull(disabledState, "disabledState");
+			requireNonNull(disabledState, "disabledState");
 			this.disabledState = disabledState;
 			return getThis();
 		}
