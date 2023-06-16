@@ -399,6 +399,7 @@
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageInvalidDBDataTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageLinkTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRecanonicalizationTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRolesTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempSessionDataTest"/>
