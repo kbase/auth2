@@ -1,6 +1,7 @@
 package us.kbase.auth2.cli;
 
 import static java.util.Objects.requireNonNull;
+import static us.kbase.auth2.Version.VERSION;
 
 import java.io.Console;
 import java.io.PrintStream;
@@ -11,6 +12,7 @@ import org.slf4j.LoggerFactory;
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
+import com.github.zafarkhaja.semver.Version;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;
@@ -18,6 +20,7 @@ import us.kbase.auth2.kbase.KBaseAuthConfig;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
+import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.service.AuthBuilder;
@@ -122,22 +125,52 @@ public class AuthCLI {
 		}
 		final Authentication auth;
 		final AuthStartupConfig cfg;
+		final AuthStorage storage;
 		try {
 			// may need to be smarter here about figuring out the config implementation
 			cfg = new KBaseAuthConfig(Paths.get(a.deploy), true);
-			auth = new AuthBuilder(cfg, AuthExternalConfig.getDefaultConfig(cfg.getEnvironments()))
-					.getAuth();
+			final AuthBuilder ab = new AuthBuilder(
+					cfg, AuthExternalConfig.getDefaultConfig(cfg.getEnvironments()));
+			auth = ab.getAuth();
+			storage = ab.getStorage();
 		} catch (AuthConfigurationException | StorageInitException e) {
 			printError(e, a);
 			return 1;
 		}
-		int ret = 0;
+		boolean usage = true;
 		if (a.setroot) {
-			ret = setRootPassword(a, auth);
-		} else {
+			final int ret = setRootPassword(a, auth);
+			if (ret != 0) {
+				return ret;
+			};
+			usage = false;
+		}
+		if (a.removeRecanonicalizationFlag) {
+			try {
+				final long count = storage.removeDisplayNameRecanonicalizationFlag(
+						Version.valueOf(VERSION));
+				out.println(String.format("Removed %s recanonicalization flags for version %s",
+						count, VERSION));
+			} catch (AuthStorageException e) { // this can't be tested easily
+				printError(e, a);
+				return 1;
+			}
+			usage = false;
+		}
+		if (a.recanonicalizeDisplayNames) {
+			try {
+				final long count = storage.recanonicalizeDisplayNames(Version.valueOf(VERSION));
+				out.println(String.format("Recanonicalized %s user display names", count));
+			} catch (AuthStorageException e) { // this can't be tested easily
+				printError(e, a);
+				return 1;
+			}
+			usage = false;
+		}
+		if (usage) {
 			usage(jc);
 		}
-		return ret;
+		return 0;
 	}
 
 	private int setRootPassword(final Args a, final Authentication auth) {
@@ -193,12 +226,10 @@ public class AuthCLI {
 	}
 
 	private class Args {
-		@Parameter(names = {"-h", "--help"}, help = true,
-				description = "Display help.")
+		@Parameter(names = {"-h", "--help"}, help = true, description = "Display help.")
 		private boolean help;
 		
-		@Parameter(names = {"-v", "--verbose"},
-				description = "Show error stacktraces.")
+		@Parameter(names = {"-v", "--verbose"}, description = "Show error stacktraces.")
 		private boolean verbose;
 		
 		@Parameter(names = {"-d", "--deploy"}, required = true,
@@ -206,9 +237,24 @@ public class AuthCLI {
 		private String deploy;
 		
 		@Parameter(names = {"-r", "--set-root-password"}, description =
-				"Set the root user password. If this option is selected no " +
-				"other specified operations will be executed. If the root account is disabled " +
+				"Set the root user password. If the root account is disabled " +
 				"it will be enabled with the enabling user set to the root user name.")
 		private boolean setroot;
+		
+		@Parameter(names = {"--recanonicalize-display-names"}, description =
+				"Recreate canonical search display names. This may be necessary after a version " +
+				"update where the canonicalization algorithm has changed. " +
+				"Records in the database are tagged with a flag with the current version once " +
+				"they have been recanonicalized and will not be processed again unless the " +
+				"flag is removed with --remove-recanonicalization-flag."
+		)
+		private boolean recanonicalizeDisplayNames;
+		
+		@Parameter(names = {"--remove-recanonicalization-flag"}, description =
+				"Remove the flag denoting that a database user record's search display name " +
+				"has been recanonicalized. Once removed, the recanonicalization algorithm " +
+				"will update the record again if run."
+		)
+		private boolean removeRecanonicalizationFlag;
 	}
 }
