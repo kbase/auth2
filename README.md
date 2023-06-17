@@ -1,5 +1,4 @@
-KBase authentication server
-===========================
+# KBase authentication server
 
 This repo contains the second iteration of the KBase authentication server.
 
@@ -7,8 +6,7 @@ Build status (master):
 [![Build Status](https://travis-ci.org/kbase/auth2.svg?branch=master)](https://travis-ci.org/kbase/auth2) [![codecov](https://codecov.io/gh/kbase/auth2/branch/master/graph/badge.svg)](https://codecov.io/gh/kbase/auth2)
 
 
-Current endpoints
------------------
+## Current endpoints
 
 ### UI
 
@@ -190,8 +188,8 @@ the user.
 DELETE /testmode/api/V2/testmodeonly/clear  
 Removes all test mode data from the system.
 
-Admin notes
------------
+## Admin notes
+
 * It is expected that this server always runs behind a reverse proxy (such as
   nginx) that enforces https / TLS and as such the auth server is configured to
   allow cookies to be set over insecure connections.
@@ -211,9 +209,16 @@ Admin notes
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
 * Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
   * Note that only the public API has been tested with the auth server.
+* In version 0.6.0, the canonicalization algorithm for user display names changed and the
+  database needs to be updated.
+  * See the `--recanonicalize-display-names` option for the `manage_auth` script. This can
+    be run while the server is live **after** updating to version 0.6.0.
+  * Once the names have been recanonicalized, the `--remove-recanonicalization-flag` can be
+    used to remove flags set on database objects to avoid reprocessing if the recanonicalize
+    process does not complete.
 
-Requirements
-------------
+## Requirements
+
 Java 8 (OpenJDK OK)  
 Apache Ant (http://ant.apache.org/)  
 MongoDB 2.6+ (https://www.mongodb.com/)  
@@ -223,8 +228,8 @@ This repo (git clone https://github.com/kbase/auth2)
 The jars repo (git clone https://github.com/kbase/jars)  
 The two repos above need to be in the same parent folder.
 
-To start server
----------------
+## To start server
+
 start mongodb  
 if using mongo auth, create a mongo user  
 cd into the auth2 repo  
@@ -234,8 +239,8 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
 
-Administer the server
----------------------
+## Administer the server
+
 Set a root password:  
 `./manage_auth -d <path to deploy.cfg> -r`  
 
@@ -244,15 +249,14 @@ local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
 
-Start & stop server w/o a pid
------------------------------
+## Start & stop server w/o a pid
+
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
 
 Omit the stop key to have jetty generate one for you.
 
-Developer notes
----------------
+## Developer notes
 
 ### Adding and releasing code
 
@@ -306,7 +310,6 @@ In `us.kbase.auth2.lib.exceptions`:
 
 Anything else is mapped to 500.
 
-Ancient history
----------------
+## Ancient history
 
 https://github.com/kbaseIncubator/auth2proto
