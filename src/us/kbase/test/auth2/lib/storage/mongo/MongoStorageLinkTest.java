@@ -242,9 +242,9 @@ public class MongoStorageLinkTest extends MongoStorageTester {
 	public void unlinkFailInput() throws Exception {
 		failUnlink(null, "foobar", new NullPointerException("userName"));
 		failUnlink(new UserName("foo"), null,
-				new IllegalArgumentException("Missing argument: id"));
+				new IllegalArgumentException("id cannot be null or whitespace only"));
 		failUnlink(new UserName("foo"), "    \t \n   ",
-				new IllegalArgumentException("Missing argument: id"));
+				new IllegalArgumentException("id cannot be null or whitespace only"));
 	}
 	
 	@Test

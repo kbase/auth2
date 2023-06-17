@@ -132,9 +132,10 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		failStoreToken(null, "foo", new NullPointerException("token"));
-		failStoreToken(st, null, new IllegalArgumentException("Missing argument: hash"));
+		failStoreToken(
+				st, null, new IllegalArgumentException("hash cannot be null or whitespace only"));
 		failStoreToken(st, "   \t  ", new IllegalArgumentException(
-				"Missing argument: hash"));
+				"hash cannot be null or whitespace only"));
 	}
 	
 	@Test

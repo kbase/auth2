@@ -65,7 +65,7 @@ public class Utils {
 			final String s,
 			final String name) {
 		if (s == null || s.trim().isEmpty()) {
-			throw new IllegalArgumentException("Missing argument: " + name);
+			throw new IllegalArgumentException(name + " cannot be null or whitespace only");
 		}
 		return s.trim();
 	}

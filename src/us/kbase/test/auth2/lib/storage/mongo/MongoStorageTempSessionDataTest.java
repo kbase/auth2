@@ -113,9 +113,9 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 				.link("state", "pkce", new UserName("whee"));
 		failStoreTemporarySessionData(null, "foo", new NullPointerException("data"));
 		failStoreTemporarySessionData(tsd, null,
-				new IllegalArgumentException("Missing argument: hash"));
+				new IllegalArgumentException("hash cannot be null or whitespace only"));
 		failStoreTemporarySessionData(tsd, "   \t   \n ",
-				new IllegalArgumentException("Missing argument: hash"));
+				new IllegalArgumentException("hash cannot be null or whitespace only"));
 	}
 	
 	@Test

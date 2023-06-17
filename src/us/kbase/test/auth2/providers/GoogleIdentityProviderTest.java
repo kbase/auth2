@@ -219,18 +219,18 @@ public class GoogleIdentityProviderTest {
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
 		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
-				"Missing argument: authcode"));
+				"authcode cannot be null or whitespace only"));
 		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
-				"Missing argument: authcode"));
+				"authcode cannot be null or whitespace only"));
 	}
 	
 	@Test
 	public void illegalPKCEVerifer() throws Exception {
 		final IdentityProvider idp = new GoogleIdentityProvider(CFG);
 		failGetIdentities(idp, "c", null, true, new IllegalArgumentException(
-				"Missing argument: pkceCodeVerifier"));
+				"pkceCodeVerifier cannot be null or whitespace only"));
 		failGetIdentities(idp, "c", "  \t  \n  ", true, new IllegalArgumentException(
-				"Missing argument: pkceCodeVerifier"));
+				"pkceCodeVerifier cannot be null or whitespace only"));
 	}
 	
 	@Test
