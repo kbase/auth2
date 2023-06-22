@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.exceptions;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
@@ -46,7 +46,7 @@ public class ErrorMessage {
 			final Throwable ex,
 			final String callID,
 			final boolean includeTrace) {
-		nonNull(ex, "ex");
+		requireNonNull(ex, "ex");
 		this.callid = callID; // null ok
 		if (includeTrace) {
 			final StringWriter st = new StringWriter();

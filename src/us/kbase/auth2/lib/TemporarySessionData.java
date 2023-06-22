@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.time.Duration;
@@ -199,7 +199,7 @@ public class TemporarySessionData {
 		if (lifetimeInMS < 0) {
 			throw new IllegalArgumentException("lifetime must be >= 0");
 		}
-		nonNull(created, "created");
+		requireNonNull(created, "created");
 		final Duration d = Duration.ofMillis(lifetimeInMS);
 		final Instant expires;
 		if (Instant.MAX.minus(d).isBefore(created)) {
@@ -221,9 +221,9 @@ public class TemporarySessionData {
 		private final Instant expires;
 		
 		private Builder(final UUID id, final Instant created, final Instant expires) {
-			nonNull(id, "id");
-			nonNull(created, "created");
-			nonNull(expires, "expires");
+			requireNonNull(id, "id");
+			requireNonNull(created, "created");
+			requireNonNull(expires, "expires");
 			if (expires.isBefore(created)) {
 				throw new IllegalArgumentException("expires is before created");
 			}
@@ -239,7 +239,7 @@ public class TemporarySessionData {
 		 */
 		public TemporarySessionData error(final String error, final ErrorType errorType) {
 			checkStringNoCheckedException(error, "error");
-			nonNull(errorType, "errorType");
+			requireNonNull(errorType, "errorType");
 			return new TemporarySessionData(
 					Operation.ERROR, id, created, expires,
 					null, null, null, null, error, errorType);
@@ -273,7 +273,7 @@ public class TemporarySessionData {
 		}
 
 		private Set<RemoteIdentity> checkIdents(final Set<RemoteIdentity> identities) {
-			nonNull(identities, "identities");
+			requireNonNull(identities, "identities");
 			noNulls(identities, "null item in identities");
 			if (identities.isEmpty()) {
 				throw new IllegalArgumentException("empty identities");
@@ -296,7 +296,7 @@ public class TemporarySessionData {
 				final UserName userName) {
 			checkStringNoCheckedException(oauth2State, "oauth2State");
 			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
-			nonNull(userName, "userName");
+			requireNonNull(userName, "userName");
 			return new TemporarySessionData(
 					Operation.LINKSTART, id, created, expires,
 					oauth2State, pkceCodeVerifier, null, userName, null, null);
@@ -311,7 +311,7 @@ public class TemporarySessionData {
 		public TemporarySessionData link(
 				final UserName userName,
 				final Set<RemoteIdentity> identities) {
-			nonNull(userName, "userName");
+			requireNonNull(userName, "userName");
 			return new TemporarySessionData(
 					Operation.LINKIDENTS, id, created, expires,
 					null, null, checkIdents(identities), userName, null, null);

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.config;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
@@ -21,7 +21,7 @@ public class CollectingExternalConfig implements ExternalConfig {
 	 * @param map the map defining the configuration.
 	 */
 	public CollectingExternalConfig(final Map<String, ConfigItem<String, State>> map) {
-		nonNull(map, "map");
+		requireNonNull(map, "map");
 		cfg = map;
 	}
 	

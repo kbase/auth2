@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.common;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.net.InetAddress;
 import java.time.Instant;
@@ -94,8 +94,8 @@ public class ServiceCommon {
 			final String email)
 			throws IllegalParameterException, InvalidTokenException, AuthStorageException,
 				UnauthorizedException {
-		nonNull(auth, "auth");
-		nonNull(token, "token");
+		requireNonNull(auth, "auth");
+		requireNonNull(token, "token");
 		final UserUpdate.Builder uu = UserUpdate.getBuilder();
 		try {
 			if (displayName != null && !displayName.trim().isEmpty()) {
@@ -161,9 +161,9 @@ public class ServiceCommon {
 			final boolean ignoreIPsInHeaders,
 			final Map<String, String> customContext)
 			throws MissingParameterException, IllegalParameterException {
-		nonNull(userAgentParser, "userAgentParser");
-		nonNull(request, "request");
-		nonNull(customContext, "customContext");
+		requireNonNull(userAgentParser, "userAgentParser");
+		requireNonNull(request, "request");
+		requireNonNull(customContext, "customContext");
 		final TokenCreationContext.Builder tcc = userAgentParser.getTokenContextFromUserAgent(
 				request.getHeader(HEADER_USER_AGENT));
 		addIPAddress(tcc, request, ignoreIPsInHeaders);

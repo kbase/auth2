@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.user;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -145,7 +145,7 @@ public class LocalUser extends AuthUser {
 		 * @return this builder.
 		 */
 		public Builder withLastReset(final Instant lastReset) {
-			nonNull(lastReset, "lastReset");
+			requireNonNull(lastReset, "lastReset");
 			this.lastReset = Optional.of(lastReset);
 			return this;
 		}

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.identity;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 /** An identity provided by a 3rd party identity provider such as Google, Globus, etc.
  * @author gaprice@lbl.gov
@@ -20,8 +20,8 @@ public class RemoteIdentity {
 	public RemoteIdentity(
 			final RemoteIdentityID remoteID,
 			final RemoteIdentityDetails details) {
-		nonNull(remoteID, "remoteID");
-		nonNull(details, "details");
+		requireNonNull(remoteID, "remoteID");
+		requireNonNull(details, "details");
 		this.remoteID = remoteID;
 		this.details = details;
 	}

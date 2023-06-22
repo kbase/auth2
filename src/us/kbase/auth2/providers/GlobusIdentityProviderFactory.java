@@ -1,7 +1,7 @@
 package us.kbase.auth2.providers;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -80,7 +80,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		 * @param idc the configuration for the provider.
 		 */
 		public GlobusIdentityProvider(final IdentityProviderConfig idc) {
-			nonNull(idc, "idc");
+			requireNonNull(idc, "idc");
 			if (!GlobusIdentityProviderFactory.class.getName().equals(
 					idc.getIdentityProviderFactoryClassName())) {
 				throw new IllegalArgumentException(

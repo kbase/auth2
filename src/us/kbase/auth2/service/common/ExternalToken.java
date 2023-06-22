@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.common;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
@@ -19,7 +19,7 @@ public class ExternalToken {
 	private final Map<String, String> custom;
 
 	public ExternalToken(final StoredToken storedToken) {
-		nonNull(storedToken, "storedToken");
+		requireNonNull(storedToken, "storedToken");
 		type = storedToken.getTokenType().getDescription();
 		id = storedToken.getId().toString();
 		name = storedToken.getTokenName().isPresent() ?

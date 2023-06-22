@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.config;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Collections;
 import java.util.HashMap;
@@ -182,14 +182,14 @@ public class AuthConfig {
 			if (p == null || p.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider names cannot be null or empty");
 			}
-			nonNull(providers.get(p), String.format("provider config for provider %s is null", p));
+			requireNonNull(providers.get(p), String.format("provider config for provider %s is null", p));
 		}
 		if (tokenLifetimeMS == null) {
 			tokenLifetimeMS = new HashMap<>();
 		}
 		for (final TokenLifetimeType t: tokenLifetimeMS.keySet()) {
-			nonNull(t, "null key in token life time map");
-			nonNull(tokenLifetimeMS.get(t), String.format("lifetime for key %s is null", t));
+			requireNonNull(t, "null key in token life time map");
+			requireNonNull(tokenLifetimeMS.get(t), String.format("lifetime for key %s is null", t));
 			if (tokenLifetimeMS.get(t) < MIN_TOKEN_LIFE_MS) {
 				throw new IllegalArgumentException(String.format(
 						"lifetime for key %s must be at least %s ms", t, MIN_TOKEN_LIFE_MS));
@@ -253,7 +253,7 @@ public class AuthConfig {
 	 * @return a new AuthConfig filtered to remove all identity providers except those specified.
 	 */
 	public AuthConfig filterProviders(final Set<String> identityProviders) {
-		nonNull(identityProviders, "identityProviders");
+		requireNonNull(identityProviders, "identityProviders");
 		final Set<String> included = new HashSet<>(identityProviders);
 		included.retainAll(providers.keySet());
 		final Map<String, ProviderConfig> newprovs = included.stream().collect(

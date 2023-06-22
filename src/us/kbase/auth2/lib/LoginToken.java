@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
@@ -28,7 +28,7 @@ public class LoginToken {
 	 * @param token the temporary token.
 	 */
 	public LoginToken(final TemporaryToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		this.temporaryToken = Optional.of(token);
 		this.token = Optional.empty();
 	}
@@ -37,7 +37,7 @@ public class LoginToken {
 	 * @param token the new token.
 	 */
 	public LoginToken(final NewToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		this.temporaryToken = Optional.empty();
 		this.token = Optional.of(token);
 	}

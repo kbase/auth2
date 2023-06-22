@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.exceptions;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 /** Base class of all authorization / authentication exceptions.
  * @author gaprice@lbl.gov 
@@ -16,7 +16,7 @@ public class AuthException extends Exception {
 	}
 
 	private static String getMsg(final ErrorType err, final String message) {
-		nonNull(err, "err");
+		requireNonNull(err, "err");
 		return err.getErrorCode() + " " + err.getError() + 
 				(message == null || message.trim().isEmpty() ? "" : ": " + message);
 	}

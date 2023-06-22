@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.config;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import us.kbase.auth2.lib.config.ConfigAction.Action;
 import us.kbase.auth2.lib.config.ConfigAction.State;
@@ -24,7 +24,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	 * @return a new ConfigItem with the state "action".
 	 */
 	public static <T> ConfigItem<T, State> state(T item) {
-		nonNull(item, "item");
+		requireNonNull(item, "item");
 		return new ConfigItem<>(item, ConfigAction.state());
 	}
 	
@@ -61,7 +61,7 @@ public class ConfigItem<T, A extends ConfigAction> {
 	 * @return a new ConfigItem with a set action.
 	 */
 	public static <T> ConfigItem<T, Action> set(T item) {
-		nonNull(item, "item");
+		requireNonNull(item, "item");
 		return new ConfigItem<>(item, ConfigAction.set());
 	}
 

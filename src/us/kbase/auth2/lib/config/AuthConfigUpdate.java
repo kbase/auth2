@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.config;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkString;
 
 import java.util.Collections;
@@ -52,9 +52,9 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 				final Optional<Boolean> enabled,
 				final Optional<Boolean> forceLoginChoice,
 				final Optional<Boolean> forceLinkChoice) {
-			nonNull(enabled, "enabled");
-			nonNull(forceLoginChoice, "forceLoginChoice");
-			nonNull(forceLinkChoice, "forceLinkChoice");
+			requireNonNull(enabled, "enabled");
+			requireNonNull(forceLoginChoice, "forceLoginChoice");
+			requireNonNull(forceLinkChoice, "forceLinkChoice");
 			
 			this.enabled = enabled;
 			this.forceLoginChoice = forceLoginChoice;
@@ -321,7 +321,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 				throws MissingParameterException {
 			//TODO ZLATER CODE should consider provider name class
 			checkString(provider, "provider");
-			nonNull(update, "update");
+			requireNonNull(update, "update");
 			providers.put(provider, update);
 			return this;
 		}
@@ -334,7 +334,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		public Builder<T> withTokenLifeTime(
 				final TokenLifetimeType lifetimeType,
 				final long lifetimeInMillis) {
-			nonNull(lifetimeType, "lifetimeType");
+			requireNonNull(lifetimeType, "lifetimeType");
 			if (lifetimeInMillis < AuthConfig.MIN_TOKEN_LIFE_MS) {
 				throw new IllegalArgumentException(String.format(
 						"token lifetime must be at least %s ms", AuthConfig.MIN_TOKEN_LIFE_MS));
@@ -360,7 +360,7 @@ public class AuthConfigUpdate<T extends ExternalConfig> {
 		 * @return this builder.
 		 */
 		public Builder<T> withExternalConfig(final T config) {
-			nonNull(config, "config");
+			requireNonNull(config, "config");
 			external = Optional.of(config);
 			return this;
 		}

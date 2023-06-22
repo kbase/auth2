@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
@@ -23,7 +23,7 @@ public class LocalLoginResult {
 	 * @param userName the username of the user that logged in.
 	 */
 	public LocalLoginResult(final UserName userName) {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		this.userName = Optional.of(userName);
 		token = Optional.empty();
 	}
@@ -32,7 +32,7 @@ public class LocalLoginResult {
 	 * @param token the user's new token.
 	 */
 	public LocalLoginResult(final NewToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		userName = Optional.empty();
 		this.token = Optional.of(token);
 	}

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.util.Collections;
@@ -315,7 +315,7 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		public Builder withSearchOnRole(final Role role) {
-			nonNull(role, "role");
+			requireNonNull(role, "role");
 			this.searchRoles.add(role);
 			return this;
 		}

@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.token;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.nonNull;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -26,7 +26,7 @@ public class TemporaryToken {
 	public TemporaryToken(
 			final TemporarySessionData data,
 			final String token) {
-		nonNull(data, "data");
+		requireNonNull(data, "data");
 		checkStringNoCheckedException(token, "token");
 		this.id = data.getId();
 		this.token = token;

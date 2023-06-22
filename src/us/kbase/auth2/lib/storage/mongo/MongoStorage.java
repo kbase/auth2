@@ -1,7 +1,7 @@
 package us.kbase.auth2.lib.storage.mongo;
 
+import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
-import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.InetAddress;
@@ -296,7 +296,7 @@ public class MongoStorage implements AuthStorage {
 	
 	// this should only be used for tests
 	private MongoStorage(final MongoDatabase db, final Clock clock) throws StorageInitException {
-		nonNull(db, "db");
+		requireNonNull(db, "db");
 		this.db = db;
 		this.clock = clock;
 		
@@ -372,8 +372,8 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void createLocalUser(final LocalUser local, final PasswordHashAndSalt creds)
 			throws UserExistsException, AuthStorageException, NoSuchRoleException {
-		nonNull(local, "local");
-		nonNull(creds, "creds");
+		requireNonNull(local, "local");
+		requireNonNull(creds, "creds");
 		final String encpwdhsh = Base64.getEncoder().encodeToString(creds.getPasswordHash());
 		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
 		final Set<String> roles = local.getRoles().stream().map(r -> r.getID())
@@ -451,7 +451,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public PasswordHashAndSalt getPasswordHashAndSalt(final UserName userName)
 			throws AuthStorageException, NoSuchLocalUserException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final Document d = findOne(COL_USERS,
 				new Document(Fields.USER_NAME, userName.getName())
 						.append(Fields.USER_LOCAL, true),
@@ -584,7 +584,7 @@ public class MongoStorage implements AuthStorage {
 			final PasswordHashAndSalt creds,
 			final boolean forceReset)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(creds, "creds");
+		requireNonNull(creds, "creds");
 		getUserDoc(COL_USERS, name, true); //check the user actually is local
 		final String pwdhsh = Base64.getEncoder().encodeToString(creds.getPasswordHash());
 		final String encsalt = Base64.getEncoder().encodeToString(creds.getSalt());
@@ -616,7 +616,7 @@ public class MongoStorage implements AuthStorage {
 	public void createUser(final NewUser newUser)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException,
 			NoSuchRoleException {
-		nonNull(newUser, "newUser");
+		requireNonNull(newUser, "newUser");
 		final Optional<UserName> admin = newUser.getAdminThatToggledEnabledState();
 		final Optional<Instant> time = newUser.getEnableToggleDate();
 		final Optional<String> reason = newUser.getReasonForDisabled();
@@ -671,10 +671,10 @@ public class MongoStorage implements AuthStorage {
 			final Instant created,
 			final Instant expires)
 			throws UserExistsException, AuthStorageException {
-		nonNull(name, "name");
-		nonNull(display, "display");
-		nonNull(created, "created");
-		nonNull(expires, "expires");
+		requireNonNull(name, "name");
+		requireNonNull(display, "display");
+		requireNonNull(created, "created");
+		requireNonNull(expires, "expires");
 		if (name.isRoot()) {
 			throw new IllegalArgumentException("Test users cannot be root");
 		}
@@ -720,7 +720,7 @@ public class MongoStorage implements AuthStorage {
 			final UserName userName,
 			final boolean local)
 			throws AuthStorageException, NoSuchUserException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final Document projection = new Document(Fields.USER_PWD_HSH, 0)
 				.append(Fields.USER_SALT, 0);
 		final Document user = findOne(collection,
@@ -745,7 +745,7 @@ public class MongoStorage implements AuthStorage {
 
 	private void toggleAccount(final UserName user, final UserName admin, final String reason)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(admin, "admin");
+		requireNonNull(admin, "admin");
 		final Document update = new Document(Fields.USER_DISABLED_REASON, reason)
 				.append(Fields.USER_DISABLED_ADMIN, admin.getName())
 				.append(Fields.USER_DISABLED_DATE, Date.from(clock.instant()));
@@ -772,7 +772,7 @@ public class MongoStorage implements AuthStorage {
 
 	private void storeToken(final String collection, final StoredToken token, final String hash)
 			throws AuthStorageException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		checkStringNoCheckedException(hash, "hash");
 		final Optional<TokenName> tokenName = token.getTokenName();
 		final TokenCreationContext ctx = token.getContext();
@@ -863,7 +863,7 @@ public class MongoStorage implements AuthStorage {
 
 	private StoredToken getToken(final String collection, final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		final Document t = findOne(collection,
 				new Document(Fields.TOKEN_TOKEN, token.getTokenHash()),
 				new Document(Fields.TOKEN_TOKEN, 0));
@@ -920,7 +920,7 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public Set<StoredToken> getTokens(final UserName userName) throws AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final Set<StoredToken> ret = new HashSet<>();
 		try {
 			final FindIterable<Document> ts = db.getCollection(COL_TOKEN).find(
@@ -1000,7 +1000,7 @@ public class MongoStorage implements AuthStorage {
 			final Set<UserName> users,
 			final String collection)
 			throws AuthStorageException {
-		nonNull(users, "users");
+		requireNonNull(users, "users");
 		Utils.noNulls(users, "Null username in users set");
 		if (users.isEmpty()) {
 			return new HashMap<>();
@@ -1065,7 +1065,7 @@ public class MongoStorage implements AuthStorage {
 			final UserSearchSpec spec,
 			final int limit)
 			throws AuthStorageException {
-		nonNull(spec, "spec");
+		requireNonNull(spec, "spec");
 		final Document query = new Document();
 		if (spec.hasSearchPrefixes()) {
 			final List<Document> regexes = spec.getSearchPrefixes().stream()
@@ -1112,8 +1112,8 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void deleteToken(final UserName userName, final UUID tokenId)
 			throws AuthStorageException, NoSuchTokenException {
-		nonNull(userName, "userName");
-		nonNull(tokenId, "tokenId");
+		requireNonNull(userName, "userName");
+		requireNonNull(tokenId, "tokenId");
 		try {
 			final DeleteResult dr = db.getCollection(COL_TOKEN)
 					.deleteOne(new Document(Fields.TOKEN_USER_NAME, userName.getName())
@@ -1131,7 +1131,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void deleteTokens(final UserName userName)
 			throws AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		deleteTokens(new Document(Fields.TOKEN_USER_NAME, userName.getName()));
 	}
 
@@ -1154,8 +1154,8 @@ public class MongoStorage implements AuthStorage {
 			final Set<Role> addRoles,
 			final Set<Role> removeRoles)
 			throws AuthStorageException, NoSuchUserException {
-		nonNull(addRoles, "addRoles");
-		nonNull(removeRoles, "removeRoles");
+		requireNonNull(addRoles, "addRoles");
+		requireNonNull(removeRoles, "removeRoles");
 		if (addRoles.contains(Role.ROOT) || removeRoles.contains(Role.ROOT)) {
 			// I don't like this at all. The whole way the root user is managed needs a rethink.
 			// note that the Authorization code shouldn't allow this either, but to be safe...
@@ -1176,7 +1176,7 @@ public class MongoStorage implements AuthStorage {
 			final Set<Object> removeRoles,
 			final String field)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		if (addRoles.isEmpty() && removeRoles.isEmpty()) {
 			return;
 		}
@@ -1204,9 +1204,9 @@ public class MongoStorage implements AuthStorage {
 			final Set<Role> roles,
 			final Set<String> customRoles)
 			throws NoSuchRoleException, AuthStorageException, NoSuchUserException {
-		nonNull(userName, "userName");
-		nonNull(roles, "roles");
-		nonNull(customRoles, "customRoles");
+		requireNonNull(userName, "userName");
+		requireNonNull(roles, "roles");
+		requireNonNull(customRoles, "customRoles");
 		if (roles.contains(Role.ROOT)) {
 			// I don't like this at all. The whole way the root user is managed needs a rethink.
 			// note that the Authorization code shouldn't allow this either, but to be safe...
@@ -1241,7 +1241,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void testModeSetCustomRole(final CustomRole role, final Instant expires)
 			throws AuthStorageException {
-		nonNull(expires, "expires");
+		requireNonNull(expires, "expires");
 		setCustomRole(COL_TEST_CUST_ROLES, role, expires);
 	}
 	
@@ -1265,7 +1265,7 @@ public class MongoStorage implements AuthStorage {
 			final CustomRole role,
 			final Instant expires)
 			throws AuthStorageException {
-		nonNull(role, "role");
+		requireNonNull(role, "role");
 		final Document update = new Document(Fields.ROLES_DESC, role.getDesc());
 		if (expires != null) {
 			update.append(Fields.ROLES_EXPIRES, Date.from(expires));
@@ -1395,8 +1395,8 @@ public class MongoStorage implements AuthStorage {
 			final Set<String> addRoles,
 			final Set<String> removeRoles)
 			throws NoSuchUserException, AuthStorageException, NoSuchRoleException {
-		nonNull(addRoles, "addRoles");
-		nonNull(removeRoles, "removeRoles");
+		requireNonNull(addRoles, "addRoles");
+		requireNonNull(removeRoles, "removeRoles");
 		Utils.noNulls(addRoles, "Null role in addRoles");
 		Utils.noNulls(removeRoles, "Null role in removeRoles");
 		final Set<String> allRoles = new HashSet<>(addRoles);
@@ -1556,7 +1556,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void storeTemporarySessionData(final TemporarySessionData data, final String hash)
 			throws AuthStorageException {
-		nonNull(data, "data");
+		requireNonNull(data, "data");
 		checkStringNoCheckedException(hash, "hash");
 		final Set<Document> ids;
 		if (data.getIdentities().isPresent()) {
@@ -1620,7 +1620,7 @@ public class MongoStorage implements AuthStorage {
 	public TemporarySessionData getTemporarySessionData(
 			final IncomingHashedToken token)
 			throws AuthStorageException, NoSuchTokenException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		final Document d = findOne(COL_TEMP_DATA,
 				new Document(Fields.TEMP_SESSION_TOKEN, token.getTokenHash()));
 		if (d == null) {
@@ -1682,7 +1682,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public Optional<UUID> deleteTemporarySessionData(final IncomingHashedToken token)
 			throws AuthStorageException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		try {
 			final Document tempIds = db.getCollection(COL_TEMP_DATA).findOneAndDelete(
 					new Document(Fields.TEMP_SESSION_TOKEN, token.getTokenHash()),
@@ -1705,7 +1705,7 @@ public class MongoStorage implements AuthStorage {
 		 * to so that isn't subject to race conditions that could mean deleted IDs are missing from
 		 * the list
 		 */
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		try {
 			final DeleteResult tempIds = db.getCollection(COL_TEMP_DATA).deleteMany(
 					new Document(Fields.TEMP_SESSION_USER, userName.getName()));
@@ -1757,7 +1757,7 @@ public class MongoStorage implements AuthStorage {
 		 * documents, adding the same provider ID to a single document twice is possible without
 		 * careful db updates.
 		 */
-		nonNull(remoteID, "remoteID");
+		requireNonNull(remoteID, "remoteID");
 		if (user.isLocal()) {
 			throw new LinkFailedException("Cannot link identities to a local user");
 		}
@@ -1843,7 +1843,7 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void updateUser(final UserName userName, final UserUpdate update)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(update, "update");
+		requireNonNull(update, "update");
 		if (!update.hasUpdates()) {
 			return; //noop
 		}
@@ -1871,7 +1871,7 @@ public class MongoStorage implements AuthStorage {
 	// assume coders are stupid enough to pass in null documents
 	private void updateUserAnyUpdate(final UserName userName, final Document update)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final Document query = new Document(Fields.USER_NAME, userName.getName());
 		try {
 			final UpdateResult r = db.getCollection(COL_USERS).updateOne(query, update);
@@ -1887,15 +1887,15 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void setLastLogin(final UserName user, final Instant lastLogin) 
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(lastLogin, "lastLogin");
+		requireNonNull(lastLogin, "lastLogin");
 		updateUser(user, new Document(Fields.USER_LAST_LOGIN, Date.from(lastLogin)));
 	}
 	
 	@Override
 	public void addPolicyIDs(final UserName userName, final Set<PolicyID> policyIDs)
 			throws NoSuchUserException, AuthStorageException {
-		nonNull(userName, "userName");
-		nonNull(policyIDs, "policyIDs");
+		requireNonNull(userName, "userName");
+		requireNonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
 		if (!userExists(userName)) {
 			throw new NoSuchUserException(userName.getName());
@@ -1934,7 +1934,7 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public void removePolicyID(final PolicyID policyID) throws AuthStorageException {
-		nonNull(policyID, "policyID");
+		requireNonNull(policyID, "policyID");
 		try {
 			db.getCollection(COL_USERS).updateMany(new Document(), new Document("$pull",
 					new Document(Fields.USER_POLICY_IDS, new Document(Fields.POLICY_ID,
@@ -2028,7 +2028,7 @@ public class MongoStorage implements AuthStorage {
 			final boolean overwrite)
 			throws AuthStorageException {
 
-		nonNull(cfgUpdate, "cfgSet");
+		requireNonNull(cfgUpdate, "cfgSet");
 		updateConfig(COL_CONFIG_APPLICATION,
 				Fields.CONFIG_APP_ALLOW_LOGIN, cfgUpdate.getLoginAllowed(), overwrite);
 		for (final Entry<TokenLifetimeType, Long> e:
@@ -2097,7 +2097,7 @@ public class MongoStorage implements AuthStorage {
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
 		
-		nonNull(mapper, "mapper");
+		requireNonNull(mapper, "mapper");
 		try {
 			final FindIterable<Document> extiter = db.getCollection(COL_CONFIG_EXTERNAL).find();
 			final Map<String, ConfigItem<String, State>> ext = new HashMap<>();
@@ -2129,7 +2129,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private String getRecanonicalizationFlag(final Version version) {
 		return "_recanonicalized_for_version_" +
-				nonNull(version, "version").toString().replace(".", "_");
+				requireNonNull(version, "version").toString().replace(".", "_");
 	}
 
 	@Override

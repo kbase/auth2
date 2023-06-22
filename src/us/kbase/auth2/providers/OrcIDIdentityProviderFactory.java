@@ -1,6 +1,6 @@
 package us.kbase.auth2.providers;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.IOException;
 import java.net.URI;
@@ -75,7 +75,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		 * @param idc the configuration for this provider.
 		 */
 		public OrcIDIdentityProvider(final IdentityProviderConfig idc) {
-			nonNull(idc, "idc");
+			requireNonNull(idc, "idc");
 			if (!OrcIDIdentityProviderFactory.class.getName().equals(
 					idc.getIdentityProviderFactoryClassName())) {
 				throw new IllegalArgumentException(

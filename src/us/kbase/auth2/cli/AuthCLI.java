@@ -1,6 +1,6 @@
 package us.kbase.auth2.cli;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.Console;
 import java.io.PrintStream;
@@ -91,10 +91,10 @@ public class AuthCLI {
 			final ConsoleWrapper console,
 			final PrintStream out,
 			final PrintStream err) {
-		nonNull(args, "args");
-		nonNull(console, "console");
-		nonNull(out, "out");
-		nonNull(err, "err");
+		requireNonNull(args, "args");
+		requireNonNull(console, "console");
+		requireNonNull(out, "out");
+		requireNonNull(err, "err");
 		this.args = args;
 		this.console = console;
 		this.out = out;

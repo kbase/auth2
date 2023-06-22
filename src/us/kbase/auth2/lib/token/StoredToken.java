@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib.token;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Optional;
@@ -33,9 +33,9 @@ public class StoredToken {
 			final Instant creationDate,
 			final Instant expirationDate) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
-		nonNull(creationDate, "created");
+		requireNonNull(creationDate, "created");
 		// no way to test this one
-		nonNull(expirationDate, "expires");
+		requireNonNull(expirationDate, "expires");
 		this.type = type;
 		this.tokenName = tokenName;
 		this.context = context;
@@ -241,9 +241,9 @@ public class StoredToken {
 		private Instant expirationDate;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
-			nonNull(type, "type");
-			nonNull(id, "id");
-			nonNull(userName, "userName");
+			requireNonNull(type, "type");
+			requireNonNull(id, "id");
+			requireNonNull(userName, "userName");
 			this.id = id;
 			this.type = type;
 			this.userName = userName;
@@ -251,7 +251,7 @@ public class StoredToken {
 
 		@Override
 		public OptionalsStep withTokenName(final TokenName tokenName) {
-			nonNull(tokenName, "tokenName");
+			requireNonNull(tokenName, "tokenName");
 			this.tokenName = Optional.of(tokenName);
 			return this;
 		}
@@ -264,7 +264,7 @@ public class StoredToken {
 		
 		@Override
 		public OptionalsStep withContext(final TokenCreationContext context) {
-			nonNull(context, "context");
+			requireNonNull(context, "context");
 			this.context = context;
 			return this;
 		}
@@ -277,8 +277,8 @@ public class StoredToken {
 
 		@Override
 		public OptionalsStep withLifeTime(final Instant created, final Instant expires) {
-			nonNull(created, "created");
-			nonNull(expires, "expires");
+			requireNonNull(created, "created");
+			requireNonNull(expires, "expires");
 			if (created.isAfter(expires)) {
 				throw new IllegalArgumentException("expires must be > created");
 			}
@@ -291,7 +291,7 @@ public class StoredToken {
 		public OptionalsStep withLifeTime(
 				final Instant created,
 				final long lifeTimeInMilliseconds) {
-			nonNull(created, "created");
+			requireNonNull(created, "created");
 			this.creationDate = created;
 			this.expirationDate = created.plusMillis(lifeTimeInMilliseconds);
 			return this;

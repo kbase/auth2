@@ -6,7 +6,7 @@ import com.nulabinc.zxcvbn.Strength;
 
 import us.kbase.auth2.lib.exceptions.IllegalPasswordException;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Arrays;
 
@@ -57,7 +57,7 @@ public class Password {
 	 * @param password the password to wrap.
 	 */
 	public Password(final char[] password) {
-		nonNull(password, "password");
+		requireNonNull(password, "password");
 		this.password = Arrays.copyOf(password, password.length);
 	}
 	
