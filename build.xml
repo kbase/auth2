@@ -33,6 +33,7 @@
     <include name="mongo/mongo-java-driver-3.8.2.jar"/>
     <include name="mustache/compiler-0.9.3.jar"/>
     <include name="nulab-inc/zxcvbn-1.2.2.jar"/>
+    <include name="jsemver/java-semver-0.9.0.jar"/>
   </fileset>
 
   <fileset dir="${jardir}" id="logging">
@@ -100,7 +101,6 @@
   <fileset dir="${jardir}" id="testlibs">
     <include name="apache_commons/commons-io-2.4.jar"/>
     <include name="equalsverifier/equalsverifier-3.1.10.jar"/>
-    <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
     <include name="jetty/jetty-all-9.3.11.v20160721-uber.jar"/>
