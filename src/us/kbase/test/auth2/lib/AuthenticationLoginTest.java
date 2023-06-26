@@ -994,9 +994,9 @@ public class AuthenticationLoginTest {
 		final Authentication auth = initTestMocks().auth;
 		
 		failLoginProviderError(auth, null, new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 		failLoginProviderError(auth, "   \t   ", new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 	}
 	
 	private void failLoginProviderError(

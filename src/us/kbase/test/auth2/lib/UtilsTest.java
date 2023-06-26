@@ -67,9 +67,9 @@ public class UtilsTest {
 	@Test
 	public void checkStringUncheckedFail() throws Exception {
 		failCheckStringUnchecked(null, "foo",
-				new IllegalArgumentException("Missing argument: foo"));
+				new IllegalArgumentException("foo cannot be null or whitespace only"));
 		failCheckStringUnchecked("    \n \t  ", "foo",
-				new IllegalArgumentException("Missing argument: foo"));
+				new IllegalArgumentException("foo cannot be null or whitespace only"));
 	}
 	
 	@Test

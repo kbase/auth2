@@ -313,11 +313,9 @@ public class UserSearchSpecTest {
 	@Test
 	public void addPrefixFail() {
 		failAddPrefix(null, new IllegalArgumentException(
-				// TODO CODE change to cannot be null or a whitespace only string
-				//           this has huge repercussions though, later
-				"Missing argument: prefix"));
+				"prefix cannot be null or whitespace only"));
 		failAddPrefix("   \t   \n  ", new IllegalArgumentException(
-				"Missing argument: prefix"));
+				"prefix cannot be null or whitespace only"));
 	}
 	
 	private void failAddPrefix(final String prefix, final Exception e) {
@@ -332,9 +330,9 @@ public class UserSearchSpecTest {
 	@Test
 	public void addRegexFail() throws Exception {
 		failAddRegex(null, new IllegalArgumentException(
-				"Missing argument: regex"));
+				"regex cannot be null or whitespace only"));
 		failAddRegex("   \t   \n  ", new IllegalArgumentException(
-				"Missing argument: regex"));
+				"regex cannot be null or whitespace only"));
 	}
 	
 	private void failAddRegex(final String regex, final Exception e) throws Exception {

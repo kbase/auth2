@@ -153,9 +153,10 @@ public class UIUtilsTest {
 	
 	@Test
 	public void removeLoginCookieFailNullAndEmpty() {
-		failRemoveLoginCookie(null, new IllegalArgumentException("Missing argument: cookieName"));
+		failRemoveLoginCookie(null, new IllegalArgumentException(
+				"cookieName cannot be null or whitespace only"));
 		failRemoveLoginCookie("  \t  \n   ",
-				new IllegalArgumentException("Missing argument: cookieName"));
+				new IllegalArgumentException("cookieName cannot be null or whitespace only"));
 	}
 	
 	private void failRemoveLoginCookie(final String name, final Exception e) {
@@ -241,9 +242,9 @@ public class UIUtilsTest {
 	@Test
 	public void getLoginCookieFailNoName() {
 		failGetLoginCookie(null, null,
-				new IllegalArgumentException("Missing argument: cookieName"));
+				new IllegalArgumentException("cookieName cannot be null or whitespace only"));
 		failGetLoginCookie("  \t  \n   ", null,
-				new IllegalArgumentException("Missing argument: cookieName"));
+				new IllegalArgumentException("cookieName cannot be null or whitespace only"));
 	}
 	
 	@Test
@@ -355,9 +356,9 @@ public class UIUtilsTest {
 		
 		failGetValueFromHeader(null, "s", new NullPointerException("headers"));
 		failGetValueFromHeader(headers, null, new IllegalArgumentException(
-				"Missing argument: headerName"));
+				"headerName cannot be null or whitespace only"));
 		failGetValueFromHeader(headers, "    \t    ", new IllegalArgumentException(
-				"Missing argument: headerName"));
+				"headerName cannot be null or whitespace only"));
 	}
 	
 	private void failGetValueFromHeader(
@@ -422,9 +423,9 @@ public class UIUtilsTest {
 	public void getTokenFromCookieFailBadInput() {
 		failGetTokenFromCookie(null, "foo", new NullPointerException("headers"));
 		failGetTokenFromCookie(mock(HttpHeaders.class), null,
-				new IllegalArgumentException("Missing argument: tokenCookieName"));
+				new IllegalArgumentException("tokenCookieName cannot be null or whitespace only"));
 		failGetTokenFromCookie(mock(HttpHeaders.class), "   \t    \n  ",
-				new IllegalArgumentException("Missing argument: tokenCookieName"));
+				new IllegalArgumentException("tokenCookieName cannot be null or whitespace only"));
 	}
 	
 	@Test
@@ -485,9 +486,9 @@ public class UIUtilsTest {
 	public void getTokenFromCookie3ArgFailBadInput() {
 		failGetTokenFromCookie(null, "foo", false, new NullPointerException("headers"));
 		failGetTokenFromCookie(mock(HttpHeaders.class), null, false, 
-				new IllegalArgumentException("Missing argument: tokenCookieName"));
+				new IllegalArgumentException("tokenCookieName cannot be null or whitespace only"));
 		failGetTokenFromCookie(mock(HttpHeaders.class), "   \t    \n  ", false,
-				new IllegalArgumentException("Missing argument: tokenCookieName"));
+				new IllegalArgumentException("tokenCookieName cannot be null or whitespace only"));
 	}
 	
 	@Test
@@ -748,9 +749,9 @@ public class UIUtilsTest {
 		failGetExternalURIDefault(null, selector, deflt, new NullPointerException("auth"));
 		failGetExternalURIDefault(auth, null, deflt, new NullPointerException("selector"));
 		failGetExternalURIDefault(auth, selector, null,
-				new IllegalArgumentException("Missing argument: deflt"));
+				new IllegalArgumentException("deflt cannot be null or whitespace only"));
 		failGetExternalURIDefault(auth, selector, "  \t   \n   ",
-				new IllegalArgumentException("Missing argument: deflt"));
+				new IllegalArgumentException("deflt cannot be null or whitespace only"));
 	}
 	
 	private void failGetExternalURIDefault(

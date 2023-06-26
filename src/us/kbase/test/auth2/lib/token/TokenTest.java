@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib.token;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -141,9 +142,9 @@ public class TokenTest {
 		
 		failCreateTemporaryToken(null, "foo", new NullPointerException("data"));
 		failCreateTemporaryToken(data, null,
-				new IllegalArgumentException("Missing argument: token"));
+				new IllegalArgumentException("token cannot be null or whitespace only"));
 		failCreateTemporaryToken(data, "  \t \n  ",
-				new IllegalArgumentException("Missing argument: token"));
+				new IllegalArgumentException("token cannot be null or whitespace only"));
 	}
 	
 	private void failCreateTemporaryToken(
@@ -312,7 +313,7 @@ public class TokenTest {
 			fail("hashed bad input");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
-					is("Missing argument: token"));
+					is("token cannot be null or whitespace only"));
 		}
 	}
 	
@@ -322,7 +323,7 @@ public class TokenTest {
 			fail("hashed bad input");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception message", e.getMessage(),
-					is("Missing argument: token"));
+					is("token cannot be null or whitespace only"));
 		}
 	}
 	
@@ -339,9 +340,12 @@ public class TokenTest {
 				is("uqWglk0zIPvAxqkiFARTyFE+okq4/QV3A0gEqWckgJY="));
 		
 		failCreateNewToken(null, "foo", new NullPointerException("storedToken"));
-		failCreateNewToken(ht, null, new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(ht,  "", new IllegalArgumentException("Missing argument: token"));
-		failCreateNewToken(ht, " \t", new IllegalArgumentException("Missing argument: token"));
+		failCreateNewToken(
+				ht, null, new IllegalArgumentException("token cannot be null or whitespace only"));
+		failCreateNewToken(
+				ht,  "", new IllegalArgumentException("token cannot be null or whitespace only"));
+		failCreateNewToken( ht, " \t",
+				new IllegalArgumentException("token cannot be null or whitespace only"));
 	}
 	
 	private void failCreateNewToken(
@@ -392,9 +396,9 @@ public class TokenTest {
 					new UserName("u2"))
 				.withLifeTime(Instant.ofEpochMilli(1000), 1000)
 				.withTokenName(new TokenName("foo")).build();
-		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, htnewuser, ht3)),
-				new IllegalArgumentException("Mixing tokens from different users is not allowed"));
-		failCreateTokenSet(ht1, new HashSet<>(Arrays.asList(ht2, null, ht3)),
+		failCreateTokenSet(ht1, set(ht2, htnewuser, ht3), new IllegalArgumentException(
+				"Mixing tokens from different users is not allowed"));
+		failCreateTokenSet(ht1, set(ht2, null, ht3),
 				new NullPointerException("One of the tokens in the incoming set is null"));
 		
 	}

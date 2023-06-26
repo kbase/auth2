@@ -56,9 +56,10 @@ public class NameTest {
 	
 	@Test
 	public void constructFail() {
-		failConstruct("foo", null, 3, new IllegalArgumentException("Missing argument: type"));
+		failConstruct("foo", null, 3,
+				new IllegalArgumentException("type cannot be null or whitespace only"));
 		failConstruct("foo", "   \t \n    ", 3,
-				new IllegalArgumentException("Missing argument: type"));
+				new IllegalArgumentException("type cannot be null or whitespace only"));
 		failConstruct(null, "thing", 1, new MissingParameterException("thing"));
 		failConstruct("    \t    \n    ", "thing", 1, new MissingParameterException("thing"));
 		failConstruct("     fo𐎣o     ", "thing", 3,
@@ -69,9 +70,10 @@ public class NameTest {
 	
 	@Test
 	public void checkFail() {
-		failCheck("foo", null, 3, new IllegalArgumentException("Missing argument: type"));
+		failCheck("foo", null, 3,
+				new IllegalArgumentException("type cannot be null or whitespace only"));
 		failCheck("foo", "   \t \n    ", 3,
-				new IllegalArgumentException("Missing argument: type"));
+				new IllegalArgumentException("type cannot be null or whitespace only"));
 		failCheck(null, "thing", 1, new MissingParameterException("thing"));
 		failCheck("    \t    \n    ", "thing", 1, new MissingParameterException("thing"));
 		failCheck("     fo𐎣o     ", "thing", 3,

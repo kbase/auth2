@@ -74,7 +74,7 @@ public class DisplayNameTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(
-					got, new IllegalArgumentException("Missing argument: name"));
+					got, new IllegalArgumentException("name cannot be null or whitespace only"));
 		}
 	}
 
