@@ -5,7 +5,14 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
+import static us.kbase.auth2.Version.VERSION;
+import static us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCommon.assertCorrectRecanonicalization;
+import static us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCommon.assertNoRecanonicalizationFlag;
+import static us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCommon.createUser;
+import static us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCommon.setRecanonicalizedFlag;
+import static us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestCommon.trashCanonicalizationData;
 import static us.kbase.test.auth2.TestCommon.assertClear;
+import static us.kbase.test.auth2.TestCommon.list;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -26,11 +33,14 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.mongodb.client.MongoDatabase;
+
 import us.kbase.auth2.cli.AuthCLI;
 import us.kbase.auth2.cli.AuthCLI.ConsoleWrapper;
 import us.kbase.auth2.cryptutils.PasswordCrypt;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.TestCommon;
 
@@ -44,10 +54,21 @@ public class AuthCLITest {
 			"    -h, --help\n" +
 			"       Display help.\n" +
 			"       Default: false\n" +
+			"    --recanonicalize-display-names\n" +
+			"       Recreate canonical search display names. This may be necessary after a\n" +
+			"       version update where the canonicalization algorithm has changed. Records in the\n" +
+			"       database are tagged with a flag with the current version once they have been\n" +
+			"       recanonicalized and will not be processed again unless the flag is removed with\n" +
+			"       --remove-recanonicalization-flag.\n" +
+			"       Default: false\n" +
+			"    --remove-recanonicalization-flag\n" +
+			"       Remove the flag denoting that a database user record's search display\n" +
+			"       name has been recanonicalized. Once removed, the recanonicalization algorithm\n" +
+			"       will update the record again if run.\n" +
+			"       Default: false\n" +
 			"    -r, --set-root-password\n" +
-			"       Set the root user password. If this option is selected no other specified\n" +
-			"       operations will be executed. If the root account is disabled it will be enabled with\n" +
-			"       the enabling user set to the root user name.\n" +
+			"       Set the root user password. If the root account is disabled it will be\n" +
+			"       enabled with the enabling user set to the root user name.\n" +
 			"       Default: false\n" +
 			"    -v, --verbose\n" +
 			"       Show error stacktraces.\n" +
@@ -58,12 +79,15 @@ public class AuthCLITest {
 	private final static String DB_NAME = "authclitest";
 	
 	private static MongoStorageTestManager manager;
+	private static MongoStorage storage;
+	private static MongoDatabase db;
 
 	
 	@BeforeClass
 	public static void beforeClass() throws Exception {
 		manager = new MongoStorageTestManager(DB_NAME);
-		
+		storage = manager.storage;
+		db = manager.db;
 	}
 	
 	@AfterClass
@@ -301,6 +325,49 @@ public class AuthCLITest {
 								"30030 Illegal password: Password is not strong enough. " +
 								"A word by itself is easy to guess."),
 				consoleMock, 2);
+	}
+	
+	@Test
+	public void removeRecanonicalizationFlags() throws Exception {
+		final Path deploy = generateTempConfigFile();
+
+		createUser(storage, "user1", "wowbagger-the-prolonged", 1);
+		createUser(storage, "user2", "that one gu.y", 2);
+		createUser(storage, "user3", "oh hooray!", 3);
+		setRecanonicalizedFlag(db, "user1", VERSION.replace(".", "_"));
+		setRecanonicalizedFlag(db, "user3", VERSION.replace(".", "_"));
+		runCliPriorToPwdInput(
+				new String[] {"-d", deploy.toString(), "--remove-recanonicalization-flag"},
+				0,
+				Arrays.asList("Removed 2 recanonicalization flags for version " + VERSION),
+				Collections.emptyList());
+		
+		assertNoRecanonicalizationFlag(db, "user1");
+		assertNoRecanonicalizationFlag(db, "user2");
+		assertNoRecanonicalizationFlag(db, "user3");
+	}
+	
+	@Test
+	public void recanonicalizeDisplayNames() throws Exception {
+		final Path deploy = generateTempConfigFile();
+		
+		createUser(storage, "user1", "wowbagger-the-prolonged", 1);
+		createUser(storage, "user2", "that one gu.y", 2);
+		createUser(storage, "user3", "oh hooray!", 3);
+		trashCanonicalizationData(db, "user1");
+		trashCanonicalizationData(db, "user2");
+		trashCanonicalizationData(db, "user3");
+		runCliPriorToPwdInput(
+				new String[] {"-d", deploy.toString(), "--recanonicalize-display-names"},
+				0,
+				Arrays.asList("Recanonicalized 3 user display names"),
+				Collections.emptyList());
+		
+		final String version = VERSION.replace(".", "_");
+		assertCorrectRecanonicalization(
+				db, "user1", list("wowbagger", "the", "prolonged"), version);
+		assertCorrectRecanonicalization(db, "user2", list("that", "one", "guy"), version);
+		assertCorrectRecanonicalization(db, "user3", list("oh", "hooray"), version);
 	}
 
 	private void runCliPriorToPwdInput(

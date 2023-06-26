@@ -258,7 +258,6 @@ public class UserSearchSpec {
 		public Builder withSearchPrefix(final String prefix) {
 			checkStringNoCheckedException(prefix, "prefix");
 			this.prefixes = DisplayName.getCanonicalDisplayName(prefix);
-			// TODO NAMESEARCHBUGFIX add a cli command to update canonical names in the db.
 			// TODO NAMESEARCHBUGFIX release notes & version bump
 			this.regex = null;
 			return this;
