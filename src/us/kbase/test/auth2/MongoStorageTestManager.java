@@ -1,6 +1,12 @@
 package us.kbase.test.auth2;
 
 import static org.mockito.Mockito.mock;
+import static us.kbase.test.auth2.TestCommon.destroyDB;
+import static us.kbase.test.auth2.TestCommon.getMongoExe;
+import static us.kbase.test.auth2.TestCommon.getTempDir;
+import static us.kbase.test.auth2.TestCommon.isDeleteTempFiles;
+import static us.kbase.test.auth2.TestCommon.stfuLoggers;
+import static us.kbase.test.auth2.TestCommon.useWiredTigerEngine;
 
 import java.io.IOException;
 import java.lang.reflect.Constructor;
@@ -14,7 +20,6 @@ import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.common.test.controllers.mongo.MongoController;
-import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestManager {
 
@@ -28,13 +33,13 @@ public class MongoStorageTestManager {
 	public boolean wiredTiger;
 	
 	public MongoStorageTestManager(final String dbName) throws Exception {
-		TestCommon.stfuLoggers();
-		mongo = new MongoController(TestCommon.getMongoExe().toString(),
-				TestCommon.getTempDir(),
-				TestCommon.useWiredTigerEngine());
-		wiredTiger = TestCommon.useWiredTigerEngine();
+		stfuLoggers();
+		mongo = new MongoController(getMongoExe().toString(),
+				getTempDir(),
+				useWiredTigerEngine());
+		wiredTiger = useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
-				TestCommon.getMongoExe(), mongo.getServerPort()));
+				getMongoExe(), mongo.getServerPort()));
 		mc = new MongoClient("localhost:" + mongo.getServerPort());
 		db = mc.getDatabase(dbName);
 		
@@ -51,17 +56,17 @@ public class MongoStorageTestManager {
 		}
 		if (mongo != null) {
 			try {
-				mongo.destroy(TestCommon.isDeleteTempFiles());
+				mongo.destroy(isDeleteTempFiles());
 			} catch (IOException e) {
 				System.out.println("Error deleting temporarary files at: " +
-						TestCommon.getTempDir());
+						getTempDir());
 				e.printStackTrace();
 			}
 		}
 	}
 	
 	public void reset() throws Exception {
-		TestCommon.destroyDB(db);
+		destroyDB(db);
 		// only drop the data, not the indexes, since creating indexes is slow and will be done
 		// anyway when the new storage instance is created
 		// db.drop();
