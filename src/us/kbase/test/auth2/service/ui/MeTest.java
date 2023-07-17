@@ -67,7 +67,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class MeTest {
 
-	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID = UUID.fromString("552d7b4d-f5b9-402e-9269-ff442438c908");
 	private static final String DB_NAME = "test_me_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -111,8 +111,9 @@ public class MeTest {
 	
 	@Test
 	public void getMeMinimalInput() throws Exception {
+		final UUID uid = UUID.fromString("c428d976-ba32-4a89-99c7-237b02c54676");
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
+				uid, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -136,6 +137,7 @@ public class MeTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", uid.toString())
 				.with("local", true)
 				.with("display", "bleah")
 				.with("email", null)
@@ -187,6 +189,7 @@ public class MeTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", UID.toString())
 				.with("local", false)
 				.with("display", "bleah")
 				.with("email", "a@g.com")

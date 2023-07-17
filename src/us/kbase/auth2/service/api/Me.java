@@ -59,6 +59,7 @@ public class Me {
 		// this code is almost identical to ui.Me but I don't want to couple the API and UI outputs
 		final Map<String, Object> ret = new HashMap<String, Object>();
 		ret.put(Fields.USER, u.getUserName().getName());
+		ret.put(Fields.ANONYMOUS_ID, u.getAnonymousID().toString());
 		ret.put(Fields.LOCAL, u.isLocal());
 		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
 		ret.put(Fields.EMAIL, u.getEmail().getAddress());
