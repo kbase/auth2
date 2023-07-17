@@ -8,6 +8,7 @@ import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -26,6 +27,7 @@ public class NewUser extends AuthUser {
 	
 	private NewUser(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant created,
 			final RemoteIdentity remoteIdentity,
@@ -35,7 +37,8 @@ public class NewUser extends AuthUser {
 			final Map<PolicyID, Instant> policyIDs,
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
-		super(userName, displayName, created, new HashSet<>(Arrays.asList(remoteIdentity)), email,
+		super(userName, anonymousID, displayName, created,
+				new HashSet<>(Arrays.asList(remoteIdentity)), email,
 				roles, customRoles, policyIDs, lastLogin, disabledState);
 	}
 
@@ -53,6 +56,8 @@ public class NewUser extends AuthUser {
 	
 	/** Get a builder for a new standard user.
 	 * @param userName the user's user name.
+	 * @param anonymousID the user's anonymized ID. The calling code is responsible for ensuring
+	 * these IDs are unique per user.
 	 * @param displayName the user's display name.
 	 * @param created the user's creation date.
 	 * @param remoteIdentity the remote identity associated with the user.
@@ -60,10 +65,11 @@ public class NewUser extends AuthUser {
 	 */
 	public static Builder getBuilder(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant created,
 			final RemoteIdentity remoteIdentity) {
-		return new Builder(userName, displayName, created, remoteIdentity);
+		return new Builder(userName, anonymousID, displayName, created, remoteIdentity);
 	}
 	
 	/** A NewUser builder.
@@ -76,10 +82,11 @@ public class NewUser extends AuthUser {
 		
 		private Builder(
 				final UserName userName,
+				final UUID anonymousID,
 				final DisplayName displayName,
 				final Instant created,
 				final RemoteIdentity remoteIdentity) {
-			super(userName, displayName, created);
+			super(userName, anonymousID, displayName, created);
 			if (UserName.ROOT.equals(userName)) {
 				throw new IllegalArgumentException("Standard users cannot be root");
 			}
@@ -95,8 +102,8 @@ public class NewUser extends AuthUser {
 		 * @return the user.
 		 */
 		public NewUser build() {
-			return new NewUser(userName, displayName, created, remoteIdentity, email, roles,
-					customRoles, policyIDs, lastLogin, disabledState);
+			return new NewUser(userName, anonymousID, displayName, created, remoteIdentity, email,
+					roles, customRoles, policyIDs, lastLogin, disabledState);
 		}
 		
 	}

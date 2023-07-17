@@ -11,6 +11,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -31,6 +32,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class AuthUserTest {
 	
+	private static final UUID UID = UUID.randomUUID();
 	private static final Instant NOW = Instant.now();
 	
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
@@ -45,9 +47,12 @@ public class AuthUserTest {
 	
 	@Test
 	public void constructMinimal() throws Exception {
-		final AuthUser u = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"), NOW)
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("bar"), NOW)
 				.build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
@@ -74,7 +79,7 @@ public class AuthUserTest {
 		final Optional<Instant> ll = Optional.of(Instant.now());
 		final Instant d = ll.get().plusMillis(2);
 		
-		final AuthUser u = AuthUser.getBuilder(UserName.ROOT, new DisplayName("bar1"), NOW)
+		final AuthUser u = AuthUser.getBuilder(UserName.ROOT, UID, new DisplayName("bar1"), NOW)
 				.withEmailAddress(new EmailAddress("f@h1.com"))
 				.withCustomRole("foo")
 				.withCustomRole("bar")
@@ -82,6 +87,8 @@ public class AuthUserTest {
 				.withUserDisabledState(
 						new UserDisabledState("reason", new UserName("whee"), d)).build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.of(new UserName("whee"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
@@ -109,7 +116,8 @@ public class AuthUserTest {
 		final Optional<Instant> ll = Optional.of(Instant.now());
 		final Instant d = ll.get().plusMillis(2);
 		
-		final AuthUser u = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
@@ -122,6 +130,8 @@ public class AuthUserTest {
 				.withUserDisabledState(new UserDisabledState(new UserName("whee1"), d))
 				.build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.of(new UserName("whee1"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
@@ -148,7 +158,7 @@ public class AuthUserTest {
 	@Test
 	public void newIdentitiesMinimal() throws Exception {
 		final AuthUser pre = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withIdentity(REMOTE).build();
 		
 		final RemoteIdentity ri2 = new RemoteIdentity(
@@ -158,6 +168,8 @@ public class AuthUserTest {
 		final AuthUser u = AuthUser.getBuilderWithoutIdentities(pre)
 				.withIdentity(ri2).build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
@@ -183,7 +195,8 @@ public class AuthUserTest {
 		final Optional<Instant> ll = Optional.of(Instant.now());
 		final Instant d = ll.get().plusMillis(2);
 		
-		final AuthUser pre = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
+		final AuthUser pre = AuthUser.getBuilder(
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withEmailAddress(new EmailAddress("f@h2.com"))
 				.withIdentity(REMOTE)
 				.withRole(Role.DEV_TOKEN)
@@ -203,6 +216,8 @@ public class AuthUserTest {
 		final AuthUser u = AuthUser.getBuilderWithoutIdentities(pre)
 				.withIdentity(ri2).build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.of(new UserName("whee1"))));
 		assertThat("incorrect created date", u.getCreated(), is(NOW));
@@ -228,7 +243,8 @@ public class AuthUserTest {
 	
 	@Test
 	public void roleMethods() throws Exception {
-		final AuthUser u = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withRole(Role.ADMIN)
 				.withRole(Role.DEV_TOKEN)
 				.build();
@@ -249,7 +265,8 @@ public class AuthUserTest {
 				new RemoteIdentityID("prov2", "bar2"),
 				new RemoteIdentityDetails("user2", "full2", "email2"));
 		
-		final AuthUser u = AuthUser.getBuilder(new UserName("whoo"), new DisplayName("bar3"), NOW)
+		final AuthUser u = AuthUser.getBuilder(
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withIdentity(REMOTE)
 				.withIdentity(ri2)
 				.build();
@@ -279,7 +296,7 @@ public class AuthUserTest {
 		final Instant ll = Instant.now();
 		final Instant c = ll.plusMillis(1000);
 		
-		final AuthUser u = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"), c)
+		final AuthUser u = AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"), c)
 				.withLastLogin(ll)
 				.build();
 		
@@ -288,7 +305,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void rootAddRoot() throws Exception {
-		AuthUser.getBuilder(UserName.ROOT, new DisplayName("foo"), NOW)
+		AuthUser.getBuilder(UserName.ROOT, UID, new DisplayName("foo"), NOW)
 				.withRole(Role.ROOT).build();
 		// should work
 	}
@@ -296,6 +313,7 @@ public class AuthUserTest {
 	@Test
 	public void constructFail() throws Exception {
 		final UserName un = new UserName("foo");
+		final UUID ui = UUID.randomUUID();
 		final EmailAddress email = new EmailAddress("f@h.com");
 		final DisplayName dn = new DisplayName("bar");
 		final RemoteIdentity id = REMOTE;
@@ -306,37 +324,40 @@ public class AuthUserTest {
 		final Instant created = Instant.now();
 		final Instant ll = Instant.now();
 		final UserDisabledState ds = new UserDisabledState();
-		failBuild(null, dn, created, email, id, role, crole, pid, pidt, ll, ds,
+		failBuild(null, ui, dn, created, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("userName"));
-		failBuild(un, null, created, email, id, role, crole, pid, pidt, ll, ds,
+		failBuild(un, null, dn, created, email, id, role, crole, pid, pidt, ll, ds,
+				new NullPointerException("anonymousID"));
+		failBuild(un, ui, null, created, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("displayName"));
-		failBuild(un, dn, null, email, id, role, crole, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, null, email, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("created"));
-		failBuild(un, dn, created, null, id, role, crole, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, created, null, id, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("email"));
-		failBuild(un, dn, created, email, null, role, crole, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, created, email, null, role, crole, pid, pidt, ll, ds,
 				new NullPointerException("remoteIdentity"));
-		failBuild(un, dn, created, email, id, null, crole, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, created, email, id, null, crole, pid, pidt, ll, ds,
 				new NullPointerException("role"));
-		failBuild(un, dn, created, email, id, role, null, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, created, email, id, role, null, pid, pidt, ll, ds,
 				new NullPointerException("customRole"));
-		failBuild(un, dn, created, email, id, role, crole, null, pidt, ll, ds,
+		failBuild(un, ui, dn, created, email, id, role, crole, null, pidt, ll, ds,
 				new NullPointerException("policyID"));
-		failBuild(un, dn, created, email, id, role, crole, pid, null, ll, ds,
+		failBuild(un, ui, dn, created, email, id, role, crole, pid, null, ll, ds,
 				new NullPointerException("agreedOn"));
-		failBuild(un, dn, created, email, id, role, crole, pid, pidt, null, ds,
+		failBuild(un, ui, dn, created, email, id, role, crole, pid, pidt, null, ds,
 				new NullPointerException("lastLogin"));
-		failBuild(un, dn, ll, email, id, role, crole, pid, pidt, created, null,
+		failBuild(un, ui, dn, ll, email, id, role, crole, pid, pidt, created, null,
 				new NullPointerException("disabledState"));
-		failBuild(UserName.ROOT, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
+		failBuild(UserName.ROOT, ui, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
 				new IllegalStateException("Root user cannot have identities"));
-		failBuild(un, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
+		failBuild(un, ui, dn, created, email, id, Role.ROOT, crole, pid, pidt, ll, ds,
 				new IllegalStateException("Non-root username with root role"));
 	}
 	
 	@Test
 	public void failRootBuildRoles() throws Exception {
-		final AuthUser.Builder b = AuthUser.getBuilder(UserName.ROOT, new DisplayName("foo"), NOW);
+		final AuthUser.Builder b = AuthUser.getBuilder(
+				UserName.ROOT, UID, new DisplayName("foo"), NOW);
 		for (final Role r: Arrays.asList(
 				Role.DEV_TOKEN, Role.SERV_TOKEN, Role.ADMIN, Role.CREATE_ADMIN)) {
 			try {
@@ -351,6 +372,7 @@ public class AuthUserTest {
 	
 	private void failBuild(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant created,
 			final EmailAddress email,
@@ -363,7 +385,7 @@ public class AuthUserTest {
 			final UserDisabledState disabledState,
 			final Exception e) {
 		try {
-			AuthUser.getBuilder(userName, displayName, created)
+			AuthUser.getBuilder(userName, anonymousID, displayName, created)
 					.withEmailAddress(email)
 					.withIdentity(identity)
 					.withRole(role)
@@ -380,7 +402,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableIdentities() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withIdentity(REMOTE).build();
 		
 		final RemoteIdentity ri = new RemoteIdentity(
@@ -398,7 +420,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableRoles() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withRole(Role.DEV_TOKEN).build();
 		
 		try {
@@ -412,7 +434,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableCustomRoles() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withCustomRole("foo").build();
 		
 		try {
@@ -426,7 +448,7 @@ public class AuthUserTest {
 	@Test
 	public void immutableGrantableRoles() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withRole(Role.ADMIN).build();
 		
 		try {
@@ -440,7 +462,7 @@ public class AuthUserTest {
 	@Test
 	public void immutablePolicyIDs() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("whoo"), new DisplayName("bar3"), NOW)
+				new UserName("whoo"), UID, new DisplayName("bar3"), NOW)
 				.withPolicyID(new PolicyID("foo"), Instant.now()).build();
 		
 		try {
@@ -453,7 +475,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void sortedCustomRoles() throws Exception {
-		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), UID, new DisplayName("u"),
 				Instant.ofEpochMilli(10000))
 				.withCustomRole("zoo")
 				.withCustomRole("foo")
@@ -467,7 +489,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void sortedRoles() throws Exception {
-		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), UID, new DisplayName("u"),
 				Instant.ofEpochMilli(10000))
 				.withRole(Role.SERV_TOKEN)
 				.withRole(Role.ADMIN)
@@ -481,7 +503,7 @@ public class AuthUserTest {
 	
 	@Test
 	public void sortedPolicyIDs() throws Exception {
-		final AuthUser u = AuthUser.getBuilder(new UserName("f"), new DisplayName("u"),
+		final AuthUser u = AuthUser.getBuilder(new UserName("f"), UID, new DisplayName("u"),
 				Instant.ofEpochMilli(10000))
 				.withPolicyID(new PolicyID("zoo"), Instant.ofEpochMilli(10000))
 				.withPolicyID(new PolicyID("mid2"), Instant.ofEpochMilli(15000))

@@ -10,6 +10,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.bson.Document;
@@ -46,6 +47,7 @@ public class MongoStorageTestCommon {
 			throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName(username),
+				UUID.randomUUID(),
 				new DisplayName(displayName),
 				NOW,
 				createRemoteIdentity(remoteID)

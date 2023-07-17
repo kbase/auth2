@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -22,6 +23,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	
+	private static final UUID UID = UUID.randomUUID();
 	private static final Instant NOW = Instant.now();
 
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
@@ -31,7 +33,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void disableAccountTwice() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -102,7 +104,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void enableAccountTwice() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),
@@ -160,7 +162,7 @@ public class MongoStorageDisableAccountTest extends MongoStorageTester {
 	@Test
 	public void disableEnableDisable() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		assertThat("account already disabled",
 				storage.getUser(new UserName("foo")).getDisabledState(),

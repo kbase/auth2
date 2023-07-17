@@ -467,7 +467,7 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("f"), Instant.now())
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
@@ -500,7 +500,7 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		when(storage.getUser(un)).thenReturn(AuthUser.getBuilder(
-				un, new DisplayName("f"), Instant.now())
+				un, UUID.randomUUID(), new DisplayName("f"), Instant.now())
 				.withRole(r).build());
 		
 		failExecute(ao, auth, "unauthorized user test for role " + r,
@@ -526,7 +526,8 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("f"), Instant.now())
+				.build());
 		
 		failExecute(ao, auth, "unauthorized user test",
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
@@ -550,7 +551,7 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		final Builder builder = AuthUser.getBuilder(
-				userName, new DisplayName("f"), Instant.now());
+				userName, UUID.randomUUID(), new DisplayName("f"), Instant.now());
 		
 		if (role != null) {
 			builder.withRole(role);

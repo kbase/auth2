@@ -70,12 +70,14 @@ public class AuthenticationCreateLocalUserTest {
 		logEvents.clear();
 	}
 	
+	private final static UUID UID = UUID.randomUUID();
+	
 	private final static Instant NOW = Instant.now();
 	
 	@Test
 	public void createWithAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
+				new UserName("admin"), UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 				
@@ -85,7 +87,7 @@ public class AuthenticationCreateLocalUserTest {
 	@Test
 	public void createWithCreateAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
+				new UserName("admin"), UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -95,7 +97,7 @@ public class AuthenticationCreateLocalUserTest {
 	@Test
 	public void createWithRootUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("foo"), NOW)
+				UserName.ROOT, UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		create(admin);
@@ -125,11 +127,14 @@ public class AuthenticationCreateLocalUserTest {
 		when(rand.getTemporaryPassword(10)).thenReturn(pwdChar);
 		
 		when(rand.generateSalt()).thenReturn(salt);
+
+		final UUID uid = UUID.randomUUID();
+		when(rand.randomUUID()).thenReturn(uid).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(create);
 		
 		final LocalUser expected = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), create)
+				new UserName("foo"), uid, new DisplayName("bar"), create)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true).build();
 		
@@ -146,7 +151,7 @@ public class AuthenticationCreateLocalUserTest {
 		assertClear(matcher.savedHash);
 		/* ensure method was called at least once
 		 * Usually not necessary when mocking the call, but since createLU returns null
-		 * need to ensure the method was actually called and therefore the RootuserAnswerMatcher
+		 * need to ensure the method was actually called and therefore the LocalUserAnswerMatcher
 		 * ran
 		 */
 		verify(storage).createLocalUser(any(), any());
@@ -176,7 +181,7 @@ public class AuthenticationCreateLocalUserTest {
 						.withLifeTime(NOW, NOW).build());
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
+				new UserName("admin"), UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -185,6 +190,8 @@ public class AuthenticationCreateLocalUserTest {
 		when(rand.getTemporaryPassword(10)).thenReturn(pwdChar);
 		
 		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(create);
 		
@@ -214,7 +221,7 @@ public class AuthenticationCreateLocalUserTest {
 						.withLifeTime(NOW, NOW).build());
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
+				new UserName("admin"), UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -223,6 +230,8 @@ public class AuthenticationCreateLocalUserTest {
 		when(rand.getTemporaryPassword(10)).thenReturn(pwdChar);
 		
 		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(create);
 		
@@ -249,7 +258,7 @@ public class AuthenticationCreateLocalUserTest {
 						.withLifeTime(NOW, NOW).build());
 
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo"), NOW)
+				new UserName("admin"), UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -325,7 +334,7 @@ public class AuthenticationCreateLocalUserTest {
 						.withLifeTime(NOW, NOW).build());
 
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("foo"), NOW)
+				UserName.ROOT, UID, new DisplayName("foo"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ROOT).build();
 		

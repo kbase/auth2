@@ -394,7 +394,7 @@ public class Authentication {
 				throw new RuntimeException("This is impossible", e);
 			}
 			final LocalUser root = LocalUser.getLocalUserBuilder(
-					UserName.ROOT, dn, clock.instant()).build();
+					UserName.ROOT, randGen.randomUUID(), dn, clock.instant()).build();
 			try {
 				storage.createLocalUser(root, new PasswordHashAndSalt(passwordHash, salt));
 				// only way to avoid a race condition. Checking existence before creating user
@@ -462,7 +462,7 @@ public class Authentication {
 			pwd_copy = pwd.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			final LocalUser lu = LocalUser.getLocalUserBuilder(
-					userName, displayName, clock.instant())
+					userName, randGen.randomUUID(), displayName, clock.instant())
 					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu, new PasswordHashAndSalt(passwordHash, salt));
 			logInfo("Local user {} created by admin {}",
@@ -1954,7 +1954,8 @@ public class Authentication {
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		final Instant now = clock.instant();
-		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
+		final NewUser.Builder b = NewUser.getBuilder(
+				userName, randGen.randomUUID(), displayName, now, match.get())
 				 // no need to set last login, will be set in the login() call below
 				.withEmailAddress(email);
 		for (final PolicyID pid: policyIDs) {
@@ -2054,7 +2055,11 @@ public class Authentication {
 		}
 		final Instant now = clock.instant();
 		storage.testModeCreateUser(
-				userName, displayName, now, now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+				userName,
+				randGen.randomUUID(),
+				displayName,
+				now,
+				now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
 		logInfo("Created test mode user {}", userName.getName());
 	}
 	
@@ -3146,7 +3151,8 @@ public class Authentication {
 			email = EmailAddress.UNKNOWN;
 		}
 		try {
-			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), remoteIdentity)
+			storage.createUser(NewUser.getBuilder(
+					userName, randGen.randomUUID(), dn, clock.instant(), remoteIdentity)
 					.withEmailAddress(email).build());
 			logInfo("Imported user {}", userName.getName());
 		} catch (NoSuchRoleException e) {

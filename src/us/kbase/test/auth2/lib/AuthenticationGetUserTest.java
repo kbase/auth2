@@ -42,6 +42,8 @@ public class AuthenticationGetUserTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -55,7 +57,7 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("foo"), Instant.now())
+				new UserName("whee"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
@@ -142,7 +144,7 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getOtherUserSameUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("foo"), Instant.now())
+				new UserName("whee"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
@@ -152,12 +154,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getOtherUserDiffUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("foo1"), Instant.now())
+				new UserName("whee"), UID, new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser target = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
@@ -194,12 +196,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getOtherUserFailDisabledDiffUser() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foo1"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser target = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("baz"), Instant.now())).build();
@@ -230,7 +232,7 @@ public class AuthenticationGetUserTest {
 						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo1"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo1"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build());
 		
@@ -303,12 +305,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUserAsAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -318,12 +320,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUserAsAdminSelf() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -334,12 +336,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUserAsAdminCreate() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -349,12 +351,12 @@ public class AuthenticationGetUserTest {
 	@Test
 	public void getUserAsAdminRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -409,7 +411,7 @@ public class AuthenticationGetUserTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		

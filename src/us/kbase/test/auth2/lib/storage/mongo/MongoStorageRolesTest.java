@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -24,6 +25,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageRolesTest extends MongoStorageTester {
 
+	private static final UUID UID = UUID.randomUUID();
 	private static final Instant NOW = Instant.now();
 	
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
@@ -33,7 +35,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void addAndRemoveRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN, Role.ADMIN), set(Role.SERV_TOKEN));
@@ -49,7 +51,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void addRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN, Role.ADMIN),
 				Collections.emptySet());
 		assertThat("incorrect roles", storage.getUser(new UserName("foo")).getRoles(),
@@ -59,7 +61,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void removeRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN), Collections.emptySet());
@@ -72,7 +74,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void removeNonExistentRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"), Collections.emptySet(),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN));
@@ -83,7 +85,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void addAndRemoveSameRole() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.updateRoles(new UserName("foo"),
 				set(Role.DEV_TOKEN, Role.CREATE_ADMIN), set(Role.DEV_TOKEN));
@@ -94,7 +96,7 @@ public class MongoStorageRolesTest extends MongoStorageTester {
 	@Test
 	public void noop() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		storage.updateRoles(new UserName("foo"), set(Role.DEV_TOKEN), Collections.emptySet());
 		
 		storage.updateRoles(new UserName("foo"), Collections.emptySet(), Collections.emptySet());

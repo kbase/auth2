@@ -6,6 +6,7 @@ import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.Arrays;
@@ -46,6 +47,8 @@ import com.mongodb.client.model.UpdateOptions;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
 
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
+import us.kbase.auth2.cryptutils.SHA1RandomDataGenerator;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -285,24 +288,38 @@ public class MongoStorage implements AuthStorage {
 	
 	private final MongoDatabase db;
 	private final Clock clock;
+	private RandomDataGenerator randGen;
 	
 	/** Create a new MongoDB authentication storage system.
 	 * @param db the MongoDB database to use for storage.
 	 * @throws StorageInitException if the storage system could not be initialized.
 	 */
 	public MongoStorage(final MongoDatabase db) throws StorageInitException {
-		this(db, Clock.systemDefaultZone()); //don't use timezone
+		this(db, getDefaultRandomGenerator(), Clock.systemDefaultZone()); //don't use timezone
 	}
 	
 	// this should only be used for tests
-	private MongoStorage(final MongoDatabase db, final Clock clock) throws StorageInitException {
+	private MongoStorage(
+			final MongoDatabase db,
+			final RandomDataGenerator randGen,
+			final Clock clock)
+			throws StorageInitException {
 		requireNonNull(db, "db");
 		this.db = db;
+		this.randGen = randGen;
 		this.clock = clock;
 		
 		//TODO MISC port over schemamanager from UJS (will need changes for schema key & mdb ver)
 		ensureIndexes(); // MUST come before checkConfig();
 		checkConfig();
+	}
+	
+	private static RandomDataGenerator getDefaultRandomGenerator() {
+		try {
+			return new SHA1RandomDataGenerator();
+		} catch (NoSuchAlgorithmException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 	}
 	
 	private void checkConfig() throws StorageInitException  {
@@ -386,6 +403,7 @@ public class MongoStorage implements AuthStorage {
 		final Optional<Instant> reset = local.getLastPwdReset();
 		final Document u = new Document(
 				Fields.USER_NAME, local.getUserName().getName())
+				.append(Fields.USER_ANONYMOUS_ID, local.getAnonymousID().toString())
 				.append(Fields.USER_LOCAL, true)
 				.append(Fields.USER_EMAIL, local.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, local.getDisplayName().getName())
@@ -432,6 +450,7 @@ public class MongoStorage implements AuthStorage {
 		
 		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
 				getUserName(user.getString(Fields.USER_NAME)),
+				UUID.fromString(user.getString(Fields.USER_ANONYMOUS_ID)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				user.getDate(Fields.USER_CREATED).toInstant())
 				.withEmailAddress(getEmail(user.getString(Fields.USER_EMAIL)))
@@ -626,6 +645,7 @@ public class MongoStorage implements AuthStorage {
 				COL_CUST_ROLES, newUser.getCustomRoles()).values();
 		final Document u = new Document(
 				Fields.USER_NAME, newUser.getUserName().getName())
+				.append(Fields.USER_ANONYMOUS_ID, newUser.getAnonymousID().toString())
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, newUser.getEmail().getAddress())
 				.append(Fields.USER_DISPLAY_NAME, newUser.getDisplayName().getName())
@@ -667,11 +687,13 @@ public class MongoStorage implements AuthStorage {
 	@Override
 	public void testModeCreateUser(
 			final UserName name,
+			final UUID anonymousID,
 			final DisplayName display,
 			final Instant created,
 			final Instant expires)
 			throws UserExistsException, AuthStorageException {
 		requireNonNull(name, "name");
+		requireNonNull(anonymousID, "anonymousID");
 		requireNonNull(display, "display");
 		requireNonNull(created, "created");
 		requireNonNull(expires, "expires");
@@ -680,6 +702,7 @@ public class MongoStorage implements AuthStorage {
 		}
 		final Document u = new Document(
 				Fields.USER_NAME, name.getName())
+				.append(Fields.USER_ANONYMOUS_ID, anonymousID.toString())
 				.append(Fields.USER_LOCAL, false)
 				.append(Fields.USER_EMAIL, null)
 				.append(Fields.USER_DISPLAY_NAME, display.getName())
@@ -721,17 +744,52 @@ public class MongoStorage implements AuthStorage {
 			final boolean local)
 			throws AuthStorageException, NoSuchUserException {
 		requireNonNull(userName, "userName");
-		final Document projection = new Document(Fields.USER_PWD_HSH, 0)
-				.append(Fields.USER_SALT, 0);
-		final Document user = findOne(collection,
-				new Document(Fields.USER_NAME, userName.getName()), projection);
+		Document user = getUserDocWithoutPassword(collection, userName);
 		if (user == null) {
 			throw new NoSuchUserException(userName.getName());
+		}
+		if (user.getString(Fields.USER_ANONYMOUS_ID) == null) {
+			user = updateUserAnonID(collection, userName);
 		}
 		if (local && !user.getBoolean(Fields.USER_LOCAL)) {
 			throw new NoSuchLocalUserException(userName.getName());
 		}
 		return user;
+	}
+
+	private Document getUserDocWithoutPassword(final String collection, final UserName userName)
+			throws AuthStorageException {
+		return findOne(
+				collection,
+				new Document(Fields.USER_NAME, userName.getName()),
+				new Document(Fields.USER_PWD_HSH, 0).append(Fields.USER_SALT, 0));
+	}
+
+	private Document updateUserAnonID(final String collection, final UserName userName)
+			throws AuthStorageException {
+		/* Added in version 0.6.0 when anonymous IDs were added to users. This method lazily
+		 * backfills the anonymous ID on an as-needed basis.
+		 */
+		final Document query = new Document(Fields.USER_NAME, userName.getName())
+				// only modify if not already done to avoid race conditions
+				.append(Fields.USER_ANONYMOUS_ID, null);
+		final Document update = new Document(
+				"$set", new Document(Fields.USER_ANONYMOUS_ID, randGen.randomUUID().toString()));
+		try {
+			db.getCollection(COL_USERS).updateOne(query, update);
+			// if it didn't match we assume the user doc was updated to include an ID in
+			// a different thread or process
+		} catch (MongoException e) { // this is very difficult to test
+			throw new AuthStorageException(
+					"Connection to database failed: " + e.getMessage(), e);
+		}
+		// pull the user from the DB again to avoid a race condition here
+		final Document userdoc = getUserDocWithoutPassword(collection, userName);
+		if (userdoc == null) {
+			throw new RuntimeException(
+					"User unexpectedly not found in database: " + userName.getName());
+		}
+		return userdoc;
 	}
 
 	@Override
@@ -968,6 +1026,7 @@ public class MongoStorage implements AuthStorage {
 		
 		final AuthUser.Builder b = AuthUser.getBuilder(
 				getUserName(user.getString(Fields.USER_NAME)),
+				UUID.fromString(user.getString(Fields.USER_ANONYMOUS_ID)),
 				getDisplayName(user.getString(Fields.USER_DISPLAY_NAME)),
 				user.getDate(Fields.USER_CREATED).toInstant())
 				.withEmailAddress(getEmail(user.getString(Fields.USER_EMAIL)))

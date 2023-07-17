@@ -41,6 +41,8 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTestModeTokenTest {
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	private static List<ILoggingEvent> logEvents;
 	
 	@BeforeClass
@@ -64,7 +66,7 @@ public class AuthenticationTestModeTokenTest {
 		final UUID id = UUID.randomUUID();
 		
 		when(storage.testModeGetUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("d"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("d"), Instant.now()).build());
 		when(rand.randomUUID()).thenReturn(id);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");
@@ -99,7 +101,7 @@ public class AuthenticationTestModeTokenTest {
 		final UUID id = UUID.randomUUID();
 		
 		when(storage.testModeGetUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("d"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("d"), Instant.now()).build());
 		when(rand.randomUUID()).thenReturn(id);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");

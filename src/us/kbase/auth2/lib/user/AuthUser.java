@@ -7,10 +7,12 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.DisplayName;
@@ -35,6 +37,11 @@ public class AuthUser {
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
+	// TODO ANONID show in /me UI and endpoint, and also testmode /me and /user
+	// TODO ANONID show in admin UI (endpoint?)
+	// TODO ANONID add admin method to translate anon IDs to IDs
+	// TODO ANONID release notes
+	private final UUID anonymousID;
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;
 	private final Set<String> customRoles;
@@ -46,6 +53,7 @@ public class AuthUser {
 	
 	AuthUser(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant created,
 			final Set<RemoteIdentity> identities,
@@ -56,6 +64,7 @@ public class AuthUser {
 			final Optional<Instant> lastLogin,
 			final UserDisabledState disabledState) {
 		this.userName = userName;
+		this.anonymousID = anonymousID;
 		this.email = email;
 		this.displayName = displayName;
 		this.identities = Collections.unmodifiableSet(identities);
@@ -95,6 +104,13 @@ public class AuthUser {
 	 */
 	public UserName getUserName() {
 		return userName;
+	}
+	
+	/** Returns the anonymized ID for the user.
+	 * @return the anonymous ID.
+	 */
+	public UUID getAnonymousID() {
+		return anonymousID;
 	}
 
 	/** Returns whether this user is a local user.
@@ -215,19 +231,8 @@ public class AuthUser {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((created == null) ? 0 : created.hashCode());
-		result = prime * result + ((customRoles == null) ? 0 : customRoles.hashCode());
-		result = prime * result + ((disabledState == null) ? 0 : disabledState.hashCode());
-		result = prime * result + ((displayName == null) ? 0 : displayName.hashCode());
-		result = prime * result + ((email == null) ? 0 : email.hashCode());
-		result = prime * result + ((identities == null) ? 0 : identities.hashCode());
-		result = prime * result + ((lastLogin == null) ? 0 : lastLogin.hashCode());
-		result = prime * result + ((policyIDs == null) ? 0 : policyIDs.hashCode());
-		result = prime * result + ((roles == null) ? 0 : roles.hashCode());
-		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		return result;
+		return Objects.hash(anonymousID, created, customRoles, disabledState,
+				displayName, email, identities, lastLogin, policyIDs, roles, userName);
 	}
 
 	@Override
@@ -242,91 +247,34 @@ public class AuthUser {
 			return false;
 		}
 		AuthUser other = (AuthUser) obj;
-		if (created == null) {
-			if (other.created != null) {
-				return false;
-			}
-		} else if (!created.equals(other.created)) {
-			return false;
-		}
-		if (customRoles == null) {
-			if (other.customRoles != null) {
-				return false;
-			}
-		} else if (!customRoles.equals(other.customRoles)) {
-			return false;
-		}
-		if (disabledState == null) {
-			if (other.disabledState != null) {
-				return false;
-			}
-		} else if (!disabledState.equals(other.disabledState)) {
-			return false;
-		}
-		if (displayName == null) {
-			if (other.displayName != null) {
-				return false;
-			}
-		} else if (!displayName.equals(other.displayName)) {
-			return false;
-		}
-		if (email == null) {
-			if (other.email != null) {
-				return false;
-			}
-		} else if (!email.equals(other.email)) {
-			return false;
-		}
-		if (identities == null) {
-			if (other.identities != null) {
-				return false;
-			}
-		} else if (!identities.equals(other.identities)) {
-			return false;
-		}
-		if (lastLogin == null) {
-			if (other.lastLogin != null) {
-				return false;
-			}
-		} else if (!lastLogin.equals(other.lastLogin)) {
-			return false;
-		}
-		if (policyIDs == null) {
-			if (other.policyIDs != null) {
-				return false;
-			}
-		} else if (!policyIDs.equals(other.policyIDs)) {
-			return false;
-		}
-		if (roles == null) {
-			if (other.roles != null) {
-				return false;
-			}
-		} else if (!roles.equals(other.roles)) {
-			return false;
-		}
-		if (userName == null) {
-			if (other.userName != null) {
-				return false;
-			}
-		} else if (!userName.equals(other.userName)) {
-			return false;
-		}
-		return true;
+		return Objects.equals(anonymousID, other.anonymousID)
+				&& Objects.equals(created, other.created)
+				&& Objects.equals(customRoles, other.customRoles)
+				&& Objects.equals(disabledState, other.disabledState)
+				&& Objects.equals(displayName, other.displayName)
+				&& Objects.equals(email, other.email)
+				&& Objects.equals(identities, other.identities)
+				&& Objects.equals(lastLogin, other.lastLogin)
+				&& Objects.equals(policyIDs, other.policyIDs)
+				&& Objects.equals(roles, other.roles)
+				&& Objects.equals(userName, other.userName);
 	}
 	
 	/** Get a builder for an AuthUser. This builder can be used to build either local users
 	 * or standard users, but the local users will not include password related information.
 	 * @param userName the user's user name.
+	 * @param anonymousID the user's anonymized ID. The calling code is responsible for ensuring
+	 * these IDs are unique per user.
 	 * @param displayName the users's display name.
 	 * @param creationDate the user's creation date.
 	 * @return a builder.
 	 */
 	public static Builder getBuilder(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant creationDate) {
-		return new Builder(userName, displayName, creationDate);
+		return new Builder(userName, anonymousID, displayName, creationDate);
 	}
 	
 	/** Get a builder for an AuthUser based on a previous AuthUser, but without the latter's
@@ -336,7 +284,11 @@ public class AuthUser {
 	 * @return a builder.
 	 */
 	public static Builder getBuilderWithoutIdentities(final AuthUser user) {
-		final Builder b = getBuilder(user.getUserName(), user.getDisplayName(), user.getCreated())
+		final Builder b = getBuilder(
+						user.getUserName(),
+						user.getAnonymousID(),
+						user.getDisplayName(),
+						user.getCreated())
 				.withUserDisabledState(user.getDisabledState())
 				.withEmailAddress(user.getEmail());
 		if (user.getLastLogin().isPresent()) {
@@ -365,9 +317,10 @@ public class AuthUser {
 		
 		private Builder(
 				final UserName userName,
+				final UUID anonymousID,
 				final DisplayName displayName,
 				final Instant creationDate) {
-			super(userName, displayName, creationDate);
+			super(userName, anonymousID, displayName, creationDate);
 		}
 		
 		@Override
@@ -392,8 +345,8 @@ public class AuthUser {
 		 * @return the user.
 		 */
 		public AuthUser build() {
-			return new AuthUser(userName, displayName, created, identities, email, roles,
-					customRoles, policyIDs, lastLogin, disabledState);
+			return new AuthUser(userName, anonymousID, displayName, created, identities, email,
+					roles, customRoles, policyIDs, lastLogin, disabledState);
 		}
 	}
 	
@@ -406,6 +359,7 @@ public class AuthUser {
 	public abstract static class AbstractBuilder<T extends AbstractBuilder<T>> {
 		
 		final UserName userName;
+		final UUID anonymousID;
 		final DisplayName displayName;
 		final Instant created;
 		EmailAddress email = EmailAddress.UNKNOWN;
@@ -417,14 +371,13 @@ public class AuthUser {
 		
 		AbstractBuilder(
 				final UserName userName,
+				final UUID anonymousID,
 				final DisplayName displayName,
 				final Instant created) {
-			requireNonNull(userName, "userName");
-			requireNonNull(displayName, "displayName");
-			requireNonNull(created, "created");
-			this.userName = userName;
-			this.displayName = displayName;
-			this.created = created;
+			this.userName = requireNonNull(userName, "userName");
+			this.anonymousID = requireNonNull(anonymousID, "anonymousID");
+			this.displayName = requireNonNull(displayName, "displayName");
+			this.created = requireNonNull(created, "created");
 			if (userName.equals(UserName.ROOT)) {
 				roles.add(Role.ROOT);
 			}

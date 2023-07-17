@@ -108,8 +108,8 @@ public class TestCommon {
 	}
 	
 	public static void assertExceptionCorrect(
-			final Exception got,
-			final Exception expected) {
+			final Throwable got,
+			final Throwable expected) {
 		assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
 				got.getMessage(), is(expected.getMessage()));
 		assertThat("incorrect exception type", got, instanceOf(expected.getClass()));

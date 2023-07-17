@@ -7,6 +7,7 @@ import static org.mockito.Mockito.argThat;
 import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.when;
 import static us.kbase.test.auth2.TestCommon.calculatePKCEChallenge;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.service.ServiceTestUtils.enableLogin;
 import static us.kbase.test.auth2.service.ServiceTestUtils.enableProvider;
@@ -90,6 +91,10 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 public class LoginTest {
 	
 	//TODO TEST convert most of these to unit tests, but keep enough for integration tests
+	
+	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
+	private static final UUID UID3 = UUID.randomUUID();
 	
 	private static final String DB_NAME = "test_login_ui";
 	private static final String COOKIE_NAME = "login-cookie";
@@ -587,7 +592,7 @@ public class LoginTest {
 				authcode, pkce, environment);
 		
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("whee"), new DisplayName("dn"), Instant.ofEpochMilli(20000),
+				new UserName("whee"), UID, new DisplayName("dn"), Instant.ofEpochMilli(20000),
 					remoteIdentity)
 				.build());
 	}
@@ -1155,11 +1160,11 @@ public class LoginTest {
 		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("userat"),
-				new DisplayName("f"), Instant.ofEpochMilli(30000)).build(),
+				UID, new DisplayName("f"), Instant.ofEpochMilli(30000)).build(),
 				new PasswordHashAndSalt("foobarbazbat".getBytes(), "aaa".getBytes()));
 		
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new UserName("ruser1"), UID2, new DisplayName("disp1"), inst(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
 				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(60000))
@@ -1169,7 +1174,7 @@ public class LoginTest {
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")));
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new UserName("ruser2"), UID3, new DisplayName("disp2"), inst(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 						new RemoteIdentityDetails("user3a", "full3a", "e3a@g.com"))).build());
 		when(manager.mockClock.instant()).thenReturn(Instant.ofEpochMilli(40000));
@@ -1281,12 +1286,12 @@ public class LoginTest {
 		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("ruser1"), new DisplayName("disp1"), Instant.ofEpochMilli(10000),
+				new UserName("ruser1"), UID, new DisplayName("disp1"), inst(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1a", "full1a", "e1a@g.com")))
 				.build());
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("ruser2"), new DisplayName("disp2"), Instant.ofEpochMilli(10000),
+				new UserName("ruser2"), UID2, new DisplayName("disp2"), inst(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2a", "full2a", "e2a@g.com")))
 				.build());
@@ -2355,9 +2360,9 @@ public class LoginTest {
 		manager.storage.storeTemporarySessionData(data, IncomingToken.hash("this is a token"));
 		
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("u1"), new DisplayName("d"), Instant.now(), REMOTE1).build());
+				new UserName("u1"), UID, new DisplayName("d"), Instant.now(), REMOTE1).build());
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("u2"), new DisplayName("d"), Instant.now(), REMOTE2).build());
+				new UserName("u2"), UID2, new DisplayName("d"), Instant.now(), REMOTE2).build());
 
 		return tt;
 	}

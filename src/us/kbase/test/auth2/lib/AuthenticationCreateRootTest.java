@@ -17,6 +17,7 @@ import static us.kbase.test.auth2.TestCommon.assertClear;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -54,6 +55,8 @@ public class AuthenticationCreateRootTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private final static UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -78,13 +81,16 @@ public class AuthenticationCreateRootTest {
 				"0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		final Instant create = Instant.ofEpochMilli(1000000006);
 		
+		final UUID uid = UUID.randomUUID();
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				UserName.ROOT, new DisplayName("root"), create).build();
+				UserName.ROOT, uid, new DisplayName("root"), create).build();
 		
 		final LocalUserAnswerMatcher matcher = new LocalUserAnswerMatcher(
 				exp, new PasswordHashAndSalt(hash, salt));
 		
 		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(rand.randomUUID()).thenReturn(uid).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(create);
 		
@@ -120,14 +126,17 @@ public class AuthenticationCreateRootTest {
 		final byte[] salt = new byte[] {5, 5, 5, 5, 5, 5, 5, 5};
 		final byte[] hash = fromBase64("0qnwBgrYXUeUg/rDzEIo9//gTYN3c9yxfsCtE9JkviU=");
 		
+		final UUID uid = UUID.randomUUID();
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.ofEpochMilli(1000))
+				UserName.ROOT, uid, new DisplayName("root"), Instant.ofEpochMilli(1000))
 				.build();
 		
 		final ChangePasswordAnswerMatcher matcher =
 				new ChangePasswordAnswerMatcher(UserName.ROOT, hash, salt, false);
 		
 		when(rand.generateSalt()).thenReturn(salt);
+		
+		when(rand.randomUUID()).thenReturn(uid).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(1000));
 		
@@ -139,7 +148,7 @@ public class AuthenticationCreateRootTest {
 				.changePassword(eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
 		
 		when(storage.getUser(UserName.ROOT)).thenReturn(LocalUser.getLocalUserBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.now())
+				UserName.ROOT, uid, new DisplayName("root"), Instant.now())
 				.build());
 		
 		auth.createRoot(pwd);
@@ -169,6 +178,8 @@ public class AuthenticationCreateRootTest {
 		
 		when(rand.generateSalt()).thenReturn(new byte[8]);
 		
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(Instant.now());
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
@@ -197,6 +208,8 @@ public class AuthenticationCreateRootTest {
 		final Clock clock = testauth.clockMock;
 		
 		when(rand.generateSalt()).thenReturn(new byte[8]);
+		
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(Instant.now());
 		
@@ -231,6 +244,9 @@ public class AuthenticationCreateRootTest {
 		
 		when(rand.generateSalt()).thenReturn(salt);
 		
+		final UUID uid = UUID.randomUUID();
+		when(rand.randomUUID()).thenReturn(uid).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(create);
 		
 		doThrow(new UserExistsException(UserName.ROOT.getName()))
@@ -242,7 +258,7 @@ public class AuthenticationCreateRootTest {
 				.changePassword(eq(UserName.ROOT), any(PasswordHashAndSalt.class), eq(false));
 		
 		final LocalUser disabled = LocalUser.getLocalUserBuilder(
-				UserName.ROOT, new DisplayName("root"), Instant.now())
+				UserName.ROOT, uid, new DisplayName("root"), Instant.now())
 				.withUserDisabledState(new UserDisabledState("foo", UserName.ROOT, Instant.now()))
 				.build();
 		

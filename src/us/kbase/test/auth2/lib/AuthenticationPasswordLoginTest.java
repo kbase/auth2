@@ -75,6 +75,9 @@ public class AuthenticationPasswordLoginTest {
 	
 	/* tests anything to do with passwords, including login. */
 	
+	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
+	
 	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
 	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
@@ -126,7 +129,7 @@ public class AuthenticationPasswordLoginTest {
 				"this is a token");
 		
 		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"));
 		for (final Role r: roles) {
 			b.withRole(r);
@@ -186,7 +189,7 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true).build();
 		
@@ -303,7 +306,7 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
@@ -337,7 +340,7 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 		
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
@@ -375,7 +378,7 @@ public class AuthenticationPasswordLoginTest {
 		final UUID id = UUID.randomUUID();
 		
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
@@ -453,7 +456,7 @@ public class AuthenticationPasswordLoginTest {
 				"SL1L2qIybfSLoXzIxUyIpCGR63C3NiROQVZE26GcZo0=");
 		
 		final LocalUser.Builder b = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"));
 		for (final Role r: roles) {
 			b.withRole(r);
@@ -631,7 +634,7 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		when(storage.getPasswordHashAndSalt(new UserName("foo"))).thenReturn(
@@ -667,7 +670,7 @@ public class AuthenticationPasswordLoginTest {
 				"M0D2KmSM5CoOHojYgbbKQy1UrkLskxrQnWxcaRf3/hs=");
 
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withUserDisabledState(
 						new UserDisabledState("foo", new UserName("foo"), Instant.now())).build();
@@ -710,7 +713,7 @@ public class AuthenticationPasswordLoginTest {
 				new PasswordHashAndSalt(hashold, saltold));
 		
 		final LocalUser exp = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
 		when(storage.getLocalUser(new UserName("foo"))).thenReturn(exp);
@@ -749,12 +752,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordAdminOnStd() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -768,12 +771,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordSelf() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -787,12 +790,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordRootOnCreate() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -806,12 +809,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordRootOnSelf() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -825,12 +828,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordCreateOnAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -844,12 +847,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordFailLocalUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withIdentity(REMOTE1)
 				.build();
@@ -865,12 +868,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordFailCreateOnRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				UserName.ROOT, UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -885,12 +888,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordFailCreateOnCreate() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				new UserName("bar"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -905,12 +908,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void resetPasswordFailAdminOnAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				new UserName("bar"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -971,7 +974,7 @@ public class AuthenticationPasswordLoginTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -992,12 +995,12 @@ public class AuthenticationPasswordLoginTest {
 		// mostly to exercise the password clearing code, although there's no way to check the
 		// clearing occurred
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -1026,12 +1029,12 @@ public class AuthenticationPasswordLoginTest {
 		// mostly to exercise the password clearing code, although there's no way to check the
 		// clearing occurred
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -1154,12 +1157,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordAdminOnStd() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -1173,12 +1176,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordSelf() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -1192,12 +1195,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordRootOnCreate() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -1211,12 +1214,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordRootOnSelf() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -1230,12 +1233,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordCreateOnAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -1249,12 +1252,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordFailLocalUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("baz"), Instant.now())
+				new UserName("foo"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withIdentity(REMOTE1).build();
 		
@@ -1269,12 +1272,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordFailCreateOnRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("baz"), Instant.now())
+				UserName.ROOT, UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.build();
 		
@@ -1289,12 +1292,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordFailCreateOnCreate() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				new UserName("bar"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -1309,12 +1312,12 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetPasswordFailAdminOnAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("baz"), Instant.now())
+				new UserName("bar"), UID2, new DisplayName("baz"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@hoo.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -1375,7 +1378,7 @@ public class AuthenticationPasswordLoginTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -1449,7 +1452,7 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetAllPasswordsCreateAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -1459,7 +1462,7 @@ public class AuthenticationPasswordLoginTest {
 	@Test
 	public void forceResetAllPasswordsRoot() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("bar"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		

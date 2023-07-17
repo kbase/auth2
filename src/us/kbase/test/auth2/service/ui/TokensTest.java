@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.InetAddress;
@@ -62,6 +63,8 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class TokensTest {
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	private static final String DB_NAME = "test_tokens_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -108,7 +111,7 @@ public class TokensTest {
 		final String id = "edc1dcbb-d370-4660-a639-01a72f0d578a";
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
+				new UserName("whoo"), UID, new DisplayName("d"), inst(10000)).build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
 		
 		final IncomingToken token = new IncomingToken("whoop");
@@ -178,7 +181,7 @@ public class TokensTest {
 		final String id3 = "653cc5ce-37e6-4e61-ac25-48831657f257";
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				new UserName("whoo"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
 				.withRole(Role.SERV_TOKEN)
 				.build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
@@ -339,7 +342,7 @@ public class TokensTest {
 	@Test
 	public void createTokenMinimalInput() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				new UserName("whoo"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
 				.withRole(Role.SERV_TOKEN)
 				.build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));
@@ -405,7 +408,7 @@ public class TokensTest {
 	@Test
 	public void createTokenMaximalInput() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				new UserName("whoo"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
 				.withRole(Role.SERV_TOKEN)
 				.build(),
 				new PasswordHashAndSalt("fobarbazbing".getBytes(), "aa".getBytes()));

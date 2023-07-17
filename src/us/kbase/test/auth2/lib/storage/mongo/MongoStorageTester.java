@@ -10,6 +10,7 @@ import com.github.zafarkhaja.semver.Version;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.common.test.controllers.mongo.MongoController;
 import us.kbase.test.auth2.MongoStorageTestManager;
@@ -23,6 +24,7 @@ public class MongoStorageTester {
 	static MongoClient mc;
 	static MongoDatabase db;
 	static MongoStorage storage;
+	static RandomDataGenerator mockRand;
 	static Clock mockClock;
 	static Version mongoDBVer;
 	static int indexVer;
@@ -35,6 +37,7 @@ public class MongoStorageTester {
 		mc = manager.mc;
 		db = manager.db;
 		storage = manager.storage;
+		mockRand = manager.mockRand;
 		mockClock = manager.mockClock;
 		mongoDBVer = manager.mongoDBVer;
 		indexVer = manager.indexVer;
@@ -54,6 +57,7 @@ public class MongoStorageTester {
 	public void clearDB() throws Exception {
 		manager.reset();
 		storage = manager.storage;
+		mockRand = manager.mockRand;
 		mockClock = manager.mockClock;
 	}
 }

@@ -67,6 +67,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
 
 public class MeTest {
 
+	private static final UUID UID = UUID.randomUUID();
 	private static final String DB_NAME = "test_me_ui";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -111,7 +112,7 @@ public class MeTest {
 	@Test
 	public void getMeMinimalInput() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -233,7 +234,7 @@ public class MeTest {
 		manager.storage.setCustomRole(new CustomRole("whoo", "a"));
 		manager.storage.setCustomRole(new CustomRole("whee", "b"));
 		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withCustomRole("whoo")
@@ -304,7 +305,7 @@ public class MeTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
@@ -325,7 +326,7 @@ public class MeTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
@@ -347,7 +348,7 @@ public class MeTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("whee"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("whee"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("x@g.com"))
 						.build()));
@@ -372,7 +373,7 @@ public class MeTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("whee"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("whee"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("x@g.com"))
 						.build()));
@@ -471,7 +472,7 @@ public class MeTest {
 	
 	private IncomingToken createLocalUserForTests(final Set<Role> roles) throws Exception {
 		final us.kbase.auth2.lib.user.LocalUser.Builder builder =
-				LocalUser.getLocalUserBuilder(new UserName("foobar"),
+				LocalUser.getLocalUserBuilder(new UserName("foobar"), UID,
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com"));
 		for (final Role r: roles) {
