@@ -10,11 +10,14 @@ import static org.mockito.Mockito.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.Map;
+import java.util.UUID;
 
 import javax.ws.rs.core.Cookie;
 import javax.ws.rs.core.HttpHeaders;
@@ -25,6 +28,13 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.CustomRole;
+import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.PolicyID;
+import us.kbase.auth2.lib.Role;
+import us.kbase.auth2.lib.UserDisabledState;
+import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.config.AuthConfig;
 import us.kbase.auth2.lib.config.AuthConfig.ProviderConfig;
 import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
@@ -38,8 +48,12 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.config.ConfigItem;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.AuthAPIStaticConfig;
 import us.kbase.auth2.service.AuthExternalConfig;
 import us.kbase.auth2.service.AuthExternalConfig.AuthExternalConfigMapper;
@@ -56,7 +70,7 @@ public class AdminTest {
 	/*  //TODO TEST finish unit tests
 	 *  //TODO TEST integration tests
 	 *  - but keep the integration tests as simple as possible. On the order of 1 happy path,
-	 *  1 unhappy path per method.
+	 *  1 unhappy path per method. Also need to test mustache templates
 	 */
 
 	@Test
@@ -949,12 +963,164 @@ public class AdminTest {
 		final String completelinkredirect,
 		final Exception expected) {
 	
-	try {
-		admin.configEnvironment(headers, environment, allowedloginredirect, completeloginredirect,
-				postlinkredirect, completelinkredirect);
-		fail("expected exception");
-	} catch (Exception got) {
-		TestCommon.assertExceptionCorrect(got, expected);
+		try {
+			admin.configEnvironment(headers, environment, allowedloginredirect,
+					completeloginredirect, postlinkredirect, completelinkredirect);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
 	}
-}
+	
+	@Test
+	public void userDisplayMinimal() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		final UriInfo uriInfo = mock(UriInfo.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final UUID uid = UUID.randomUUID();
+		
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("foo"), uid, new DisplayName("d"), inst(20000)).build();
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "whee")));
+		
+		when(auth.getUserAsAdmin(new IncomingToken("whee"), new UserName("foo")))
+				.thenReturn(user, (AuthUser) null);
+		
+		when(auth.getCustomRoles(new IncomingToken("whee"), true)).thenReturn(set());
+		
+		when(uriInfo.getPath()).thenReturn("/admin/user/foo");
+		
+		final Map<String, Object> result = admin.userDisplay(headers, "foo", uriInfo);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("user", "foo")
+				.with("anonid", uid.toString())
+				.with("display", "d")
+				.with("email", null)
+				.with("local", true)
+				.with("created", 20000L)
+				.with("lastlogin", null)
+				.with("DevToken", false)
+				.with("ServToken", false)
+				.with("Admin", false)
+				.with("CreateAdmin", false)
+				.with("hascustomroles", false)
+				.with("customroles", Collections.emptyList())
+				.with("disabled", false)
+				.with("disabledreason", null)
+				.with("enabletoggledby", null)
+				.with("enabletoggledate", null)
+				.with("customroleurl", "foo/customroles")
+				.with("disableurl", "foo/disable")
+				.with("forcereseturl", "foo/forcereset")
+				.with("reseturl", "foo/reset")
+				.with("roleurl", "foo/roles")
+				.with("tokenurl", "foo/tokens")
+				.build();
+		
+		assertThat("incorrect user", result, is(expected));
+	}
+	
+	@Test
+	public void userDisplayMaximal() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		final UriInfo uriInfo = mock(UriInfo.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		final UUID uid = UUID.randomUUID();
+		
+		final AuthUser user = AuthUser.getBuilder(
+				new UserName("bar"), uid, new DisplayName("d2"), inst(30000))
+				.withCustomRole("somerole")
+				.withCustomRole("someotherrole")
+				.withEmailAddress(new EmailAddress("foo@g.com"))
+				.withIdentity(new RemoteIdentity(
+						new RemoteIdentityID("prov1", "identid1"),
+						new RemoteIdentityDetails("user1", "full1", "email1")))
+				.withLastLogin(inst(60000))
+				.withPolicyID(new PolicyID("pid"), inst(50000))
+				.withRole(Role.ADMIN)
+				.withRole(Role.CREATE_ADMIN)
+				.withRole(Role.DEV_TOKEN)
+				.withRole(Role.SERV_TOKEN)
+				.withUserDisabledState(new UserDisabledState(
+						"naughty", new UserName("baz"), inst(70000)))
+				.build();
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "whee")));
+		
+		when(auth.getUserAsAdmin(new IncomingToken("whee"), new UserName("bar")))
+				.thenReturn(user, (AuthUser) null);
+		
+		when(auth.getCustomRoles(new IncomingToken("whee"), true)).thenReturn(set(
+				new CustomRole("somerole", "a role"),
+				new CustomRole("someotherrole", "another role"),
+				new CustomRole("fake", "fake")));
+		
+		when(uriInfo.getPath()).thenReturn("/admin/user/bar");
+		
+		final Map<String, Object> result = admin.userDisplay(headers, "bar", uriInfo);
+		
+		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
+				.with("user", "bar")
+				.with("anonid", uid.toString())
+				.with("display", "d2")
+				.with("email", "foo@g.com")
+				.with("local", false)
+				.with("created", 30000L)
+				.with("lastlogin", 60000L)
+				.with("DevToken", true)
+				.with("ServToken", true)
+				.with("Admin", true)
+				.with("CreateAdmin", true)
+				.with("hascustomroles", true)
+				.with("customroles", Arrays.asList(
+						ImmutableMap.of("id", "somerole", "desc", "a role", "has", true),
+						ImmutableMap.of(
+								"id", "someotherrole", "desc", "another role", "has", true),
+						ImmutableMap.of("id", "fake", "desc", "fake", "has", false)))
+				.with("disabled", true)
+				.with("disabledreason", "naughty")
+				.with("enabletoggledby", "baz")
+				.with("enabletoggledate", 70000L)
+				.with("customroleurl", "bar/customroles")
+				.with("disableurl", "bar/disable")
+				.with("forcereseturl", "bar/forcereset")
+				.with("reseturl", "bar/reset")
+				.with("roleurl", "bar/roles")
+				.with("tokenurl", "bar/tokens")
+				.build();
+		
+		assertThat("incorrect user", result, is(expected));
+	}
+	
+	@Test
+	public void userDisplayFailNoToken() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		final UriInfo uriInfo = mock(UriInfo.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(Collections.emptyMap());
+		
+		try {
+			admin.userDisplay(headers, "bar", uriInfo);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(
+					got, new NoTokenProvidedException("No user token provided"));
+		}
+	}
 }
