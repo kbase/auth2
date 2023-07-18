@@ -201,7 +201,7 @@ public interface AuthStorage {
 	Map<UserName, DisplayName> getUserDisplayNames(Set<UserName> usernames)
 			throws AuthStorageException;
 	
-	/** Get the display names for a set of  test users. Any non-existent users are left out of the
+	/** Get the display names for a set of test users. Any non-existent users are left out of the
 	 * returned map.
 	 * @param usernames the usernames for which to get display names.
 	 * @return a mapping of username to display name.
@@ -565,5 +565,14 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage system occurs.
 	 */
 	long recanonicalizeDisplayNames(Version version) throws AuthStorageException;
+
+	/** Translate anonymous IDs for users to user names. UUIDs not found in the database are
+	 * not included in the map. Disabled users are never returned.
+	 * @param anonymousIDs the anonymous IDs.
+	 * @return a mapping of anonymous ID to user name.
+	 * @throws AuthStorageException if a problem connecting with the auth storage system occurs.
+	 */
+	Map<UUID, UserName> getUserNamesFromAnonymousIDs(Set<UUID> anonymousIDs)
+			throws AuthStorageException;
 
 }

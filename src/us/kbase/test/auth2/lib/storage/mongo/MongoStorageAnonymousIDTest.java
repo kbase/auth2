@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.TestCommon.assertExceptionCorrect;
 
 import java.lang.reflect.InvocationTargetException;
@@ -11,11 +12,15 @@ import java.lang.reflect.Method;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.bson.Document;
 import org.junit.Test;
+
+import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
@@ -27,8 +32,9 @@ import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
+import us.kbase.test.auth2.TestCommon;
 
-public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
+public class MongoStorageAnonymousIDTest extends MongoStorageTester {
 	
 	/*
 	 * These tests check the lazy backfilling mechanism for anonymous user IDs added in
@@ -37,6 +43,8 @@ public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
 	 */
 	
 	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
+	private static final UUID UID3 = UUID.randomUUID();
 	
 	private static final Instant NOW = Instant.now()
 			.truncatedTo(ChronoUnit.MILLIS); // mongo truncates
@@ -44,6 +52,15 @@ public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
+	
+	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
+			new RemoteIdentityID("prov", "bar2"),
+			new RemoteIdentityDetails("user2", "full2", "email2"));
+	
+	
+	private static final RemoteIdentity REMOTE3 = new RemoteIdentity(
+			new RemoteIdentityID("prov", "bar3"),
+			new RemoteIdentityDetails("user3", "full3", "email3"));
 	
 	@Test
 	public void backfillMissingAnonIDNoFieldLocalUser() throws Exception {
@@ -155,6 +172,71 @@ public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
 		} catch (InvocationTargetException e) {
 			assertExceptionCorrect(e.getCause(), new RuntimeException(
 					"User unexpectedly not found in database: bar"));
+		}
+	}
+	
+	/*
+	 * Standard anon ID tests for anon ID specific methods
+	 */
+	
+	@Test
+	public void getUserNameByAnonymousIDEmptyInputSet() throws Exception {
+		getUserNameByAnonymousIDSetUp();
+		assertThat(
+				"incorrect users",
+				storage.getUserNamesFromAnonymousIDs(set()),
+				is(Collections.emptyMap())
+		);
+	}
+	
+	@Test
+	public void getUserNameByAnonymousIDEmptyResultSet() throws Exception {
+		getUserNameByAnonymousIDSetUp();
+		assertThat(
+				"incorrect users",
+				storage.getUserNamesFromAnonymousIDs(set(UUID.randomUUID(), UUID.randomUUID())),
+				is(Collections.emptyMap())
+		);
+	}
+	
+	@Test
+	public void getUserNameByAnonymousIDFullSet() throws Exception {
+		getUserNameByAnonymousIDSetUp();
+		assertThat(
+				"incorrect users",
+				storage.getUserNamesFromAnonymousIDs(set(UID2, UUID.randomUUID(), UID, UID3)),
+				is(ImmutableMap.of(UID, new UserName("foo"), UID2, new UserName("foo2")))
+		);
+	}
+
+	private void getUserNameByAnonymousIDSetUp() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("d"), NOW, REMOTE1).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo2"), UID2, new DisplayName("d2"), NOW, REMOTE2).build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo3"), UID3, new DisplayName("d3"), NOW, REMOTE3).build());
+		// TODO CODE should pass in the time, not generate it in the DB.
+		//           remove clock entirely from DB.
+		when(manager.mockClock.instant()).thenReturn(NOW);
+		storage.disableAccount(new UserName("foo3"), new UserName("admin"), "He gave me a wedgie");
+	}
+	
+	@Test
+	public void getUserNameByAnonymousIDFailNulls() throws Exception {
+		getUserNameByAnonymousIDFail(null, new NullPointerException("anonymousIDs"));
+		getUserNameByAnonymousIDFail(set(UUID.randomUUID(), null), new NullPointerException(
+				"Null ID in anonymousIDs set"));
+	}
+	
+	private void getUserNameByAnonymousIDFail(
+			final Set<UUID> anonymousIDs,
+			final Exception expected) {
+		try {
+			storage.getUserNamesFromAnonymousIDs(anonymousIDs);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
 		}
 	}
 }
