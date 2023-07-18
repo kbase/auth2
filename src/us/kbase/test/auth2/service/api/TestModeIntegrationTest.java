@@ -11,6 +11,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
@@ -144,9 +145,15 @@ public class TestModeIntegrationTest {
 		expected.put("email", null);
 		expected.put("idents", Collections.emptyList());
 		
+		final String anonid = (String) response.remove("anonid");
+		assertThat("invalid UUID", UUID.fromString(anonid).toString(), is(anonid));
+		
 		assertThat("incorrect return", response, is(expected));
 		
 		final Map<String, Object> response2 = getUser("whee");
+		
+		final String anonid2 = (String) response2.remove("anonid");
+		assertThat("incorrect UUID", anonid2, is(anonid));
 		
 		expected.put("created", created);
 		
@@ -305,6 +312,9 @@ public class TestModeIntegrationTest {
 		expected.put("idents", Collections.emptyList());
 		expected.put("created", created);
 		
+		final String anonid = (String) meresponse.remove("anonid");
+		assertThat("invalid UUID", UUID.fromString(anonid).toString(), is(anonid));
+		
 		assertThat("incorrect get user", meresponse, is(expected));
 	}
 
@@ -395,6 +405,9 @@ public class TestModeIntegrationTest {
 		expected.put("email", null);
 		expected.put("idents", Collections.emptyList());
 		expected.put("created", created);
+		
+		final String anonid = (String) user.remove("anonid");
+		assertThat("invalid UUID", UUID.fromString(anonid).toString(), is(anonid));
 		
 		assertThat("user modification failed", user, is(expected));
 	}

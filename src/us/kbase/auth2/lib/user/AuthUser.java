@@ -37,7 +37,6 @@ public class AuthUser {
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
-	// TODO ANONID show in /me UI and endpoint, and also testmode /me and /user
 	// TODO ANONID show in admin UI (endpoint?)
 	// TODO ANONID add admin method to translate anon IDs to IDs
 	// TODO ANONID release notes

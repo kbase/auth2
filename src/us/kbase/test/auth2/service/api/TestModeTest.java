@@ -93,6 +93,7 @@ public class TestModeTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", UID.toString())
 				.with("display", "foo bar")
 				.with("created", 10000L)
 				.with("lastlogin", null)
@@ -178,6 +179,7 @@ public class TestModeTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", UID.toString())
 				.with("display", "foo bar")
 				.with("created", 10000L)
 				.with("lastlogin", null)
@@ -458,6 +460,7 @@ public class TestModeTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "un")
+				.with("anonid", UID.toString())
 				.with("display", "dn")
 				.with("created", 10000L)
 				.with("lastlogin", null)

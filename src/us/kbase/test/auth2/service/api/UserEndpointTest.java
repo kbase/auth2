@@ -152,8 +152,9 @@ public class UserEndpointTest {
 	
 	@Test
 	public void getMeMinimalInput() throws Exception {
+		final UUID uid = UUID.randomUUID();
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
+				uid, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -176,6 +177,7 @@ public class UserEndpointTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", uid.toString())
 				.with("local", true)
 				.with("display", "bleah")
 				.with("email", null)
@@ -231,6 +233,7 @@ public class UserEndpointTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", UID.toString())
 				.with("local", false)
 				.with("display", "bleah")
 				.with("email", "a@g.com")
