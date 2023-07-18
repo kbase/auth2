@@ -119,6 +119,8 @@ public interface AuthStorage {
 	 * Note that {@link AuthUser#isLocal()} returns true for test users since local users are
 	 * defined as having no remote identities, but test users still have no passwords.
 	 * @param name the user's name.
+	 * @param anonymousID the anonymous ID for the user. The calling code is responsible for
+	 * ensuring these IDs are unique per user.
 	 * @param display the user's display name.
 	 * @param created the date the user was created.
 	 * @param expires the date the user expires from the system.
@@ -126,7 +128,8 @@ public interface AuthStorage {
 	 * @throws AuthStorageException if a problem connecting with the storage
 	 * system occurs. 
 	 */
-	void testModeCreateUser(UserName name, DisplayName display, Instant created, Instant expires)
+	void testModeCreateUser(
+			UserName name, UUID anonymousID, DisplayName display, Instant created, Instant expires)
 			throws UserExistsException, AuthStorageException;
 	
 	/** Disable a user account.

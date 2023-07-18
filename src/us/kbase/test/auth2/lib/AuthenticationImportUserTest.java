@@ -11,6 +11,7 @@ import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
@@ -42,6 +43,8 @@ public class AuthenticationImportUserTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -59,17 +62,20 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 				new RemoteIdentityDetails("user", "full", "f@h.com")));
 		
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("full"),
-				Instant.ofEpochMilli(10000),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-						new RemoteIdentityDetails("user", "full", "f@h.com")))
-				.withEmailAddress(new EmailAddress("f@h.com"))
-				.build());
+		verify(storage).createUser(
+				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
+						Instant.ofEpochMilli(10000),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+								new RemoteIdentityDetails("user", "full", "f@h.com")))
+						.withEmailAddress(new EmailAddress("f@h.com"))
+						.build());
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Imported user foo", Authentication.class));
@@ -87,12 +93,14 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 				new RemoteIdentityDetails("user", fullname, "f@h.com")));
 		
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"),
+		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), UID,
 				new DisplayName("unknown"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user", fullname, "f@h.com")))
@@ -112,12 +120,14 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 				new RemoteIdentityDetails("user", "full", email)));
 		
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"),
+		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), UID,
 				new DisplayName("full"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user", "full", email)))
@@ -144,12 +154,14 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), REMOTE_ID);
 		
 		doThrow(new UserExistsException("foo")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), new DisplayName("full"),
+				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());
@@ -164,17 +176,19 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UUID.randomUUID(), UID, null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.importUser(new UserName("foo"), REMOTE_ID);
 		
 		doThrow(new IdentityLinkedException("linked")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), new DisplayName("full"),
+				NewUser.getBuilder(new UserName("foo2"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());
 		
-		failImportUser(auth, new UserName("foo"), REMOTE_ID,
+		failImportUser(auth, new UserName("foo2"), REMOTE_ID,
 				new IdentityLinkedException("linked"));
 	}
 	
@@ -185,12 +199,14 @@ public class AuthenticationImportUserTest {
 		final Clock clock = testauth.clockMock;
 		final Authentication auth = testauth.auth;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UUID.randomUUID(), UID, null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), REMOTE_ID);
+		auth.importUser(new UserName("foo2"), REMOTE_ID);
 		
 		doThrow(new NoSuchRoleException("foo")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), new DisplayName("full"),
+				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());

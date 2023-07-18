@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -28,6 +29,8 @@ public class LocalUserTest {
 	
 	/* note that this does not replicate the tests from authuser to test the general builder */
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@Test
 	public void equals() {
 		EqualsVerifier.forClass(LocalUser.class).usingGetClass()
@@ -37,9 +40,11 @@ public class LocalUserTest {
 	@Test
 	public void constructMinimal() throws Exception {
 		final LocalUser lu = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(5))
 				.build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", lu.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(false));
 		assertThat("incorrect reset date", lu.getLastPwdReset(), is(Optional.empty()));
 		
@@ -68,7 +73,7 @@ public class LocalUserTest {
 	@Test
 	public void constructMaximal() throws Exception {
 		final LocalUser lu = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(5))
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN)
 				.withCustomRole("foobar")
@@ -80,6 +85,8 @@ public class LocalUserTest {
 				.withLastReset(Instant.ofEpochMilli(40000))
 				.build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", lu.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect pwd reset", lu.isPwdResetRequired(), is(true));
 		assertThat("incorrect reset date", lu.getLastPwdReset(),
 				is(Optional.of(Instant.ofEpochMilli(40000))));
@@ -112,7 +119,7 @@ public class LocalUserTest {
 	public void buildFail() throws Exception {
 		try {
 			LocalUser.getLocalUserBuilder(
-					new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(5))
+					new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(5))
 					.withLastReset(null)
 					.build();
 			fail("expected exception");

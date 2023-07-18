@@ -71,6 +71,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
  */
 public class UserEndpointTest {
 
+	private static final UUID UID = UUID.randomUUID();
 	private static final String DB_NAME = "test_user_api";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -152,7 +153,7 @@ public class UserEndpointTest {
 	@Test
 	public void getMeMinimalInput() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -193,7 +194,7 @@ public class UserEndpointTest {
 	public void getMeMaximalInput() throws Exception {
 		manager.storage.setCustomRole(new CustomRole("whoo", "a"));
 		manager.storage.setCustomRole(new CustomRole("whee", "b"));
-		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
+		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"), UID,
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -291,7 +292,7 @@ public class UserEndpointTest {
 	@Test
 	public void putMeNoUpdate() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
@@ -311,7 +312,7 @@ public class UserEndpointTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
@@ -320,7 +321,7 @@ public class UserEndpointTest {
 	@Test
 	public void putMeFullUpdate() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
@@ -341,7 +342,7 @@ public class UserEndpointTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("whee"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("whee"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("x@g.com"))
 						.build()));
@@ -417,7 +418,7 @@ public class UserEndpointTest {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
@@ -461,11 +462,11 @@ public class UserEndpointTest {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobaz"),
-				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				UUID.randomUUID(),new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
@@ -591,30 +592,34 @@ public class UserEndpointTest {
 		assertThat("incorrect users", response, is(expected));
 	}
 	
+	private UUID uuid() {
+		return UUID.randomUUID();
+	}
+	
 	private IncomingToken setUpUsersForTesting() throws Exception {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foo"),
-				new DisplayName("bar *thing*"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("bar *thing*"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("baz"),
-				new DisplayName("fuz"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("fuz"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("puz"),
-				new DisplayName("mup"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("mup"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("mua"),
-				new DisplayName("paz"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("paz"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("toobar"),
-				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");

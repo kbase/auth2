@@ -18,6 +18,7 @@ import com.github.zafarkhaja.semver.Version;
 import com.mongodb.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
+import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
 import us.kbase.common.test.controllers.mongo.MongoController;
 
@@ -27,6 +28,7 @@ public class MongoStorageTestManager {
 	public MongoClient mc;
 	public MongoDatabase db;
 	public MongoStorage storage;
+	public RandomDataGenerator mockRand;
 	public Clock mockClock;
 	public Version mongoDBVer;
 	public int indexVer;
@@ -70,10 +72,11 @@ public class MongoStorageTestManager {
 		// only drop the data, not the indexes, since creating indexes is slow and will be done
 		// anyway when the new storage instance is created
 		// db.drop();
+		mockRand = mock(RandomDataGenerator.class);
 		mockClock = mock(Clock.class);
 		final Constructor<MongoStorage> con = MongoStorage.class.getDeclaredConstructor(
-				MongoDatabase.class, Clock.class);
+				MongoDatabase.class, RandomDataGenerator.class, Clock.class);
 		con.setAccessible(true);
-		storage = con.newInstance(db, mockClock);
+		storage = con.newInstance(db, mockRand, mockClock);
 	}
 }

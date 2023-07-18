@@ -47,6 +47,8 @@ public class AuthenticationCustomRoleTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -71,7 +73,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
+				adminName, UID, new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
@@ -147,7 +149,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
+				adminName, UID, new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
@@ -304,7 +306,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				un, new DisplayName("foobar"), Instant.now())
+				un, UID, new DisplayName("foobar"), Instant.now())
 				.withRole(r).build();
 
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
@@ -439,7 +441,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foobar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
@@ -465,7 +467,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foobar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
@@ -493,7 +495,7 @@ public class AuthenticationCustomRoleTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("foobar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);

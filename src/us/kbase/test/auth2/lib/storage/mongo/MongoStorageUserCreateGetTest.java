@@ -11,6 +11,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -43,6 +44,8 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	private static final Instant NOW = Instant.now()
 			.truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 	
@@ -59,7 +62,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("local"), new DisplayName("bar"), NOW)
+				new UserName("local"), UID, new DisplayName("bar"), NOW)
 				.build();
 				
 		storage.createLocalUser(nlu, new PasswordHashAndSalt(pwd, salt));
@@ -68,6 +71,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		
 		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("local"));
 
+		// test based on equality vs identity
+		assertThat("incorrect anonID", lu.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect password hash",
 				new String(creds.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz2"));
 		assertThat("incorrect password salt",
@@ -102,7 +107,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("baz"), new DisplayName("bang"), Instant.ofEpochMilli(5000))
+				new UserName("baz"), UID, new DisplayName("bang"), Instant.ofEpochMilli(5000))
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("foo").withCustomRole("bar")
@@ -124,6 +129,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		
 		final PasswordHashAndSalt creds = storage.getPasswordHashAndSalt(new UserName("baz"));
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", lu.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect password hash",
 				new String(creds.getPasswordHash(), StandardCharsets.UTF_8), is("foobarbaz3"));
 		assertThat("incorrect password salt",
@@ -161,7 +168,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createUserFailNulls() throws Exception {
 		final LocalUser lu = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now()).build();
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now()).build();
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(new byte[10], new byte[2]);
 		failCreateLocalUser(null, creds, new NullPointerException("local"));
 		failCreateLocalUser(lu, null, new NullPointerException("creds"));
@@ -172,7 +179,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW)
+				new UserName("baz"), UID, new DisplayName("bang"), NOW)
 				.withCustomRole("Idontexist")
 				.build();
 				
@@ -185,7 +192,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW)
+				new UserName("baz"), UID, new DisplayName("bang"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
@@ -219,7 +226,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] pwd = "foobarbaz3".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW)
+				new UserName("baz"), UID, new DisplayName("bang"), NOW)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true)
 				.build();
@@ -231,7 +238,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getStdUserAsLocal() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE1).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE1).build());
 				
 		failGetLocalUser(new UserName("foo"), new NoSuchLocalUserException("foo"));
 	}
@@ -251,7 +258,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		final byte[] salt = "whoo".getBytes(StandardCharsets.UTF_8);
 		final Instant create = Instant.ofEpochMilli(1000);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
-				new UserName("baz"), new DisplayName("bang"), create)
+				new UserName("baz"), UID, new DisplayName("bang"), create)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(5000))
 				.withForceReset(true)
@@ -261,6 +268,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		
 		final AuthUser u = storage.getUser(new UserName("baz"));
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(create));
@@ -305,11 +314,13 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createGetStdUserMinimal() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user"), new DisplayName("bar"), NOW, REMOTE1)
+				new UserName("user"), UID, new DisplayName("bar"), NOW, REMOTE1)
 				.build());
 
 		final AuthUser u = storage.getUser(new UserName("user"));
 
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
@@ -339,7 +350,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		// ensure last login is after creation date
 		final Instant ll = NOW.plusMillis(10000);
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user"), new DisplayName("bar"), NOW, REMOTE1)
+				new UserName("user"), UID, new DisplayName("bar"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g.com"))
 				.withRole(Role.CREATE_ADMIN)
 				.withRole(Role.DEV_TOKEN)
@@ -353,6 +364,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 
 		final AuthUser u = storage.getUser(new UserName("user"));
 
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.of(new UserName("baz"))));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
@@ -387,7 +400,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getNoSuchUser() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 
@@ -411,7 +424,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createUserWithBadCustomRole() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("baz"), new DisplayName("bang"), NOW, REMOTE1)
+				new UserName("baz"), UID, new DisplayName("bang"), NOW, REMOTE1)
 				.withCustomRole("Idontexist")
 				.build();
 				
@@ -421,7 +434,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createExistingUser() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		
@@ -430,7 +443,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new RemoteIdentityDetails("user1", "full1", "email1"));
 		
 		final NewUser nu2 = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, ri)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, ri)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build();
 		
@@ -440,7 +453,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createUserWithExistingRemoteID() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		
@@ -449,7 +462,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new RemoteIdentityDetails("user1", "full1", "email1"));
 		
 		final NewUser nu2 = NewUser.getBuilder(
-				new UserName("user2"), new DisplayName("bar1"), NOW, ri)
+				new UserName("user2"), UUID.randomUUID(), new DisplayName("bar1"), NOW, ri)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build();
 		
@@ -469,10 +482,13 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getUserByRemoteIdMinimal() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.build());
 		
 		final AuthUser u = storage.getUser(REMOTE1).get();
+		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
@@ -502,7 +518,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		// ensure last login is after creation date
 		final Instant ll = NOW.plusMillis(10000);
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user"), new DisplayName("bar"), NOW, REMOTE1)
+				new UserName("user"), UID, new DisplayName("bar"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g.com"))
 				.withRole(Role.CREATE_ADMIN).withRole(Role.DEV_TOKEN)
 				.withCustomRole("crfoo").withCustomRole("crbar")
@@ -517,6 +533,8 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 
 		final AuthUser u = storage.getUser(REMOTE2).get();
 
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.of(new UserName("baz"))));
 		assertThat("incorrect creation", u.getCreated(), is(NOW));
@@ -546,7 +564,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getNonExistentUserByRemoteId() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		assertThat("incorrect user", storage.getUser(REMOTE2), is(Optional.empty()));
@@ -555,7 +573,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getUserAndUpdateRemoteId() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.build());
 		storage.link(new UserName("user1"), REMOTE2);

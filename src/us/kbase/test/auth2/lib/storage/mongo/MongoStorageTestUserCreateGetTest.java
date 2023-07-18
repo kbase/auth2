@@ -37,6 +37,8 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	
 	/* we test clearing of all data here, since it has to be somewhere. */
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar1"),
 			new RemoteIdentityDetails("user1", "full1", "email1"));
@@ -44,7 +46,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void clearTestData() throws Exception {
 		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000), expiry);
 		
 		storage.testModeSetCustomRole(new CustomRole("foo", "bar"), expiry);
@@ -86,7 +88,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	public void createAndGet() throws Exception {
 		final Instant expiry = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 				.plus(1, ChronoUnit.DAYS); // mongo truncates
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000), expiry);
 		
 		final Instant e = storage.testModeGetUserExpiry(new UserName("foo"));
@@ -94,6 +96,8 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 		
 		final AuthUser u = storage.testModeGetUser(new UserName("foo"));
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect creation", u.getCreated(), is(Instant.ofEpochMilli(10000)));
@@ -124,7 +128,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getNoSuchUser() throws Exception {
 		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("user1"), new DisplayName("bar1"),
+		storage.testModeCreateUser(new UserName("user1"), UID, new DisplayName("bar1"),
 				Instant.ofEpochMilli(10000), expiry);
 
 		failGetUser(new UserName("user2"), new NoSuchUserException("user2"));
@@ -134,7 +138,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getStdUserFromTestCollection() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("user"), new DisplayName("bar"), Instant.now(), REMOTE1)
+				new UserName("user"), UID, new DisplayName("bar"), Instant.now(), REMOTE1)
 				.build());
 		
 		failGetUser(new UserName("user"), new NoSuchUserException("user"));
@@ -143,7 +147,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void getTestUserFromStdCollection() throws Exception {
 		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("user1"), new DisplayName("bar1"),
+		storage.testModeCreateUser(new UserName("user1"), UID, new DisplayName("bar1"),
 				Instant.ofEpochMilli(10000), expiry);
 		
 		try {
@@ -159,7 +163,7 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 		// this test could fail to cover the intended code if mongo happens to remove the user
 		// before the get occurs.
 		// since the removal thread only runs 1/min should be rare.
-		storage.testModeCreateUser(new UserName("user1"), new DisplayName("bar1"),
+		storage.testModeCreateUser(new UserName("user1"), UID, new DisplayName("bar1"),
 				Instant.ofEpochMilli(10000), Instant.now());
 		Thread.sleep(1);
 		failGetUser(new UserName("user1"), new NoSuchUserException("user1"));
@@ -186,37 +190,40 @@ public class MongoStorageTestUserCreateGetTest extends MongoStorageTester {
 	@Test
 	public void createUserBadArgsFail() throws Exception {
 		final UserName u = new UserName("foo");
+		final UUID i = UUID.randomUUID();
 		final DisplayName n = new DisplayName("bar");
 		final Instant c = Instant.ofEpochMilli(1000);
 		final Instant e = Instant.now().plus(1, ChronoUnit.DAYS);
 		
-		failCreateuser(null, n, c, e, new NullPointerException("name"));
-		failCreateuser(UserName.ROOT, n, c, e,
+		failCreateuser(null, i, n, c, e, new NullPointerException("name"));
+		failCreateuser(UserName.ROOT, i, n, c, e,
 				new IllegalArgumentException("Test users cannot be root"));
-		failCreateuser(u, null, c, e, new NullPointerException("display"));
-		failCreateuser(u, n, null, e, new NullPointerException("created"));
-		failCreateuser(u, n, c, null, new NullPointerException("expires"));
+		failCreateuser(u, null, n, c, e, new NullPointerException("anonymousID"));
+		failCreateuser(u, i, null, c, e, new NullPointerException("display"));
+		failCreateuser(u, i, n, null, e, new NullPointerException("created"));
+		failCreateuser(u, i, n, c, null, new NullPointerException("expires"));
 	}
 	
 	@Test
 	public void createUserDuplicateFail() throws Exception {
 		final Instant expiry = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("user1"), new DisplayName("bar1"),
+		storage.testModeCreateUser(new UserName("user1"), UID, new DisplayName("bar1"),
 				Instant.ofEpochMilli(10000), expiry);
 		
-		failCreateuser(new UserName("user1"), new DisplayName("whee"),
+		failCreateuser(new UserName("user1"), UID, new DisplayName("whee"),
 				Instant.ofEpochMilli(100000), expiry.plus(3, ChronoUnit.MINUTES),
 				new UserExistsException("user1"));
 	}
 	
 	private void failCreateuser(
 			final UserName name,
+			final UUID anonymousID,
 			final DisplayName display,
 			final Instant created,
 			final Instant expires,
 			final Exception expected) {
 		try {
-			storage.testModeCreateUser(name, display, created, expires);
+			storage.testModeCreateUser(name, anonymousID, display, created, expires);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

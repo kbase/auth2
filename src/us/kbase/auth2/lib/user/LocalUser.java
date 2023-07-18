@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
@@ -27,6 +28,7 @@ public class LocalUser extends AuthUser {
 	
 	private LocalUser(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant created,
 			final EmailAddress email,
@@ -37,8 +39,8 @@ public class LocalUser extends AuthUser {
 			final UserDisabledState disabledState,
 			final boolean forceReset,
 			final Optional<Instant> lastReset) {
-		super(userName, displayName, created, Collections.emptySet(), email, roles, customRoles,
-				policyIDs, lastLogin, disabledState);
+		super(userName, anonymousID, displayName, created, Collections.emptySet(), email, roles,
+				customRoles, policyIDs, lastLogin, disabledState);
 		this.forceReset = forceReset;
 		this.lastReset = lastReset;
 	}
@@ -98,15 +100,18 @@ public class LocalUser extends AuthUser {
 	 * array data when no longer needed.
 	 * 
 	 * @param userName the users's user name.
+	 * @param anonymousID the user's anonymized ID. The calling code is responsible for ensuring
+	 * these IDs are unique per user.
 	 * @param displayName the user's display name.
 	 * @param creationDate the user's creation date.
 	 * @return a builder.
 	 */
 	public static Builder getLocalUserBuilder(
 			final UserName userName,
+			final UUID anonymousID,
 			final DisplayName displayName,
 			final Instant creationDate) {
-		return new Builder(userName, displayName, creationDate);
+		return new Builder(userName, anonymousID, displayName, creationDate);
 		
 	}
 	
@@ -121,9 +126,10 @@ public class LocalUser extends AuthUser {
 
 		private Builder(
 				final UserName userName,
+				final UUID anonymousID,
 				final DisplayName displayName,
 				final Instant creationDate) {
-			super(userName, displayName, creationDate);
+			super(userName, anonymousID, displayName, creationDate);
 		}
 
 		@Override
@@ -154,8 +160,8 @@ public class LocalUser extends AuthUser {
 		 * @return the user.
 		 */
 		public LocalUser build() {
-			return new LocalUser(userName, displayName, created, email, roles, customRoles,
-					policyIDs, lastLogin, disabledState, forceReset, lastReset);
+			return new LocalUser(userName, anonymousID, displayName, created, email, roles,
+					customRoles, policyIDs, lastLogin, disabledState, forceReset, lastReset);
 		}
 		
 	}

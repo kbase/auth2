@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -26,6 +27,8 @@ public class NewUserTest {
 	
 	/* note that this does not replicate the tests from authuser to test the general builder */
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
 			new RemoteIdentityID("prov42", "bar42"),
 			new RemoteIdentityDetails("user42", "full42", "email42"));
@@ -34,9 +37,11 @@ public class NewUserTest {
 	public void build() throws Exception {
 		final Instant now = Instant.now();
 		final NewUser u = NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), now, REMOTE)
+				new UserName("foo"), UID, new DisplayName("bar"), now, REMOTE)
 				.withEmailAddress(new EmailAddress("f@h.com")).build();
 		
+		// test based on equality vs identity
+		assertThat("incorrect anonID", u.getAnonymousID(), is(UUID.fromString(UID.toString())));
 		assertThat("incorrect disable admin", u.getAdminThatToggledEnabledState(),
 				is(Optional.empty()));
 		assertThat("incorrect created", u.getCreated(), is(now));
@@ -72,7 +77,8 @@ public class NewUserTest {
 			final Exception e)
 			throws Exception {
 		try {
-			NewUser.getBuilder(userName, new DisplayName("bar"), Instant.now(), remoteIdentity);
+			NewUser.getBuilder(
+					userName, UID, new DisplayName("bar"), Instant.now(), remoteIdentity);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

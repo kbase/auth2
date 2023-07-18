@@ -20,6 +20,8 @@ public class Fields {
 	
 	/** The user name. */
 	public static final String USER_NAME = "user";
+	/** The anonymous ID for the user. */
+	public static final String USER_ANONYMOUS_ID = "anonid";
 	/** The display name for the user. */
 	public static final String USER_DISPLAY_NAME = "display";
 	/** The canonical version of the display name. E.g. split into parts, whitespace removed, etc.

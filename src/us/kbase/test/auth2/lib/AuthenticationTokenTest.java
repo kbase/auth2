@@ -59,7 +59,9 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 
 public class AuthenticationTokenTest {
 	
-	/* tests token get, create, revoke, and getBare. */
+	/* tests token get, create, and revoke. */
+	
+	private static final UUID UID = UUID.randomUUID();
 	
 	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
 	
@@ -232,7 +234,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void getTokensUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -526,7 +528,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void revokeTokenAdmin() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 
@@ -586,7 +588,7 @@ public class AuthenticationTokenTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -715,7 +717,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void revokeAllTokensAdminAll() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -800,7 +802,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void revokeAllTokensAdminUser() throws Exception {
 		final AuthUser admin = AuthUser.getBuilder(
-				new UserName("admin"), new DisplayName("bar"), Instant.now())
+				new UserName("admin"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -890,7 +892,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createAgentToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.build();
 		
 		createToken(user, new HashMap<>(), 7 * 24 * 3600 * 1000L, TokenType.AGENT);
@@ -899,7 +901,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createAgentTokenWithAltLifeTime() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.build();
 		
 		final HashMap<TokenLifetimeType, Long> lifetimes = new HashMap<>();
@@ -910,7 +912,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createDevToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -920,7 +922,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createDevTokenAltLifetime() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -932,7 +934,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createDevTokenWithServRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
@@ -942,7 +944,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createServToken() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
@@ -952,7 +954,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createServTokenWithAdminRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -962,7 +964,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createServTokenWithAltLifetime() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
@@ -1002,7 +1004,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createTokenFailNoDevRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -1013,7 +1015,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void createTokenFailNoServRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN)
 				.withRole(Role.CREATE_ADMIN).build();

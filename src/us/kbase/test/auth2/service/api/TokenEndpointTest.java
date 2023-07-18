@@ -2,6 +2,7 @@ package us.kbase.test.auth2.service.api;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
 import java.net.URI;
@@ -328,7 +329,7 @@ public class TokenEndpointTest {
 	
 	private NewToken setUpUser() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000))
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("bar"), inst(10000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "zz".getBytes()));
 		final NewToken nt = new NewToken(StoredToken.getBuilder(

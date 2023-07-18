@@ -7,6 +7,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.service.common.ServiceCommonTest.assertRootJSONCorrect;
 
@@ -65,6 +66,7 @@ public class TestModeTest {
 	 * we do not test for null constructor inputs.
 	 */
 	
+	private static final UUID UID = UUID.randomUUID();
 	
 	/* the value of the git commit from the root endpoint could either be
 	 * an error message or a git commit hash depending on the test environment, so both are
@@ -84,7 +86,7 @@ public class TestModeTest {
 		final TestMode tm = new TestMode(auth);
 		
 		when(auth.testModeGetUser(new UserName("foobar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foobar"), new DisplayName("foo bar"), Instant.ofEpochMilli(10000))
+				new UserName("foobar"), UID, new DisplayName("foo bar"), inst(10000))
 				.build());
 		
 		final Map<String, Object> au = tm.createTestUser(new CreateTestUser("foobar", "foo bar"));
@@ -169,7 +171,7 @@ public class TestModeTest {
 		final TestMode tm = new TestMode(auth);
 		
 		when(auth.testModeGetUser(new UserName("foobar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foobar"), new DisplayName("foo bar"), Instant.ofEpochMilli(10000))
+				new UserName("foobar"), UID, new DisplayName("foo bar"), inst(10000))
 				.build());
 		
 		final Map<String, Object> au = tm.getTestUser("foobar");
@@ -448,7 +450,7 @@ public class TestModeTest {
 		final TestMode tm = new TestMode(auth);
 		
 		when(auth.testModeGetUser(new IncomingToken("some token"))).thenReturn(
-				AuthUser.getBuilder(new UserName("un"), new DisplayName("dn"),
+				AuthUser.getBuilder(new UserName("un"), UID, new DisplayName("dn"),
 						Instant.ofEpochMilli(10000))
 						.build());
 		
@@ -762,7 +764,7 @@ public class TestModeTest {
 		
 		when(auth.testModeGetUser(new IncomingToken("yay!"), new UserName("foo"))).thenReturn(
 				new ViewableUser(AuthUser.getBuilder(
-						new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000))
+						new UserName("foo"), UID, new DisplayName("bar"), inst(10000))
 							.build(),
 						true));
 		
@@ -897,7 +899,7 @@ public class TestModeTest {
 		
 		when(auth.testModeGetUser(new IncomingToken("this is a token"))).thenReturn(
 				AuthUser.getBuilder(
-						new UserName("foo"), new DisplayName("dn"), Instant.ofEpochMilli(10000L))
+						new UserName("foo"), UID, new DisplayName("dn"), inst(10000L))
 						.build());
 		
 		final MultivaluedMap<String, String> form = new MultivaluedHashMap<>();

@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bson.Document;
 import org.junit.Test;
@@ -28,6 +29,8 @@ import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageCustomRoleTest extends MongoStorageTester {
+	
+	private static final UUID UID = UUID.randomUUID();
 
 	private static final Instant NOW = Instant.now();
 	
@@ -128,7 +131,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void addAndRemoveRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -147,7 +150,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void addRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -160,7 +163,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void removeRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -174,7 +177,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void removeNonExistentRoles() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -188,7 +191,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void addAndRemoveSameRole() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -201,7 +204,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void noop() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		
@@ -223,7 +226,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 		 * deleted.
 		 */
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		storage.setCustomRole(new CustomRole("bar", "bleah"));
@@ -264,7 +267,7 @@ public class MongoStorageCustomRoleTest extends MongoStorageTester {
 	@Test
 	public void updateFailNoSuchRole() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		storage.setCustomRole(new CustomRole("foo", "bleah"));
 		failUpdateRoles(new UserName("foo"), set("foo"), set("bar"),
 				new NoSuchRoleException("bar"));

@@ -10,6 +10,7 @@ import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Set;
+import java.util.UUID;
 
 import org.bson.Document;
 import org.junit.Test;
@@ -31,6 +32,8 @@ import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestRoleTest extends MongoStorageTester {
+	
+	private static final UUID UID = UUID.randomUUID();
 	
 	private final static Instant DAY1 = Instant.now().truncatedTo(ChronoUnit.MILLIS)
 			.plus(1, ChronoUnit.DAYS); // mongo truncates
@@ -159,7 +162,7 @@ public class MongoStorageTestRoleTest extends MongoStorageTester {
 	@Test
 	public void addAndRemoveRoles() throws Exception {
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
 		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
@@ -197,7 +200,7 @@ public class MongoStorageTestRoleTest extends MongoStorageTester {
 		 * case for future proofing purposes.
 		 */
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		
 		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
@@ -217,7 +220,7 @@ public class MongoStorageTestRoleTest extends MongoStorageTester {
 		storage.setCustomRole(new CustomRole("baz", "bat"));
 		storage.testModeSetCustomRole(new CustomRole("bar", "bat"), DAY1);
 		storage.testModeSetCustomRole(new CustomRole("baz", "bat"), DAY1);
-		storage.createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+		storage.createUser(NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000), REMOTE).build());
 		failUpdateRoles(new UserName("foo"), set(Role.ADMIN), set("bar", "baz"),
 				new NoSuchUserException("foo"));
@@ -230,7 +233,7 @@ public class MongoStorageTestRoleTest extends MongoStorageTester {
 		storage.testModeSetCustomRole(new CustomRole("bar", "bat"), DAY1);
 		storage.testModeSetCustomRole(new CustomRole("baz", "bat"), DAY1);
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		try {
 			storage.updateCustomRoles(new UserName("foo"), set("bar"), set("baz"));
@@ -280,7 +283,7 @@ public class MongoStorageTestRoleTest extends MongoStorageTester {
 	@Test
 	public void updateFailNoSuchRole() throws Exception {
 		final Instant expires = Instant.now().plus(1, ChronoUnit.DAYS);
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"),
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(100000), expires);
 		storage.testModeSetCustomRole(new CustomRole("foo", "bleah"), DAY1);
 		failUpdateRoles(new UserName("foo"), set(), set("bar"),
