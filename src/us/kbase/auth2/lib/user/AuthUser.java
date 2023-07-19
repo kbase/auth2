@@ -37,7 +37,6 @@ public class AuthUser {
 	private final DisplayName displayName;
 	private final EmailAddress email;
 	private final UserName userName;
-	// TODO ANONID docs and release notes
 	private final UUID anonymousID;
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;
