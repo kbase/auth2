@@ -38,7 +38,7 @@ public class AuthUser {
 	private final EmailAddress email;
 	private final UserName userName;
 	// TODO ANONID add admin method to translate anon IDs to IDs
-	// TODO ANONID release notes
+	// TODO ANONID docs and release notes
 	private final UUID anonymousID;
 	private final Set<Role> roles;
 	private final Set<Role> canGrantRoles;

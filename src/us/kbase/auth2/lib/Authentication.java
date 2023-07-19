@@ -1044,6 +1044,37 @@ public class Authentication {
 		return user;
 	}
 
+	/** Translate user anonymous IDs to the user name. The requesting user must have administration
+	 * permissions. A maximum of 10000 IDs may be submitted. UUIDs not found are omitted from
+	 * the results.
+	 * Never returns disabled users or the root user.
+	 * @param token the user's token.
+	 * @param anonymousIDs the IDs to translate.
+	 * @return A mapping of the input IDs to the corresponding user names.
+	 * @throws IllegalParameterException if too many IDs are submitted.
+	 * @throws InvalidTokenException if the provided token is invalid.
+	 * @throws UnauthorizedException if the calling user is not an admin.
+	 * @throws AuthStorageException if an error occurs connecting to the storage system.
+	 */
+	public Map<UUID, UserName> getUserNamesFromAnonymousIDs(
+			final IncomingToken token,
+			final Set<UUID> anonymousIDs)
+			throws IllegalParameterException, InvalidTokenException, UnauthorizedException,
+				AuthStorageException {
+		noNulls(requireNonNull(anonymousIDs, "anonymousIDs"), "Null ID in anonymousIDs");
+		getUser(token, new OpReqs("translate anonymous IDs").roles(Role.ADMIN)); // check perms
+		if (anonymousIDs.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		if (anonymousIDs.size() > MAX_RETURNED_USERS) {
+			throw new IllegalParameterException(
+					"Anonymous ID count exceeds maximum of " + MAX_RETURNED_USERS);
+		}
+		final Map<UUID, UserName> ret = storage.getUserNamesFromAnonymousIDs(anonymousIDs);
+		ret.values().remove(UserName.ROOT);
+		return ret;
+	}
+	
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
 	 * at once. Never returns the root user name or disabled users.
 	 * @param token a token for the user requesting the lookup.
@@ -1063,7 +1094,7 @@ public class Authentication {
 		// just check the token is valid
 		getTokenSuppressUnauthorized(token, "get user display names");
 		if (userNames.isEmpty()) {
-			return new HashMap<>();
+			return Collections.emptyMap();
 		}
 		if (userNames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
