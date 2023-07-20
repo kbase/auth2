@@ -55,7 +55,7 @@ public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
 		backfillMissingAnonIDLocalUser(new Document("$set", new Document("anonid", null)));
 	}
 
-	public void backfillMissingAnonIDLocalUser(final Document update) throws Exception {
+	private void backfillMissingAnonIDLocalUser(final Document update) throws Exception {
 		final byte[] pwd = "foobarbaz2".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "whee".getBytes(StandardCharsets.UTF_8);
 		final LocalUser nlu = LocalUser.getLocalUserBuilder(
@@ -83,7 +83,7 @@ public class MongoStorageAnonymousIDBackfillingTest extends MongoStorageTester {
 		backfillMissingAnonIDStdUser(new Document("$set", new Document("anonid", null)));
 	}
 
-	public void backfillMissingAnonIDStdUser(final Document update) throws Exception {
+	private void backfillMissingAnonIDStdUser(final Document update) throws Exception {
 		storage.createUser(NewUser.getBuilder(
 				new UserName("foo"), UID, new DisplayName("d"), NOW, REMOTE1).build());
 		db.getCollection("users").updateOne(new Document("user", "foo"), update);

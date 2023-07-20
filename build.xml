@@ -366,6 +366,7 @@
         <test name="us.kbase.test.auth2.service.common.IncomingJSONTest"/>
         <test name="us.kbase.test.auth2.service.common.ServiceCommonTest"/>
         <test name="us.kbase.test.auth2.service.ui.AdminTest"/>
+        <test name="us.kbase.test.auth2.service.ui.AdminIntegrationTest"/>
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
         <test name="us.kbase.test.auth2.service.ui.MeTest"/>

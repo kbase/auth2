@@ -1,0 +1,61 @@
+<html>
+<body>
+<p>Note that in a proper UI, the display name, email, role descriptions, and disable reason should be HTML-escaped.</p>
+
+
+<h3>User info</h3>
+User name: foobar<br/>
+Anonymous ID: 655c0b66-11ef-433c-8fc7-be2e44a882ba<br/>
+<p>
+DISABLED by meanadmin on 70000. Reason given:<br/>
+squoze the charmin
+</p>
+Display name: bleah<br/>
+Email: a@g.com<br/>
+Created: 20000<br/>
+Last login: 30000<br/>
+Local: false
+<p/>
+<h3>Roles:</h3>
+<form action="foobar/roles" method="post">
+	Create developer token: <input type="checkbox" name="DevToken" checked /><br/>
+	Create server token: <input type="checkbox" name="ServToken"  /><br/>
+	Admin: <input type="checkbox" name="Admin" checked /><br/>
+	Create admin: <input type="checkbox" name="CreateAdmin"  /><br/>
+<input type="reset" value="Reset"/>
+<input type="submit" value="Update"/>
+</form>
+
+<h3>Custom roles:</h3>
+<p>Note that in a proper UI, the role descriptions should be HTML-escaped.</p>
+<form action="foobar/customroles" method="post">
+<p>
+ID: whoop <input type="checkbox" name="whoop" /><br/>
+Description:<br/>
+c
+</p>
+<p>
+ID: whoo <input type="checkbox" name="whoo" checked/><br/>
+Description:<br/>
+a
+</p>
+<p>
+ID: whee <input type="checkbox" name="whee" checked/><br/>
+Description:<br/>
+b
+</p>
+<input type="reset" value="Reset"/>
+<input type="submit" value="Update"/>
+</form>
+
+<p><a href="foobar/tokens">Manage user's tokens</a></p>
+
+Note that if all admins are disabled you can reenable the root account from the manage_auth script.
+<form action="foobar/disable" method="post" id="disableform">
+	Disabled: <input type="checkbox" name="disabled" checked /><br/>
+	Reason: <textarea name="disabledreason" form="disableform" cols="40" rows="5"></textarea><br/>
+	<input type="reset" value="Reset"/>
+	<input type="submit" value="Update"/>
+</form>
+</body>
+</html>
