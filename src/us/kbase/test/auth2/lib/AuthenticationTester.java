@@ -487,13 +487,8 @@ public class AuthenticationTester {
 		
 		ao.getLogAccumulator().clear();
 		
-		final UserName un;
-		if (Role.ROOT.equals(r)) {
-			un = UserName.ROOT;
-		} else {
-			un = new UserName("foo");
-		}
-		
+		final UserName un = Role.ROOT.equals(r) ? UserName.ROOT : new UserName("foo");
+				
 		when(storage.getToken(ao.getIncomingToken().getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), un)
 						.withLifeTime(Instant.now(), 0).build())
