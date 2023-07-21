@@ -72,12 +72,13 @@ public class AdminTest {
 		final Admin admin = new Admin(auth);
 
 		final String t = "token";
-		final String a = UID1.toString();
+		final String a = "b8e62d05-1968-4aa0-916d-8815ab69ea15";
 		
 		anonIDsToUserNamesFail(admin, t, a + ", foobar, " + a, new IllegalParameterException(
 				"Illegal anonymous user ID [foobar]: Invalid UUID string: foobar"));
-		anonIDsToUserNamesFail(admin, t, a + "x", new IllegalParameterException(
-				String.format("Illegal anonymous user ID [%sx]: UUID string too large", UID1)));
+		anonIDsToUserNamesFail(admin, t, a.substring(0, 35) + "x", new IllegalParameterException(
+				"Illegal anonymous user ID [b8e62d05-1968-4aa0-916d-8815ab69ea1x]: "
+				+ "Error at index 11 in: \"8815ab69ea1x\""));
 		anonIDsToUserNamesFail(admin, t, a + ",   , " + a, new IllegalParameterException(
 				"Illegal anonymous user ID []: Invalid UUID string: "));
 		
