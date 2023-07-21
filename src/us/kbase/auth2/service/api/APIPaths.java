@@ -8,6 +8,7 @@ public class APIPaths {
 
 	private static final String SEP = "/";
 
+	private static final String ADMIN = "admin";
 	private static final String ME = "me";
 	private static final String TOKEN = "token";
 	private static final String USERS = "users";
@@ -36,6 +37,11 @@ public class APIPaths {
 	public static final String LEGACY_GLOBUS_USERS = USERS + SEP + "{user}";
 	/** The Globus user legacy endpoint location relative to the Globus root. */
 	public static final String LEGACY_GLOBUS_TOKEN = "goauth" + SEP + TOKEN;
+	
+	/** The admin location. */
+	public static final String API_V2_ADMIN = API_V2 + SEP + ADMIN;
+	/** The anonymous ID lookup endpoint location relative to the admin root. */
+	public static final String ANONYMOUS_ID_LOOKUP = "anonids";
 	
 	/** The token introspection endpoint location. */
 	public static final String API_V2_TOKEN = API_V2 + SEP + TOKEN;
