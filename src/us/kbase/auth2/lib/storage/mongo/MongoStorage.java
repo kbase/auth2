@@ -177,30 +177,34 @@ public class MongoStorage implements AuthStorage {
 	private static final IndexOptions IDX_UNIQ_SPARSE =
 			new IndexOptions().unique(true).sparse(true);
 	static {
-		//hardcoded indexes
+		// hardcoded indexes
 		INDEXES = new HashMap<String, Map<List<String>, IndexOptions>>();
 		
-		//user indexes
+		// user indexes
 		final Map<List<String>, IndexOptions> users = new HashMap<>();
-		//find users and ensure user names are unique
+		// find users and ensure user names are unique
 		users.put(Arrays.asList(Fields.USER_NAME), IDX_UNIQ);
-		//find user by identity id and ensure identities only possessed by one user
+		// find users by anonymous ID. These are supposed to be UUIDs so we don't add an
+		// unique index. Sparse since users who haven't been created or fetched since 0.6.0
+		// will not have an anonymous ID.
+		users.put(Arrays.asList(Fields.USER_ANONYMOUS_ID), IDX_SPARSE);
+		// find user by identity id and ensure identities only possessed by one user
 		users.put(Arrays.asList(Fields.USER_IDENTITIES + Fields.FIELD_SEP +
 				Fields.IDENTITIES_ID), IDX_UNIQ_SPARSE);
-		//find users by display name
+		// find users by display name
 		users.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
-		//find users by roles
+		// find users by roles
 		users.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
-		//find users by custom roles
+		// find users by custom roles
 		users.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
 		INDEXES.put(COL_USERS, users);
 		
-		//custom roles indexes
+		// custom roles indexes
 		final Map<List<String>, IndexOptions> roles = new HashMap<>();
 		roles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
 		INDEXES.put(COL_CUST_ROLES, roles);
 		
-		//token indexes
+		// token indexes
 		final Map<List<String>, IndexOptions> token = new HashMap<>();
 		token.put(Arrays.asList(Fields.TOKEN_USER_NAME), null);
 		token.put(Arrays.asList(Fields.TOKEN_TOKEN), IDX_UNIQ);
@@ -213,7 +217,7 @@ public class MongoStorage implements AuthStorage {
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TOKEN, token);
 		
-		//temporary token indexes
+		// temporary token indexes
 		final Map<List<String>, IndexOptions> temptoken = new HashMap<>();
 		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_TOKEN), IDX_UNIQ);
 		temptoken.put(Arrays.asList(Fields.TEMP_SESSION_ID), IDX_UNIQ);
@@ -227,9 +231,9 @@ public class MongoStorage implements AuthStorage {
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEMP_DATA, temptoken);
 		
-		//config indexes
+		// config indexes
 		final Map<List<String>, IndexOptions> cfg = new HashMap<>();
-		//ensure only one config object
+		// ensure only one config object
 		cfg.put(Arrays.asList(Fields.DB_SCHEMA_KEY), IDX_UNIQ);
 		INDEXES.put(COL_CONFIG, cfg);
 		
@@ -251,21 +255,21 @@ public class MongoStorage implements AuthStorage {
 		
 		// *** test collection indexes ***
 		
-		//user indexes
+		// user indexes
 		final Map<List<String>, IndexOptions> testUsers = new HashMap<>();
-		//find users and ensure user names are unique
+		// find users and ensure user names are unique
 		testUsers.put(Arrays.asList(Fields.USER_NAME), IDX_UNIQ);
-		//find users by display name
+		// find users by display name
 		testUsers.put(Arrays.asList(Fields.USER_DISPLAY_NAME_CANONICAL), null);
-		//find users by roles
+		// find users by roles
 		testUsers.put(Arrays.asList(Fields.USER_ROLES), IDX_SPARSE);
-		//find users by custom roles
+		// find users by custom roles
 		testUsers.put(Arrays.asList(Fields.USER_CUSTOM_ROLES), IDX_SPARSE);
 		testUsers.put(Arrays.asList(Fields.USER_EXPIRES), 
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEST_USERS, testUsers);
 		
-		//token indexes
+		// token indexes
 		final Map<List<String>, IndexOptions> testToken = new HashMap<>();
 		testToken.put(Arrays.asList(Fields.TOKEN_USER_NAME), null);
 		testToken.put(Arrays.asList(Fields.TOKEN_TOKEN), IDX_UNIQ);
@@ -278,7 +282,7 @@ public class MongoStorage implements AuthStorage {
 				new IndexOptions().expireAfter(0L, TimeUnit.SECONDS));
 		INDEXES.put(COL_TEST_TOKEN, testToken);
 		
-		//custom roles indexes
+		// custom roles indexes
 		final Map<List<String>, IndexOptions> testRoles = new HashMap<>();
 		testRoles.put(Arrays.asList(Fields.ROLES_ID), IDX_UNIQ);
 		testRoles.put(Arrays.asList(Fields.ROLES_EXPIRES), 
@@ -1050,6 +1054,38 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	@Override
+	public Map<UUID, UserName> getUserNamesFromAnonymousIDs(final Set<UUID> anonymousIDs)
+			throws AuthStorageException {
+		requireNonNull(anonymousIDs, "anonymousIDs");
+		Utils.noNulls(anonymousIDs, "Null ID in anonymousIDs set");
+		if (anonymousIDs.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		final List<String> queryIDs = anonymousIDs.stream().map(u -> u.toString())
+				.collect(Collectors.toList());
+		final Document query = new Document(
+				Fields.USER_ANONYMOUS_ID, new Document("$in", queryIDs))
+				.append(Fields.USER_DISABLED_REASON, null);
+		final Document projection = new Document(Fields.USER_NAME, 1)
+				.append(Fields.USER_ANONYMOUS_ID, 1);
+		try {
+			final FindIterable<Document> docs = db.getCollection(COL_USERS)
+					.find(query).projection(projection);
+			final Map<UUID, UserName> ret = new HashMap<>();
+			for (final Document d: docs) {
+				ret.put(
+						// assume the UUIDs in the DB are good
+						// especially since we're matching against known good UUIDs
+						UUID.fromString(d.getString(Fields.USER_ANONYMOUS_ID)),
+						getUserName(d.getString(Fields.USER_NAME)));
+			}
+			return ret;
+		} catch (MongoException e) { // difficult to test
+			throw new AuthStorageException("Connection to database failed: " + e.getMessage(), e);
+		}
+	}
+	
+	@Override
 	public Map<UserName, DisplayName> getUserDisplayNames(final Set<UserName> users)
 			throws AuthStorageException {
 		return getDisplayNames(users, COL_USERS);
@@ -1062,7 +1098,7 @@ public class MongoStorage implements AuthStorage {
 		requireNonNull(users, "users");
 		Utils.noNulls(users, "Null username in users set");
 		if (users.isEmpty()) {
-			return new HashMap<>();
+			return Collections.emptyMap();
 		}
 		final List<String> queryusers = users.stream().map(u -> u.getName())
 				.collect(Collectors.toList());
