@@ -76,9 +76,9 @@ public class AdminTest {
 		
 		anonIDsToUserNamesFail(admin, t, a + ", foobar, " + a, new IllegalParameterException(
 				"Illegal anonymous user ID [foobar]: Invalid UUID string: foobar"));
-		anonIDsToUserNamesFail(admin, t, a.substring(0, 35) + "x", new IllegalParameterException(
-				"Illegal anonymous user ID [b8e62d05-1968-4aa0-916d-8815ab69ea1x]: "
-				+ "Error at index 11 in: \"8815ab69ea1x\""));
+		// error message is different for java 8 & 11. When 8 is gone switch back to exact test
+		anonIDsToUserNamesFailContains(admin, t, a + "x", 
+				"Illegal anonymous user ID [b8e62d05-1968-4aa0-916d-8815ab69ea15x]: ");
 		anonIDsToUserNamesFail(admin, t, a + ",   , " + a, new IllegalParameterException(
 				"Illegal anonymous user ID []: Invalid UUID string: "));
 		
@@ -98,6 +98,20 @@ public class AdminTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+	
+	private void anonIDsToUserNamesFailContains(
+			final Admin admin,
+			final String token,
+			final String anonIDs,
+			final String expected)
+			throws Exception {
+		try {
+			admin.anonIDsToUserNames(token, anonIDs);
+			fail("expected exception");
+		} catch (IllegalParameterException got) {
+			TestCommon.assertExceptionMessageContains(got, expected);
 		}
 	}
 }
