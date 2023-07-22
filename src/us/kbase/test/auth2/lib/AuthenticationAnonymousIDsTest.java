@@ -180,10 +180,10 @@ public class AuthenticationAnonymousIDsTest {
 	private void getUserNamesFromAnonymousIDsFail(
 			final Authentication auth,
 			final IncomingToken token,
-			final Set<UUID> anonymoutIDs,
+			final Set<UUID> anonymousIDs,
 			final Exception expected) {
 		try {
-			auth.getUserNamesFromAnonymousIDs(token, anonymoutIDs);
+			auth.getUserNamesFromAnonymousIDs(token, anonymousIDs);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

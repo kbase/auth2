@@ -4,6 +4,14 @@
 
 * ADMIN ACTION REQUIRED - after the server is upgraded, use the `manage_auth` script to
   recanonicalize the user display names. See the [README.md](./README.md#admin-notes) file.
+* ADMIN OPTIONAL ACTION - on first startup, the service will build a sparse index on the `anonid`
+  field in the `users` collection. If there are many users this could take some time. The
+  index could be built in the background while the server is running to reduce or avoid
+  downtime by starting the new version of the service pointed at the same database or manually
+  creating the index in the MongoDB shell.
+* User anonymous IDs have been added and are visible in the various endpoints that return
+  user information.
+* The `/api/V2/admin/anonids` endpoint has been added to translate anonymous IDs to user names.
 * The user search API endpoint has been improved to allow for multiple tokens (e.g. "Dave Smith")
   in the search prefix. The prefix will be tokenized prior to search.
 
