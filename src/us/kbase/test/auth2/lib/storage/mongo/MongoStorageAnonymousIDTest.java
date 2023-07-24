@@ -116,6 +116,35 @@ public class MongoStorageAnonymousIDTest extends MongoStorageTester {
 		assertThat("incorrect user", got, is(expected));
 	}
 	
+	@Test
+	public void backFillMissingAnonIDNoFieldStdUserGetByIdentity() throws Exception {
+		backFillMissingAnonIDNoFieldStdUserGetByIdentity(
+				new Document("$unset", new Document("anonid", "")));
+	}
+	
+	@Test
+	public void backFillMissingAnonIDWithFieldStdUserGetByIdentity() throws Exception {
+		backFillMissingAnonIDNoFieldStdUserGetByIdentity(
+				new Document("$set", new Document("anonid", null)));
+	}
+
+	private void backFillMissingAnonIDNoFieldStdUserGetByIdentity(final Document update)
+			throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("d"), NOW, REMOTE1).build());
+		db.getCollection("users").updateOne(new Document("user", "foo"), update);
+		
+		final UUID uid2 = UUID.randomUUID();
+		when(manager.mockRand.randomUUID()).thenReturn(uid2, (UUID) null);
+		
+		final AuthUser got = storage.getUser(REMOTE1).get();
+		final AuthUser expected = AuthUser.getBuilder(
+				new UserName("foo"), uid2, new DisplayName("d"), NOW)
+				.withIdentity(REMOTE1)
+				.build();
+		assertThat("incorrect user", got, is(expected));
+	}
+
 	/*
 	 * The following tests test race conditions by accessing the internal update method
 	 * directly. At this point the userdoc has already been pulled from the database and
@@ -125,7 +154,7 @@ public class MongoStorageAnonymousIDTest extends MongoStorageTester {
 	
 	private Method getAnonIDUpdateMethod() throws Exception {
 		final Method m = MongoStorage.class
-				.getDeclaredMethod("updateUserAnonID", String.class, UserName.class);
+				.getDeclaredMethod("updateUserAnonID", String.class, String.class);
 		m.setAccessible(true);
 		return m;
 	}
@@ -143,7 +172,7 @@ public class MongoStorageAnonymousIDTest extends MongoStorageTester {
 		when(manager.mockRand.randomUUID()).thenReturn(UUID.randomUUID(), (UUID) null);
 		
 		final Document userdoc = (Document) getAnonIDUpdateMethod()
-				.invoke(storage, "users", new UserName("foo"));
+				.invoke(storage, "users", "foo");
 		
 		// only check a few properties, the methods above test exhaustively
 		assertThat("incorrect user", userdoc.getString("user"), is("foo"));
@@ -167,7 +196,7 @@ public class MongoStorageAnonymousIDTest extends MongoStorageTester {
 		when(manager.mockRand.randomUUID()).thenReturn(UUID.randomUUID(), (UUID) null);
 		
 		try {
-			getAnonIDUpdateMethod().invoke(storage, "users", new UserName("bar"));
+			getAnonIDUpdateMethod().invoke(storage, "users", "bar");
 			fail("expected exception");
 		} catch (InvocationTargetException e) {
 			assertExceptionCorrect(e.getCause(), new RuntimeException(
