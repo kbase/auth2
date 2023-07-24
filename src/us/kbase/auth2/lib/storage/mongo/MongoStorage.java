@@ -748,33 +748,49 @@ public class MongoStorage implements AuthStorage {
 			final boolean local)
 			throws AuthStorageException, NoSuchUserException {
 		requireNonNull(userName, "userName");
-		Document user = getUserDocWithoutPassword(collection, userName);
+		return getUserDoc(
+				collection, new Document(Fields.USER_NAME, userName.getName()), local, userName);
+		
+	}
+	
+	private Document getUserDoc(
+			final String collection,
+			final Document query,
+			final boolean local,
+			final UserName nameForException)
+			throws AuthStorageException, NoSuchUserException {
+		Document user = getUserDocWithoutPassword(collection, query);
 		if (user == null) {
-			throw new NoSuchUserException(userName.getName());
+			if (nameForException != null) {
+				throw new NoSuchUserException(nameForException.getName());
+			} else {
+				return null;
+			}
 		}
+		final String userName = user.getString(Fields.USER_NAME);
 		if (user.getString(Fields.USER_ANONYMOUS_ID) == null) {
 			user = updateUserAnonID(collection, userName);
 		}
 		if (local && !user.getBoolean(Fields.USER_LOCAL)) {
-			throw new NoSuchLocalUserException(userName.getName());
+			throw new NoSuchLocalUserException(userName);
 		}
 		return user;
 	}
 
-	private Document getUserDocWithoutPassword(final String collection, final UserName userName)
+	private Document getUserDocWithoutPassword(final String collection, final Document query)
 			throws AuthStorageException {
 		return findOne(
 				collection,
-				new Document(Fields.USER_NAME, userName.getName()),
+				query,
 				new Document(Fields.USER_PWD_HSH, 0).append(Fields.USER_SALT, 0));
 	}
 
-	private Document updateUserAnonID(final String collection, final UserName userName)
+	private Document updateUserAnonID(final String collection, final String userName)
 			throws AuthStorageException {
 		/* Added in version 0.6.0 when anonymous IDs were added to users. This method lazily
 		 * backfills the anonymous ID on an as-needed basis.
 		 */
-		final Document query = new Document(Fields.USER_NAME, userName.getName())
+		final Document query = new Document(Fields.USER_NAME, userName)
 				// only modify if not already done to avoid race conditions
 				.append(Fields.USER_ANONYMOUS_ID, null);
 		final Document update = new Document(
@@ -788,10 +804,11 @@ public class MongoStorage implements AuthStorage {
 					"Connection to database failed: " + e.getMessage(), e);
 		}
 		// pull the user from the DB again to avoid a race condition here
-		final Document userdoc = getUserDocWithoutPassword(collection, userName);
+		final Document userdoc = getUserDocWithoutPassword(
+				collection, new Document(Fields.USER_NAME, userName));
 		if (userdoc == null) {
 			throw new RuntimeException(
-					"User unexpectedly not found in database: " + userName.getName());
+					"User unexpectedly not found in database: " + userName);
 		}
 		return userdoc;
 	}
@@ -1526,12 +1543,12 @@ public class MongoStorage implements AuthStorage {
 
 	@Override
 	public Optional<AuthUser> getUser(final RemoteIdentity remoteID) throws AuthStorageException {
-		final Document query = makeUserQuery(remoteID);
-		//note a user with identities should never have these fields, but
-		//doesn't hurt to be safe
-		final Document projection = new Document(Fields.USER_PWD_HSH, 0)
-				.append(Fields.USER_SALT, 0);
-		final Document u = findOne(COL_USERS, query, projection);
+		final Document u;
+		try {
+			u = getUserDoc(COL_USERS, makeUserQuery(remoteID), false, null);
+		} catch (NoSuchUserException e) {
+			throw new RuntimeException("This should be impossible", e);
+		}
 		if (u == null) {
 			return Optional.empty();
 		}
