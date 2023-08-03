@@ -9,6 +9,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -27,6 +28,9 @@ import us.kbase.test.auth2.TestCommon;
 
 public class LoginStateTest {
 	
+	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
+	
 	private static final RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar"),
 			new RemoteIdentityDetails("user", "full", "email"));
@@ -44,10 +48,10 @@ public class LoginStateTest {
 	static {
 		try {
 			AUTH_USER1 = NewUser.getBuilder(
-					new UserName("foo4"), new DisplayName("bar4"), Instant.now(), REMOTE1)
+					new UserName("foo4"), UID, new DisplayName("bar4"), Instant.now(), REMOTE1)
 					.withEmailAddress(new EmailAddress("f@h.com")).build();
 			AUTH_USER2 = AuthUser.getBuilder(
-					new UserName("foo5"), new DisplayName("bar5"), Instant.now())
+					new UserName("foo5"), UID2, new DisplayName("bar5"), Instant.now())
 					.withEmailAddress(new EmailAddress("f@h5.com"))
 					.withIdentity(REMOTE2).withIdentity(REMOTE3)
 					.withRole(Role.ADMIN)
@@ -164,11 +168,11 @@ public class LoginStateTest {
 		final DisplayName dn = new DisplayName("d");
 		final Instant now = Instant.now();
 		final LoginState ls = LoginState.getBuilder("prov", false, Instant.now())
-				.withUser(AuthUser.getBuilder(new UserName("foo"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("foo"), UID, dn, now)
 						.withIdentity(REMOTE1).build(), REMOTE1)
-				.withUser(AuthUser.getBuilder(new UserName("bar"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("bar"), UID2, dn, now)
 						.withIdentity(REMOTE2).build(), REMOTE2)
-				.withUser(AuthUser.getBuilder(new UserName("baz"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("baz"), UUID.randomUUID(), dn, now)
 						.withIdentity(REMOTE3).build(), REMOTE3)
 				.build();
 		
@@ -190,7 +194,7 @@ public class LoginStateTest {
 	@Test
 	public void sortedLinkedIdentities() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("dn"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("dn"), Instant.now())
 				.withIdentity(REMOTE3)
 				.withIdentity(REMOTE1)
 				.withIdentity(REMOTE2)

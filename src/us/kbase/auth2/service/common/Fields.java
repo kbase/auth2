@@ -74,6 +74,8 @@ public class Fields {
 	
 	/** A user name. */
 	public static final String USER = "user";
+	/** An anonymous ID for a user. */
+	public static final String ANONYMOUS_ID = "anonid";
 	/** A set of users. */
 	public static final String USERS = "users";
 	/** Whether any users are included in the results. */

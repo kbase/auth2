@@ -13,6 +13,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -33,6 +34,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 
+	private static final UUID UID = UUID.randomUUID();
 	private static final Instant NOW = Instant.now()
 			.truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 	
@@ -47,7 +49,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateNoop() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"), UserUpdate.getBuilder().build());
@@ -60,7 +62,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateDisplay() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
@@ -74,7 +76,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateEmail() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
@@ -88,7 +90,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void updateBoth() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.updateUser(new UserName("user1"),
@@ -126,7 +128,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void lastLogin() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		final Instant d = NOW.plus(Duration.ofHours(2));
@@ -158,7 +160,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void addPolicyIDsEmpty() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		storage.addPolicyIDs(new UserName("user1"), Collections.emptySet());
@@ -169,7 +171,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void addPolicyIDs() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000));
@@ -182,7 +184,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void addPolicyIDsOverwrite() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000),
@@ -200,7 +202,7 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void addPolicyIDsOverwriteEmpty() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com")).build();
 		storage.createUser(nu);
 		when(mockClock.instant()).thenReturn(Instant.ofEpochMilli(10000));
@@ -241,14 +243,14 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void removePolicyID() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.withPolicyID(new PolicyID("foo"), Instant.now())
 				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(30000))
 				.build();
 		storage.createUser(nu);
 		final NewUser nu2 = NewUser.getBuilder(
-				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
+				new UserName("user2"), UID, new DisplayName("bar1"), NOW, REMOTE2)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.withPolicyID(new PolicyID("foo"), Instant.now())
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(40000))
@@ -266,13 +268,13 @@ public class MongoStorageUpdateUserFieldsTest extends MongoStorageTester {
 	@Test
 	public void removeUnusedPolicyID() throws Exception {
 		final NewUser nu = NewUser.getBuilder(
-				new UserName("user1"), new DisplayName("bar1"), NOW, REMOTE1)
+				new UserName("user1"), UID, new DisplayName("bar1"), NOW, REMOTE1)
 				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(20000))
 				.withPolicyID(new PolicyID("bar"), Instant.ofEpochMilli(30000))
 				.build();
 		storage.createUser(nu);
 		final NewUser nu2 = NewUser.getBuilder(
-				new UserName("user2"), new DisplayName("bar1"), NOW, REMOTE2)
+				new UserName("user2"), UID, new DisplayName("bar1"), NOW, REMOTE2)
 				.withEmailAddress(new EmailAddress("e@g1.com"))
 				.withPolicyID(new PolicyID("foo"), Instant.ofEpochMilli(35000))
 				.withPolicyID(new PolicyID("baz"), Instant.ofEpochMilli(40000))

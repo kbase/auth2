@@ -467,7 +467,7 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("f"), Instant.now())
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
@@ -487,20 +487,15 @@ public class AuthenticationTester {
 		
 		ao.getLogAccumulator().clear();
 		
-		final UserName un;
-		if (Role.ROOT.equals(r)) {
-			un = UserName.ROOT;
-		} else {
-			un = new UserName("foo");
-		}
-		
+		final UserName un = Role.ROOT.equals(r) ? UserName.ROOT : new UserName("foo");
+				
 		when(storage.getToken(ao.getIncomingToken().getHashedToken())).thenReturn(
 				StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(), un)
 						.withLifeTime(Instant.now(), 0).build())
 				.thenReturn(null);
 		
 		when(storage.getUser(un)).thenReturn(AuthUser.getBuilder(
-				un, new DisplayName("f"), Instant.now())
+				un, UUID.randomUUID(), new DisplayName("f"), Instant.now())
 				.withRole(r).build());
 		
 		failExecute(ao, auth, "unauthorized user test for role " + r,
@@ -526,7 +521,8 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("f"), Instant.now())
+				.build());
 		
 		failExecute(ao, auth, "unauthorized user test",
 				new UnauthorizedException(ErrorType.UNAUTHORIZED));
@@ -550,7 +546,7 @@ public class AuthenticationTester {
 				.thenReturn(null);
 		
 		final Builder builder = AuthUser.getBuilder(
-				userName, new DisplayName("f"), Instant.now());
+				userName, UUID.randomUUID(), new DisplayName("f"), Instant.now());
 		
 		if (role != null) {
 			builder.withRole(role);

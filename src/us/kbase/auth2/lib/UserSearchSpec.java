@@ -1,9 +1,12 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
@@ -21,75 +24,91 @@ public class UserSearchSpec {
 	
 	//TODO ZLATER CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
-	private final Optional<String> prefix;
+	private final List<String> prefixes;
+	private final String regex;
 	private final boolean searchUser;
 	private final boolean searchDisplayName;
 	private final Set<Role> searchRoles;
 	private final Set<String> searchCustomRoles;
-	private final boolean isRegex;
 	private final boolean includeRoot;
 	private final boolean includeDisabled;
 
 	private UserSearchSpec(
-			final Optional<String> prefix,
+			final List<String> prefixes,
+			final String regex,
 			final boolean searchUser,
 			final boolean searchDisplayName,
 			final Set<Role> searchRoles,
 			final Set<String> searchCustomRoles,
-			final boolean isRegex,
 			final boolean includeRoot,
 			final boolean includeDisabled) {
-		this.prefix = prefix;
+		this.prefixes = prefixes == null ? null : Collections.unmodifiableList(prefixes);
+		this.regex = regex;
 		this.searchUser = searchUser;
 		this.searchDisplayName = searchDisplayName;
 		this.searchRoles = searchRoles;
 		this.searchCustomRoles = searchCustomRoles;
-		this.isRegex = isRegex;
 		this.includeRoot = includeRoot;
 		this.includeDisabled = includeDisabled;
 	}
 
-	/** Returns the user and/or display name prefix or regex for the search, if any.
-	 * The prefix matches the start of the username or the start of any part of the whitespace
+	/** Returns the user and/or display name prefixes for the search, if any.
+	 * The prefixes match the start of the username or the start of any part of the whitespace
 	 * tokenized display name.
-	 * 
-	 * A regex should be applied as is. isRegex() will be true if the prefix is actually a regex.
 	 * @return the search prefix.
 	 */
-	public Optional<String> getSearchPrefix() {
-		return prefix;
+	public List<String> getSearchPrefixes() {
+		return prefixes == null ? Collections.emptyList() : prefixes;
 	}
 	
-	/** Returns true if a search prefix is set and that prefix should be treated as a regular
-	 * expression rather than just a prefix, false otherwise.
-	 * @return true if the search prefix is a regex
+	/** Returns the user and/or display name regex for the search, if any.
+	 * A regex should be applied as is.
+	 * @return the search prefix.
 	 */
-	public boolean isRegex() {
-		return isRegex;
+	public Optional<String> getSearchRegex() {
+		return Optional.ofNullable(regex);
+	}
+	
+	/** Returns true if the regex is set. This means the search prefix is not set.
+	 * @return true if the regex is set.
+	 */
+	public boolean hasSearchRegex() {
+		return regex != null;
+	}
+	
+	/** Returns true if the search prefixes are set. This means the search regex is not set.
+	 * @ return true if the search prefixes are set.
+	 */
+	public boolean hasSearchPrefixes() {
+		return prefixes != null;
+	}
+	
+	private boolean hasSearchString() {
+		return prefixes != null || regex != null;
 	}
 
 	/** Returns true if a search should occur on the user's user name.
 	 * 
 	 * True when a) a prefix or regex is provided and b) withSearchOnUserName() was called with a
-	 * true argument or neither searchOnUserName() nor searchOnDisplayName() were called with a
-	 * true argument.
+	 * true argument or neither withSearchOnUserName() nor withSearchOnDisplayName() were called
+	 * with a true argument.
 	 * @return whether the search should occur on the user's user name with the provided prefix or
 	 * regex.
 	 */
 	public boolean isUserNameSearch() {
-		return searchUser || (prefix.isPresent() && !searchDisplayName);
+		return searchUser || (hasSearchString() && !searchDisplayName);
 	}
 
 	/** Returns true if a search should occur on the user's tokenized display name.
 	 * 
 	 * True when a) a prefix or regex is provided and b) withSearchOnDisplayName() was called with
-	 * a true argument or neither searchOnUserName() nor searchOnDisplayName() were called with a
-	 * true argument.
+	 * a true argument or neither withSearchOnUserName() nor withSearchOnDisplayName() were
+	 * called with a true argument.
 	 * @return whether the search should occur on the users's display name with the provided
 	 * prefix or regex.
 	 */
 	public boolean isDisplayNameSearch() {
-		return searchDisplayName || (prefix.isPresent() && !searchUser);
+		return searchDisplayName || (hasSearchString() && !searchUser);
 	}
 	
 	/** Returns true if a search should occur on the user's roles.
@@ -183,17 +202,8 @@ public class UserSearchSpec {
 
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + (includeDisabled ? 1231 : 1237);
-		result = prime * result + (includeRoot ? 1231 : 1237);
-		result = prime * result + (isRegex ? 1231 : 1237);
-		result = prime * result + ((prefix == null) ? 0 : prefix.hashCode());
-		result = prime * result + ((searchCustomRoles == null) ? 0 : searchCustomRoles.hashCode());
-		result = prime * result + (searchDisplayName ? 1231 : 1237);
-		result = prime * result + ((searchRoles == null) ? 0 : searchRoles.hashCode());
-		result = prime * result + (searchUser ? 1231 : 1237);
-		return result;
+		return Objects.hash(includeDisabled, includeRoot, prefixes, regex,
+				searchCustomRoles, searchDisplayName, searchRoles, searchUser);
 	}
 
 	@Override
@@ -208,43 +218,14 @@ public class UserSearchSpec {
 			return false;
 		}
 		UserSearchSpec other = (UserSearchSpec) obj;
-		if (includeDisabled != other.includeDisabled) {
-			return false;
-		}
-		if (includeRoot != other.includeRoot) {
-			return false;
-		}
-		if (isRegex != other.isRegex) {
-			return false;
-		}
-		if (prefix == null) {
-			if (other.prefix != null) {
-				return false;
-			}
-		} else if (!prefix.equals(other.prefix)) {
-			return false;
-		}
-		if (searchCustomRoles == null) {
-			if (other.searchCustomRoles != null) {
-				return false;
-			}
-		} else if (!searchCustomRoles.equals(other.searchCustomRoles)) {
-			return false;
-		}
-		if (searchDisplayName != other.searchDisplayName) {
-			return false;
-		}
-		if (searchRoles == null) {
-			if (other.searchRoles != null) {
-				return false;
-			}
-		} else if (!searchRoles.equals(other.searchRoles)) {
-			return false;
-		}
-		if (searchUser != other.searchUser) {
-			return false;
-		}
-		return true;
+		return includeDisabled == other.includeDisabled
+				&& includeRoot == other.includeRoot
+				&& Objects.equals(prefixes, other.prefixes)
+				&& Objects.equals(regex, other.regex)
+				&& Objects.equals(searchCustomRoles, other.searchCustomRoles)
+				&& searchDisplayName == other.searchDisplayName
+				&& Objects.equals(searchRoles, other.searchRoles)
+				&& searchUser == other.searchUser;
 	}
 
 	/** A builder for a UserSearchSpec.
@@ -253,12 +234,12 @@ public class UserSearchSpec {
 	 */
 	public static class Builder {
 		
-		private Optional<String> prefix = Optional.empty();
+		private List<String> prefixes = null;
+		private String regex = null;
 		private boolean searchUser = false;
 		private boolean searchDisplayName = false;
 		private final Set<Role> searchRoles = new HashSet<>();
 		private final Set<String> searchCustomRoles = new HashSet<>();
-		private boolean isRegex = false;
 		private boolean includeRoot = false;
 		private boolean includeDisabled = false;
 		
@@ -267,18 +248,17 @@ public class UserSearchSpec {
 		/** Set a prefix by which the user name and / or tokenized display name will be searched.
 		 * The prefix will replace the search regex, if any.
 		 * The prefix matches the start of the username or the start of any part of the whitespace
-		 * tokenized display name.
-		 * The prefix is always converted to lower case.
+		 * and hyphen tokenized display name.
+		 * The prefix is always split by whitespace and hyphens, punctuation removed, and
+		 * converted to lower case.
 		 * Once the prefix or search regex is set in this builder it cannot be removed.
 		 * @param prefix the prefix.
 		 * @return this builder.
 		 */
 		public Builder withSearchPrefix(final String prefix) {
-			if (prefix == null || prefix.trim().isEmpty()) {
-				throw new IllegalArgumentException("Prefix cannot be null or the empty string");
-			}
-			this.prefix = Optional.of(prefix.toLowerCase());
-			this.isRegex = false;
+			checkStringNoCheckedException(prefix, "prefix");
+			this.prefixes = DisplayName.getCanonicalDisplayName(prefix);
+			this.regex = null;
 			return this;
 		}
 		
@@ -292,11 +272,8 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		Builder withSearchRegex(final String regex) {
-			if (regex == null || regex.trim().isEmpty()) {
-				throw new IllegalArgumentException("Regex cannot be null or the empty string");
-			}
-			this.prefix = Optional.of(regex);
-			this.isRegex = true;
+			this.regex = checkStringNoCheckedException(regex, "regex");
+			this.prefixes = null;
 			return this;
 		}
 		
@@ -323,9 +300,9 @@ public class UserSearchSpec {
 		}
 
 		private void checkSearchPrefix(final boolean search) {
-			if (search && !this.prefix.isPresent()) {
+			if (search && prefixes == null && regex == null) {
 				throw new IllegalStateException(
-						"Must provide a prefix if a name search is to occur");
+						"Must provide a prefix or regex if a name search is to occur");
 			}
 		}
 		
@@ -336,7 +313,7 @@ public class UserSearchSpec {
 		 * @return this builder.
 		 */
 		public Builder withSearchOnRole(final Role role) {
-			nonNull(role, "role");
+			requireNonNull(role, "role");
 			this.searchRoles.add(role);
 			return this;
 		}
@@ -378,8 +355,8 @@ public class UserSearchSpec {
 		 * @return a UserSearchSpec.
 		 */
 		public UserSearchSpec build() {
-			return new UserSearchSpec(prefix, searchUser, searchDisplayName, searchRoles,
-					searchCustomRoles, isRegex, includeRoot, includeDisabled);
+			return new UserSearchSpec(prefixes, regex, searchUser, searchDisplayName, searchRoles,
+					searchCustomRoles, includeRoot, includeDisabled);
 		}
 	}
 }

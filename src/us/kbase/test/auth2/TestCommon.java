@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -107,8 +108,8 @@ public class TestCommon {
 	}
 	
 	public static void assertExceptionCorrect(
-			final Exception got,
-			final Exception expected) {
+			final Throwable got,
+			final Throwable expected) {
 		assertThat("incorrect exception. trace:\n" + ExceptionUtils.getStackTrace(got),
 				got.getMessage(), is(expected.getMessage()));
 		assertThat("incorrect exception type", got, instanceOf(expected.getClass()));
@@ -159,6 +160,11 @@ public class TestCommon {
 	@SafeVarargs
 	public static <T> Set<T> set(T... objects) {
 		return new HashSet<T>(Arrays.asList(objects));
+	}
+	
+	@SafeVarargs
+	public static <T> List<T> list(T... objects) {
+		return Arrays.asList(objects);
 	}
 	
 	public static final Optional<String> ES = Optional.empty();

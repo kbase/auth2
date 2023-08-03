@@ -7,6 +7,7 @@ import static org.mockito.Mockito.when;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
+import java.util.UUID;
 import java.time.Instant;
 
 import org.bson.Document;
@@ -27,6 +28,7 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStoragePasswordTest extends MongoStorageTester {
 	
+	private static final UUID UID = UUID.randomUUID();
 	private static final Instant NOW = Instant.now();
 
 	private static final RemoteIdentity REMOTE = new RemoteIdentity(
@@ -38,7 +40,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new UserName("foo"), UID, new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 
 		storage.forcePasswordReset(new UserName("foo"));
@@ -50,7 +52,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	@Test
 	public void resetFailNoLocalUser() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		failReset(new UserName("foo"), new NoSuchLocalUserException("foo"));
 	}
 	
@@ -74,13 +76,14 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new UserName("foo"), UID, new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo2"), new DisplayName("bar"), NOW).build(),
+				new UserName("foo2"), UUID.randomUUID(), new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo3"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo3"), UUID.randomUUID(), new DisplayName("bar"), NOW, REMOTE)
+				.build());
 		
 		storage.forcePasswordReset();
 		final Document stduser = db.getCollection("users")
@@ -97,7 +100,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new UserName("foo"), UID, new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.empty()));
@@ -126,7 +129,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 		final byte[] passwordHash = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW).build(),
+				new UserName("foo"), UID, new DisplayName("bar"), NOW).build(),
 				new PasswordHashAndSalt(passwordHash, salt));
 		final LocalUser user = storage.getLocalUser(new UserName("foo"));
 		assertThat("incorrect last reset date", user.getLastPwdReset(), is(Optional.empty()));
@@ -171,7 +174,7 @@ public class MongoStoragePasswordTest extends MongoStorageTester {
 	@Test
 	public void changePasswordFailNoLocalUser() throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), NOW, REMOTE).build());
+				new UserName("foo"), UID, new DisplayName("bar"), NOW, REMOTE).build());
 		final byte[] pwd = "foobarbaz1".getBytes(StandardCharsets.UTF_8);
 		final byte[] salt = "wo".getBytes(StandardCharsets.UTF_8);
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(pwd, salt);

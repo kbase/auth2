@@ -220,14 +220,14 @@ public class TemporarySessionDataTest {
 	
 	@Test
 	public void constructLoginStartFailBadInput() throws Exception {
-		failConstructLoginStart(
-				null, "p", new IllegalArgumentException("Missing argument: oauth2State"));
-		failConstructLoginStart(
-				" \t   ", "p", new IllegalArgumentException("Missing argument: oauth2State"));
-		failConstructLoginStart(
-				"s", null, new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
-		failConstructLoginStart("s", "  \n   \t ",
-				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
+		failConstructLoginStart(null, "p",
+				new IllegalArgumentException("oauth2State cannot be null or whitespace only"));
+		failConstructLoginStart(" \t   ", "p",
+				new IllegalArgumentException("oauth2State cannot be null or whitespace only"));
+		failConstructLoginStart("s", null, new IllegalArgumentException(
+				"pkceCodeVerifier cannot be null or whitespace only"));
+		failConstructLoginStart("s", "  \n   \t ", new IllegalArgumentException(
+				"pkceCodeVerifier cannot be null or whitespace only"));
 	}
 	
 	private void failConstructLoginStart(
@@ -264,14 +264,14 @@ public class TemporarySessionDataTest {
 	@Test
 	public void constructLinkStartFailBadInput() throws Exception {
 		final UserName u = new UserName("foo");
-		failConstructLinkStart(
-				null, "pcke", u, new IllegalArgumentException("Missing argument: oauth2State"));
+		failConstructLinkStart(null, "pcke", u,
+				new IllegalArgumentException("oauth2State cannot be null or whitespace only"));
 		failConstructLinkStart(" \t   ", "pkce", u,
-				new IllegalArgumentException("Missing argument: oauth2State"));
-		failConstructLinkStart("state", null, u,
-				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
-		failConstructLinkStart("state", " ", u,
-				new IllegalArgumentException("Missing argument: pkceCodeVerifier"));
+				new IllegalArgumentException("oauth2State cannot be null or whitespace only"));
+		failConstructLinkStart("state", null, u, new IllegalArgumentException(
+				"pkceCodeVerifier cannot be null or whitespace only"));
+		failConstructLinkStart("state", " ", u, new IllegalArgumentException(
+				"pkceCodeVerifier cannot be null or whitespace only"));
 		failConstructLinkStart("state", "pkce", null, new NullPointerException("userName"));
 	}
 	
@@ -318,9 +318,10 @@ public class TemporarySessionDataTest {
 	public void constructWithErrorFailNullsAndEmpties() throws Exception {
 		final String err = "err";
 		final ErrorType et = ErrorType.DISABLED;
-		failConstructError(null, et, new IllegalArgumentException("Missing argument: error"));
+		failConstructError(
+				null, et, new IllegalArgumentException("error cannot be null or whitespace only"));
 		failConstructError("  \t  ", et,
-				new IllegalArgumentException("Missing argument: error"));
+				new IllegalArgumentException("error cannot be null or whitespace only"));
 		failConstructError(err, null, new NullPointerException("errorType"));
 	}
 	

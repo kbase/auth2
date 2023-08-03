@@ -274,9 +274,10 @@ public class Admin {
 			@PathParam(UIPaths.USER) final String user,
 			@Context final UriInfo uriInfo)
 			throws AuthStorageException, NoSuchUserException,
-			MissingParameterException, IllegalParameterException,
-			InvalidTokenException, UnauthorizedException,
-			NoTokenProvidedException {
+				MissingParameterException, IllegalParameterException,
+				InvalidTokenException, UnauthorizedException,
+				NoTokenProvidedException {
+		// TODO FEATURE include info about identity providers & policy IDs
 		final IncomingToken adminToken = getTokenFromCookie(headers, cfg.getTokenCookieName());
 		final AuthUser au = auth.getUserAsAdmin(adminToken, new UserName(user));
 		final Set<CustomRole> roles = auth.getCustomRoles(adminToken, true);
@@ -293,6 +294,7 @@ public class Admin {
 				relativize(uriInfo, userPrefix + UIPaths.ADMIN_FORCE_RESET_PWD));
 		ret.put(Fields.URL_TOKEN, relativize(uriInfo, userPrefix + UIPaths.ADMIN_TOKENS));
 		ret.put(Fields.USER, au.getUserName().getName());
+		ret.put(Fields.ANONYMOUS_ID, au.getAnonymousID().toString());
 		ret.put(Fields.DISPLAY, au.getDisplayName().getName());
 		ret.put(Fields.EMAIL, au.getEmail().getAddress());
 		ret.put(Fields.LOCAL, au.isLocal());

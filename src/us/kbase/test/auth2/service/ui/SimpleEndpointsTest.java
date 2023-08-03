@@ -3,6 +3,7 @@ package us.kbase.test.auth2.service.ui;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import static us.kbase.test.auth2.service.common.ServiceCommonTest.SERVER_VER;
@@ -239,7 +240,7 @@ public class SimpleEndpointsTest {
 		String pwdhashb64 = "yfzvxxMCbKQgoa0e38AmGNZxPJ+lT8PNXPgiR8QkFM0=";
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("whoo"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build(),
+				new UserName("whoo"), UUID.randomUUID(), new DisplayName("d"), inst(10000)).build(),
 				new PasswordHashAndSalt(Base64.getDecoder().decode(pwdhashb64), salt.getBytes()));
 		
 		final IncomingToken token = new IncomingToken("whoop");

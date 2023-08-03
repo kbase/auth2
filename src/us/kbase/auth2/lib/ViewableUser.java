@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.Optional;
 
@@ -24,7 +24,7 @@ public class ViewableUser {
 	 * @param viewEmail whether the view should include the user's email address.
 	 */
 	public ViewableUser(final AuthUser user, final boolean viewEmail) {
-		nonNull(user, "user");
+		requireNonNull(user, "user");
 		this.userName = user.getUserName();
 		this.displayName = user.getDisplayName();
 		if (viewEmail) {

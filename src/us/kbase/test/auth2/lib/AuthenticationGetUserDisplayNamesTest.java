@@ -50,6 +50,8 @@ public class AuthenticationGetUserDisplayNamesTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -168,7 +170,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpec() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -184,7 +186,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecWithRootAsAdmin() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.ADMIN).build();
 		
@@ -202,7 +204,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecWithRootAsCreate() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.CREATE_ADMIN).build();
 		
@@ -220,7 +222,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecWithRootAsRoot() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("foo"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
@@ -248,7 +250,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 		for (final UserSearchSpec spec: Arrays.asList(noprefix, custom, role, disabled)) {
 			for (final Role r: Arrays.asList(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN)) {
 				final AuthUser user = AuthUser.getBuilder(
-						r == Role.ROOT ? UserName.ROOT : new UserName("foo"),
+						r == Role.ROOT ? UserName.ROOT : new UserName("foo"), UID,
 						new DisplayName("foo"), Instant.now())
 						.withEmailAddress(new EmailAddress("f@h.com"))
 						.withRole(r).build();
@@ -277,14 +279,14 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailRegex() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				UserName.ROOT, new DisplayName("foo"), Instant.now())
+				UserName.ROOT, UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.build();
 		
-		final UserSearchSpec spec = UserSearchSpec.getBuilder().withSearchPrefix("foo").build();
-		final Field m = spec.getClass().getDeclaredField("isRegex");
+		final UserSearchSpec spec = UserSearchSpec.getBuilder().withIncludeDisabled(true).build();
+		final Field m = spec.getClass().getDeclaredField("regex");
 		m.setAccessible(true);
-		m.set(spec, true);
+		m.set(spec, "foo");
 		
 		failGetDisplayNamesSpec(user, spec, new UnauthorizedException(ErrorType.UNAUTHORIZED,
 				"Regex search is currently for internal use only"));
@@ -320,7 +322,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailStdUserCustomRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -334,7 +336,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailStdUserRole() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -348,7 +350,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailStdUserNoPrefix() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -361,7 +363,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailStdUserIncludeRoot() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
@@ -375,7 +377,7 @@ public class AuthenticationGetUserDisplayNamesTest {
 	@Test
 	public void getDisplayNamesSpecFailStdUserIncludeDisabled() throws Exception {
 		final AuthUser user = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("foo"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("foo"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		

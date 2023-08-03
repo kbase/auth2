@@ -15,7 +15,6 @@ import ch.qos.logback.classic.Logger;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.config.ExternalConfig;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
-import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.common.ServiceCommon;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.auth2.service.exceptions.ExceptionHandler;
@@ -85,7 +84,7 @@ public class AuthenticationService extends ResourceConfig {
 		register(JacksonJaxbJsonProvider.class);
 		register(MustacheMvcFeature.class);
 		property(MustacheMvcFeature.TEMPLATE_BASE_PATH, c.getPathToTemplateDirectory().toString());
-		register(LoggingFilter.class);
+		register(us.kbase.auth2.service.LoggingFilter.class);
 		register(ExceptionHandler.class);
 		final Authentication auth = ab.getAuth();
 		register(new AbstractBinder() {

@@ -1,6 +1,6 @@
 package us.kbase.auth2.lib;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -69,7 +69,7 @@ public class LinkIdentities {
 	 * @return the linked remote identities.
 	 */
 	public Set<RemoteIdentity> getLinkedIdentities(final UserName userName) {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		if (!linked.containsKey(userName)) {
 			throw new IllegalArgumentException("No such user: " + userName.getName());
 		}
@@ -188,8 +188,8 @@ public class LinkIdentities {
 			if (provider == null || provider.trim().isEmpty()) {
 				throw new IllegalArgumentException("provider cannot be null or empty");
 			}
-			nonNull(userName, "userName");
-			nonNull(expires, "expires");
+			requireNonNull(userName, "userName");
+			requireNonNull(expires, "expires");
 			this.provider = provider;
 			this.expires = expires;
 			this.userName = userName;
@@ -202,7 +202,7 @@ public class LinkIdentities {
 		public Builder withIdentity(final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
-			nonNull(remoteID, "remoteID");
+			requireNonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
 			idents.add(remoteID);
 			return this;
@@ -223,8 +223,8 @@ public class LinkIdentities {
 		public Builder withUser(final AuthUser user, final RemoteIdentity remoteID) {
 			// should probably check that the identity doesn't already exist in either of the
 			// maps... but eh for now
-			nonNull(user, "user");
-			nonNull(remoteID, "remoteID");
+			requireNonNull(user, "user");
+			requireNonNull(remoteID, "remoteID");
 			checkProvider(remoteID);
 			if (user.getIdentity(remoteID) == null) {
 				throw new IllegalArgumentException("user does not contain remote ID");

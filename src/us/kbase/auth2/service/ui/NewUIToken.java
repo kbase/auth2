@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.ui;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -17,7 +17,7 @@ public class NewUIToken extends UIToken {
 	}
 
 	private static StoredToken getStoredToken(final NewToken token) {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		return token.getStoredToken();
 	}
 

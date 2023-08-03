@@ -11,8 +11,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import static us.kbase.test.auth2.TestCommon.set;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.now;
+import static us.kbase.test.auth2.TestCommon.set;
 import static us.kbase.test.auth2.TestCommon.tempToken;
 import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
@@ -90,6 +91,9 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 public class AuthenticationLoginTest {
 	
 	private static final Instant SMALL = Instant.ofEpochMilli(1);
+	
+	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
 	
 	private static final TokenCreationContext CTX = TokenCreationContext.getBuilder().build();
 	
@@ -274,7 +278,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"));
 		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000L))
 				.withRole(userRole)
 				.withIdentity(storageRemoteID).build();
@@ -376,7 +380,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"));
 		
-		final AuthUser.Builder user = AuthUser.getBuilder(new UserName("foo"),
+		final AuthUser.Builder user = AuthUser.getBuilder(new UserName("foo"), UID,
 				new DisplayName("bar"), Instant.ofEpochMilli(10000L))
 				.withRole(userRole)
 				.withIdentity(storageRemoteID);
@@ -528,7 +532,7 @@ public class AuthenticationLoginTest {
 		when(storage.getUser(storageRemoteID1)).thenReturn(Optional.empty())
 				.thenReturn(null);
 		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"),
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID,
 				new DisplayName("bar"), Instant.ofEpochMilli(10000L))
 				.withIdentity(storageRemoteID2).build();
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user))
@@ -610,7 +614,7 @@ public class AuthenticationLoginTest {
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"));
 		
 		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"),
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID,
 				new DisplayName("bar"), Instant.ofEpochMilli(10000L))
 				.withIdentity(storageRemoteID1)
 				.withIdentity(storageRemoteID2).build();
@@ -621,7 +625,7 @@ public class AuthenticationLoginTest {
 				.withIdentity(storageRemoteID1).withIdentity(storageRemoteID2).build()))
 				.thenReturn(null);
 		
-		final AuthUser user2 = AuthUser.getBuilder(new UserName("foo2"),
+		final AuthUser user2 = AuthUser.getBuilder(new UserName("foo2"), UID2,
 				new DisplayName("bar2"), Instant.ofEpochMilli(50000L))
 				.withIdentity(storageRemoteID3).build();
 		
@@ -994,9 +998,9 @@ public class AuthenticationLoginTest {
 		final Authentication auth = initTestMocks().auth;
 		
 		failLoginProviderError(auth, null, new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 		failLoginProviderError(auth, "   \t   ", new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 	}
 	
 	private void failLoginProviderError(
@@ -1123,7 +1127,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000L))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build();
@@ -1135,7 +1139,7 @@ public class AuthenticationLoginTest {
 		final LoginState got = auth.getLoginState(token);
 		
 		final LoginState expected = LoginState.getBuilder("prov", true,Instant.ofEpochMilli(10001))
-				.withUser(AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				.withUser(AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build(),
@@ -1173,13 +1177,13 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		final AuthUser user1 = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
-				Instant.ofEpochMilli(10000L))
+		final AuthUser user1 = AuthUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000L))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build();
 		
-		final AuthUser user2 = AuthUser.getBuilder(new UserName("foo2"), new DisplayName("bar2"),
-				Instant.ofEpochMilli(20000L))
+		final AuthUser user2 = AuthUser.getBuilder(
+				new UserName("foo2"), UID2, new DisplayName("bar2"), Instant.ofEpochMilli(20000L))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build();
 		
@@ -1197,14 +1201,14 @@ public class AuthenticationLoginTest {
 		
 		final Instant exp = Instant.ofEpochMilli(10001);
 		final LoginState expected = LoginState.getBuilder("prov", true, exp).withUser(
-				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build(),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 		
-				.withUser(AuthUser.getBuilder(new UserName("foo2"), new DisplayName("bar2"),
+				.withUser(AuthUser.getBuilder(new UserName("foo2"), UID2, new DisplayName("bar2"),
 						Instant.ofEpochMilli(20000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "e@g.com"))).build(),
@@ -1243,7 +1247,7 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 				Instant.ofEpochMilli(10000L))
 				.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build();
@@ -1261,7 +1265,7 @@ public class AuthenticationLoginTest {
 		
 		final Instant exp = Instant.ofEpochMilli(10001);
 		final LoginState expected = LoginState.getBuilder("prov", true, exp).withUser(
-				AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+				AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 						Instant.ofEpochMilli(10000L))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build(),
@@ -1400,7 +1404,7 @@ public class AuthenticationLoginTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(tokenID).thenReturn(null);
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
@@ -1408,8 +1412,8 @@ public class AuthenticationLoginTest {
 				set(new PolicyID("pid1"), new PolicyID("pid2")),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), false);
 
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
-				Instant.ofEpochMilli(10000),
+		verify(storage).createUser(NewUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com"))
@@ -1470,7 +1474,7 @@ public class AuthenticationLoginTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(tokenID).thenReturn(null);
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
@@ -1478,8 +1482,8 @@ public class AuthenticationLoginTest {
 				set(new PolicyID("pid1"), new PolicyID("pid2")),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
-				Instant.ofEpochMilli(10000),
+		verify(storage).createUser(NewUser.getBuilder(
+				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com"))
@@ -1565,7 +1569,7 @@ public class AuthenticationLoginTest {
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com"))))
 				.thenReturn(Optional.of(NewUser.getBuilder(
-						new UserName("baz"), new DisplayName("bar"), Instant.ofEpochMilli(700000),
+						new UserName("baz"), UID, new DisplayName("bar"), inst(700000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
@@ -1587,7 +1591,7 @@ public class AuthenticationLoginTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.randomUUID()).thenReturn(UID2).thenReturn(tokenID).thenReturn(null);
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
@@ -1595,8 +1599,8 @@ public class AuthenticationLoginTest {
 				Collections.emptySet(),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
-				Instant.ofEpochMilli(10000),
+		verify(storage).createUser(NewUser.getBuilder(
+				new UserName("foo"), UID2, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com")).build());
@@ -1901,10 +1905,11 @@ public class AuthenticationLoginTest {
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
 				.thenReturn(null);
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new UserExistsException("baz")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("baz"), new DisplayName("bat"),
+				NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -1942,10 +1947,12 @@ public class AuthenticationLoginTest {
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
 				.thenReturn(null);
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
+		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new IdentityLinkedException("ef0518c79af70ed979907969c6d0a0f7")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -1984,10 +1991,11 @@ public class AuthenticationLoginTest {
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
 				.thenReturn(null);
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new NoSuchRoleException("foobar")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -2028,6 +2036,7 @@ public class AuthenticationLoginTest {
 								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
 				.thenReturn(null);
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2076,6 +2085,8 @@ public class AuthenticationLoginTest {
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
 				.thenReturn(null);
+		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
@@ -2130,7 +2141,7 @@ public class AuthenticationLoginTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+		when(rand.randomUUID()).thenReturn(UID).thenReturn(tokenID).thenReturn(null);
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).setLastLogin(
@@ -2194,7 +2205,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")))).thenReturn(Optional.of(
-						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 								Instant.ofEpochMilli(70000))
 						.withRole(userRole)
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2263,7 +2274,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")))).thenReturn(Optional.of(
-						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 								Instant.ofEpochMilli(70000))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -2345,7 +2356,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")))).thenReturn(Optional.of(
-						AuthUser.getBuilder(new UserName("foo"), new DisplayName("bar"),
+						AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
 								Instant.ofEpochMilli(70000))
 						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -2366,7 +2377,7 @@ public class AuthenticationLoginTest {
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com"))))
 				.thenReturn(Optional.of(NewUser.getBuilder(
-						new UserName("baz"), new DisplayName("bar"), Instant.ofEpochMilli(700000),
+						new UserName("baz"), UID2, new DisplayName("bar"), inst(700000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
 						new RemoteIdentityDetails("user5", "full5", "b@g.com"))).build()));
 		
@@ -2612,7 +2623,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build()));
@@ -2648,7 +2659,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -2686,7 +2697,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build()));
@@ -2728,7 +2739,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build()));
@@ -2774,7 +2785,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build()));
@@ -2820,7 +2831,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"),
+					.thenReturn(Optional.of(AuthUser.getBuilder(new UserName("foo"), UID,
 							new DisplayName("bar"), Instant.ofEpochMilli(70000))
 					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 							new RemoteIdentityDetails("user1", "full1", "f@h.com"))).build()));

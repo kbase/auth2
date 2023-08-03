@@ -1,6 +1,6 @@
 package us.kbase.auth2.service;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -32,15 +32,18 @@ public class AuthBuilder {
 	
 	private MongoClient mc;
 	private Authentication auth;
+	private AuthStorage storage;
 	
 	public AuthBuilder(
 			final AuthStartupConfig cfg,
 			final ExternalConfig defaultExternalConfig)
 			throws StorageInitException, AuthConfigurationException {
-		nonNull(cfg, "cfg");
-		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		requireNonNull(cfg, "cfg");
+		requireNonNull(defaultExternalConfig, "defaultExternalConfig");
 		mc = buildMongo(cfg);
-		auth = buildAuth(cfg, mc, defaultExternalConfig);
+		final AuthBits ab = buildAuth(cfg, mc, defaultExternalConfig);
+		auth = ab.auth;
+		storage = ab.storage;
 	}
 	
 	public AuthBuilder(
@@ -48,11 +51,13 @@ public class AuthBuilder {
 			final ExternalConfig defaultExternalConfig,
 			final MongoClient mc)
 			throws StorageInitException, AuthConfigurationException {
-		nonNull(cfg, "cfg");
-		nonNull(defaultExternalConfig, "defaultExternalConfig");
-		nonNull(mc, "mc");
+		requireNonNull(cfg, "cfg");
+		requireNonNull(defaultExternalConfig, "defaultExternalConfig");
+		requireNonNull(mc, "mc");
 		this.mc = mc;
-		auth = buildAuth(cfg, mc, defaultExternalConfig);
+		final AuthBits ab = buildAuth(cfg, mc, defaultExternalConfig);
+		auth = ab.auth;
+		storage = ab.storage;
 	}
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
@@ -74,7 +79,17 @@ public class AuthBuilder {
 		}
 	}
 	
-	private Authentication buildAuth(
+	private static class AuthBits {
+		private final Authentication auth;
+		private final AuthStorage storage;
+
+		public AuthBits(final Authentication auth, final AuthStorage storage) {
+			this.auth = auth;
+			this.storage = storage;
+		}
+	}
+	
+	private AuthBits buildAuth(
 			final AuthStartupConfig c,
 			final MongoClient mc,
 			final ExternalConfig defaultExternalConfig)
@@ -97,15 +112,33 @@ public class AuthBuilder {
 					idc.getIdentityProviderFactoryClassName(), IdentityProviderFactory.class);
 			providers.add(fac.configure(idc));
 		}
-		return new Authentication(s, providers, defaultExternalConfig, c.isTestModeEnabled());
+		return new AuthBits(
+				new Authentication(s, providers, defaultExternalConfig, c.isTestModeEnabled()),
+				s
+		);
 	}
 	
+	/** Get the mongo client used by the storage instance.
+	 * @see #getStorage()
+	 * @return the mongo client.
+	 */
 	public MongoClient getMongoClient() {
 		return mc;
 	}
 
+	/** Get the built authentication instance.
+	 * @return the authentication instance.
+	 */
 	public Authentication getAuth() {
 		return auth;
+	}
+	
+	/** Get the storage instance backing the authentication instance.
+	 * @see #getAuth()
+	 * @return the storage instance.
+	 */
+	public AuthStorage getStorage() {
+		return storage;
 	}
 	
 }

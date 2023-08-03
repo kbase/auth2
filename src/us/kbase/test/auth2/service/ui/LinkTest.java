@@ -192,7 +192,8 @@ public class LinkTest {
 		enableProvider(host, COOKIE_NAME, admintoken, "prov2");
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("u1"), new DisplayName("d"), Instant.now()).build(),
+				new UserName("u1"), UUID.randomUUID(), new DisplayName("d"), Instant.now())
+				.build(),
 				new PasswordHashAndSalt("foofoofoofoo".getBytes(), "arp".getBytes()));
 		
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
@@ -242,7 +243,9 @@ public class LinkTest {
 
 	private NewToken setUpLinkUserAndToken() throws Exception {
 		manager.storage.createUser(NewUser.getBuilder(
-				new UserName("u1"), new DisplayName("d"), Instant.now(), REMOTE1).build());
+				new UserName("u1"), UUID.randomUUID(), new DisplayName("d"), Instant.now(),
+				REMOTE1)
+				.build());
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("u1"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(100000000000000L))

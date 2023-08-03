@@ -387,7 +387,12 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("unique", true)
 						.append("key", new Document("user", 1))
 						.append("name", "user_1")
+						.append("ns", "test_mongostorage.users"),
+				new Document("v", indexVer)
+						.append("key", new Document("anonid", 1))
+						.append("name", "anonid_1")
 						.append("ns", "test_mongostorage.users")
+						.append("sparse", true)
 				)));
 	}
 	

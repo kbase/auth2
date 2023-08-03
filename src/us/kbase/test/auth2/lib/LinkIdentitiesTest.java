@@ -8,6 +8,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 import java.time.Instant;
 import java.util.Arrays;
 import java.util.LinkedList;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -23,6 +24,8 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.test.auth2.TestCommon;
 
 public class LinkIdentitiesTest {
+	
+	private static final UUID UID = UUID.randomUUID();
 	
 	private final static RemoteIdentity REMOTE1 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar"),
@@ -40,7 +43,7 @@ public class LinkIdentitiesTest {
 	static {
 		try {
 			AUTH_USER = AuthUser.getBuilder(
-					new UserName("foo"), new DisplayName("bar"), Instant.now())
+					new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 					.withEmailAddress(new EmailAddress("f@h.com"))
 					.withIdentity(REMOTE1).build();
 		} catch (Exception e) {
@@ -135,7 +138,7 @@ public class LinkIdentitiesTest {
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("u2", "f2", "f2@g.com"));
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.now())
+				new UserName("bar"), UUID.randomUUID(), new DisplayName("d"), Instant.now())
 				.withIdentity(ri1)
 				.withIdentity(ri2)
 				.build();
@@ -197,7 +200,7 @@ public class LinkIdentitiesTest {
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("u2", "f2", "f2@g.com"));
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.now())
+				new UserName("bar"), UUID.randomUUID(), new DisplayName("d"), Instant.now())
 				.withIdentity(ri1)
 				.withIdentity(ri2)
 				.build();
@@ -227,11 +230,11 @@ public class LinkIdentitiesTest {
 		final Instant now = Instant.now();
 		final LinkIdentities ls = LinkIdentities.getBuilder(
 				new UserName("fake"), "prov", Instant.now())
-				.withUser(AuthUser.getBuilder(new UserName("foo"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("foo"), UID, dn, now)
 						.withIdentity(REMOTE1).build(), REMOTE1)
-				.withUser(AuthUser.getBuilder(new UserName("bar"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("bar"), UUID.randomUUID(), dn, now)
 						.withIdentity(REMOTE2).build(), REMOTE2)
-				.withUser(AuthUser.getBuilder(new UserName("baz"), dn, now)
+				.withUser(AuthUser.getBuilder(new UserName("baz"), UUID.randomUUID(), dn, now)
 						.withIdentity(REMOTE3).build(), REMOTE3)
 				.build();
 		
@@ -254,7 +257,7 @@ public class LinkIdentitiesTest {
 	@Test
 	public void sortedLinkedIdentities() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("dn"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("dn"), Instant.now())
 				.withIdentity(REMOTE3)
 				.withIdentity(REMOTE1)
 				.withIdentity(REMOTE2)

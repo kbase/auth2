@@ -4,7 +4,6 @@ import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkString;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 import static us.kbase.auth2.lib.Utils.clear;
-import static us.kbase.auth2.lib.Utils.nonNull;
 import static us.kbase.auth2.lib.Utils.noNulls;
 
 import java.net.URI;
@@ -225,8 +224,8 @@ public class Authentication {
 		} catch (NoSuchAlgorithmException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
-		nonNull(storage, "storage");
-		nonNull(defaultExternalConfig, "defaultExternalConfig");
+		requireNonNull(storage, "storage");
+		requireNonNull(defaultExternalConfig, "defaultExternalConfig");
 		this.defaultExternalConfig = defaultExternalConfig;
 		this.storage = storage;
 		setUpIdentityProviders(identityProviderSet);
@@ -246,14 +245,14 @@ public class Authentication {
 	}
 
 	private void setUpIdentityProviders(final Set<IdentityProvider> identityProviderSet) {
-		nonNull(identityProviderSet, "identityProviderSet");
+		requireNonNull(identityProviderSet, "identityProviderSet");
 		noNulls(identityProviderSet, "Null identity provider in set");
 		if (identityProviderSet.isEmpty()) {
 			return;
 		}
 		final IdentityProvider prov = identityProviderSet.iterator().next();
 		for (final IdentityProvider idp: identityProviderSet) {
-			nonNull(idp.getProviderName(), "provider name");
+			requireNonNull(idp.getProviderName(), "provider name");
 			if (!idp.getEnvironments().equals(prov.getEnvironments())) {
 				throw new IllegalArgumentException(String.format(
 						"Provider %s environments %s do not match provider %s environments %s",
@@ -375,7 +374,7 @@ public class Authentication {
 	 */
 	public void createRoot(final Password pwd)
 			throws AuthStorageException, IllegalPasswordException {
-		nonNull(pwd, "pwd");
+		requireNonNull(pwd, "pwd");
 		try {
 			pwd.checkValidity();
 		} catch (IllegalPasswordException e) {
@@ -395,7 +394,7 @@ public class Authentication {
 				throw new RuntimeException("This is impossible", e);
 			}
 			final LocalUser root = LocalUser.getLocalUserBuilder(
-					UserName.ROOT, dn, clock.instant()).build();
+					UserName.ROOT, randGen.randomUUID(), dn, clock.instant()).build();
 			try {
 				storage.createLocalUser(root, new PasswordHashAndSalt(passwordHash, salt));
 				// only way to avoid a race condition. Checking existence before creating user
@@ -442,9 +441,9 @@ public class Authentication {
 			final EmailAddress email)
 			throws AuthStorageException, UserExistsException, UnauthorizedException,
 			InvalidTokenException {
-		nonNull(userName, "userName");
-		nonNull(displayName, "displayName");
-		nonNull(email, "email");
+		requireNonNull(userName, "userName");
+		requireNonNull(displayName, "displayName");
+		requireNonNull(email, "email");
 		final AuthUser admin = getUser(adminToken,
 				new OpReqs("create local user {}", userName.getName())
 						.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
@@ -463,7 +462,7 @@ public class Authentication {
 			pwd_copy = pwd.getPassword();
 			passwordHash = pwdcrypt.getEncryptedPassword(pwd_copy, salt);
 			final LocalUser lu = LocalUser.getLocalUserBuilder(
-					userName, displayName, clock.instant())
+					userName, randGen.randomUUID(), displayName, clock.instant())
 					.withEmailAddress(email).withForceReset(true).build();
 			storage.createLocalUser(lu, new PasswordHashAndSalt(passwordHash, salt));
 			logInfo("Local user {} created by admin {}",
@@ -505,7 +504,7 @@ public class Authentication {
 			final TokenCreationContext tokenCtx)
 			throws AuthStorageException, PasswordMismatchException, DisabledUserException,
 				UnauthorizedException {
-		nonNull(tokenCtx, "tokenCtx");
+		requireNonNull(tokenCtx, "tokenCtx");
 		final LocalUser u = getLocalUser(userName, password);
 		if (u.isPwdResetRequired()) {
 			logInfo("Local user {} log in attempt. Password reset is required",
@@ -518,13 +517,13 @@ public class Authentication {
 	private LocalUser getLocalUser(final UserName userName, final Password password)
 			throws AuthStorageException, PasswordMismatchException, DisabledUserException,
 				UnauthorizedException {
-		nonNull(password, "password");
+		requireNonNull(password, "password");
 		final char[] pwd_copy = password.getPassword(); // no way to test this is cleared
 		password.clear();
 		final LocalUser u;
 		PasswordHashAndSalt creds = null;
 		try {
-			nonNull(userName, "userName");
+			requireNonNull(userName, "userName");
 			try {
 				creds = storage.getPasswordHashAndSalt(userName);
 				if (!pwdcrypt.authenticate(pwd_copy, creds.getPasswordHash(), creds.getSalt())) {
@@ -575,7 +574,7 @@ public class Authentication {
 		byte[] salt = null;
 		byte[] passwordHash = null;
 		try {
-			nonNull(pwdnew, "pwdnew");
+			requireNonNull(pwdnew, "pwdnew");
 			if (pwdnew.equals(password)) {
 				// note username is not verified at this point
 				throw new IllegalPasswordException("Old and new passwords are identical.");
@@ -620,7 +619,7 @@ public class Authentication {
 	public Password resetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = checkCanResetPassword(
 				token, userName, "reset password for user {}", userName.getName());
 		Password pwd = null;
@@ -719,7 +718,7 @@ public class Authentication {
 	public void forceResetPassword(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			NoSuchUserException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = checkCanResetPassword(token, userName,
 				"force password reset for user {}", userName.getName());
 		storage.forcePasswordReset(userName);
@@ -799,7 +798,7 @@ public class Authentication {
 	 */
 	public Set<StoredToken> getTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = getUser(token,
 				new OpReqs("get tokens for user {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
@@ -838,7 +837,7 @@ public class Authentication {
 	// converts a no such token exception into an invalid token exception.
 	private StoredToken getToken(final IncomingToken token, final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		try {
 			final Set<TokenType> allowedTypes = reqs.allowedTokenTypes;
 			final StoredToken st = storage.getToken(token.getHashedToken());
@@ -882,9 +881,9 @@ public class Authentication {
 			final TokenType tokenType,
 			final TokenCreationContext tokenCtx)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		nonNull(tokenName, "tokenName");
-		nonNull(tokenType, "tokenType");
-		nonNull(tokenCtx, "tokenCtx");
+		requireNonNull(tokenName, "tokenName");
+		requireNonNull(tokenType, "tokenType");
+		requireNonNull(tokenCtx, "tokenCtx");
 		if (TokenType.LOGIN.equals(tokenType)) {
 			throw new IllegalArgumentException("Cannot create a login token without logging in");
 		}
@@ -1006,7 +1005,7 @@ public class Authentication {
 			final UserName user)
 			throws AuthStorageException, InvalidTokenException,
 				NoSuchUserException, DisabledUserException {
-		nonNull(user, "userName");
+		requireNonNull(user, "userName");
 		final AuthUser requestingUser = getUserSuppressUnauthorized(token, "get viewable user");
 		final AuthUser otherUser = storage.getUser(user);
 		if (otherUser.isDisabled()) {
@@ -1035,7 +1034,7 @@ public class Authentication {
 			final UserName userName)
 			throws AuthStorageException, NoSuchUserException,
 			InvalidTokenException, UnauthorizedException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = getUser(adminToken,
 				new OpReqs("get user {} as admin", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
@@ -1045,6 +1044,37 @@ public class Authentication {
 		return user;
 	}
 
+	/** Translate user anonymous IDs to the user name. The requesting user must have administration
+	 * permissions. A maximum of 10000 IDs may be submitted. UUIDs not found are omitted from
+	 * the results.
+	 * Never returns disabled users or the root user.
+	 * @param token the user's token.
+	 * @param anonymousIDs the IDs to translate.
+	 * @return A mapping of the input IDs to the corresponding user names.
+	 * @throws IllegalParameterException if too many IDs are submitted.
+	 * @throws InvalidTokenException if the provided token is invalid.
+	 * @throws UnauthorizedException if the calling user is not an admin.
+	 * @throws AuthStorageException if an error occurs connecting to the storage system.
+	 */
+	public Map<UUID, UserName> getUserNamesFromAnonymousIDs(
+			final IncomingToken token,
+			final Set<UUID> anonymousIDs)
+			throws IllegalParameterException, InvalidTokenException, UnauthorizedException,
+				AuthStorageException {
+		noNulls(requireNonNull(anonymousIDs, "anonymousIDs"), "Null ID in anonymousIDs");
+		getUser(token, new OpReqs("translate anonymous IDs").roles(Role.ADMIN)); // check perms
+		if (anonymousIDs.isEmpty()) {
+			return Collections.emptyMap();
+		}
+		if (anonymousIDs.size() > MAX_RETURNED_USERS) {
+			throw new IllegalParameterException(
+					"Anonymous ID count exceeds maximum of " + MAX_RETURNED_USERS);
+		}
+		final Map<UUID, UserName> ret = storage.getUserNamesFromAnonymousIDs(anonymousIDs);
+		ret.values().remove(UserName.ROOT);
+		return ret;
+	}
+	
 	/** Look up display names for a set of user names. A maximum of 10000 users may be looked up
 	 * at once. Never returns the root user name or disabled users.
 	 * @param token a token for the user requesting the lookup.
@@ -1059,12 +1089,12 @@ public class Authentication {
 			final IncomingToken token,
 			final Set<UserName> userNames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException {
-		nonNull(userNames, "userNames");
+		requireNonNull(userNames, "userNames");
 		noNulls(userNames, "Null name in userNames");
 		// just check the token is valid
 		getTokenSuppressUnauthorized(token, "get user display names");
 		if (userNames.isEmpty()) {
-			return new HashMap<>();
+			return Collections.emptyMap();
 		}
 		if (userNames.size() > MAX_RETURNED_USERS) {
 			throw new IllegalParameterException(
@@ -1091,8 +1121,8 @@ public class Authentication {
 			final IncomingToken token,
 			final UserSearchSpec spec)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		nonNull(spec, "spec");
-		if (spec.isRegex()) {
+		requireNonNull(spec, "spec");
+		if (spec.hasSearchRegex()) {
 			throw new UnauthorizedException("Regex search is currently for internal use only");
 		}
 		final AuthUser user = getUser(token, new OpReqs("search users"));
@@ -1100,7 +1130,7 @@ public class Authentication {
 			if (spec.isCustomRoleSearch() || spec.isRoleSearch()) {
 				throw new UnauthorizedException("Only admins may search on roles");
 			}
-			if (!spec.getSearchPrefix().isPresent()) {
+			if (!spec.hasSearchPrefixes()) {
 				throw new UnauthorizedException("Only admins may search without a prefix");
 			}
 			if (spec.isRootIncluded() || spec.isDisabledIncluded()) {
@@ -1125,7 +1155,7 @@ public class Authentication {
 	 */
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
-		nonNull(suggestedUserName, "suggestedUserName");
+		requireNonNull(suggestedUserName, "suggestedUserName");
 		final Optional<UserName> target = UserName.sanitizeName(suggestedUserName);
 		Optional<UserName> availableUserName = Optional.empty();
 		if (target.isPresent()) {
@@ -1196,7 +1226,7 @@ public class Authentication {
 			final UUID tokenID)
 			throws AuthStorageException,
 			NoSuchTokenException, InvalidTokenException, UnauthorizedException {
-		nonNull(tokenID, "tokenID");
+		requireNonNull(tokenID, "tokenID");
 		final StoredToken ht = getToken(token, new OpReqs("revoke token {}", tokenID)
 				.types(TokenType.LOGIN));
 		storage.deleteToken(ht.getUserName(), tokenID);
@@ -1223,8 +1253,8 @@ public class Authentication {
 			final UUID tokenID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 				NoSuchTokenException {
-		nonNull(userName, "userName");
-		nonNull(tokenID, "tokenID");
+		requireNonNull(userName, "userName");
+		requireNonNull(tokenID, "tokenID");
 		final AuthUser admin = getUser(token,
 				new OpReqs("revoke token {} for user {}", tokenID, userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
@@ -1242,7 +1272,7 @@ public class Authentication {
 	 */
 	public Optional<StoredToken> revokeToken(final IncomingToken token)
 			throws AuthStorageException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		StoredToken t = null;
 		try {
 			t = storage.getToken(token.getHashedToken());
@@ -1268,7 +1298,7 @@ public class Authentication {
 		 * why bother. Only matters if a user is logging out and linking an account at the
 		 * same time.
 		 */
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		StoredToken t = null;
 		try {
 			t = storage.getToken(token.getHashedToken());
@@ -1323,7 +1353,7 @@ public class Authentication {
 	 */
 	public void revokeAllTokens(final IncomingToken token, final UserName userName)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = getUser(token,
 				new OpReqs("revoke all tokens for user {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
@@ -1377,9 +1407,9 @@ public class Authentication {
 			final Set<Role> removeRoles)
 			throws NoSuchUserException, AuthStorageException,
 			UnauthorizedException, InvalidTokenException, IllegalParameterException {
-		nonNull(userName, "userName");
-		nonNull(addRoles, "addRoles");
-		nonNull(removeRoles, "removeRoles");
+		requireNonNull(userName, "userName");
+		requireNonNull(addRoles, "addRoles");
+		requireNonNull(removeRoles, "removeRoles");
 		noNulls(addRoles, "Null role in addRoles");
 		noNulls(removeRoles, "Null role in removeRoles");
 		
@@ -1455,7 +1485,7 @@ public class Authentication {
 			final IncomingToken token,
 			final CustomRole role)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		nonNull(role, "role");
+		requireNonNull(role, "role");
 		final AuthUser admin = getUser(token, new OpReqs("set custom role {}", role.getID())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.setCustomRole(role);
@@ -1535,9 +1565,9 @@ public class Authentication {
 			throws AuthStorageException, NoSuchUserException, NoSuchRoleException,
 			InvalidTokenException, UnauthorizedException, IllegalParameterException {
 		// some of this code is similar to the updateRoles function, refactor?
-		nonNull(userName, "userName");
-		nonNull(addRoles, "addRoles");
-		nonNull(removeRoles, "removeRoles");
+		requireNonNull(userName, "userName");
+		requireNonNull(addRoles, "addRoles");
+		requireNonNull(removeRoles, "removeRoles");
 		noNulls(addRoles, "Null role in addRoles");
 		noNulls(removeRoles, "Null role in removeRoles");
 		
@@ -1932,12 +1962,12 @@ public class Authentication {
 			throws AuthStorageException, InvalidTokenException, UserExistsException,
 				UnauthorizedException, IdentityLinkedException, MissingParameterException,
 				IdentityProviderErrorException {
-		nonNull(userName, "userName");
-		nonNull(displayName, "displayName");
-		nonNull(email, "email");
-		nonNull(policyIDs, "policyIDs");
+		requireNonNull(userName, "userName");
+		requireNonNull(displayName, "displayName");
+		requireNonNull(email, "email");
+		requireNonNull(policyIDs, "policyIDs");
 		noNulls(policyIDs, "null item in policyIDs");
-		nonNull(tokenCtx, "tokenCtx");
+		requireNonNull(tokenCtx, "tokenCtx");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException("Cannot create ROOT user");
 		}
@@ -1955,7 +1985,8 @@ public class Authentication {
 					"Not authorized to create user with remote identity %s", identityID));
 		}
 		final Instant now = clock.instant();
-		final NewUser.Builder b = NewUser.getBuilder(userName, displayName, now, match.get())
+		final NewUser.Builder b = NewUser.getBuilder(
+				userName, randGen.randomUUID(), displayName, now, match.get())
 				 // no need to set last login, will be set in the login() call below
 				.withEmailAddress(email);
 		for (final PolicyID pid: policyIDs) {
@@ -1998,8 +2029,8 @@ public class Authentication {
 			final TokenType tokenType)
 			throws TestModeException, AuthStorageException, NoSuchUserException {
 		ensureTestMode();
-		nonNull(userName, "userName");
-		nonNull(tokenType, "tokenType");
+		requireNonNull(userName, "userName");
+		requireNonNull(tokenType, "tokenType");
 		storage.testModeGetUser(userName); // ensure user exists
 		final UUID id = randGen.randomUUID();
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
@@ -2022,7 +2053,7 @@ public class Authentication {
 	public StoredToken testModeGetToken(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, TestModeException {
 		ensureTestMode();
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		final StoredToken st;
 		try {
 			st = storage.testModeGetToken(token.getHashedToken());
@@ -2048,14 +2079,18 @@ public class Authentication {
 			throws UserExistsException, AuthStorageException, UnauthorizedException,
 			TestModeException {
 		ensureTestMode();
-		nonNull(userName, "userName");
-		nonNull(displayName, "displayName");
+		requireNonNull(userName, "userName");
+		requireNonNull(displayName, "displayName");
 		if (userName.isRoot()) {
 			throw new UnauthorizedException("Cannot create root user");
 		}
 		final Instant now = clock.instant();
 		storage.testModeCreateUser(
-				userName, displayName, now, now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
+				userName,
+				randGen.randomUUID(),
+				displayName,
+				now,
+				now.plusMillis(TEST_MODE_DATA_LIFETIME_MS));
 		logInfo("Created test mode user {}", userName.getName());
 	}
 	
@@ -2076,7 +2111,7 @@ public class Authentication {
 			final Set<UserName> userNames)
 			throws InvalidTokenException, AuthStorageException, IllegalParameterException,
 				TestModeException {
-		nonNull(userNames, "userNames");
+		requireNonNull(userNames, "userNames");
 		noNulls(userNames, "Null name in userNames");
 		// just check the token is valid
 		final StoredToken stoken = testModeGetToken(token);
@@ -2105,7 +2140,7 @@ public class Authentication {
 	public AuthUser testModeGetUser(final UserName userName)
 			throws AuthStorageException, NoSuchUserException, TestModeException {
 		ensureTestMode();
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser u = storage.testModeGetUser(userName);
 		logInfo("Accessed user data for test mode user {} by user name", userName.getName());
 		return u;
@@ -2131,7 +2166,7 @@ public class Authentication {
 			throws TestModeException, AuthStorageException, InvalidTokenException,
 				NoSuchUserException {
 		ensureTestMode();
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		final StoredToken st;
 		try {
 			st = storage.testModeGetToken(token.getHashedToken());
@@ -2154,7 +2189,7 @@ public class Authentication {
 	public ViewableUser testModeGetUser(final IncomingToken token, final UserName user)
 			throws InvalidTokenException, NoSuchUserException, TestModeException,
 				AuthStorageException {
-		nonNull(user, "userName");
+		requireNonNull(user, "userName");
 		final AuthUser requestingUser = testModeGetUserInternal(token);
 		final AuthUser otherUser = storage.testModeGetUser(user);
 		final boolean sameUser = requestingUser.getUserName().equals(otherUser.getUserName());
@@ -2171,7 +2206,7 @@ public class Authentication {
 	public void testModeSetCustomRole(final CustomRole role)
 			throws AuthStorageException, TestModeException {
 		ensureTestMode();
-		nonNull(role, "role");
+		requireNonNull(role, "role");
 		storage.testModeSetCustomRole(
 				role, clock.instant().plusMillis(TEST_MODE_DATA_LIFETIME_MS));
 		logInfo("Created test custom role {}", role.getID());
@@ -2207,9 +2242,9 @@ public class Authentication {
 			throws NoSuchUserException, NoSuchRoleException, AuthStorageException,
 				TestModeException {
 		ensureTestMode();
-		nonNull(userName, "userName");
-		nonNull(roles, "roles");
-		nonNull(customRoles, "customRoles");
+		requireNonNull(userName, "userName");
+		requireNonNull(roles, "roles");
+		requireNonNull(customRoles, "customRoles");
 		noNulls(roles, "Null role in roles");
 		noNulls(customRoles, "Null role in customRoles");
 		storage.testModeSetRoles(userName, roles, customRoles);
@@ -2260,8 +2295,8 @@ public class Authentication {
 			final boolean linkAll)
 			throws AuthenticationException, AuthStorageException, UnauthorizedException,
 				MissingParameterException, IdentityProviderErrorException {
-		nonNull(policyIDs, "policyIDs");
-		nonNull(tokenCtx, "tokenCtx");
+		requireNonNull(policyIDs, "policyIDs");
+		requireNonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
 		// allow mutation of the identity set
 		final Set<RemoteIdentity> ids = new HashSet<>(
@@ -2339,7 +2374,7 @@ public class Authentication {
 	 */
 	public void removePolicyID(final IncomingToken token, final PolicyID policyID)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException {
-		nonNull(policyID, "policyID");
+		requireNonNull(policyID, "policyID");
 		final AuthUser admin = getUser(token, new OpReqs("remove policy ID {}", policyID.getName())
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		storage.removePolicyID(policyID);
@@ -2370,7 +2405,7 @@ public class Authentication {
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 				LinkFailedException, NoSuchIdentityProviderException, NoSuchEnvironmentException,
 				MissingParameterException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		checkLifeTimeSec(lifetimeSec);
 		final String state = randGen.getToken();
 		final String pkceVerifier = generatePKCECodeVerifier();
@@ -2416,7 +2451,7 @@ public class Authentication {
 			final int tokenLifeTimeMS)
 			throws AuthStorageException {
 		checkStringNoCheckedException(errorMessage, "errorMessage");
-		nonNull(errorType, "errorType");
+		requireNonNull(errorType, "errorType");
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), tokenLifeTimeMS)
 				.error(errorMessage, errorType);
@@ -2809,7 +2844,7 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public void deleteLinkOrLoginState(final IncomingToken token) throws AuthStorageException {
-		nonNull(token, "token");
+		requireNonNull(token, "token");
 		final Optional<UUID> id = storage.deleteTemporarySessionData(token.getHashedToken());
 		if (id.isPresent()) {
 			logInfo("Deleted temporary token {}", id.get());
@@ -2829,7 +2864,7 @@ public class Authentication {
 			final IncomingToken token,
 			final UserUpdate update)
 			throws InvalidTokenException, AuthStorageException, UnauthorizedException {
-		nonNull(update, "update");
+		requireNonNull(update, "update");
 		// should check the token before returning even if there's no update
 		final StoredToken ht = getToken(token, new OpReqs("update user").types(TokenType.LOGIN));
 		if (!update.hasUpdates()) {
@@ -2882,7 +2917,7 @@ public class Authentication {
 			final String reason)
 			throws InvalidTokenException, UnauthorizedException, AuthStorageException,
 			IllegalParameterException, NoSuchUserException, MissingParameterException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		checkString(reason, "reason", 1000);
 		final AuthUser admin = getUser(token, new OpReqs("disable account {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
@@ -2916,7 +2951,7 @@ public class Authentication {
 	public void enableAccount(final IncomingToken token, final UserName userName)
 			throws UnauthorizedException, InvalidTokenException, AuthStorageException,
 				NoSuchUserException {
-		nonNull(userName, "userName");
+		requireNonNull(userName, "userName");
 		final AuthUser admin = getUser(token, new OpReqs("enable account {}", userName.getName())
 				.types(TokenType.LOGIN).roles(Role.ROOT, Role.CREATE_ADMIN, Role.ADMIN));
 		if (userName.isRoot()) {
@@ -2944,7 +2979,7 @@ public class Authentication {
 			final AuthConfigUpdate<T> update)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, NoSuchIdentityProviderException {
-		nonNull(update, "update");
+		requireNonNull(update, "update");
 		final AuthUser admin = getUser(token, new OpReqs("update configuration")
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		for (final String provider: update.getProviders().keySet()) {
@@ -3080,7 +3115,7 @@ public class Authentication {
 			final ExternalConfigMapper<T> mapper)
 			throws InvalidTokenException, UnauthorizedException,
 			AuthStorageException, ExternalConfigMappingException {
-		nonNull(mapper, "mapper");
+		requireNonNull(mapper, "mapper");
 		final AuthUser admin = getUser(token, new OpReqs("get configuration")
 				.types(TokenType.LOGIN).roles(Role.ADMIN));
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
@@ -3115,7 +3150,7 @@ public class Authentication {
 	public <T extends ExternalConfig> T getExternalConfig(
 			final ExternalConfigMapper<T> mapper)
 			throws AuthStorageException, ExternalConfigMappingException {
-		nonNull(mapper, "mapper");
+		requireNonNull(mapper, "mapper");
 		final AuthConfigSet<CollectingExternalConfig> acs = cfg.getConfig();
 		return mapper.fromMap(acs.getExtcfg().getMap());
 	}
@@ -3132,8 +3167,8 @@ public class Authentication {
 	 */
 	public void importUser(final UserName userName, final RemoteIdentity remoteIdentity)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
-		nonNull(userName, "userName");
-		nonNull(remoteIdentity, "remoteIdentity");
+		requireNonNull(userName, "userName");
+		requireNonNull(remoteIdentity, "remoteIdentity");
 		DisplayName dn;
 		try { // hacky, but eh. Python guys will like it though
 			dn = new DisplayName(remoteIdentity.getDetails().getFullname());
@@ -3147,7 +3182,8 @@ public class Authentication {
 			email = EmailAddress.UNKNOWN;
 		}
 		try {
-			storage.createUser(NewUser.getBuilder(userName, dn, clock.instant(), remoteIdentity)
+			storage.createUser(NewUser.getBuilder(
+					userName, randGen.randomUUID(), dn, clock.instant(), remoteIdentity)
 					.withEmailAddress(email).build());
 			logInfo("Imported user {}", userName.getName());
 		} catch (NoSuchRoleException e) {

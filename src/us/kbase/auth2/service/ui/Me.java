@@ -100,6 +100,7 @@ public class Me {
 		ret.put(Fields.URL_UNLINK, relativize(uriInfo, UIPaths.ME_ROOT_UNLINK));
 		ret.put(Fields.URL_ROLE, relativize(uriInfo, UIPaths.ME_ROOT_ROLES));
 		ret.put(Fields.USER, u.getUserName().getName());
+		ret.put(Fields.ANONYMOUS_ID, u.getAnonymousID().toString());
 		ret.put(Fields.LOCAL, u.isLocal());
 		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
 		ret.put(Fields.EMAIL, u.getEmail().getAddress());

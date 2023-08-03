@@ -59,13 +59,15 @@ public class Utils {
 	/** As checkString(), but doesn't throw a checked exception.
 	 * @param s the string to check.
 	 * @param name the name of the string to use in any error messages.
+	 * @return The string, trimmed.
 	 */
-	public static void checkStringNoCheckedException(
+	public static String checkStringNoCheckedException(
 			final String s,
 			final String name) {
 		if (s == null || s.trim().isEmpty()) {
-			throw new IllegalArgumentException("Missing argument: " + name);
+			throw new IllegalArgumentException(name + " cannot be null or whitespace only");
 		}
+		return s.trim();
 	}
 
 	/** Adds two longs, returning Long.MAX_VALUE or Long.MIN_VALUE, as appropriate, if the
@@ -108,16 +110,6 @@ public class Utils {
 			if (item == null) {
 				throw new NullPointerException(message);
 			}
-		}
-	}
-	
-	/** Throws a null pointer exception if an object is null.
-	 * @param o the object to check.
-	 * @param message the message for the exception.
-	 */
-	public static void nonNull(final Object o, final String message) {
-		if (o == null) {
-			throw new NullPointerException(message);
 		}
 	}
 }

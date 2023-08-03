@@ -1,5 +1,4 @@
-KBase authentication server
-===========================
+# KBase authentication server
 
 This repo contains the second iteration of the KBase authentication server.
 
@@ -7,8 +6,7 @@ Build status (master):
 [![Build Status](https://travis-ci.org/kbase/auth2.svg?branch=master)](https://travis-ci.org/kbase/auth2) [![codecov](https://codecov.io/gh/kbase/auth2/branch/master/graph/badge.svg)](https://codecov.io/gh/kbase/auth2)
 
 
-Current endpoints
------------------
+## Current endpoints
 
 ### UI
 
@@ -20,53 +18,53 @@ testing. In many cases a manual refresh of the page will be required to see
 changes. Further, once a checkbox is manually checked or unchecked that state
 will not change, even with a refresh - to see changes reset the form.
 
-/  
+`/`  
 General server information including git commit, version, and server time.
 
-/admin  
+`/admin`  
 Global admin tasks - force reset all passwords, revoke all tokens, view a token, search for users.
 
-/admin/customroles  
+`/admin/customroles`  
 View, add, and delete custom roles.
 
-/admin/config  
+`/admin/config`  
 View and edit the server configuration.
 
-/admin/localaccount  
+`/admin/localaccount`  
 Create a local account.
 
-/admin/user/&lt;user name&gt;  
+`/admin/user/<user name>`  
 View user, disable user, reset password, force password reset, and modify user roles.
 
-/admin/user/&lt;user name&gt;/tokens  
+`/admin/user/<user name>/tokens`  
 View and revoke tokens for a specific user.
 
-/customroles  
+`/customroles`  
 View custom roles. This page is publicly viewable to any user with a valid token.
 
-/link  
+`/link`  
 Link accounts.
 
-/login  
+`/login`  
 Login to a provider based account. Stores a cookie with a token.
 
-/localaccount/login  
+`/localaccount/login`  
 Login to a local account. Stores a cookie with a token.
 
-/localaccount/reset  
+`/localaccount/reset`  
 Reset the password for a local account.
 
-/logout  
+`/logout`  
 Logs the user out.  
 Removes the user's token from the database as well as any temporary link tokens associated with
 the user. Removes the login, temporary login, and temporary link cookies except if JSON output
 is requested, in which case it is expected that the UI manages the login token
 (but not the temporary tokens).
 
-/me  
+`/me`  
 User page. Update name and email address, remove roles.
 
-/tokens  
+`/tokens`  
 List, create, and revoke tokens.
 
 ### API
@@ -81,41 +79,56 @@ noted.
 Tokens are opaque strings - no particular structure should be assumed, and token string contents
 may change without notice.
 
-GET /api/V2/me  
+`GET /api/V2/me`  
 See the current user's profile.
 
-PUT /api/V2/me  
+`PUT /api/V2/me`  
 Update the current user's email address and display name. Takes JSON encoded data with the
 keys `display` and `email`.
 
-GET /api/V2/users/?list=&lt;comma separated user names&gt;  
+`GET /api/V2/users/?list=<comma separated user names>`  
 Validate a set of user names and get the users' display names. Returns a map of username ->
 display name. Any usernames that do not correspond to accounts will not be included in the map.
 
-GET /api/V2/users/search/&lt;prefix&gt;/?fields=&lt;comma separated fields&gt;  
+`GET /api/V2/users/search/<prefix>/?fields=<comma separated fields>`  
 Find users based on a prefix of the username or any parts of the display name, where parts are
 delimited by whitespace. By default the search occurs on all fields; setting the fields query
 parameter can restrict the search fields and thus possibly speed up the search. Current field names
 are `username` and `displayname`; any other field names are ignored. Returns a map of
 username -> display name. At most 10,000 names are returned.
 
-GET /api/V2/token  
+`GET /api/V2/token`  
 Introspect a token.
 
-POST /api/V2/token  
+`POST /api/V2/token`  
 Create an agent token. Takes JSON encoded data with the keys `name` for a required token name
 string and `customcontext` for an optional map of user-supplied creation context to be saved
 with the token, and returned when the token is queried.
+
+`GET /api/v2/admin/anonids?list=<comma separated anonymous user IDs>`  
+Translate anonymous user IDs to user names. `Admin` (and exactly `Admin`) permission
+is required. At most 10000 IDs are allowed, but the URL size limit effectively limits the count
+to less than that. Disabled users are not returned; IDs not found in the database are omitted from
+the map.
+
+RETURNS:
+```
+{
+  <anonymous ID 1>: <user name 1>,
+  ...
+  <anonymous ID N>: <user name N>
+}
+```
 
 #### Legacy
 
 Endpoints (mostly) identical to the original Globus and KBase auth endpoints are provided for
 backwards compatibility.
 
-POST /api/legacy/KBase/Sessions/Login  
+`POST /api/legacy/KBase/Sessions/Login`  
 The legacy KBase API.
 
-GET /api/legacy/globus  
+`GET /api/legacy/globus`  
 The legacy globus API. Endpoints are /goauth/token and /users.
 
 ### Test Mode
@@ -143,43 +156,43 @@ Test mode data is only accessible via endpoints under the `/testmode` root endpo
 These endpoints mimic the behavior of the standard API endpoints above, but only interact with
 test mode data.
 
-GET /testmode  
+`GET /testmode`  
 
-GET /testmode/api/V2/me  
+`GET /testmode/api/V2/me`  
 
-GET /testmode/api/V2/token  
+`GET /testmode/api/V2/token`  
 
-GET /testmode/api/V2/users  
+`GET /testmode/api/V2/users`  
 
-POST /testmode/api/legacy/KBase/Sessions/Login  
+`POST /testmode/api/legacy/KBase/Sessions/Login`  
 
-GET /testmode/api/legacy/globus  
+`GET /testmode/api/legacy/globus`  
 
 #### Data manipulation endpoints
 
 These endpoints allow a test harness to create and modify test mode users, tokens, and roles.
 No authentication is required.
 
-POST /testmode/api/V2/testmodeonly/user  
+`POST /testmode/api/V2/testmodeonly/user`  
 Create a user. Takes JSON encoded data with the keys `user` for the user name and `display` for
 the user's display name.
 
-GET /testmode/api/V2/testmodeonly/user/&lt;username&gt;  
+`GET /testmode/api/V2/testmodeonly/user/<username>`  
 Get a user's data.
 
-POST /testmode/api/V2/testmodeonly/token  
+`POST /testmode/api/V2/testmodeonly/token`  
 Create a token. The user to which the token is assigned must exist. Takes JSON encoded data with
 the keys `user` for the user name, `name` for an optional token name, and `type` for the token
 type. `type` is one of `Login`, `Agent`, `Dev`, or `Serv`.
 
-POST /testmode/api/V2/testmodeonly/customroles  
+`POST /testmode/api/V2/testmodeonly/customroles`  
 Create a custom role. Takes JSON encoded data with the keys `id` for the role id and `desc` for
 the role description. Posting a role with an existing ID overwrites the description of the role.
 
-GET /testmode/api/V2/testmodeonly/customroles  
+`GET /testmode/api/V2/testmodeonly/customroles`  
 Get the list of extant custom roles.
 
-PUT /testmode/api/V2/testmodeonly/userroles  
+`PUT /testmode/api/V2/testmodeonly/userroles`  
 Set a user's roles, overwriting any current roles. Takes JSON encoded data with the keys `user`
 for the user name of the user to modify, `roles` for a list of built-in roles to grant to the
 user, and `customroles` for a list of custom role ids to grant to the user. Allowed `roles` are
@@ -187,11 +200,11 @@ user, and `customroles` for a list of custom role ids to grant to the user. Allo
 any actual privileges in test mode. Omitting `roles` and `customroles` removes all roles from
 the user.
 
-DELETE /testmode/api/V2/testmodeonly/clear  
+`DELETE /testmode/api/V2/testmodeonly/clear`  
 Removes all test mode data from the system.
 
-Admin notes
------------
+## Admin notes
+
 * It is expected that this server always runs behind a reverse proxy (such as
   nginx) that enforces https / TLS and as such the auth server is configured to
   allow cookies to be set over insecure connections.
@@ -211,9 +224,16 @@ Admin notes
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
 * Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
   * Note that only the public API has been tested with the auth server.
+* In version 0.6.0, the canonicalization algorithm for user display names changed and the
+  database needs to be updated.
+  * See the `--recanonicalize-display-names` option for the `manage_auth` script. This can
+    be run while the server is live **after** updating to version 0.6.0.
+  * Once the names have been recanonicalized, the `--remove-recanonicalization-flag` can be
+    used to remove flags set on database objects to avoid reprocessing if the recanonicalize
+    process does not complete.
 
-Requirements
-------------
+## Requirements
+
 Java 8 (OpenJDK OK)  
 Apache Ant (http://ant.apache.org/)  
 MongoDB 2.6+ (https://www.mongodb.com/)  
@@ -223,8 +243,8 @@ This repo (git clone https://github.com/kbase/auth2)
 The jars repo (git clone https://github.com/kbase/jars)  
 The two repos above need to be in the same parent folder.
 
-To start server
----------------
+## To start server
+
 start mongodb  
 if using mongo auth, create a mongo user  
 cd into the auth2 repo  
@@ -234,8 +254,8 @@ copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 `cd jettybase`  
 `./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
 
-Administer the server
----------------------
+## Administer the server
+
 Set a root password:  
 `./manage_auth -d <path to deploy.cfg> -r`  
 
@@ -244,15 +264,14 @@ local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
 
-Start & stop server w/o a pid
------------------------------
+## Start & stop server w/o a pid
+
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
 
 Omit the stop key to have jetty generate one for you.
 
-Developer notes
----------------
+## Developer notes
 
 ### Adding and releasing code
 
@@ -306,7 +325,6 @@ In `us.kbase.auth2.lib.exceptions`:
 
 Anything else is mapped to 500.
 
-Ancient history
----------------
+## Ancient history
 
 https://github.com/kbaseIncubator/auth2proto

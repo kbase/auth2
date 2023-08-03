@@ -71,6 +71,7 @@ import us.kbase.test.auth2.service.ServiceTestUtils;
  */
 public class UserEndpointTest {
 
+	private static final UUID UID = UUID.randomUUID();
 	private static final String DB_NAME = "test_user_api";
 	private static final String COOKIE_NAME = "login-cookie";
 	
@@ -94,6 +95,7 @@ public class UserEndpointTest {
 			Thread.sleep(1000);
 		}
 		port = server.getPort();
+		System.out.println("Server started on port " + port);
 		host = "http://localhost:" + port;
 	}
 	
@@ -150,8 +152,9 @@ public class UserEndpointTest {
 	
 	@Test
 	public void getMeMinimalInput() throws Exception {
+		final UUID uid = UUID.randomUUID();
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
+				uid, new DisplayName("bleah"), Instant.ofEpochMilli(20000)).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
 		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
@@ -174,6 +177,7 @@ public class UserEndpointTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", uid.toString())
 				.with("local", true)
 				.with("display", "bleah")
 				.with("email", null)
@@ -192,7 +196,7 @@ public class UserEndpointTest {
 	public void getMeMaximalInput() throws Exception {
 		manager.storage.setCustomRole(new CustomRole("whoo", "a"));
 		manager.storage.setCustomRole(new CustomRole("whee", "b"));
-		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"),
+		manager.storage.createUser(NewUser.getBuilder(new UserName("foobar"), UID,
 				new DisplayName("bleah"), Instant.ofEpochMilli(20000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
@@ -229,6 +233,7 @@ public class UserEndpointTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("user", "foobar")
+				.with("anonid", UID.toString())
 				.with("local", false)
 				.with("display", "bleah")
 				.with("email", "a@g.com")
@@ -290,7 +295,7 @@ public class UserEndpointTest {
 	@Test
 	public void putMeNoUpdate() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
@@ -310,7 +315,7 @@ public class UserEndpointTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user modified unexpectedly", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("bleah"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("bleah"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("f@h.com"))
 						.build()));
@@ -319,7 +324,7 @@ public class UserEndpointTest {
 	@Test
 	public void putMeFullUpdate() throws Exception {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				new PasswordHashAndSalt("foobarbazbing".getBytes(), "aa".getBytes()));
 		final IncomingToken token = new IncomingToken("whee");
@@ -340,7 +345,7 @@ public class UserEndpointTest {
 		assertThat("incorrect response code", res.getStatus(), is(204));
 		
 		assertThat("user not modified", manager.storage.getUser(new UserName("foobar")),
-				is(AuthUser.getBuilder(new UserName("foobar"), new DisplayName("whee"),
+				is(AuthUser.getBuilder(new UserName("foobar"), UID, new DisplayName("whee"),
 						Instant.ofEpochMilli(20000))
 						.withEmailAddress(new EmailAddress("x@g.com"))
 						.build()));
@@ -416,7 +421,7 @@ public class UserEndpointTest {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
@@ -460,11 +465,11 @@ public class UserEndpointTest {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobar"),
-				new DisplayName("bleah"), Instant.ofEpochMilli(20000))
+				UID, new DisplayName("bleah"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foobaz"),
-				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				UUID.randomUUID(),new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
@@ -590,30 +595,34 @@ public class UserEndpointTest {
 		assertThat("incorrect users", response, is(expected));
 	}
 	
+	private UUID uuid() {
+		return UUID.randomUUID();
+	}
+	
 	private IncomingToken setUpUsersForTesting() throws Exception {
 		final PasswordHashAndSalt creds = new PasswordHashAndSalt(
 				"foobarbazbing".getBytes(), "aa".getBytes());
 
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("foo"),
-				new DisplayName("bar"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("bar *thing*"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("baz"),
-				new DisplayName("fuz"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("fuz"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("puz"),
-				new DisplayName("mup"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("mup"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("mua"),
-				new DisplayName("paz"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("paz"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f@h.com")).build(),
 				creds);
 		
 		
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(new UserName("toobar"),
-				new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
+				uuid(), new DisplayName("bleah2"), Instant.ofEpochMilli(20000))
 				.withEmailAddress(new EmailAddress("f2@g.com")).build(),
 				creds);
 		final IncomingToken token = new IncomingToken("whee");
@@ -670,12 +679,12 @@ public class UserEndpointTest {
 	
 	@Test
 	public void searchUsersBlankFields() throws Exception {
-		searchUsers("f", "   \t ,   ", ImmutableMap.of("foo", "bar", "baz", "fuz"));
+		searchUsers("f", "   \t ,   ", ImmutableMap.of("foo", "bar *thing*", "baz", "fuz"));
 	}
 	
 	@Test
 	public void searchUsersUserName() throws Exception {
-		searchUsers("f", " username  ,  \t  ", ImmutableMap.of("foo", "bar"));
+		searchUsers("f", " username  ,  \t  ", ImmutableMap.of("foo", "bar *thing*"));
 	}
 	
 	@Test
@@ -686,7 +695,24 @@ public class UserEndpointTest {
 	@Test
 	public void searchUsersBothFields() throws Exception {
 		searchUsers("f", " displayname   \t ,   \t username   ",
-				ImmutableMap.of("foo", "bar", "baz", "fuz"));
+				ImmutableMap.of("foo", "bar *thing*", "baz", "fuz"));
+	}
+	
+	@Test
+	public void searchUsersBothFields2() throws Exception {
+		searchUsers("b", " displayname   \t ,   \t username   ",
+				ImmutableMap.of("foo", "bar *thing*", "baz", "fuz", "toobar", "bleah2"));
+	}
+	
+	@Test
+	public void searchUsersMultitoken() throws Exception {
+		searchUsers("b th", " displayname   \t ,   \t username   ",
+				ImmutableMap.of("foo", "bar *thing*"));
+	}
+	
+	@Test
+	public void searchUsersMultitoken2() throws Exception {
+		searchUsers("b%20th", "", ImmutableMap.of("foo", "bar *thing*"));
 	}
 	
 	private void searchUsers(

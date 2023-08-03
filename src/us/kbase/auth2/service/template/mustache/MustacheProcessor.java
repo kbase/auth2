@@ -1,6 +1,6 @@
 package us.kbase.auth2.service.template.mustache;
 
-import static us.kbase.auth2.lib.Utils.nonNull;
+import static java.util.Objects.requireNonNull;
 
 import java.io.StringWriter;
 import java.nio.file.Path;
@@ -25,7 +25,7 @@ public class MustacheProcessor implements TemplateProcessor {
 	private final Path templates;
 	
 	public MustacheProcessor(final Path templateDir) {
-		nonNull(templateDir, "templateDir");
+		requireNonNull(templateDir, "templateDir");
 		templates = templateDir;
 	}
 	

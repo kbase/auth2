@@ -84,6 +84,9 @@ public class AuthenticationLinkTest {
 	
 	private final Instant NOW = Instant.now();
 	
+	private final UUID UID = UUID.randomUUID();
+	private final UUID UID2 = UUID.randomUUID();
+	
 	private final RemoteIdentity REMOTE = new RemoteIdentity(new RemoteIdentityID("Prov", "id1"),
 			new RemoteIdentityDetails("user1", "full1", "f1@g.com"));
 	
@@ -131,7 +134,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(rand.getToken())
@@ -267,7 +270,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.build()).thenReturn(null);
 		
 		failLinkStart(auth, userToken, 120, "ip1", "env", new LinkFailedException(
@@ -316,7 +319,7 @@ public class AuthenticationLinkTest {
 						.link("mystate", "pkceverifiedforyourcomfort", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.now())
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceverifiedforyourcomfort", true, null))
@@ -376,7 +379,7 @@ public class AuthenticationLinkTest {
 						.link("somestate", "pkcecuresacne", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.now())
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkcecuresacne", true, null))
@@ -434,7 +437,7 @@ public class AuthenticationLinkTest {
 						.link("stateish", "pkceambrosiaofthegods", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceambrosiaofthegods", true, null))
@@ -459,7 +462,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.empty()).thenReturn(null);
 		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("arg"), Instant.now())
+				new UserName("whee"), UID2, new DisplayName("arg"), Instant.now())
 				.withIdentity(storageRemoteID3).build())).thenReturn(null);
 		
 		when(storage.link(new UserName("baz"), storageRemoteID2))
@@ -517,7 +520,7 @@ public class AuthenticationLinkTest {
 						.link("stately", "pkcehasgreatretirementbenefits", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkcehasgreatretirementbenefits", true, "myenv"))
@@ -584,7 +587,7 @@ public class AuthenticationLinkTest {
 						.link("stateinheah", "pkceisnotsnakeoilatall", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceisnotsnakeoilatall", true, null))
@@ -598,7 +601,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 		
 		when(storage.getUser(storageRemoteID)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+				new UserName("someuser"), UID2, new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
 		
 		final UUID tokenID = UUID.randomUUID();
@@ -655,7 +658,7 @@ public class AuthenticationLinkTest {
 								new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities(
@@ -680,7 +683,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
 		
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+				new UserName("someuser"), UID2, new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
 		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
@@ -739,7 +742,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build());
 		
 		failLinkWithToken(auth, null, "prov", "foo", null, "state",
@@ -1005,7 +1008,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceverifier", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("f"), Instant.now())
+				new UserName("baz"), UID, new DisplayName("f"), Instant.now())
 				.withUserDisabledState(
 						new UserDisabledState("f", new UserName("b"), Instant.now())).build());
 		
@@ -1042,7 +1045,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceverifier", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now()).build());
 		
 		failLinkWithToken(auth, token, "prov", "foo", null, "state",
 				new LinkFailedException("Cannot link identities to local account foo"));
@@ -1075,7 +1078,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceprovidesdivineinfluence", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now())
 				.withIdentity(REMOTE).build());
 		
 		when(idp.getIdentities("foo", "pkceprovidesdivineinfluence", true, "env")).thenThrow(
@@ -1112,7 +1115,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkcewasinventedbyaristotle", new UserName("foo")));
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now())
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now())
 				.withIdentity(REMOTE).build());
 		
 		when(idp.getIdentities("foo", "pkcewasinventedbyaristotle", true, null)).thenThrow(
@@ -1150,7 +1153,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceimkindofgettingboredwiththis", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceimkindofgettingboredwiththis", true, null))
@@ -1200,7 +1203,7 @@ public class AuthenticationLinkTest {
 						.link("state", "pkceohwhocares", new UserName("baz")));
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(20000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(20000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceohwhocares", true, null))
@@ -1274,9 +1277,9 @@ public class AuthenticationLinkTest {
 		final Authentication auth = initTestMocks().auth;
 		
 		failLinkProviderError(auth, null, new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 		failLinkProviderError(auth, "   \t   ", new IllegalArgumentException(
-				"Missing argument: providerError"));
+				"providerError cannot be null or whitespace only"));
 	}
 	
 	private void failLinkProviderError(
@@ -1307,7 +1310,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID temptokenid = UUID.randomUUID();
@@ -1334,7 +1337,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user4", "full4", "f4@g.com"));
 		
 		final AuthUser user2 = AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now())
+				new UserName("someuser"), UID2, new DisplayName("a"), Instant.now())
 				.withIdentity(storageRemoteID2).build();
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user2))
 				.thenReturn(null);
@@ -1372,7 +1375,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID tempTokenID = UUID.randomUUID();
@@ -1388,7 +1391,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user2", "full2", "f2@g.com"));
 
 		final AuthUser user2 = AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now())
+				new UserName("someuser"), UID2, new DisplayName("a"), Instant.now())
 				.withIdentity(storageRemoteID2).build();
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(user2)).thenReturn(null);
 		
@@ -1419,7 +1422,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		failGetLinkState(auth, null, tempToken, new NullPointerException("token"));
@@ -1461,7 +1464,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now()).build());
 
 		failGetLinkState(auth, token, new IncomingToken("bar"),
 				new LinkFailedException("Cannot link identities to local account foo"));
@@ -1482,7 +1485,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
@@ -1506,7 +1509,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1533,7 +1536,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1561,7 +1564,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID tempTokenID = UUID.randomUUID();
@@ -1595,7 +1598,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID tempTokenID = UUID.randomUUID();
@@ -1642,7 +1645,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1688,7 +1691,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1732,7 +1735,7 @@ public class AuthenticationLinkTest {
 						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build());
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1783,7 +1786,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now()).build());
 
 		failLinkIdentity(auth, token, new IncomingToken("bar"), "foo",
 				new LinkFailedException("Cannot link identities to local account foo"));
@@ -1804,7 +1807,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
@@ -1829,7 +1832,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1856,7 +1859,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID id = UUID.randomUUID();
@@ -1888,7 +1891,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID id = UUID.randomUUID();
@@ -1920,7 +1923,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1947,7 +1950,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -1977,7 +1980,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2012,7 +2015,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2047,7 +2050,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2098,7 +2101,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2128,7 +2131,7 @@ public class AuthenticationLinkTest {
 				new RemoteIdentityDetails("user5", "full5", "f5@g.com"));
 		
 		when(storage.getUser(storageRemoteID2)).thenReturn(Optional.of(AuthUser.getBuilder(
-				new UserName("someuser"), new DisplayName("a"), Instant.now()).build()))
+				new UserName("someuser"), UID2, new DisplayName("a"), Instant.now()).build()))
 				.thenReturn(null);
 		when(storage.getUser(storageRemoteID3)).thenReturn(Optional.empty())
 				.thenReturn(null);
@@ -2174,7 +2177,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2219,7 +2222,7 @@ public class AuthenticationLinkTest {
 						.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build());
 		
 		failLinkAll(auth, null, tempToken, new NullPointerException("token"));
@@ -2261,7 +2264,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now()).build());
 
 		failLinkAll(auth, token, new IncomingToken("bar"),
 				new LinkFailedException("Cannot link identities to local account foo"));
@@ -2282,7 +2285,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken()))
@@ -2307,7 +2310,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2346,7 +2349,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2373,7 +2376,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID id = UUID.randomUUID();
@@ -2406,7 +2409,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		final UUID id = UUID.randomUUID();
@@ -2439,7 +2442,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2467,7 +2470,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
@@ -2517,7 +2520,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		auth.unlink(userToken, "foobar");
@@ -2574,7 +2577,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("f"), Instant.now()).build());
+				new UserName("foo"), UID, new DisplayName("f"), Instant.now()).build());
 
 		failUnlink(auth, token, "foo",
 				new UnLinkFailedException("Local user foo doesn't have remote identities"));
@@ -2594,7 +2597,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		doThrow(new NoSuchUserException("baz")).when(storage)
@@ -2618,7 +2621,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		doThrow(new UnLinkFailedException("unlink")).when(storage)
@@ -2641,7 +2644,7 @@ public class AuthenticationLinkTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.ofEpochMilli(10000))
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.ofEpochMilli(10000))
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		doThrow(new NoSuchIdentityException("noid")).when(storage)

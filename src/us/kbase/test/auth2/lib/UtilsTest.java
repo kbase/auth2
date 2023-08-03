@@ -48,7 +48,12 @@ public class UtilsTest {
 	@Test
 	public void checkString() throws Exception {
 		Utils.checkString(TestCommon.LONG1001, "name");
-		Utils.checkStringNoCheckedException(TestCommon.LONG1001, "name");
+		assertThat("incorrect response",
+				Utils.checkStringNoCheckedException(" \t   no whitespace   \t ", "name"),
+				is("no whitespace"));
+		assertThat("incorrect response",
+				Utils.checkStringNoCheckedException(TestCommon.LONG1001, "name"),
+				is(TestCommon.LONG1001));
 		Utils.checkString("ok", "name", 2);
 		Utils.checkString(" \n  ok   \t", "name", 2);
 	}
@@ -62,9 +67,9 @@ public class UtilsTest {
 	@Test
 	public void checkStringUncheckedFail() throws Exception {
 		failCheckStringUnchecked(null, "foo",
-				new IllegalArgumentException("Missing argument: foo"));
+				new IllegalArgumentException("foo cannot be null or whitespace only"));
 		failCheckStringUnchecked("    \n \t  ", "foo",
-				new IllegalArgumentException("Missing argument: foo"));
+				new IllegalArgumentException("foo cannot be null or whitespace only"));
 	}
 	
 	@Test
@@ -134,20 +139,4 @@ public class UtilsTest {
 			assertThat("incorrect exception message", npe.getMessage(), is(message));
 		}
 	}
-	
-	@Test
-	public void nonNull() {
-		Utils.nonNull(new Object(), "foo"); // should work
-	}
-	
-	@Test
-	public void failNonNull() {
-		try {
-			Utils.nonNull(null, "foo");
-			fail("expected exception");
-		} catch (NullPointerException e) {
-			assertThat("incorrect exception message", e.getMessage(), is("foo"));
-		}
-	}
-	
 }

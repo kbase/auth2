@@ -33,6 +33,7 @@
     <include name="mongo/mongo-java-driver-3.8.2.jar"/>
     <include name="mustache/compiler-0.9.3.jar"/>
     <include name="nulab-inc/zxcvbn-1.2.2.jar"/>
+    <include name="jsemver/java-semver-0.9.0.jar"/>
   </fileset>
 
   <fileset dir="${jardir}" id="logging">
@@ -100,7 +101,6 @@
   <fileset dir="${jardir}" id="testlibs">
     <include name="apache_commons/commons-io-2.4.jar"/>
     <include name="equalsverifier/equalsverifier-3.1.10.jar"/>
-    <include name="jsemver/java-semver-0.9.0.jar"/>
     <include name="junit/junit-4.12.jar"/>
     <include name="mockserver/mockserver-netty-3.10.4-jar-with-dependencies.jar"/>
     <include name="jetty/jetty-all-9.3.11.v20160721-uber.jar"/>
@@ -298,6 +298,7 @@
         <test name="us.kbase.test.auth2.cryptutils.CryptUtilsTest"/>
         <test name="us.kbase.test.auth2.cryptutils.SHA1RandomDataGeneratorTest"/>
         <test name="us.kbase.test.auth2.kbase.KBaseAuthConfigTest"/>
+        <test name="us.kbase.test.auth2.lib.AuthenticationAnonymousIDsTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationConfigTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationConstructorTest"/>
         <test name="us.kbase.test.auth2.lib.AuthenticationCreateLocalUserTest"/>
@@ -357,6 +358,8 @@
         <test name="us.kbase.test.auth2.providers.OrcIDIdentityProviderTest"/>
         <test name="us.kbase.test.auth2.service.AuthExternalConfigTest"/>
         <test name="us.kbase.test.auth2.service.LoggingFilterTest"/>
+        <test name="us.kbase.test.auth2.service.api.AdminTest"/>
+        <test name="us.kbase.test.auth2.service.api.AdminIntegrationTest"/>
         <test name="us.kbase.test.auth2.service.api.APITokenTest"/>
         <test name="us.kbase.test.auth2.service.api.TokenEndpointTest"/>
         <test name="us.kbase.test.auth2.service.api.TestModeTest"/>
@@ -366,6 +369,7 @@
         <test name="us.kbase.test.auth2.service.common.IncomingJSONTest"/>
         <test name="us.kbase.test.auth2.service.common.ServiceCommonTest"/>
         <test name="us.kbase.test.auth2.service.ui.AdminTest"/>
+        <test name="us.kbase.test.auth2.service.ui.AdminIntegrationTest"/>
         <test name="us.kbase.test.auth2.service.ui.LinkTest"/>
         <test name="us.kbase.test.auth2.service.ui.LoginTest"/>
         <test name="us.kbase.test.auth2.service.ui.MeTest"/>
@@ -389,6 +393,7 @@
         <classpath refid="test.classpath"/>
         <formatter type="plain" usefile="false" />
         <sysproperty key="AUTH2_TEST_CONFIG" value="${testcfg}"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageAnonymousIDTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageConfigTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageCustomRoleTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTestRoleTest"/>
@@ -399,6 +404,7 @@
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageInvalidDBDataTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageLinkTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStoragePasswordTest"/>
+        <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRecanonicalizationTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageRolesTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageStartUpTest"/>
         <test name="us.kbase.test.auth2.lib.storage.mongo.MongoStorageTempSessionDataTest"/>

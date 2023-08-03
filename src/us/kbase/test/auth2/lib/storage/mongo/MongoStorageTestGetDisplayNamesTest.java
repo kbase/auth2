@@ -3,12 +3,14 @@ package us.kbase.test.auth2.lib.storage.mongo;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.time.Instant;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Set;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -22,10 +24,12 @@ import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTestGetDisplayNamesTest extends MongoStorageTester {
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@Test
 	public void emptyList() throws Exception {
 		final Instant now = Instant.now();
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"), now,
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"), now,
 				now.plusSeconds(10));
 		
 		final Map<UserName, DisplayName> res = storage.testModeGetUserDisplayNames(set());
@@ -36,12 +40,12 @@ public class MongoStorageTestGetDisplayNamesTest extends MongoStorageTester {
 	@Test
 	public void getDisplayNames() throws Exception {
 		final Instant now = Instant.now();
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"), now,
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"), now,
 				now.plusSeconds(10));
-		storage.testModeCreateUser(new UserName("baz"), new DisplayName("bat"), now,
-				now.plusSeconds(10));
-		storage.testModeCreateUser(new UserName("wugga"), new DisplayName("whoo"), now,
-				now.plusSeconds(10));
+		storage.testModeCreateUser(new UserName("baz"), UUID.randomUUID(), new DisplayName("bat"),
+				now, now.plusSeconds(10));
+		storage.testModeCreateUser(new UserName("wugga"), UUID.randomUUID(),
+				new DisplayName("whoo"), now, now.plusSeconds(10));
 		
 		final Map<UserName, DisplayName> res = storage.testModeGetUserDisplayNames(
 				set(new UserName("foo"), new UserName("wugga")));
@@ -70,7 +74,7 @@ public class MongoStorageTestGetDisplayNamesTest extends MongoStorageTester {
 	@Test
 	public void getStdNameFromTestStorage() throws Exception {
 		storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.ofEpochMilli(10000L)).build(),
+				new UserName("foo"), UID, new DisplayName("bar"), inst(10000L)).build(),
 				new PasswordHashAndSalt("foobarbazbat".getBytes(), "bar".getBytes()));
 		
 		final Map<UserName, DisplayName> res = storage.testModeGetUserDisplayNames(
@@ -82,7 +86,7 @@ public class MongoStorageTestGetDisplayNamesTest extends MongoStorageTester {
 	@Test
 	public void getTestNameFromStdStorage() throws Exception {
 		final Instant now = Instant.now();
-		storage.testModeCreateUser(new UserName("foo"), new DisplayName("bar"), now,
+		storage.testModeCreateUser(new UserName("foo"), UID, new DisplayName("bar"), now,
 				now.plusSeconds(10));
 		
 		final Map<UserName, DisplayName> res = storage.getUserDisplayNames(

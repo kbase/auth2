@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.verify;
+import static us.kbase.test.auth2.TestCommon.inst;
 import static us.kbase.test.auth2.lib.AuthenticationTester.assertLogEventsCorrect;
 import static us.kbase.test.auth2.lib.AuthenticationTester.initTestMocks;
 
@@ -44,6 +45,9 @@ import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
 public class AuthenticationTestModeUserTest {
 	
 	/* test clearing test data here because it's as good as anywhere else. */
+	
+	private static final UUID UID = UUID.randomUUID();
+	private static final UUID UID2 = UUID.randomUUID();
 
 	private static List<ILoggingEvent> logEvents;
 	
@@ -75,11 +79,12 @@ public class AuthenticationTestModeUserTest {
 		final Authentication auth = testauth.auth;
 		final Clock clock = testauth.clockMock;
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID, (UUID) null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		auth.testModeCreateUser(new UserName("foo"), new DisplayName("whee"));
 		
-		verify(storage).testModeCreateUser(new UserName("foo"), new DisplayName("whee"),
+		verify(storage).testModeCreateUser(new UserName("foo"), UID, new DisplayName("whee"),
 				Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, "Created test mode user foo",
@@ -110,10 +115,11 @@ public class AuthenticationTestModeUserTest {
 		final UserName u = new UserName("foo");
 		final DisplayName d = new DisplayName("bar");
 		
+		when(testauth.randGenMock.randomUUID()).thenReturn(UID, (UUID) null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
 		doThrow(new UserExistsException("foo")).when(storage).testModeCreateUser(
-				u, d, Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
+				u, UID, d, Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
 
 		failCreateUser(auth, u, d, new UserExistsException("foo"));
 	}
@@ -150,10 +156,12 @@ public class AuthenticationTestModeUserTest {
 				.build());
 		
 		when(storage.testModeGetUser(new UserName("whee"))).thenReturn(AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build());
+				new UserName("whee"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.build());
 		
 		assertThat("incorrect user", auth.testModeGetUser(t), is(AuthUser.getBuilder(
-				new UserName("whee"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build()));
+				new UserName("whee"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.build()));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
 				"Test mode user whee accessed their user data", Authentication.class));
@@ -222,11 +230,12 @@ public class AuthenticationTestModeUserTest {
 		final Authentication auth = testauth.auth;
 		
 		when(storage.testModeGetUser(new UserName("whee1"))).thenReturn(AuthUser.getBuilder(
-				new UserName("whee1"), new DisplayName("d"), Instant.ofEpochMilli(10000)).build());
+				new UserName("whee1"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
+				.build());
 		
 		assertThat("incorrect user", auth.testModeGetUser(new UserName("whee1")),
 				is(AuthUser.getBuilder(
-						new UserName("whee1"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+						new UserName("whee1"), UID, new DisplayName("d"), inst(10000))
 						.build()));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
@@ -282,17 +291,17 @@ public class AuthenticationTestModeUserTest {
 				.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.now())
+				new UserName("bar"), UID, new DisplayName("d"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@p.com")).build());
 		
 		when(storage.testModeGetUser(new UserName("foo"))).thenReturn(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("g"), Instant.ofEpochMilli(10000))
+				new UserName("foo"), UID2, new DisplayName("g"), Instant.ofEpochMilli(10000))
 				.withEmailAddress(new EmailAddress("x@y.com")).build());
 		
 		final ViewableUser vu = auth.testModeGetUser(t, new UserName("foo"));
 		
 		assertThat("incorrect user", vu, is(new ViewableUser(AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("g"), Instant.ofEpochMilli(10000))
+				new UserName("foo"), UID2, new DisplayName("g"), Instant.ofEpochMilli(10000))
 				.withEmailAddress(new EmailAddress("x@y.com")).build(), false)));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
@@ -312,17 +321,13 @@ public class AuthenticationTestModeUserTest {
 				.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.now())
-				.withEmailAddress(new EmailAddress("f@p.com")).build());
-		
-		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				new UserName("bar"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
 				.withEmailAddress(new EmailAddress("f@p.com")).build());
 		
 		final ViewableUser vu = auth.testModeGetUser(t, new UserName("bar"));
 		
 		assertThat("incorrect user", vu, is(new ViewableUser(AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.ofEpochMilli(10000))
+				new UserName("bar"), UID, new DisplayName("d"), Instant.ofEpochMilli(10000))
 				.withEmailAddress(new EmailAddress("f@p.com")).build(), true)));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
@@ -388,7 +393,7 @@ public class AuthenticationTestModeUserTest {
 				.withLifeTime(Instant.now(), Instant.now()).build());
 		
 		when(storage.testModeGetUser(new UserName("bar"))).thenReturn(AuthUser.getBuilder(
-				new UserName("bar"), new DisplayName("d"), Instant.now())
+				new UserName("bar"), UID, new DisplayName("d"), Instant.now())
 				.withEmailAddress(new EmailAddress("f@p.com")).build());
 		
 		when(storage.testModeGetUser(new UserName("foo")))

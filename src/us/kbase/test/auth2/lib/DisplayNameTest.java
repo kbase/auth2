@@ -5,6 +5,7 @@ import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 
 import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Test;
 
@@ -50,10 +51,31 @@ public class DisplayNameTest {
 	}
 	
 	@Test
-	public void canonical() throws Exception {
-		final DisplayName dn = new DisplayName("whEe   ΅·   +΅BA՞+R·   (bleΔah)  ՞  wuΞgga");
-		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(),
-				is(Arrays.asList("whee", "ba՞+r", "bleδah", "wuξgga")));
+	public void getCanonicalDisplayName() throws Exception {
+		final String input =
+				"whEe1   ΅·   +΅BA՞+R·   (bleΔah)  ՞  wuΞgga  wentworth-fungus   bA()*&R";
+		final List<String> expected = Arrays.asList(
+				"whee1", "bar", "bleδah", "wuξgga", "wentworth", "fungus");
+		final DisplayName dn = new DisplayName(input);
+		assertThat("incorrect canonical name", dn.getCanonicalDisplayName(), is(expected));
+		assertThat("incorrect canonical name", DisplayName.getCanonicalDisplayName(input),
+			is(expected));
+	}
+	
+	@Test
+	public void getCanonicalDisplayNameFail() throws Exception {
+		failGetCanonicalDisplayName(null);
+		failGetCanonicalDisplayName("   \t    ");
+	}
+	
+	private void failGetCanonicalDisplayName(final String name) {
+		try {
+			DisplayName.getCanonicalDisplayName(name);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(
+					got, new IllegalArgumentException("name cannot be null or whitespace only"));
+		}
 	}
 
 }

@@ -229,18 +229,18 @@ public class GlobusIdentityProviderTest {
 	public void illegalAuthcode() throws Exception {
 		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
 		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
-				"Missing argument: authcode"));
+				"authcode cannot be null or whitespace only"));
 		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
-				"Missing argument: authcode"));
+				"authcode cannot be null or whitespace only"));
 	}
 	
 	@Test
 	public void illegalPKCEVerifier() throws Exception {
 		final IdentityProvider idp = new GlobusIdentityProvider(CFG);
 		failGetIdentities(idp, "p", null, true, new IllegalArgumentException(
-				"Missing argument: pkceCodeVerifier"));
+				"pkceCodeVerifier cannot be null or whitespace only"));
 		failGetIdentities(idp, "p", "  \t  \n  ", true, new IllegalArgumentException(
-				"Missing argument: pkceCodeVerifier"));
+				"pkceCodeVerifier cannot be null or whitespace only"));
 	}
 	
 	@Test

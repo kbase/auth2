@@ -43,6 +43,8 @@ public class AuthenticationDisableUserTest {
 	
 	private static List<ILoggingEvent> logEvents;
 	
+	private static final UUID UID = UUID.randomUUID();
+	
 	@BeforeClass
 	public static void beforeClass() {
 		logEvents = AuthenticationTester.setUpSLF4JTestLoggerAppender();
@@ -131,7 +133,7 @@ public class AuthenticationDisableUserTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.now())
 				.withRole(Role.ADMIN).build())
 				.thenReturn(null);
 		
@@ -159,7 +161,7 @@ public class AuthenticationDisableUserTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(adminName)).thenReturn(AuthUser.getBuilder(
-				adminName, new DisplayName("foo"), Instant.now())
+				adminName, UID, new DisplayName("foo"), Instant.now())
 				.withRole(role).build())
 				.thenReturn(null);
 		
@@ -263,7 +265,7 @@ public class AuthenticationDisableUserTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(new UserName("baz"))).thenReturn(AuthUser.getBuilder(
-				new UserName("baz"), new DisplayName("foo"), Instant.now())
+				new UserName("baz"), UID, new DisplayName("foo"), Instant.now())
 				.withRole(Role.ADMIN).build())
 				.thenReturn(null);
 		
@@ -289,7 +291,7 @@ public class AuthenticationDisableUserTest {
 				.thenReturn(null);
 		
 		when(storage.getUser(adminName)).thenReturn(AuthUser.getBuilder(
-				adminName, new DisplayName("foo"), Instant.now())
+				adminName, UID, new DisplayName("foo"), Instant.now())
 				.withRole(role).build())
 				.thenReturn(null);
 		

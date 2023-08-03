@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 
 import java.time.Instant;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.junit.Test;
 
@@ -26,7 +27,7 @@ public class ViewableUserTest {
 	@Test
 	public void constructWithoutEmail() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("e@f.com")).build();
 		
 		final ViewableUser vu = new ViewableUser(u, false);
@@ -38,7 +39,7 @@ public class ViewableUserTest {
 	@Test
 	public void constructWithEmail() throws Exception {
 		final AuthUser u = AuthUser.getBuilder(
-				new UserName("foo"), new DisplayName("bar"), Instant.now())
+				new UserName("foo"), UUID.randomUUID(), new DisplayName("bar"), Instant.now())
 				.withEmailAddress(new EmailAddress("e@f.com")).build();
 
 		final ViewableUser vu = new ViewableUser(u, true);

@@ -64,7 +64,7 @@ public class AuthenticationPolicyIDTest {
 				.withLifeTime(Instant.now(), Instant.now()).build();
 		
 		final AuthUser u = AuthUser.getBuilder(
-				adminName, new DisplayName("foobar"), Instant.now())
+				adminName, UUID.randomUUID(), new DisplayName("foobar"), Instant.now())
 				.withRole(Role.ADMIN).build();
 		
 		when(storage.getToken(token.getHashedToken())).thenReturn(htoken, (StoredToken) null);
