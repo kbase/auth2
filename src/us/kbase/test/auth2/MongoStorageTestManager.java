@@ -15,12 +15,12 @@ import java.time.Clock;
 import org.bson.Document;
 
 import com.github.zafarkhaja.semver.Version;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
-import us.kbase.common.test.controllers.mongo.MongoController;
 
 public class MongoStorageTestManager {
 
@@ -42,7 +42,7 @@ public class MongoStorageTestManager {
 		wiredTiger = useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				getMongoExe(), mongo.getServerPort()));
-		mc = new MongoClient("localhost:" + mongo.getServerPort());
+		mc = MongoClients.create("mongodb://localhost:" + mongo.getServerPort());
 		db = mc.getDatabase(dbName);
 		
 		final Document bi = db.runCommand(new Document("buildinfo", 1));
@@ -51,7 +51,7 @@ public class MongoStorageTestManager {
 		indexVer = mongoDBVer.greaterThanOrEqualTo(Version.forIntegers(3, 4)) ? 2 : 1;
 		reset();
 	}
-	
+
 	public void destroy() throws Exception {
 		if (mc != null) {
 			mc.close();

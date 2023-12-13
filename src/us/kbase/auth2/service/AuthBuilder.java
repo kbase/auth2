@@ -2,13 +2,15 @@ package us.kbase.auth2.service;
 
 import static java.util.Objects.requireNonNull;
 
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
 import org.slf4j.LoggerFactory;
 
-import com.mongodb.MongoClient;
-import com.mongodb.MongoClientOptions;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.MongoClientSettings;
 import com.mongodb.MongoCredential;
 import com.mongodb.MongoException;
 import com.mongodb.ServerAddress;
@@ -67,10 +69,20 @@ public class AuthBuilder {
 				final MongoCredential creds = MongoCredential.createCredential(
 						c.getMongoUser().get(), c.getMongoDatabase(), c.getMongoPwd().get());
 				// unclear if and when it's safe to clear the password
-				return new MongoClient(new ServerAddress(c.getMongoHost()), creds,
-						MongoClientOptions.builder().build());
+				return MongoClients.create(
+						MongoClientSettings.builder()
+								.credential(creds)
+								.applyToClusterSettings(builder ->
+										builder.hosts(Arrays.asList(
+												new ServerAddress(c.getMongoHost()))))
+								.build());
 			} else {
-				return new MongoClient(new ServerAddress(c.getMongoHost()));
+				return MongoClients.create(
+						MongoClientSettings.builder()
+								.applyToClusterSettings(builder ->
+										builder.hosts(Arrays.asList(
+												new ServerAddress(c.getMongoHost()))))
+								.build());
 			}
 		} catch (MongoException e) {
 			LoggerFactory.getLogger(getClass()).error(
