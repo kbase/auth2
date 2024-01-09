@@ -160,12 +160,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("schema", 1))
-						.append("name", "schema_1")
-						.append("ns", "test_mongostorage.config"),
+						.append("name", "schema_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.config")
 				)));
 	}
 	
@@ -177,12 +175,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
-						.append("name", "key_1")
-						.append("ns", "test_mongostorage.config_app"),
+						.append("name", "key_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.config_app")
 				)));
 	}
 	
@@ -194,12 +190,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
-						.append("name", "key_1")
-						.append("ns", "test_mongostorage.config_ext"),
+						.append("name", "key_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.config_ext")
 				)));
 	}
 	
@@ -211,12 +205,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("prov", 1).append("key", 1))
-						.append("name", "prov_1_key_1")
-						.append("ns", "test_mongostorage.config_prov"),
+						.append("name", "prov_1_key_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.config_prov")
 				)));
 	}
 	
@@ -228,12 +220,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
-						.append("name", "id_1")
-						.append("ns", "test_mongostorage.cust_roles"),
+						.append("name", "id_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-						.append("ns", "test_mongostorage.cust_roles")
 				)));
 	}
 	
@@ -246,16 +236,13 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
-						.append("name", "id_1")
-						.append("ns", "test_mongostorage.test_cust_roles"),
+						.append("name", "id_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.test_cust_roles"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.test_cust_roles")
 						.append("expireAfterSeconds", 0L)
 				)));
 	}
@@ -268,27 +255,22 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
-						.append("name", "token_1")
-						.append("ns", "test_mongostorage.tempdata"),
+						.append("name", "token_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.tempdata")
 						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("sparse", true)
 						.append("key", new Document("user", 1))
-						.append("name", "user_1")
-						.append("ns", "test_mongostorage.tempdata"),
+						.append("name", "user_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.tempdata"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
-						.append("ns", "test_mongostorage.tempdata")
 				)));
 	}
 	
@@ -300,26 +282,21 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
-						.append("name", "token_1")
-						.append("ns", "test_mongostorage.tokens"),
+						.append("name", "token_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.tokens")
 						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.tokens"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("key", new Document("user", 1))
-						.append("name", "user_1")
-						.append("ns", "test_mongostorage.tokens"),
+						.append("name", "user_1"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
-						.append("ns", "test_mongostorage.tokens")
 				)));
 	}
 	
@@ -331,26 +308,21 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("token", 1))
-						.append("name", "token_1")
-						.append("ns", "test_mongostorage.test_tokens"),
+						.append("name", "token_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.test_tokens")
 						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.test_tokens"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("key", new Document("user", 1))
-						.append("name", "user_1")
-						.append("ns", "test_mongostorage.test_tokens"),
+						.append("name", "user_1"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("id", 1))
 						.append("name", "id_1")
-						.append("ns", "test_mongostorage.test_tokens")
 				)));
 	}
 	
@@ -362,36 +334,29 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
 						.append("name", "custrls_1")
-						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
 				new Document("v", indexVer)
 						.append("key", new Document("dispcan", 1))
-						.append("name", "dispcan_1")
-						.append("ns", "test_mongostorage.users"),
+						.append("name", "dispcan_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.users"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("unique", true)	
 						.append("key", new Document("idents.id", 1))
 						.append("name", "idents.id_1")
-						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
 				new Document("v", indexVer)
 						.append("key", new Document("roles", 1))
 						.append("name", "roles_1")
-						.append("ns", "test_mongostorage.users")
 						.append("sparse", true),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("user", 1))
-						.append("name", "user_1")
-						.append("ns", "test_mongostorage.users"),
+						.append("name", "user_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("anonid", 1))
 						.append("name", "anonid_1")
-						.append("ns", "test_mongostorage.users")
 						.append("sparse", true)
 				)));
 	}
@@ -404,30 +369,24 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
 						.append("name", "custrls_1")
-						.append("ns", "test_mongostorage.test_users")
 						.append("sparse", true),
 				new Document("v", indexVer)
 						.append("key", new Document("dispcan", 1))
-						.append("name", "dispcan_1")
-						.append("ns", "test_mongostorage.test_users"),
+						.append("name", "dispcan_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
-						.append("ns", "test_mongostorage.test_users"),
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("key", new Document("roles", 1))
 						.append("name", "roles_1")
-						.append("ns", "test_mongostorage.test_users")
 						.append("sparse", true),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("user", 1))
-						.append("name", "user_1")
-						.append("ns", "test_mongostorage.test_users"),
+						.append("name", "user_1"),
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("ns", "test_mongostorage.test_users")
 						.append("expireAfterSeconds", 0L)
 				)));
 	}
