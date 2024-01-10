@@ -12,6 +12,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
 
+import com.github.zafarkhaja.semver.Version;
 import org.apache.commons.io.FileUtils;
 
 
@@ -30,6 +31,9 @@ public class MongoController {
         tempDirectories.add(DATA_DIR);
     }
 
+    private final static Version MONGO_DB_3 =
+            Version.forIntegers(3,6,23);
+
     private final Path tempDir;
 
     private final Process mongo;
@@ -39,13 +43,22 @@ public class MongoController {
             final String mongoExe,
             final Path rootTempDir)
             throws Exception {
-        this(mongoExe, rootTempDir, false);
+        this(mongoExe, rootTempDir, false, MONGO_DB_3);
     }
 
     public MongoController(
             final String mongoExe,
             final Path rootTempDir,
             final boolean useWiredTiger)
+            throws Exception {
+        this(mongoExe, rootTempDir, useWiredTiger, MONGO_DB_3);
+    }
+
+    public MongoController(
+            final String mongoExe,
+            final Path rootTempDir,
+            final boolean useWiredTiger,
+            final Version dbVer)
             throws Exception {
         checkExe(mongoExe, "mongod server");
         tempDir = makeTempDirs(rootTempDir, "MongoController-", tempDirectories);
@@ -54,6 +67,11 @@ public class MongoController {
         List<String> command = new LinkedList<String>();
         command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
                 "--dbpath", tempDir.resolve(DATA_DIR).toString()));
+
+        // In version 3.6, the --nojournal option is deprecated
+        if (dbVer.lessThanOrEqualTo(MONGO_DB_3)) {
+            command.addAll(Arrays.asList("--nojournal"));
+        }
         if (useWiredTiger) {
             command.addAll(Arrays.asList("--storageEngine", "wiredTiger"));
         }
