@@ -13,12 +13,14 @@ import java.util.List;
 import java.util.Scanner;
 
 import com.github.zafarkhaja.semver.Version;
+import com.mongodb.client.MongoClients;
 import org.apache.commons.io.FileUtils;
+import org.bson.Document;
 
 
 /** Q&D Utility to run a Mongo server for the purposes of testing from
  * Java.
- * @author gaprice@lbl.gov
+ * @author gaprice@lbl.gov, sijiex@lbl.gov
  *
  */
 public class MongoController {
@@ -34,16 +36,18 @@ public class MongoController {
     private final static Version MONGO_DB_3 =
             Version.forIntegers(3,6,23);
 
-    private final Path tempDir;
+    private final static Version MONGO_DB_7 =
+            Version.forIntegers(7,0,4);
 
-    private final Process mongo;
+    private final Path tempDir;
     private final int port;
+    private Process mongo;
 
     public MongoController(
             final String mongoExe,
             final Path rootTempDir)
             throws Exception {
-        this(mongoExe, rootTempDir, false, MONGO_DB_3);
+        this(mongoExe, rootTempDir, false);
     }
 
     public MongoController(
@@ -51,36 +55,18 @@ public class MongoController {
             final Path rootTempDir,
             final boolean useWiredTiger)
             throws Exception {
-        this(mongoExe, rootTempDir, useWiredTiger, MONGO_DB_3);
-    }
-
-    public MongoController(
-            final String mongoExe,
-            final Path rootTempDir,
-            final boolean useWiredTiger,
-            final Version dbVer)
-            throws Exception {
         checkExe(mongoExe, "mongod server");
         tempDir = makeTempDirs(rootTempDir, "MongoController-", tempDirectories);
         port = findFreePort();
 
-        List<String> command = new LinkedList<String>();
-        command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
-                "--dbpath", tempDir.resolve(DATA_DIR).toString()));
-
-        // In version 3.6, the --nojournal option is deprecated
-        if (dbVer.lessThanOrEqualTo(MONGO_DB_3)) {
-            command.addAll(Arrays.asList("--nojournal"));
+        List<String> command = getCommand(mongoExe, useWiredTiger);
+        mongo = startProcess(command);
+        Version dbVer = getMongoDBVer();
+        if (dbVer.greaterThan(MONGO_DB_3)) {
+            destroy(false);
+            command = getCommand(mongoExe, useWiredTiger, MONGO_DB_7);
+            mongo = startProcess(command);
         }
-        if (useWiredTiger) {
-            command.addAll(Arrays.asList("--storageEngine", "wiredTiger"));
-        }
-        ProcessBuilder servpb = new ProcessBuilder(command)
-                .redirectErrorStream(true)
-                .redirectOutput(tempDir.resolve("mongo.log").toFile());
-
-        mongo = servpb.start();
-        Thread.sleep(1000); //wait for server to start up
     }
 
     public int getServerPort() {
@@ -98,6 +84,45 @@ public class MongoController {
         if (tempDir != null && deleteTempFiles) {
             FileUtils.deleteDirectory(tempDir.toFile());
         }
+    }
+
+    public Version getMongoDBVer() {
+        String dbVer = MongoClients.create("mongodb://localhost:" + getServerPort())
+                .getDatabase("test")
+                .runCommand(new Document("buildinfo", 1))
+                .getString("version");
+        return Version.valueOf(dbVer);
+    }
+
+    public List<String> getCommand(final String mongoExe, final boolean useWiredTiger) {
+        return getCommand(mongoExe, useWiredTiger, MONGO_DB_3);
+    }
+
+    public List<String> getCommand(final String mongoExe,
+                                   final boolean useWiredTiger,
+                                   final Version dbVer) {
+        List<String> command = new LinkedList<String>();
+        command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
+                "--dbpath", tempDir.resolve(DATA_DIR).toString()));
+
+        // In version 3.6, the --nojournal option is deprecated
+        if (dbVer.lessThanOrEqualTo(MONGO_DB_3)) {
+            command.addAll(Arrays.asList("--nojournal"));
+        }
+        if (useWiredTiger) {
+            command.addAll(Arrays.asList("--storageEngine", "wiredTiger"));
+        }
+        return command;
+    }
+
+    public Process startProcess(List<String> command) throws Exception {
+        ProcessBuilder servpb = new ProcessBuilder(command)
+                .redirectErrorStream(true)
+                .redirectOutput(getTempDir().resolve("mongo.log").toFile());
+
+        Process mongoProcess = servpb.start();
+        Thread.sleep(1000); //wait for server to start up
+        return mongoProcess;
     }
 
     public static void main(String[] args) throws Exception {

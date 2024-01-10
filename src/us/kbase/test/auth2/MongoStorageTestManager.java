@@ -36,11 +36,9 @@ public class MongoStorageTestManager {
 	
 	public MongoStorageTestManager(final String dbName) throws Exception {
 		stfuLoggers();
-		Version dbVer = getMongoDBVer(dbName);
 		mongo = new MongoController(getMongoExe().toString(),
 				getTempDir(),
-				useWiredTigerEngine(),
-				dbVer);
+				useWiredTigerEngine());
 		wiredTiger = useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				getMongoExe(), mongo.getServerPort()));
@@ -80,20 +78,5 @@ public class MongoStorageTestManager {
 				MongoDatabase.class, RandomDataGenerator.class, Clock.class);
 		con.setAccessible(true);
 		storage = con.newInstance(db, mockRand, mockClock);
-	}
-
-	public Version getMongoDBVer(final String dbName) throws Exception {
-		MongoController mongoCtr = new MongoController(
-				getMongoExe().toString(),
-				getTempDir(),
-				useWiredTigerEngine());
-
-		String dbVer = MongoClients.create("mongodb://localhost:" + mongo.getServerPort())
-				.getDatabase(dbName)
-				.runCommand(new Document("buildinfo", 1))
-				.getString("version");
-
-		mongoCtr.destroy(true);
-		return Version.valueOf(dbVer);
 	}
 }
