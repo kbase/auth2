@@ -36,16 +36,20 @@ public class MongoStorageTestManager {
 	
 	public MongoStorageTestManager(final String dbName) throws Exception {
 		stfuLoggers();
-		mongoDBVer = getMongoDBVer(dbName);
+		Version dbVer = getMongoDBVer(dbName);
 		mongo = new MongoController(getMongoExe().toString(),
 				getTempDir(),
 				useWiredTigerEngine(),
-				mongoDBVer);
+				dbVer);
 		wiredTiger = useWiredTigerEngine();
 		System.out.println(String.format("Testing against mongo executable %s on port %s",
 				getMongoExe(), mongo.getServerPort()));
 		mc = MongoClients.create("mongodb://localhost:" + mongo.getServerPort());
-		db = mc.getDatabase(dbName);;
+		db = mc.getDatabase(dbName);
+
+		final Document bi = db.runCommand(new Document("buildinfo", 1));
+		final String version = bi.getString("version");
+		mongoDBVer = Version.valueOf(version);
 		indexVer = mongoDBVer.greaterThanOrEqualTo(Version.forIntegers(3, 4)) ? 2 : 1;
 		reset();
 	}
