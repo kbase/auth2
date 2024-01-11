@@ -104,6 +104,7 @@ public class MongoController {
         JsonNode node = obj.readTree(buildInfoJsonStr);
         JsonNode versionNode = node.get("version");
 
+        System.out.println("MongoDB version: " + versionNode.textValue());
         checkVerProcess.destroy();
         return Version.valueOf(versionNode.textValue());
     }
@@ -131,7 +132,7 @@ public class MongoController {
                 .redirectOutput(getTempDir().resolve("mongo.log").toFile());
 
         Process mongoProcess = servpb.start();
-        Thread.sleep(1000); //wait for server to start up
+        Thread.sleep(3000); //wait for server to start up
         return mongoProcess;
     }
 
