@@ -4,18 +4,21 @@ import static us.kbase.common.test.controllers.ControllerCommon.checkExe;
 import static us.kbase.common.test.controllers.ControllerCommon.findFreePort;
 import static us.kbase.common.test.controllers.ControllerCommon.makeTempDirs;
 
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Scanner;
+import java.util.stream.Collectors;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.github.zafarkhaja.semver.Version;
-import com.mongodb.client.MongoClients;
 import org.apache.commons.io.FileUtils;
-import org.bson.Document;
 
 
 /** Q&D Utility to run a Mongo server for the purposes of testing from
@@ -36,12 +39,11 @@ public class MongoController {
     private final static Version MONGO_DB_3 =
             Version.forIntegers(3,6,23);
 
-    private final static Version MONGO_DB_7 =
-            Version.forIntegers(7,0,4);
-
     private final Path tempDir;
+
+    private final Process mongo;
+
     private final int port;
-    private Process mongo;
 
     public MongoController(
             final String mongoExe,
@@ -58,15 +60,9 @@ public class MongoController {
         checkExe(mongoExe, "mongod server");
         tempDir = makeTempDirs(rootTempDir, "MongoController-", tempDirectories);
         port = findFreePort();
-
-        List<String> command = getCommand(mongoExe, useWiredTiger);
+        Version dbVer = getMongoDBVer(mongoExe);
+        List<String> command = getMongoServerStartCommand(mongoExe, useWiredTiger, dbVer);
         mongo = startProcess(command);
-        Version dbVer = getMongoDBVer();
-        if (dbVer.greaterThan(MONGO_DB_3)) {
-            destroy(false);
-            command = getCommand(mongoExe, useWiredTiger, MONGO_DB_7);
-            mongo = startProcess(command);
-        }
     }
 
     public int getServerPort() {
@@ -86,21 +82,35 @@ public class MongoController {
         }
     }
 
-    public Version getMongoDBVer() {
-        String dbVer = MongoClients.create("mongodb://localhost:" + getServerPort())
-                .getDatabase("test")
-                .runCommand(new Document("buildinfo", 1))
-                .getString("version");
-        return Version.valueOf(dbVer);
+    public static Version getMongoDBVer(final String mongoExe) throws IOException {
+
+        // build MongoDB version check command
+        List<String> command = new LinkedList<String>();
+        command.addAll(Arrays.asList(mongoExe, "--version"));
+
+        // start MongoDB version check process
+        ProcessBuilder checkVerPb = new ProcessBuilder(command);
+        Process checkVerProcess  = checkVerPb.start();
+
+        // parse mongod --version output string
+        String buildInfo = new BufferedReader(
+                new InputStreamReader(checkVerProcess.getInputStream()))
+                .lines()
+                .collect(Collectors.joining("\n"))
+                .split("\n", 2)[1];
+
+        String buildInfoJsonStr = buildInfo.substring(buildInfo.indexOf("{"));
+        ObjectMapper obj = new ObjectMapper();
+        JsonNode node = obj.readTree(buildInfoJsonStr);
+        JsonNode versionNode = node.get("version");
+
+        checkVerProcess.destroy();
+        return Version.valueOf(versionNode.textValue());
     }
 
-    public List<String> getCommand(final String mongoExe, final boolean useWiredTiger) {
-        return getCommand(mongoExe, useWiredTiger, MONGO_DB_3);
-    }
-
-    public List<String> getCommand(final String mongoExe,
-                                   final boolean useWiredTiger,
-                                   final Version dbVer) {
+    public List<String> getMongoServerStartCommand(final String mongoExe,
+                                                   final boolean useWiredTiger,
+                                                   final Version dbVer) {
         List<String> command = new LinkedList<String>();
         command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
                 "--dbpath", tempDir.resolve(DATA_DIR).toString()));
