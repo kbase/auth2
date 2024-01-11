@@ -93,13 +93,13 @@ public class MongoController {
         Process checkVerProcess  = checkVerPb.start();
 
         // parse mongod --version output string
-        String buildInfo = new BufferedReader(
+        String output = new BufferedReader(
                 new InputStreamReader(checkVerProcess.getInputStream()))
                 .lines()
-                .collect(Collectors.joining("\n"))
-                .split("\n", 2)[1];
+                .collect(Collectors.joining("\n"));
 
-        String buildInfoJsonStr = buildInfo.substring(buildInfo.indexOf("{"));
+        System.out.println("output: " + output);
+        String buildInfoJsonStr = output.substring(output.indexOf("{"));
         ObjectMapper obj = new ObjectMapper();
         JsonNode node = obj.readTree(buildInfoJsonStr);
         JsonNode versionNode = node.get("version");
@@ -132,7 +132,7 @@ public class MongoController {
                 .redirectOutput(getTempDir().resolve("mongo.log").toFile());
 
         Process mongoProcess = servpb.start();
-        Thread.sleep(3000); //wait for server to start up
+        Thread.sleep(1000); //wait for server to start up
         return mongoProcess;
     }
 
