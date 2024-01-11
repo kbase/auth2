@@ -93,20 +93,15 @@ public class MongoController {
         Process checkVerProcess  = checkVerPb.start();
 
         // parse mongod --version output string
-        String output = new BufferedReader(
+        String dbVer = new BufferedReader(
                 new InputStreamReader(checkVerProcess.getInputStream()))
                 .lines()
-                .collect(Collectors.joining("\n"));
+                .collect(Collectors.joining(" "))
+                .split(" ")[2].substring(1);
 
-        System.out.println("output: " + output);
-        String buildInfoJsonStr = output.substring(output.indexOf("{"));
-        ObjectMapper obj = new ObjectMapper();
-        JsonNode node = obj.readTree(buildInfoJsonStr);
-        JsonNode versionNode = node.get("version");
-
-        System.out.println("MongoDB version: " + versionNode.textValue());
+        System.out.println("MongoDB version: " + dbVer);
         checkVerProcess.destroy();
-        return Version.valueOf(versionNode.textValue());
+        return Version.valueOf(dbVer);
     }
 
     public List<String> getMongoServerStartCommand(final String mongoExe,
