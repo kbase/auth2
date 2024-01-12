@@ -8,6 +8,7 @@ import static us.kbase.test.auth2.TestCommon.set;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
@@ -157,13 +158,14 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("schema", 1))
+						.append("key", new Document("schema", 1L))
 						.append("name", "schema_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_")
 				)));
 	}
@@ -173,13 +175,14 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("key", 1))
+						.append("key", new Document("key", 1L))
 						.append("name", "key_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_")
 				)));
 	}
@@ -189,13 +192,14 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_ext").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("key", 1))
+						.append("key", new Document("key", 1L))
 						.append("name", "key_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_")
 				)));
 	}
@@ -205,13 +209,14 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_prov").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("prov", 1).append("key", 1))
+						.append("key", new Document("prov", 1L).append("key", 1L))
 						.append("name", "prov_1_key_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_")
 				)));
 	}
@@ -221,13 +226,14 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("cust_roles").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1))
+						.append("key", new Document("id", 1L))
 						.append("name", "id_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_")
 				)));
 	}
@@ -237,17 +243,17 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_cust_roles").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1))
+						.append("key", new Document("id", 1L))
 						.append("name", "id_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
-						.append("key", new Document("expires", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("expires", 1L))
 						.append("name", "expires_1")
 						.append("expireAfterSeconds", 0L)
 				)));
@@ -258,26 +264,26 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("tempdata").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("token", 1))
+						.append("key", new Document("token", 1L))
 						.append("name", "token_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("expires", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("expires", 1L))
 						.append("name", "expires_1")
 						.append("expireAfterSeconds", 0L),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("sparse", true)
-						.append("key", new Document("user", 1))
+						.append("key", new Document("user", 1L))
 						.append("name", "user_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1))
+						.append("key", new Document("id", 1L))
 						.append("name", "id_1")
 				)));
 	}
@@ -287,25 +293,25 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("tokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("token", 1))
+						.append("key", new Document("token", 1L))
 						.append("name", "token_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("expires", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("expires", 1L))
 						.append("name", "expires_1")
 						.append("expireAfterSeconds", 0L),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
-						.append("key", new Document("user", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("user", 1L))
 						.append("name", "user_1"),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1))
+						.append("key", new Document("id", 1L))
 						.append("name", "id_1")
 				)));
 	}
@@ -315,25 +321,25 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_tokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("token", 1))
+						.append("key", new Document("token", 1L))
 						.append("name", "token_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("expires", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("expires", 1L))
 						.append("name", "expires_1")
 						.append("expireAfterSeconds", 0L),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
-						.append("key", new Document("user", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("user", 1L))
 						.append("name", "user_1"),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1))
+						.append("key", new Document("id", 1L))
 						.append("name", "id_1")
 				)));
 	}
@@ -343,32 +349,33 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("users").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
-						.append("key", new Document("custrls", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("custrls", 1L))
 						.append("name", "custrls_1")
 						.append("sparse", true),
-				new Document("v", indexVer)
-						.append("key", new Document("dispcan", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("dispcan", 1L))
 						.append("name", "dispcan_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)	
-						.append("key", new Document("idents.id", 1))
+						.append("key", new Document("idents.id", 1L))
 						.append("name", "idents.id_1")
 						.append("sparse", true),
-				new Document("v", indexVer)
-						.append("key", new Document("roles", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("roles", 1L))
 						.append("name", "roles_1")
 						.append("sparse", true),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("user", 1))
+						.append("key", new Document("user", 1L))
 						.append("name", "user_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("anonid", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("anonid", 1L))
 						.append("name", "anonid_1")
 						.append("sparse", true)
 				)));
@@ -379,36 +386,49 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_users").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
+		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", indexVer)
-						.append("key", new Document("custrls", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("custrls", 1L))
 						.append("name", "custrls_1")
 						.append("sparse", true),
-				new Document("v", indexVer)
-						.append("key", new Document("dispcan", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("dispcan", 1L))
 						.append("name", "dispcan_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
 						.append("name", "_id_"),
-				new Document("v", indexVer)
-						.append("key", new Document("roles", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("roles", 1L))
 						.append("name", "roles_1")
 						.append("sparse", true),
-				new Document("v", indexVer)
+				new Document("v", (long) indexVer)
 						.append("unique", true)
-						.append("key", new Document("user", 1))
+						.append("key", new Document("user", 1L))
 						.append("name", "user_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("expires", 1))
+				new Document("v", (long) indexVer)
+						.append("key", new Document("expires", 1L))
 						.append("name", "expires_1")
 						.append("expireAfterSeconds", 0L)
 				)));
 	}
 
-	public void updateField(final Document doc, final String key, final Object val) {
-		if (doc.containsKey(key)) {
-			doc.put(key, val);
+	public void updateInt2Long(final Document doc) {
+		for (Map.Entry<String, Object> entry : doc.entrySet()) {
+			String key = entry.getKey();
+			Object val = entry.getValue();
+			if (key.equals("key")) {
+				Document valDoc = (Document) val;
+				for (String dkey: valDoc.keySet()) {
+					if (valDoc.get(dkey) instanceof Integer) {
+						valDoc.put(dkey, Long.parseLong(valDoc.get(dkey).toString()));
+					}
+				}
+			} else {
+				if (val instanceof Integer) {
+					doc.put(key, Long.parseLong(val.toString()));
+				}
+			}
 		}
 	}
 }
