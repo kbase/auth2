@@ -237,6 +237,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_cust_roles").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -248,7 +249,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0)
+						.append("expireAfterSeconds", 0L)
 				)));
 	}
 	
@@ -257,6 +258,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("tempdata").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -265,7 +267,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0),
+						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("sparse", true)
 						.append("key", new Document("user", 1))
@@ -285,6 +287,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("tokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -293,7 +296,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0),
+						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_"),
@@ -312,6 +315,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_tokens").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -320,7 +324,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0),
+						.append("expireAfterSeconds", 0L),
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_"),
@@ -375,6 +379,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("test_users").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
+		indexes.forEach(doc -> updateField(doc, "expireAfterSeconds", 0L));
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
@@ -397,7 +402,13 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0)
+						.append("expireAfterSeconds", 0L)
 				)));
+	}
+
+	public void updateField(final Document doc, final String key, final Object val) {
+		if (doc.containsKey(key)) {
+			doc.put(key, val);
+		}
 	}
 }
