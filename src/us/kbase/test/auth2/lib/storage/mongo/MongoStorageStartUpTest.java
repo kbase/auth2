@@ -420,13 +420,13 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			if (key.equals("key")) {
 				Document valDoc = (Document) val;
 				for (String dkey: valDoc.keySet()) {
-					if (valDoc.get(dkey) instanceof Integer) {
-						valDoc.put(dkey, Long.parseLong(valDoc.get(dkey).toString()));
+					if (valDoc.get(dkey) instanceof Number) {
+						valDoc.put(dkey, ((Number) valDoc.get(dkey)).longValue());
 					}
 				}
 			} else {
-				if (val instanceof Integer) {
-					doc.put(key, Long.parseLong(val.toString()));
+				if (val instanceof Number) {
+					doc.put(key, ((Number) val).longValue());
 				}
 			}
 		}
