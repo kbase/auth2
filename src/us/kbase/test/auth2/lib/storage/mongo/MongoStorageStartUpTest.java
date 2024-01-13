@@ -172,14 +172,28 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(this::updateInt2Long);
+//		indexes.forEach(this::updateInt2Long);
+		for (Document doc: indexes) {
+			for (String key: doc.keySet()) {
+				if (key.equals("key")) {
+					Document dVal = (Document) doc.get(key);
+					for (String dkey: dVal.keySet()) {
+						Object dval = dVal.get(dkey);
+						System.out.println("key: " + dkey + " |" + " value: " + dval + " |" + " type: " + dval.getClass().getName());
+					}
+				} else {
+					Object val = doc.get(key);
+					System.out.println("key: " + key + " |" + " value: " + val + " |" + " type: " + val.getClass().getName());
+				}
+			}
+		}
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", (long) indexVer)
+				new Document("v", indexVer)
 						.append("unique", true)
-						.append("key", new Document("key", 1L))
+						.append("key", new Document("key", 1))
 						.append("name", "key_1"),
-				new Document("v", (long) indexVer)
-						.append("key", new Document("_id", 1L))
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 				)));
 	}
