@@ -6,10 +6,7 @@ import static org.junit.Assert.fail;
 
 import static us.kbase.test.auth2.TestCommon.set;
 
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -160,20 +157,16 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		indexes.forEach(doc -> doc.remove("ns"));
 		indexes.forEach(this::updateInt2Long);
 		assertThat("incorrect indexes", indexes, is(set(
-//				new Document("v", (long) indexVer)
-//						.append("unique", true)
-//						.append("key", new Document("schema", 1L))
-//						.append("name", "schema_1"),
-				new Document("v", (long) indexVer)
-						.append("key", new Document("_id", 1L))
-						.append("name", "_id_"),
 				new Document("v", (long) indexVer)
 						.append("unique", true)
 						.append("key", new Document("schema", 1L))
-						.append("name", "schema_1")
+						.append("name", "schema_1"),
+				new Document("v", (long) indexVer)
+						.append("key", new Document("_id", 1L))
+						.append("name", "_id_")
 				)));
 	}
-	
+
 	@Test
 	public void indexesConfigApp() {
 		final Set<Document> indexes = new HashSet<>();
@@ -424,8 +417,9 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			if (key.equals("key")) {
 				Document valDoc = (Document) val;
 				for (String dkey: valDoc.keySet()) {
-					if (valDoc.get(dkey) instanceof Number) {
-						valDoc.put(dkey, ((Number) valDoc.get(dkey)).longValue());
+					Object dval = valDoc.get(dkey);
+					if (dval instanceof Number) {
+						valDoc.put(dkey, ((Number) dval).longValue());
 					}
 				}
 			} else {
