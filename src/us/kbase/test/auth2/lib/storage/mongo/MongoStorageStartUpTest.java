@@ -188,13 +188,17 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			}
 		}
 		assertThat("incorrect indexes", indexes, is(set(
+//				new Document("v", indexVer)
+//						.append("unique", true)
+//						.append("key", new Document("key", 1))
+//						.append("name", "key_1"),
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
-						.append("name", "key_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
-						.append("name", "_id_")
+						.append("name", "key_1")
 				)));
 	}
 	
