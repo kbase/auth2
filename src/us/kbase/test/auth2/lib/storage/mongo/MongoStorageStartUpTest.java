@@ -1,9 +1,8 @@
 package us.kbase.test.auth2.lib.storage.mongo;
 
 import static org.hamcrest.CoreMatchers.is;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
 
+import static org.junit.Assert.*;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.util.*;
@@ -189,7 +188,8 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		);
 		System.out.println("-------------------------");
 		display(expected);
-		assertThat("incorrect indexes", indexes, is(expected));
+//		assertThat("incorrect indexes", indexes, is(expected));
+		assertTrue("incorrect indexes", indexes.equals(expected));
 	}
 	
 	@Test
