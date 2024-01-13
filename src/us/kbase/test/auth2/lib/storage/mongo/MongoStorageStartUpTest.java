@@ -173,21 +173,8 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
 		indexes.forEach(doc -> doc.remove("ns"));
 //		indexes.forEach(this::updateInt2Long);
-		for (Document doc: indexes) {
-			for (String key: doc.keySet()) {
-				if (key.equals("key")) {
-					Document dVal = (Document) doc.get(key);
-					for (String dkey: dVal.keySet()) {
-						Object dval = dVal.get(dkey);
-						System.out.println("key: " + dkey + " |" + " value: " + dval + " |" + " type: " + dval.getClass().getName());
-					}
-				} else {
-					Object val = doc.get(key);
-					System.out.println("key: " + key + " |" + " value: " + val + " |" + " type: " + val.getClass().getName());
-				}
-			}
-		}
-		assertThat("incorrect indexes", indexes, is(set(
+		display(indexes);
+		final Set<Document> expected = set(
 //				new Document("v", indexVer)
 //						.append("unique", true)
 //						.append("key", new Document("key", 1))
@@ -199,7 +186,10 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("unique", true)
 						.append("key", new Document("key", 1))
 						.append("name", "key_1")
-				)));
+		);
+		System.out.println("-------------------------");
+		display(expected);
+		assertThat("incorrect indexes", indexes, is(expected));
 	}
 	
 	@Test
@@ -443,6 +433,23 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			} else {
 				if (val instanceof Number) {
 					doc.put(key, ((Number) val).longValue());
+				}
+			}
+		}
+	}
+
+	public void display(final Set<Document> indexes) {
+		for (Document doc: indexes) {
+			for (String key: doc.keySet()) {
+				if (key.equals("key")) {
+					Document dVal = (Document) doc.get(key);
+					for (String dkey: dVal.keySet()) {
+						Object dval = dVal.get(dkey);
+						System.out.println("key: " + dkey + " |" + " value: " + dval + " |" + " type: " + dval.getClass().getName());
+					}
+				} else {
+					Object val = doc.get(key);
+					System.out.println("key: " + key + " |" + " value: " + val + " |" + " type: " + val.getClass().getName());
 				}
 			}
 		}

@@ -27,7 +27,7 @@ jobs:
           - java: '8'
             mongo: 'mongodb-linux-x86_64-ubuntu2204-7.0.4'
             wired_tiger: 'false'
-          - java: '8'
+          - java: '11'
             mongo: 'mongodb-linux-x86_64-3.6.23'
             wired_tiger: 'true'
 
