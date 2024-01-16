@@ -170,7 +170,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	public void indexesConfigApp() {
 		final Set<Document> indexes = new HashSet<>();
 		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
-		indexes.forEach(doc -> doc.remove("ns"));
+//		indexes.forEach(doc -> doc.remove("ns"));
 //		indexes.forEach(this::updateInt2Long);
 		display(indexes);
 		final Set<Document> expected = set(
