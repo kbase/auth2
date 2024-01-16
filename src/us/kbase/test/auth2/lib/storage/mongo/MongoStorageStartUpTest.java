@@ -169,28 +169,22 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	@Test
 	public void indexesConfigApp() {
 		final Set<Document> indexes = new HashSet<>();
-//		db.getCollection("config_app").listIndexes().forEach((Consumer<Document>) indexes::add);
-//		indexes.forEach(doc -> doc.remove("ns"));
-//		indexes.forEach(this::updateInt2Long);
 		updateIndexes("config_app", indexes);
 		display(indexes);
 		final Set<Document> expected = set(
-//				new Document("v", indexVer)
-//						.append("unique", true)
-//						.append("key", new Document("key", 1))
-//						.append("name", "key_1"),
-				new Document("v", indexVer)
-						.append("key", new Document("_id", 1))
-						.append("name", "_id_"),
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
-						.append("name", "key_1")
+						.append("name", "key_1"),
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
+						.append("name", "_id_")
+
 		);
 		System.out.println("-------------------------");
 		display(expected);
-//		assertThat("incorrect indexes", indexes, is(expected));
-		assertTrue("incorrect indexes", indexes.equals(expected));
+		assertThat("incorrect indexes", indexes, is(expected));
+//		assertTrue("incorrect indexes", indexes.equals(expected));
 	}
 	
 	@Test
