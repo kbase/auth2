@@ -152,16 +152,17 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	@Test
 	public void indexesConfig() {
 		final Set<Document> indexes = new HashSet<>();
-		db.getCollection("config").listIndexes().forEach((Consumer<Document>) indexes::add);
-		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(this::updateInt2Long);
+//		db.getCollection("config").listIndexes().forEach((Consumer<Document>) indexes::add);
+//		indexes.forEach(doc -> doc.remove("ns"));
+//		indexes.forEach(this::updateInt2Long);
+		updateIndexes("config", indexes);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", (long) indexVer)
+				new Document("v", indexVer)
 						.append("unique", true)
-						.append("key", new Document("schema", 1L))
+						.append("key", new Document("schema", 1))
 						.append("name", "schema_1"),
-				new Document("v", (long) indexVer)
-						.append("key", new Document("_id", 1L))
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
 				)));
 	}
@@ -170,8 +171,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	public void indexesConfigApp() {
 		final Set<Document> indexes = new HashSet<>();
 		updateIndexes("config_app", indexes);
-		display(indexes);
-		final Set<Document> expected = set(
+		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
 						.append("key", new Document("key", 1))
@@ -179,12 +179,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_")
-
-		);
-		System.out.println("-------------------------");
-		display(expected);
-		assertThat("incorrect indexes", indexes, is(expected));
-//		assertTrue("incorrect indexes", indexes.equals(expected));
+				)));
 	}
 	
 	@Test
