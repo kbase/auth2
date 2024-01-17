@@ -240,7 +240,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				new Document("v", indexVer)
 						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0)
+						.append("expireAfterSeconds", 0L)
 				)));
 	}
 	
@@ -401,6 +401,9 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	public void updateIndexes(final String name, final Set<Document> indexes) {
 		for (Document index: db.getCollection(name).listIndexes()) {
 			index.remove("ns");
+			if (index.containsKey("expireAfterSeconds")) {
+				index.put("expireAfterSeconds", Long.valueOf(index.get("expireAfterSeconds").toString()));
+			}
 			indexes.add(index);
 		}
 	}
