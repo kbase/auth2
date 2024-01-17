@@ -68,15 +68,13 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		
 		final Pattern errorPattern = Pattern.compile(
 				"Failed to create index: Write failed with error code 11000 and error message " +
-				"'(exception: )?E11000 duplicate key error (index|collection): " +
+				"'(exception: )?(.*)E11000 duplicate key error (index|collection): " +
 				"startUpWith2ConfigDocs.config( index: |\\.\\$)schema_1\\s+dup key: " +
-				"\\{ : \"schema\" \\}'");
+				"(\\{ schema: \"schema\" \\}'|\\{ : \"schema\" \\}')");
 		try {
 			new MongoStorage(db);
 			fail("started mongo with bad config");
 		} catch (StorageInitException e) {
-			System.out.print("e meesage is: ");
-			System.out.print(e.getMessage());
 			final Matcher match = errorPattern.matcher(e.getMessage());
 			assertThat("exception did not match: \n" + e.getMessage(), match.matches(), is(true));
 		}
