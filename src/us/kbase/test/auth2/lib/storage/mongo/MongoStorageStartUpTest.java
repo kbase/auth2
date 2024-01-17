@@ -75,6 +75,8 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			new MongoStorage(db);
 			fail("started mongo with bad config");
 		} catch (StorageInitException e) {
+			System.out.print("e meesage is: ");
+			System.out.print(e.getMessage());
 			final Matcher match = errorPattern.matcher(e.getMessage());
 			assertThat("exception did not match: \n" + e.getMessage(), match.matches(), is(true));
 		}
