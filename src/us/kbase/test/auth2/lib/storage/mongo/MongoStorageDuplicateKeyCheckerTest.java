@@ -130,9 +130,9 @@ public class MongoStorageDuplicateKeyCheckerTest {
 			getInstance(e);
 			fail("expected exception");
 		} catch (InvocationTargetException ex) {
-			TestCommon.assertExceptionCorrect((Exception) ex.getTargetException(),
-					new AuthStorageException("Unable to parse duplicate key error: some "));
-			
+			assertThat("some dup key message", ex.getTargetException().getMessage(),
+					is("Unable to parse duplicate key error: Write operation error on server 127.0.0.1:27017. " +
+							"Write error: WriteError{code=11000, message='some "));
 		}
 	}
 
