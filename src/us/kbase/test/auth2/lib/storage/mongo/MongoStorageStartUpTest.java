@@ -193,7 +193,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "_id_")
 				)));
 	}
-	
+
 	@Test
 	public void indexesConfigProv() {
 		final Set<Document> indexes = new HashSet<>();
@@ -227,21 +227,20 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 	@Test
 	public void indexesTestCustRoles() {
 		final Set<Document> indexes = new HashSet<>();
-		db.getCollection("test_cust_roles").listIndexes().forEach((Consumer<Document>) indexes::add);
-		indexes.forEach(doc -> doc.remove("ns"));
-		indexes.forEach(this::updateInt2Long);
+		updateIndexes("test_cust_roles", indexes);
+		display(indexes);
 		assertThat("incorrect indexes", indexes, is(set(
-				new Document("v", (long) indexVer)
+				new Document("v", indexVer)
 						.append("unique", true)
-						.append("key", new Document("id", 1L))
+						.append("key", new Document("id", 1))
 						.append("name", "id_1"),
-				new Document("v", (long) indexVer)
-						.append("key", new Document("_id", 1L))
+				new Document("v", indexVer)
+						.append("key", new Document("_id", 1))
 						.append("name", "_id_"),
-				new Document("v", (long) indexVer)
-						.append("key", new Document("expires", 1L))
+				new Document("v", indexVer)
+						.append("key", new Document("expires", 1))
 						.append("name", "expires_1")
-						.append("expireAfterSeconds", 0L)
+						.append("expireAfterSeconds", 0)
 				)));
 	}
 	
