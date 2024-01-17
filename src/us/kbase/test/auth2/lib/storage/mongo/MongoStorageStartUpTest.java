@@ -33,7 +33,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			assertThat("incorrect exception message", e.getMessage(), is("db"));
 		}
 	}
-	
+
 	@Test
 	public void startUpAndCheckConfigDoc() throws Exception {
 		final MongoDatabase db = mc.getDatabase("startUpAndCheckConfigDoc");
@@ -42,30 +42,30 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		assertThat("Only one config doc", col.countDocuments(), is(1L));
 		final FindIterable<Document> c = col.find();
 		final Document d = c.first();
-		
+
 		assertThat("correct config key & value", (String)d.get("schema"), is("schema"));
 		assertThat("not in update", (Boolean)d.get("inupdate"), is(false));
 		assertThat("schema v1", (Integer)d.get("schemaver"), is(1));
-		
+
 		//check startup works with the config object in place
 		final MongoStorage ms = new MongoStorage(db);
 		ms.setCustomRole(new CustomRole("foo", "bar"));
 		assertThat("failed basic storage operation", ms.getCustomRoles(),
 				is(set(new CustomRole("foo", "bar"))));
 	}
-	
+
 	@Test
 	public void startUpWith2ConfigDocs() throws Exception {
 		final MongoDatabase db = mc.getDatabase("startUpWith2ConfigDocs");
-		
+
 		final Document m = new Document("schema", "schema")
 				.append("inupdate", false)
 				.append("schemaver", 1);
-		
+
 		db.getCollection("config").insertMany(Arrays.asList(m,
 				// need to create a new document to create a new mongo _id
 				new Document(m)));
-		
+
 		final Pattern errorPattern = Pattern.compile(
 				"Failed to create index: Write failed with error code 11000 and error message " +
 				"'(exception: )?(.*)E11000 duplicate key error (index|collection): " +
@@ -79,36 +79,36 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			assertThat("exception did not match: \n" + e.getMessage(), match.matches(), is(true));
 		}
 	}
-	
+
 	@Test
 	public void startUpWithBadSchemaVersion() throws Exception {
 		final MongoDatabase db = mc.getDatabase("startUpWithBadSchemaVersion");
-		
+
 		final Document m = new Document("schema", "schema")
 				.append("inupdate", false)
 				.append("schemaver", 4);
-		
+
 		db.getCollection("config").insertOne(m);
-		
+
 		failMongoStart(db, new StorageInitException(
 				"Incompatible database schema. Server is v1, DB is v4"));
 	}
-	
+
 	@Test
 	public void startUpWithUpdateInProgress() throws Exception {
 		final MongoDatabase db = mc.getDatabase("startUpWithUpdateInProgress");
-		
+
 		final Document m = new Document("schema", "schema")
 				.append("inupdate", true)
 				.append("schemaver", 1);
-		
+
 		db.getCollection("config").insertOne(m);
-		
+
 		failMongoStart(db, new StorageInitException(
 				"The database is in the middle of an update from v1 of the " +
 				"schema. Aborting startup."));
 	}
-	
+
 	private void failMongoStart(final MongoDatabase db, final Exception exp)
 			throws Exception {
 		try {
@@ -118,13 +118,13 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			TestCommon.assertExceptionCorrect(e, exp);
 		}
 	}
-	
+
 	/* The following tests ensure that all indexes are created correctly. The collection names
-	 * are tested so that if a new collection is added the test will fail without altering 
+	 * are tested so that if a new collection is added the test will fail without altering
 	 * said test, at which time the coder will hopefully read this notice and add index tests
 	 * for the new collection.
 	 */
-	
+
 	@Test
 	public void checkCollectionNames() throws Exception {
 		final Set<String> names = new HashSet<>();
@@ -148,7 +148,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 		db.listCollectionNames().forEach((Consumer<String>) names::add);
 		assertThat("incorrect collection names", names, is(expected));
 	}
-	
+
 	@Test
 	public void indexesConfig() {
 		final Set<Document> indexes = new HashSet<>();
@@ -178,7 +178,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "_id_")
 				)));
 	}
-	
+
 	@Test
 	public void indexesConfigExt() {
 		final Set<Document> indexes = new HashSet<>();
@@ -208,7 +208,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "_id_")
 				)));
 	}
-	
+
 	@Test
 	public void indexesCustRoles() {
 		final Set<Document> indexes = new HashSet<>();
@@ -223,7 +223,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "_id_")
 				)));
 	}
-	
+
 	@Test
 	public void indexesTestCustRoles() {
 		final Set<Document> indexes = new HashSet<>();
@@ -242,7 +242,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("expireAfterSeconds", 0L)
 				)));
 	}
-	
+
 	@Test
 	public void indexesTempData() {
 		final Set<Document> indexes = new HashSet<>();
@@ -269,7 +269,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "id_1")
 				)));
 	}
-	
+
 	@Test
 	public void indexesTokens() {
 		final Set<Document> indexes = new HashSet<>();
@@ -295,7 +295,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "id_1")
 				)));
 	}
-	
+
 	@Test
 	public void indexesTestTokens() {
 		final Set<Document> indexes = new HashSet<>();
@@ -321,7 +321,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("name", "id_1")
 				)));
 	}
-	
+
 	@Test
 	public void indexesUsers() {
 		final Set<Document> indexes = new HashSet<>();
@@ -338,7 +338,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("key", new Document("_id", 1))
 						.append("name", "_id_"),
 				new Document("v", indexVer)
-						.append("unique", true)	
+						.append("unique", true)
 						.append("key", new Document("idents.id", 1))
 						.append("name", "idents.id_1")
 						.append("sparse", true),
@@ -356,7 +356,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 						.append("sparse", true)
 				)));
 	}
-	
+
 	@Test
 	public void indexesTestUsers() {
 		final Set<Document> indexes = new HashSet<>();
@@ -394,23 +394,6 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				index.put("expireAfterSeconds", Long.valueOf(index.get("expireAfterSeconds").toString()));
 			}
 			indexes.add(index);
-		}
-	}
-
-	public void display(final Set<Document> indexes) {
-		for (Document doc: indexes) {
-			for (String key: doc.keySet()) {
-				if (key.equals("key")) {
-					Document dVal = (Document) doc.get(key);
-					for (String dkey: dVal.keySet()) {
-						Object dval = dVal.get(dkey);
-						System.out.println("key: " + dkey + " |" + " value: " + dval + " |" + " type: " + dval.getClass().getName());
-					}
-				} else {
-					Object val = doc.get(key);
-					System.out.println("key: " + key + " |" + " value: " + val + " |" + " type: " + val.getClass().getName());
-				}
-			}
 		}
 	}
 }
