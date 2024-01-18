@@ -387,7 +387,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 			index.remove("ns");
 			// some versions of Mongo return ints, some longs. Convert all to longs.
 			if (index.containsKey("expireAfterSeconds")) {
-				index.put("expireAfterSeconds", Long.valueOf(index.getInteger("expireAfterSeconds")));
+				index.put("expireAfterSeconds", ((Number) index.get("expireAfterSeconds")).longValue());
 			}
 			indexes.add(index);
 		}
