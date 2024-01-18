@@ -8,7 +8,7 @@ import org.glassfish.jersey.server.mvc.mustache.MustacheMvcFeature;
 import org.slf4j.LoggerFactory;
 
 import com.fasterxml.jackson.jaxrs.json.JacksonJaxbJsonProvider;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 
 import ch.qos.logback.classic.Level;
 import ch.qos.logback.classic.Logger;

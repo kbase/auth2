@@ -7,12 +7,12 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 
 import com.github.zafarkhaja.semver.Version;
-import com.mongodb.MongoClient;
+import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoDatabase;
 
 import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.storage.mongo.MongoStorage;
-import us.kbase.common.test.controllers.mongo.MongoController;
+import us.kbase.test.auth2.MongoController;
 import us.kbase.test.auth2.MongoStorageTestManager;
 
 public class MongoStorageTester {

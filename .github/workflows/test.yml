@@ -25,7 +25,7 @@ jobs:
         # doesn't touch mongo against multiple mongo versions
         include:
           - java: '8'
-            mongo: 'mongodb-linux-x86_64-3.6.23'
+            mongo: 'mongodb-linux-x86_64-ubuntu2204-7.0.4'
             wired_tiger: 'false'
           - java: '11'
             mongo: 'mongodb-linux-x86_64-3.6.23'
