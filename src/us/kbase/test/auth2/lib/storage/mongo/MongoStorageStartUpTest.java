@@ -154,7 +154,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfig() {
-		final Set<Document> indexes = updateIndexes("config");
+		final Set<Document> indexes = getAndNormalizeIndexes("config");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -168,7 +168,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigApp() {
-		final Set<Document> indexes = updateIndexes("config_app");
+		final Set<Document> indexes = getAndNormalizeIndexes("config_app");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -182,7 +182,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigExt() {
-		final Set<Document> indexes = updateIndexes("config_ext");
+		final Set<Document> indexes = getAndNormalizeIndexes("config_ext");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -196,7 +196,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigProv() {
-		final Set<Document> indexes = updateIndexes("config_prov");
+		final Set<Document> indexes = getAndNormalizeIndexes("config_prov");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -210,7 +210,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesCustRoles() {
-		final Set<Document> indexes = updateIndexes("cust_roles");
+		final Set<Document> indexes = getAndNormalizeIndexes("cust_roles");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -224,7 +224,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestCustRoles() {
-		final Set<Document> indexes = updateIndexes("test_cust_roles");
+		final Set<Document> indexes = getAndNormalizeIndexes("test_cust_roles");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -242,7 +242,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTempData() {
-		final Set<Document> indexes = updateIndexes("tempdata");
+		final Set<Document> indexes = getAndNormalizeIndexes("tempdata");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -268,7 +268,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTokens() {
-		final Set<Document> indexes = updateIndexes("tokens");
+		final Set<Document> indexes = getAndNormalizeIndexes("tokens");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -293,7 +293,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestTokens() {
-		final Set<Document> indexes = updateIndexes("test_tokens");
+		final Set<Document> indexes = getAndNormalizeIndexes("test_tokens");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -318,7 +318,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesUsers() {
-		final Set<Document> indexes = updateIndexes("users");
+		final Set<Document> indexes = getAndNormalizeIndexes("users");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
@@ -352,7 +352,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestUsers() {
-		final Set<Document> indexes = updateIndexes("test_users");
+		final Set<Document> indexes = getAndNormalizeIndexes("test_users");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
@@ -379,9 +379,9 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				)));
 	}
 
-	public Set<Document> updateIndexes(final String name) {
+	private Set<Document> getAndNormalizeIndexes(final String collectionName) {
 		final Set<Document> indexes = new HashSet<>();
-		for (Document index: db.getCollection(name).listIndexes()) {
+		for (Document index: db.getCollection(collectionName).listIndexes()) {
 			// In MongoDB 4.4, the listIndexes and the mongo shell helper method db.collection.getIndexes()
 			// no longer returns the namespace ns field in the index specification documents.
 			index.remove("ns");

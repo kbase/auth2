@@ -64,7 +64,7 @@ public class AuthBuilder {
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
 		//TODO ZLATER MONGO handle shards & replica sets
-		MongoClientSettings.Builder mongoBuilder = MongoClientSettings.builder().applyToClusterSettings(
+		final MongoClientSettings.Builder mongoBuilder = MongoClientSettings.builder().applyToClusterSettings(
 				builder -> builder.hosts(Arrays.asList(new ServerAddress(c.getMongoHost()))));
 
 		try {

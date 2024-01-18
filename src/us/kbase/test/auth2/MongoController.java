@@ -80,7 +80,7 @@ public class MongoController {
         }
     }
 
-    public static Version getMongoDBVer(final String mongoExe) throws IOException {
+    private static Version getMongoDBVer(final String mongoExe) throws IOException {
 
         // build MongoDB version check command
         List<String> command = new LinkedList<String>();
@@ -102,7 +102,7 @@ public class MongoController {
         return Version.valueOf(dbVer);
     }
 
-    public List<String> getMongoServerStartCommand(final String mongoExe,
+    private List<String> getMongoServerStartCommand(final String mongoExe,
                                                    final boolean useWiredTiger,
                                                    final Version dbVer) {
         List<String> command = new LinkedList<String>();
@@ -122,7 +122,7 @@ public class MongoController {
         return command;
     }
 
-    public Process startProcess(List<String> command) throws Exception {
+    private Process startProcess(List<String> command) throws Exception {
         ProcessBuilder servpb = new ProcessBuilder(command)
                 .redirectErrorStream(true)
                 .redirectOutput(getTempDir().resolve("mongo.log").toFile());
