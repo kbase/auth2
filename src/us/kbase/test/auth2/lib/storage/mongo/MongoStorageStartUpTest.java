@@ -2,10 +2,13 @@ package us.kbase.test.auth2.lib.storage.mongo;
 
 import static org.hamcrest.CoreMatchers.is;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertThat;
+import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
 
-import java.util.*;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -151,8 +154,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfig() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("config", indexes);
+		final Set<Document> indexes = updateIndexes("config");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -166,8 +168,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigApp() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("config_app", indexes);
+		final Set<Document> indexes = updateIndexes("config_app");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -181,8 +182,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigExt() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("config_ext", indexes);
+		final Set<Document> indexes = updateIndexes("config_ext");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -196,8 +196,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesConfigProv() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("config_prov", indexes);
+		final Set<Document> indexes = updateIndexes("config_prov");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -211,8 +210,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesCustRoles() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("cust_roles", indexes);
+		final Set<Document> indexes = updateIndexes("cust_roles");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -226,8 +224,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestCustRoles() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("test_cust_roles", indexes);
+		final Set<Document> indexes = updateIndexes("test_cust_roles");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -245,8 +242,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTempData() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("tempdata", indexes);
+		final Set<Document> indexes = updateIndexes("tempdata");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -272,8 +268,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTokens() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("tokens", indexes);
+		final Set<Document> indexes = updateIndexes("tokens");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -298,8 +293,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestTokens() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("test_tokens", indexes);
+		final Set<Document> indexes = updateIndexes("test_tokens");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("unique", true)
@@ -324,8 +318,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesUsers() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("users", indexes);
+		final Set<Document> indexes = updateIndexes("users");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
@@ -359,8 +352,7 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 
 	@Test
 	public void indexesTestUsers() {
-		final Set<Document> indexes = new HashSet<>();
-		updateIndexes("test_users", indexes);
+		final Set<Document> indexes = updateIndexes("test_users");
 		assertThat("incorrect indexes", indexes, is(set(
 				new Document("v", indexVer)
 						.append("key", new Document("custrls", 1))
@@ -387,13 +379,18 @@ public class MongoStorageStartUpTest extends MongoStorageTester {
 				)));
 	}
 
-	public void updateIndexes(final String name, final Set<Document> indexes) {
+	public Set<Document> updateIndexes(final String name) {
+		final Set<Document> indexes = new HashSet<>();
 		for (Document index: db.getCollection(name).listIndexes()) {
+			// In MongoDB 4.4, the listIndexes and the mongo shell helper method db.collection.getIndexes()
+			// no longer returns the namespace ns field in the index specification documents.
 			index.remove("ns");
+			// some versions of Mongo return ints, some longs. Convert all to longs.
 			if (index.containsKey("expireAfterSeconds")) {
-				index.put("expireAfterSeconds", Long.valueOf(index.get("expireAfterSeconds").toString()));
+				index.put("expireAfterSeconds", Long.valueOf(index.getInteger("expireAfterSeconds")));
 			}
 			indexes.add(index);
 		}
+		return indexes;
 	}
 }

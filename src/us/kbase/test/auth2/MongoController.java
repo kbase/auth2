@@ -34,8 +34,8 @@ public class MongoController {
         tempDirectories.add(DATA_DIR);
     }
 
-    private final static Version MONGO_DB_3 =
-            Version.forIntegers(3,6,23);
+    private final static Version MONGO_DB_6_1 =
+            Version.forIntegers(6,1);
 
     private final Path tempDir;
 
@@ -109,8 +109,11 @@ public class MongoController {
         command.addAll(Arrays.asList(mongoExe, "--port", "" + port,
                 "--dbpath", tempDir.resolve(DATA_DIR).toString()));
 
-        // In version 3.6, the --nojournal option is deprecated
-        if (dbVer.lessThanOrEqualTo(MONGO_DB_3)) {
+        // Starting in MongoDB 6.1, journaling is always enabled.
+        // As a result, MongoDB removes the storage.journal.enabled option
+        // and the corresponding --journal and --nojournal command-line options.
+        // https://www.mongodb.com/docs/manual/release-notes/6.1/#changes-to-journaling
+        if (dbVer.lessThan(MONGO_DB_6_1)) {
             command.addAll(Arrays.asList("--nojournal"));
         }
         if (useWiredTiger) {

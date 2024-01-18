@@ -64,25 +64,17 @@ public class AuthBuilder {
 	
 	private MongoClient buildMongo(final AuthStartupConfig c) throws StorageInitException {
 		//TODO ZLATER MONGO handle shards & replica sets
+		MongoClientSettings.Builder mongoBuilder = MongoClientSettings.builder().applyToClusterSettings(
+				builder -> builder.hosts(Arrays.asList(new ServerAddress(c.getMongoHost()))));
+
 		try {
 			if (c.getMongoUser().isPresent()) {
 				final MongoCredential creds = MongoCredential.createCredential(
 						c.getMongoUser().get(), c.getMongoDatabase(), c.getMongoPwd().get());
 				// unclear if and when it's safe to clear the password
-				return MongoClients.create(
-						MongoClientSettings.builder()
-								.credential(creds)
-								.applyToClusterSettings(builder ->
-										builder.hosts(Arrays.asList(
-												new ServerAddress(c.getMongoHost()))))
-								.build());
+				return MongoClients.create(mongoBuilder.credential(creds).build());
 			} else {
-				return MongoClients.create(
-						MongoClientSettings.builder()
-								.applyToClusterSettings(builder ->
-										builder.hosts(Arrays.asList(
-												new ServerAddress(c.getMongoHost()))))
-								.build());
+				return MongoClients.create(mongoBuilder.build());
 			}
 		} catch (MongoException e) {
 			LoggerFactory.getLogger(getClass()).error(

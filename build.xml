@@ -30,7 +30,6 @@
     <include name="google/guava-18.0.jar"/>
     <include name="ini4j/ini4j-0.5.2.jar"/>
     <include name="jcommander/jcommander-1.48.jar"/>
-<!--    <include name="mongo/mongo-java-driver-3.8.2.jar"/>-->
     <include name="mongo/mongodb-driver-core-4.11.1.jar"/>
     <include name="mongo/mongodb-driver-sync-4.11.1.jar"/>
     <include name="bson/bson-record-codec-4.11.1.jar"/>
