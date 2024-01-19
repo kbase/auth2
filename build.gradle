@@ -46,9 +46,19 @@ test {
 		exceptionFormat = 'full'
 		showStandardStreams = true
 	}
+	finalizedBy jacocoTestReport
 	// TODO NOW coverage working?
 }
 
+jacocoTestReport {
+	reports {
+		xml.required = true
+		csv.required = true
+	}
+}
+
+
+// TODO NOW run tests from Eclipse w/o specifying classpath manually
 // TODO NOW make auth, test, and template jars
 // TODO NOW make script
 
