@@ -10,13 +10,22 @@ plugins {
 	id 'java'
 	id 'war'
 	id 'jacoco'
+	id 'org.ajoberstar.grgit' version '4.1.1'
 }
 
 repositories {
 	mavenCentral()
 }
 
+task getGitCommitId {
+    doLast {
+        def commitId = grgit.head().id
+        file('src/us/kbase/auth2/gitcommit').text = commitId
+    }
+}
+
 compileJava {
+	dependsOn getGitCommitId
 	if (JavaVersion.current() <= JavaVersion.VERSION_1_8) {
 		// TODO BUILD remove when we no longer support java 8
 		java.sourceCompatibility = JavaVersion.VERSION_1_8
@@ -25,7 +34,6 @@ compileJava {
 		options.release = 8
 	}
 	// TODO NOW build in git commit
-	// TODO NOW javadocs
 }
 
 test {
@@ -35,19 +43,18 @@ test {
 	 * require it
 	 * Although it seems to make Mongo start up correctly as well which is odd
 	 */
+	forkEvery = 1
 	/*
 	  * TODO TEST split tests into mongo wrapper tests & all other tests (incl. integration).
 	  * Set up GHA to run the non-mongo tests with a single version of mongo and run the
 	  * mong tests with matrixed mongo versions. Combine coverage at the end somehow
 	*/
-	forkEvery = 1
 	systemProperty "AUTH2_TEST_CONFIG", "./test.cfg"
 	testLogging {
 		exceptionFormat = 'full'
 		showStandardStreams = true
 	}
 	finalizedBy jacocoTestReport
-	// TODO NOW coverage working?
 }
 
 jacocoTestReport {
@@ -57,10 +64,11 @@ jacocoTestReport {
 	}
 }
 
-
+// TODO NOW javadocs
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
 // TODO NOW make auth, test, and template jars
 // TODO NOW make script
+// TODO NOW update Docker to move warfile to correct place
 
 // Custom java project layout
 sourceSets {
@@ -68,6 +76,10 @@ sourceSets {
 		java {
 			srcDirs = ["src"]
 			exclude '**/test/**'
+		}
+		resources {
+			srcDirs = ["src"]
+			include "**/gitcommit"
 		}
 	}
 	test {
@@ -85,7 +97,6 @@ sourceSets {
 
 war {
 	webXml = file('war/web.xml')
-	// TODO NOW GRADLE probably needs updates
 }
 
 def fromURL = { url, name ->
