@@ -33,7 +33,6 @@ compileJava {
 	} else {
 		options.release = 8
 	}
-	// TODO NOW build in git commit
 }
 
 test {
@@ -68,7 +67,7 @@ jacocoTestReport {
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
 // TODO NOW make auth, test, and template jars
 // TODO NOW make script
-// TODO NOW update Docker to move warfile to correct place
+// TODO NOW test server starts in docker container, including templates when gradle done
 
 // Custom java project layout
 sourceSets {
@@ -97,6 +96,8 @@ sourceSets {
 
 war {
 	webXml = file('war/web.xml')
+	// For some reason the test directories are included in the war file
+	// although the files are gone. Not sure why
 }
 
 def fromURL = { url, name ->

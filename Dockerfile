@@ -1,10 +1,7 @@
 FROM kbase/sdkbase2 as build
 
 COPY . /tmp/auth2
-RUN cd /tmp \
-    && git clone https://github.com/kbase/jars \
-    && cd auth2 \
-    && ant buildwar
+RUN cd /tmp/auth2 && ./gradlew war
 
 FROM kbase/kb_jre:latest
 
@@ -15,6 +12,8 @@ ARG BRANCH=develop
 
 COPY --from=build /tmp/auth2/deployment/ /kb/deployment/
 COPY --from=build /tmp/auth2/jettybase/ /kb/deployment/jettybase/
+COPY --from=build /tmp/auth2/build/libs/auth2.war /kb/deployment/jettybase/webapps/ROOT.war
+COPY --from=build /tmp/auth2/templates /kb/deployment/jettybase/templates
 
 # The BUILD_DATE value seem to bust the docker cache when the timestamp changes, move to
 # the end
