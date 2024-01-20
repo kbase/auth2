@@ -235,24 +235,33 @@ Removes all test mode data from the system.
 ## Requirements
 
 Java 8 (OpenJDK OK)  
-Apache Ant (http://ant.apache.org/)  
 MongoDB 2.6+ (https://www.mongodb.com/)  
 Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
     (see jetty-config.md for version used for testing)  
 This repo (git clone https://github.com/kbase/auth2)  
-The jars repo (git clone https://github.com/kbase/jars)  
-The two repos above need to be in the same parent folder.
 
 ## To start server
 
 start mongodb  
 if using mongo auth, create a mongo user  
-cd into the auth2 repo  
-`ant build`  
-copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
-`export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
-`cd jettybase`  
-`./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
+cd into the auth2 repo
+
+```
+./gradlew war
+mkdir -p jettybase/webapps
+cp build/libs/auth2.war jettybase/webapps/ROOT.war
+cp templates jettybase/templates
+```
+
+copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
+
+```
+export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>
+cd jettybase
+./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar
+```
+
+Or just use the Docker build, which is probably a lot easier.
 
 ## Administer the server
 
