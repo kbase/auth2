@@ -18,7 +18,7 @@ repositories {
 }
 // Warning - these values are hard coded in AuthController.java
 def JAR_TEMPLATE_DIR = 'kbase_auth2_templates'
-def TEMPLATE_LIST_FILE_NAME = "templateFileList.txt"
+def TEMPLATE_LIST_FILE_NAME = "templates.manifest"
 
 task getGitCommitId {
 	doLast {
@@ -70,12 +70,8 @@ jacocoTestReport {
 
 // TODO NOW javadocs
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
-// TODO NOW make auth, test, and template jars
 // TODO NOW make script
 // TODO NOW test server starts in docker container, including templates when gradle done
-// TODO NOW make test server for workspace etc. work w/o jars repo (testwar w/ templates incl.?)
-//          https://stackoverflow.com/questions/320542/how-to-get-the-path-of-a-running-jar-file
-//          https://stackoverflow.com/questions/28145187/test-if-application-is-running-in-a-jar-file-in-java
 
 // Custom java project layout
 sourceSets {
@@ -97,7 +93,6 @@ sourceSets {
 		resources {
 			srcDirs = ["src"]
 			include "**/*.testdata"
-			include "**/authjars"
 		}
 	}
 }
