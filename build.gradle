@@ -68,10 +68,9 @@ jacocoTestReport {
 	}
 }
 
-// TODO NOW javadocs
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
 // TODO NOW make script
-// TODO NOW test server starts in docker container, including templates when gradle done
+// TODO NOW test server starts in docker container via compose, including templates when gradle done
 
 // Custom java project layout
 sourceSets {
@@ -94,6 +93,14 @@ sourceSets {
 			srcDirs = ["src"]
 			include "**/*.testdata"
 		}
+	}
+}
+
+javadoc {
+	options {
+		links "https://mongodb.github.io/mongo-java-driver/4.11/apidocs/mongodb-driver-sync/"
+		// I don't know why this isn't working, but it's not worth spending time on right now
+		links "https://docs.oracle.com/javase/8/docs/api/"
 	}
 }
 
@@ -221,8 +228,9 @@ dependencies {
 		'https://github.com/kbase/jars/raw/master/lib/jars/syslog4j/syslog4j-0.9.46.jar',
 		'syslog4j-0.9.46'
 	)
-	// needed for syslog
+	// needed for syslog4j
 	implementation 'net.java.dev.jna:jna:3.4.0'
+	implementation 'joda-time:joda-time:2.3'
 	
 	// ### Test ###
 	

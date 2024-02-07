@@ -77,7 +77,7 @@ public class UserSearchSpec {
 	}
 	
 	/** Returns true if the search prefixes are set. This means the search regex is not set.
-	 * @ return true if the search prefixes are set.
+	 * @return true if the search prefixes are set.
 	 */
 	public boolean hasSearchPrefixes() {
 		return prefixes != null;
