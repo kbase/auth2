@@ -1,7 +1,23 @@
 FROM kbase/sdkbase2 as build
 
-COPY . /tmp/auth2
-RUN cd /tmp/auth2 && ./gradlew war
+WORKDIR /tmp/auth2
+
+# dependencies take a while to D/L, so D/L & cache before the build so code changes don't cause
+# a new D/L
+# can't glob *gradle because of the .gradle dir
+COPY build.gradle gradlew settings.gradle /tmp/auth2/
+COPY gradle/ /tmp/auth2/gradle/
+RUN ./gradlew dependencies
+
+# Now build the code
+COPY deployment/ /tmp/auth2/deployment/
+COPY jettybase/ /tmp/auth2/jettybase/
+COPY src /tmp/auth2/src/
+COPY templates /tmp/auth2/templates/
+COPY war /tmp/auth2/war/
+# for the git commit
+COPY .git /tmp/auth2/.git/
+RUN ./gradlew war
 
 FROM kbase/kb_jre:latest
 
@@ -26,6 +42,10 @@ LABEL org.label-schema.build-date=$BUILD_DATE \
 
 WORKDIR /kb/deployment/jettybase
 ENV KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+
+# TODO BUILD update to no longer use dockerize and take env vars (e.g. like Collections).
+# TODO BUILD figure out how to add multiple environments as env vars (multiline env vars in rancher?)
+# TODO BUILD Use subsections in the ini file / switch to TOML
 
 ENTRYPOINT [ "/kb/deployment/bin/dockerize" ]
 

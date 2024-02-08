@@ -70,7 +70,6 @@ jacocoTestReport {
 
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
 // TODO NOW make script
-// TODO NOW test server starts in docker container via compose, including templates when gradle done
 
 // Custom java project layout
 sourceSets {
