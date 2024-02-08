@@ -44,7 +44,7 @@ jobs:
         shell: bash
         run: |
           cd ..
-          git clone -b update_java_common https://github.com/kbase/jars
+          git clone https://github.com/kbase/jars
           cd -
 
       - name: Install mongo and set up test config
