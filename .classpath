@@ -21,7 +21,7 @@
 	<classpathentry kind="lib" path="/jars/lib/jars/jackson/jackson-module-jaxb-annotations-2.5.4.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jetty/jetty-all-9.3.11.v20160721-uber.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/mustache/compiler-0.9.3.jar"/>
-	<classpathentry kind="lib" path="/jars/lib/jars/kbase/common/kbase-common-0.0.22.jar"/>
+	<classpathentry kind="lib" path="/jars/lib/jars/kbase/common/kbase-common-0.2.0.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jersey/mvc/jersey-mvc-2.23.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jersey/mvc/jersey-mvc-mustache-2.23.2.jar"/>
 	<classpathentry kind="lib" path="/jars/lib/jars/jersey/entity-filtering/jersey-entity-filtering-2.23.2.jar"/>
