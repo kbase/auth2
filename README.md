@@ -226,7 +226,8 @@ Removes all test mode data from the system.
   * Note that only the public API has been tested with the auth server.
 * In version 0.6.0, the canonicalization algorithm for user display names changed and the
   database needs to be updated.
-  * See the `--recanonicalize-display-names` option for the `manage_auth` script. This can
+  * See the `--recanonicalize-display-names` option for the `manage_auth` script
+    (See the administration section below). This can
     be run while the server is live **after** updating to version 0.6.0.
   * Once the names have been recanonicalized, the `--remove-recanonicalization-flag` can be
     used to remove flags set on database objects to avoid reprocessing if the recanonicalize
@@ -241,6 +242,9 @@ Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
 This repo (git clone https://github.com/kbase/auth2)  
 
 ## To start server
+
+Either use `docker-compose --build -d`, which is easier and starts the server in test mode
+(which can be configured in the docker-compose file), or:
 
 start mongodb  
 if using mongo auth, create a mongo user  
@@ -261,12 +265,14 @@ cd jettybase
 ./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar
 ```
 
-Or just use the Docker build, which is probably a lot easier.
-
 ## Administer the server
 
+Create the administration script:
+
+`./gradlew generateManageAuthScript`
+
 Set a root password:  
-`./manage_auth -d <path to deploy.cfg> -r`  
+`build/manage_auth -d <path to deploy.cfg> -r`  
 
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
@@ -302,7 +308,7 @@ Omit the stop key to have jetty generate one for you.
 
 * Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
   * If it works as is start buying lottery tickets immediately.
-* `ant test`
+* `./gradlew test`
 
 ### UI
 

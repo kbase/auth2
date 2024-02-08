@@ -69,7 +69,6 @@ jacocoTestReport {
 }
 
 // TODO NOW run tests from Eclipse w/o specifying classpath manually
-// TODO NOW make script
 
 // Custom java project layout
 sourceSets {
@@ -148,6 +147,27 @@ task fatTestJar(type: Jar) {
 	from("$buildDir/" + TEMPLATE_LIST_FILE_NAME) { into JAR_TEMPLATE_DIR }
 	
 	with jar
+}
+
+task generateManageAuthScript {
+	dependsOn compileJava
+	doLast {
+		def dependencies = configurations.runtimeClasspath.collect { File file ->
+			file.absolutePath
+		}
+	
+		def classpath = dependencies.join(':')
+	
+		def scriptContent = """#!/bin/sh
+
+CLASSPATH=$classpath
+
+java -cp build/classes/java/main:\$CLASSPATH us.kbase.auth2.cli.AuthCLI \$@
+"""
+
+		file("$buildDir/manage_auth").text = scriptContent
+		file("$buildDir/manage_auth").setExecutable(true)
+	}
 }
 
 def fromURL = { url, name ->
