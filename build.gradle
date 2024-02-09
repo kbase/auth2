@@ -20,15 +20,15 @@ repositories {
 def JAR_TEMPLATE_DIR = 'kbase_auth2_templates'
 def TEMPLATE_LIST_FILE_NAME = "templates.manifest"
 
-task getGitCommitId {
+task buildGitCommitFile {
 	doLast {
 		def commitId = grgit.head().id
-		file('src/us/kbase/auth2/gitcommit').text = commitId
+		// is there a varible for builddir/classe/java/main?
+		file("$buildDir/classes/java/main/us/kbase/auth2/gitcommit").text = commitId
 	}
 }
 
 compileJava {
-	dependsOn getGitCommitId
 	if (JavaVersion.current() <= JavaVersion.VERSION_1_8) {
 		// TODO BUILD remove when we no longer support java 8
 		java.sourceCompatibility = JavaVersion.VERSION_1_8
@@ -36,6 +36,7 @@ compileJava {
 	} else {
 		options.release = 8
 	}
+	finalizedBy buildGitCommitFile
 }
 
 test {
