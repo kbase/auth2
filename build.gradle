@@ -23,7 +23,7 @@ def TEMPLATE_LIST_FILE_NAME = "templates.manifest"
 task buildGitCommitFile {
 	doLast {
 		def commitId = grgit.head().id
-		// is there a variable for builddir/classe/java/main?
+		// is there a variable for builddir/classes/java/main?
 		file("$buildDir/classes/java/main/us/kbase/auth2/gitcommit").text = commitId
 	}
 }

@@ -28,24 +28,24 @@ The stack trace is always logged.
 </p>
 
 <p>Allowed post-login redirect URL prefix:
-<input type="text" name="allowedloginredirect"
+<input type="text" name="allowedloginredirect" size=50
 	{{#allowedloginredirect}}value="{{.}}"{{/allowedloginredirect}}/>
 </p>
 
 <p>Redirect URL when a user cannot be logged in immediately after return from 3rd party provider,
  e.g. a choice of accounts is required or an account must be created.
-<input type="text" name="completeloginredirect"
+<input type="text" name="completeloginredirect" size=50
 	{{#completeloginredirect}}value="{{.}}"{{/completeloginredirect}}/>
 </p>
 
 <p>Redirect URL after an account link (usually to a user page showing their identities).
-<input type="text" name="postlinkredirect"
+<input type="text" name="postlinkredirect" size=50
 	{{#postlinkredirect}}value="{{.}}"{{/postlinkredirect}}/>
 </p>
 
 <p>Redirect URL when a user account cannot be linked immediately after return from 3rd party
 provider, e.g. a choice of accounts is required.
-<input type="text" name="completelinkredirect"
+<input type="text" name="completelinkredirect" size=50
 	{{#completelinkredirect}}value="{{.}}"{{/completelinkredirect}}/>
 </p>
 
@@ -87,24 +87,24 @@ provider, e.g. a choice of accounts is required.
 <form action="{{environmenturl}}" method="post">
 <input type="hidden" name="environment" value="{{environment}}"/>
 <p>Allowed post-login redirect URL prefix:
-<input type="text" name="allowedloginredirect"
+<input type="text" name="allowedloginredirect" size=50
 	{{#allowedloginredirect}}value="{{.}}"{{/allowedloginredirect}}/>
 </p>
 
 <p>Redirect URL when a user cannot be logged in immediately after return from 3rd party provider,
  e.g. a choice of accounts is required or an account must be created.
-<input type="text" name="completeloginredirect"
+<input type="text" name="completeloginredirect" size=50
 	{{#completeloginredirect}}value="{{.}}"{{/completeloginredirect}}/>
 </p>
 
 <p>Redirect URL after an account link (usually to a user page showing their identities).
-<input type="text" name="postlinkredirect"
+<input type="text" name="postlinkredirect" size=50
 	{{#postlinkredirect}}value="{{.}}"{{/postlinkredirect}}/>
 </p>
 
 <p>Redirect URL when a user account cannot be linked immediately after return from 3rd party
 provider, e.g. a choice of accounts is required.
-<input type="text" name="completelinkredirect"
+<input type="text" name="completelinkredirect" size=50
 	{{#completelinkredirect}}value="{{.}}"{{/completelinkredirect}}/>
 </p>
 <input type="reset" value="Reset"/>

@@ -3,9 +3,6 @@
 <form action="{{reseturl}}" method="post">
 	<input type="submit" value="Force password reset for all local users"/>
 </form>
-<form action="{{revokeallurl}}" method="post">
-	<input type="submit" value="Revoke ALL tokens for ALL users and log out"/>
-</form>
 
 <form action="{{tokenurl}}" method="post">
 	View token: <input type="text" name="token" /><br/>
@@ -34,5 +31,16 @@
 	<input type="checkbox" name="crole_{{id}}" /> {{id}}<br/>
 	{{/customroles}}
 	<input type="submit" value="Search"/>
+</form>
+
+<h3 style="color:red"><strong>WARNING</strong>: venturing beyond this point puts
+	your soul in mortal peril</h3>
+<p>Revoke all tokens in the service, including agent tokens, service tokens, etc.
+This will log all users out and cause any processes using any tokens whatsoever
+to error out. No warning is given; if you click the button below it happens.</p>
+<form action="{{revokeallurl}}" method="post">
+	<input style="background-color:red;color:white" type="submit"
+		value="REVOKE EVERY SINGLE TOKEN"/>
+</form>
 </body>
 </html>
