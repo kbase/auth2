@@ -5,6 +5,6 @@ package us.kbase.auth2;
 public class Version {
 	
 	/** The version of the KBase Auth2 service. */
-	public static final String VERSION = "0.6.0";
+	public static final String VERSION = "0.6.1";
 
 }
