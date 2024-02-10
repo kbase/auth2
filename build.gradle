@@ -23,7 +23,7 @@ def TEMPLATE_LIST_FILE_NAME = "templates.manifest"
 task buildGitCommitFile {
 	doLast {
 		def commitId = grgit.head().id
-		// is there a varible for builddir/classe/java/main?
+		// is there a variable for builddir/classe/java/main?
 		file("$buildDir/classes/java/main/us/kbase/auth2/gitcommit").text = commitId
 	}
 }
@@ -69,27 +69,10 @@ jacocoTestReport {
 	}
 }
 
-// TODO NOW run tests from Eclipse w/o specifying classpath manually
-
 // Custom java project layout
 sourceSets {
-	main {
-		java {
-			srcDirs = ["src"]
-			exclude '**/test/**'
-		}
-		resources {
-			srcDirs = ["src"]
-			include "**/gitcommit"
-		}
-	}
 	test {
-		java {
-			srcDirs = ["src"]
-			include '**/test/**'
-		}
 		resources {
-			srcDirs = ["src"]
 			include "**/*.testdata"
 		}
 	}
@@ -105,8 +88,6 @@ javadoc {
 
 war {
 	webXml = file('war/web.xml')
-	// For some reason the test directories are included in the war file
-	// although the files are gone. Not sure why
 }
 
 configurations {
