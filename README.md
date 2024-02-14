@@ -301,7 +301,7 @@ Omit the stop key to have jetty generate one for you.
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
   * Update the version as per the semantic version rules in
-    `src/us/kbase/auth2/service/common/ServiceCommon.java`.
+    `src/main/java/us/kbase/auth2/Version.java`.
   * Tag the version in git and github.
 
 ### Running tests
