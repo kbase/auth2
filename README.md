@@ -279,6 +279,27 @@ local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
 
+### Revoking tokens in an emergency
+
+The simple HTML only test UI included with the server supports most administration functions,
+but revoking all tokens in the service is not included as it has a major impact on systems the
+auth server supports, essentially shutting them down. If all tokens are revoked, the tokens for
+every single token type (agent, service, etc.) for every single user in the auth system are
+removed - the equivalent of clearing the tokens collection in MongoDB. 
+
+This feature is intended to be used in an emergency such as many tokens becoming compromised or
+the system needs to come to a near immediate halt (near immediate since services outside the auth
+server may cache and accept tokens for some period of time after they're invalidated in auth).
+
+To revoke all tokens, issue the following request to the server (curl used as an example):
+
+```
+curl -X POST --cookie "kbase_session=<admin token>" http://<host>/admin/revokeall
+```
+
+If the `token-cookie-name` deployment configuration value is not `kbase_session` change
+the request to match.
+
 ## Start & stop server w/o a pid
 
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
