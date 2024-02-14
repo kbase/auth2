@@ -13,6 +13,7 @@ services:
     environment:
        mongo_host: "mongo:27017"
        test_mode_enabled: "true"
+       identity_providers: ""
     command:
       - "-wait"
       - "tcp://mongo:27017"
