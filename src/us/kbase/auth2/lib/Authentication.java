@@ -1659,7 +1659,7 @@ public class Authentication {
 	/** Start the OAuth2 login process.
 	 * @param lifetimeSec the lifetime of the temporary token to be returned.
 	 * @param provider the name of the 3rd party identity provider to login with.
-	 * @param string the auth environment in which the login is taking place, or null for the
+	 * @param environment the auth environment in which the login is taking place, or null for the
 	 * default environment.
 	 * @return data to start the login process.
 	 * @throws AuthStorageException if an error occurs accessing the storage system.
@@ -1718,7 +1718,7 @@ public class Authentication {
 	 * @return A login token. In this case the token will always be a temporary token so the
 	 * control flow can be returned to the UI before returning an error.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @see #login(String, String, String, TokenCreationContext)
+	 * @see #login(IncomingToken, String, String, String, TokenCreationContext, String)
 	 */
 	public LoginToken loginProviderError(final String providerError) throws AuthStorageException {
 		checkStringNoCheckedException(providerError, "providerError");
@@ -1845,7 +1845,7 @@ public class Authentication {
 
 	/** Get the current state of a login process associated with a temporary token.
 	 * This method is expected to be called after
-	 * {@link #login(String, String, String, TokenCreationContext)}.
+	 * {@link #login(IncomingToken, String, String, String, TokenCreationContext, String)}.
 	 * After user interaction is completed, a new user can be created via
 	 * {@link #createUser(IncomingToken, String, UserName, DisplayName, EmailAddress, Set, TokenCreationContext, boolean)}
 	 * or the login can complete via
@@ -2433,7 +2433,7 @@ public class Authentication {
 	 * @param providerError the error returned by the provider.
 	 * @return A temporary token.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @see #linkStart(IncomingToken, int)
+	 * @see #link(IncomingToken, String, String, String, String)
 	 */
 	public TemporaryToken linkProviderError(final String providerError)
 			throws AuthStorageException {
@@ -2476,7 +2476,7 @@ public class Authentication {
 	 * to a new URL that does not contain said authcode as soon as possible.
 	 * 
 	 * @param token the user's temporary token acquired from
-	 * {@link #linkStart(IncomingToken, int)}.
+	 * {@link #linkStart(IncomingToken, int, String, String)}
 	 * @param provider the name of the identity provider that is servicing the link request.
 	 * @param authcode the authcode provided by the provider.
 	 * @param environment the environment in which the link request is proceeding. Null for the
@@ -2604,7 +2604,7 @@ public class Authentication {
 	
 	/** Get the current state of a linking process associated with a temporary token.
 	 * This method is expected to be called after
-	 * {@link #link(IncomingToken, String, String, String)}.
+	 * {@link #link(IncomingToken, String, String, String, String)}.
 	 * After user interaction is completed, the link can be completed by calling
 	 * {@link #link(IncomingToken, IncomingToken, String)} or
 	 * {@link #linkAll(IncomingToken, IncomingToken)}.

@@ -17,17 +17,10 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Scanner;
-import java.util.zip.ZipEntry;
-import java.util.zip.ZipException;
-import java.util.zip.ZipFile;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
@@ -37,10 +30,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import us.kbase.common.test.TestException;
 import us.kbase.test.auth2.StandaloneAuthServer;
 
+/** Q&D utility to run the auth server in test mode for use in testing rigs. Expected to
+ * be packaged in a test jar with all dependencies and the templates in a /templates/ directory.
+ */
 public class AuthController {
 	
-	private final static String AUTH_CLASS = StandaloneAuthServer.class.getName();
-	private static final String JARS_FILE = "authjars";
+	// hardcoded in build.gradle
+	private static final String TEMPLATES_JAR_DIR = "kbase_auth2_templates";
+	private static final String TEMPLATES_LIST_FILE = "templates.manifest";
+
+	private static final String AUTH_CLASS = StandaloneAuthServer.class.getName();
+	private static final String JAR_PATH = StandaloneAuthServer.class.getProtectionDomain()
+			.getCodeSource().getLocation().getPath();
 	
 	private final Process auth;
 	private final int port;
@@ -48,16 +49,14 @@ public class AuthController {
 	private final String version;
 	
 	public AuthController(
-			final Path jarsDir,
 			final String mongoHost,
 			final String mongoDatabase,
 			final Path rootTempDir)
 			throws Exception {
-		this(jarsDir, mongoHost, mongoDatabase, rootTempDir, null, null);
+		this(mongoHost, mongoDatabase, rootTempDir, null, null);
 	}
 	
 	public AuthController(
-			final Path jarsDir,
 			final String mongoHost,
 			final String mongoDatabase,
 			final Path rootTempDir,
@@ -67,16 +66,16 @@ public class AuthController {
 		if (mongoUser == null ^ mongoPwd == null) {
 			throw new TestException("Both or neither of the mongo user / pwd must be provided");
 		}
-		final String classPath = getClassPath(jarsDir);
 		tempDir = makeTempDirs(rootTempDir, "AuthController-", Arrays.asList("templates"));
 		port = findFreePort();
+		System.out.println("Using classpath " + JAR_PATH);
 		
 		final Path templateDir = tempDir.resolve("templates");
-		installTemplates(jarsDir, templateDir);
+		installTemplates(templateDir);
 		
 		final List<String> command = new ArrayList<>(Arrays.asList(
 				"java",
-				"-classpath", classPath,
+				"-classpath", JAR_PATH,
 				"-D" + MONGO_HOST_KEY + "=" + mongoHost,
 				"-D" + MONGO_DB_KEY + "=" + mongoDatabase,
 				"-D" + MONGO_TEMPLATES_KEY + "=" + templateDir.toString()));
@@ -149,83 +148,37 @@ public class AuthController {
 		}
 	}
 	
-	private void installTemplates(final Path jarsDir, final Path templatesDir) throws IOException {
-		final Path templateZipFile;
-		try (final InputStream is = getJarsFileInputStream()) {
-			final BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			//first line is zip file with templates
-			templateZipFile = jarsDir.resolve(br.readLine().trim());
-		}
-		try (final ZipFile zf = new ZipFile(templateZipFile.toFile())) {
-			for (Enumeration<? extends ZipEntry> e = zf.entries(); e.hasMoreElements();) {
-				final ZipEntry ze = e.nextElement();
-				if (ze.isDirectory()) {
-					continue;
-				}
-				final Path zippath = Paths.get(ze.getName()).normalize();
-				if (zippath.isAbsolute() || zippath.startsWith("..")) {
-					throw new TestException("Zip file " + templateZipFile +
-							" contains files outside the zip " +
-							"directory - this is a sign of a malicious zip file.");
-				}
-				final Path file = templatesDir.resolve(zippath).toAbsolutePath();
-				Files.createDirectories(file.getParent());
-				Files.createFile(file);
-				try (final OutputStream os = Files.newOutputStream(file);
-						final InputStream zipinput = zf.getInputStream(ze)) {
-					IOUtils.copy(zipinput, os);
-				}
+	private void installTemplates(final Path templatesDir) throws IOException {
+		final String templatesJarFileList = "/" + TEMPLATES_JAR_DIR + "/" + TEMPLATES_LIST_FILE;
+		final List<String> templateFiles = new ArrayList<>();
+		try (final InputStream templateFilesStream = getClass()
+				.getResourceAsStream(templatesJarFileList)
+		) {
+			if (templateFilesStream == null) {
+				throw new TestException(String.format(
+						"Could not find template file list file %s in jar", templatesJarFileList));
 			}
-		} catch (ZipException e) {
-			throw new TestException("Unable to open the zip file " + templateZipFile, e);
+			final BufferedReader br = new BufferedReader(
+					new InputStreamReader(templateFilesStream));
+			br.lines().forEach(templateFile -> templateFiles.add(templateFile));
 		}
-
-	}
-
-	private String getClassPath(final Path jarsDir) throws IOException {
-		final List<String> classpath = new LinkedList<>();
-		try (final InputStream is = getJarsFileInputStream();) {
-			final BufferedReader br = new BufferedReader(new InputStreamReader(is));
-			br.readLine(); // discard first line, which has the templates zip file
-			String line;
-			while ((line = br.readLine()) != null) {
-				if (!line.trim().isEmpty() && !line.trim().startsWith("#")) {
-					final Path jarPath = jarsDir.resolve(line);
-					if (Files.notExists(jarPath)) {
-						throw new TestException("Required jar does not exist: " + jarPath);
-
-					}
-					classpath.add(jarPath.toString());
+		for (final String templateFileName: templateFiles) {
+			final String templateJarPath = "/" + TEMPLATES_JAR_DIR + "/" + templateFileName;
+			final Path templateTargetPath = templatesDir.resolve(templateFileName)
+					.toAbsolutePath();
+			try (
+					final InputStream template = getClass()
+							.getResourceAsStream(templateJarPath);
+					final OutputStream target = Files.newOutputStream(templateTargetPath);
+					
+			) {
+				if (template == null) {
+					throw new TestException(String.format(
+							"Could not find template file %s in jar", templateJarPath));
 				}
+				IOUtils.copy(template, target);
 			}
 		}
-		return String.join(":", classpath);
-	}
-
-	private InputStream getJarsFileInputStream() {
-		final InputStream is = getClass().getResourceAsStream(JARS_FILE);
-		if (is == null) {
-			throw new TestException("No auth versions file " + JARS_FILE);
-		}
-		return is;
-	}
-	
-	public static void main(final String[] args) throws Exception {
-		final AuthController ac = new AuthController(
-				Paths.get("/home/crushingismybusiness/github/mrcreosote/jars/lib/jars"),
-				"localhost:27017",
-				"AuthController",
-				Paths.get("authtesttemp"),
-				"auth",
-				"auth");
-		System.out.println(ac.getServerPort());
-		System.out.println(ac.getTempDir());
-		System.out.println(ac.getVersion());
-		Scanner reader = new Scanner(System.in);
-		System.out.println("any char to shut down");
-		reader.next();
-		ac.destroy(false);
-		reader.close();
 	}
 
 }

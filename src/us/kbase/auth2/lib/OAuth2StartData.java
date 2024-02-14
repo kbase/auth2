@@ -24,6 +24,7 @@ public class OAuth2StartData {
 	/** Create the OAuth data.
 	 * @param redirectURI the 3rd party redirect URI.
 	 * @param tempToken the temporary token to provide to the user to track them through the flow.
+	 * @return the OAuth2 data.
 	 */
 	public static OAuth2StartData build(final URI redirectURI, final TemporaryToken tempToken) {
 		return new OAuth2StartData(redirectURI, tempToken);

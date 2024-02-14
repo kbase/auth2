@@ -34,6 +34,7 @@ public class DisplayName extends Name {
 	/** Get the canonical display name for a string. Returns a list of the whitespace and hyphen
 	 * separated tokens in the name. The tokens are lowercased, punctuation in the token is
 	 * removed, and non-unique elements are removed.
+	 * @param name the string to analyze.
 	 * @return the canonical display name.
 	 */
 	public static List<String> getCanonicalDisplayName(final String name) {

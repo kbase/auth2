@@ -54,7 +54,7 @@ public interface IdentityProvider {
 			throws IdentityRetrievalException, NoSuchEnvironmentException;
 	
 	/** Get the names of the additional environments beyond the default environment that are
-	 * configured. See {@link #getLoginURI(String, boolean, String)}.
+	 * configured. See {@link #getLoginURI(String, String, boolean, String)}.
 	 * @return the environments.
 	 */
 	Set<String> getEnvironments();
