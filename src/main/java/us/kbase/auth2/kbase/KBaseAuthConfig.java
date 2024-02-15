@@ -41,6 +41,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private static final String KEY_LOG_NAME = "log-name";
 	private static final String KEY_MONGO_HOST = "mongo-host";
 	private static final String KEY_MONGO_DB = "mongo-db";
+	private static final String KEY_MONGO_RETRY_WRITES = "mongo-retrywrites";
 	private static final String KEY_MONGO_USER = "mongo-user";
 	private static final String KEY_MONGO_PWD = "mongo-pwd";
 	private static final String KEY_COOKIE_NAME = "token-cookie-name";
@@ -68,6 +69,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	private final SLF4JAutoLogger logger;
 	private final String mongoHost;
 	private final String mongoDB;
+	private final boolean mongoRetryWrites;
 	private final Optional<String> mongoUser;
 	private final Optional<char[]> mongoPwd;
 	private final String cookieName;
@@ -98,6 +100,7 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 			templateDir = Paths.get(getString(KEY_TEMPLATE_DIR, cfg, true));
 			mongoHost = getString(KEY_MONGO_HOST, cfg, true);
 			mongoDB = getString(KEY_MONGO_DB, cfg, true);
+			mongoRetryWrites = TRUE.equals(getString(KEY_MONGO_RETRY_WRITES, cfg));
 			mongoUser = Optional.ofNullable(getString(KEY_MONGO_USER, cfg));
 			Optional<String> mongop = Optional.ofNullable(getString(KEY_MONGO_PWD, cfg));
 			if (mongoUser.isPresent() ^ mongop.isPresent()) {
@@ -342,6 +345,11 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		return mongoDB;
 	}
 
+	@Override
+	public boolean getMongoRetryWrites() {
+		return mongoRetryWrites;
+	}
+	
 	@Override
 	public Optional<String> getMongoUser() {
 		return mongoUser;

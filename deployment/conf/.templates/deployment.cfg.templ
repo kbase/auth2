@@ -1,6 +1,7 @@
 [authserv2]
 mongo-host={{ default .Env.mongo_host "ci-mongo" }}
 mongo-db={{ default .Env.mongo_db "auth2" }}
+mongo-retrywrites={{ default .Env.mongo_retrywrites "false" }}
 mongo-user={{ default .Env.mongo_user "" }}
 mongo-pwd={{ default .Env.mongo_pwd "" }}
 # The name of the cookie in which tokens should be stored in the browser.
