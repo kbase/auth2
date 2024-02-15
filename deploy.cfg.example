@@ -9,6 +9,9 @@
 mongo-host =
 # The name of the mongo database to be used as auth storage.
 mongo-db =
+# Whether to enable ('true') the MongoDB retryWrites parameter or not (anything other than 'true').
+# See https://www.mongodb.com/docs/manual/core/retryable-writes/
+mongo-retrywrites = false
 # If the mongo database is authenticated, the user name of a read/write account.
 mongo-user =
 # If the mongo data base is authenticated, the password for the given username.
