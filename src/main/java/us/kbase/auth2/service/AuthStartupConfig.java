@@ -14,6 +14,7 @@ public interface AuthStartupConfig {
 	Set<IdentityProviderConfig> getIdentityProviderConfigs();
 	String getMongoHost();
 	String getMongoDatabase();
+	boolean getMongoRetryWrites();
 	// note both or neither for user & pwd
 	Optional<String> getMongoUser();
 	Optional<char[]> getMongoPwd();

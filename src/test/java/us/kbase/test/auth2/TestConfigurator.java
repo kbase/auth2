@@ -133,6 +133,11 @@ public class TestConfigurator implements AuthStartupConfig {
 	public String getMongoDatabase() {
 		return mongoDatabase == null ? System.getProperty(MONGO_DB_KEY) : mongoDatabase;
 	}
+	
+	@Override
+	public boolean getMongoRetryWrites() {
+		return false;
+	}
 
 	@Override
 	public Optional<String> getMongoUser() {

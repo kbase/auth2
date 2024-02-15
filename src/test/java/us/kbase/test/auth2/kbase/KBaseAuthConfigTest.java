@@ -78,6 +78,7 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(false));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.empty()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.empty()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
@@ -96,6 +97,7 @@ public class KBaseAuthConfigTest {
 				"[authserv2]",
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     mydb   ",
+				"mongo-retrywrites   =   \t  true  \t ",
 				"mongo-user= muser",
 				"mongo-pwd =  mpwd",
 				"test-mode-enabled= true",
@@ -141,6 +143,7 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(true));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("muser")));
 		assertThat("incorrect mongo pwd",
 				Arrays.equals(cfg.getMongoPwd().get(), "mpwd".toCharArray()), is(true));
@@ -224,6 +227,7 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(false));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.empty()));
 		assertThat("incorrect mongo pwd", cfg.getMongoPwd(), is(Optional.empty()));
 		assertThat("incorrect test mode", cfg.isTestModeEnabled(), is(false));
@@ -242,6 +246,7 @@ public class KBaseAuthConfigTest {
 				"[authserv2]",
 				"mongo-host=  localhost:50000    ",
 				"mongo-db   =     mydb   ",
+				"mongo-retrywrites=true",
 				"mongo-user= muser",
 				"mongo-pwd =  mpwd",
 				"test-mode-enabled= true",
@@ -273,6 +278,7 @@ public class KBaseAuthConfigTest {
 		
 		assertThat("incorrect mongo host", cfg.getMongoHost(), is("localhost:50000"));
 		assertThat("incorrect mongo db", cfg.getMongoDatabase(), is("mydb"));
+		assertThat("incorrect retry writes", cfg.getMongoRetryWrites(), is(true));
 		assertThat("incorrect mongo user", cfg.getMongoUser(), is(Optional.of("muser")));
 		assertThat("incorrect mongo pwd",
 				Arrays.equals(cfg.getMongoPwd().get(), "mpwd".toCharArray()), is(true));

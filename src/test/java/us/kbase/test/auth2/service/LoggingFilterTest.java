@@ -87,6 +87,11 @@ public class LoggingFilterTest {
 		public String getMongoDatabase() {
 			return DB_NAME;
 		}
+		
+		@Override
+		public boolean getMongoRetryWrites() {
+			return false;
+		}
 
 		@Override
 		public Optional<String> getMongoUser() {
