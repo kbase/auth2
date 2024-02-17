@@ -65,15 +65,6 @@ jacocoTestReport {
 	}
 }
 
-// Custom java project layout
-sourceSets {
-	test {
-		resources {
-			include "**/*.testdata"
-		}
-	}
-}
-
 javadoc {
 	options {
 		links "https://mongodb.github.io/mongo-java-driver/4.11/apidocs/mongodb-driver-sync/"
