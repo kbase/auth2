@@ -217,6 +217,9 @@ Removes all test mode data from the system.
 			proxy_pass http://localhost:20002/;
 			proxy_cookie_path /login /auth/login;
 			proxy_cookie_path /link /auth/link;
+			
+			# If using alternate environments (see below)
+			add_header X-AUTH-ENV "environment_name";
 		}
 
 * Get Globus creds [here](https://developers.globus.org)

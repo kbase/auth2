@@ -1,9 +1,19 @@
 # Authentication service environments
 
 The auth service can support multiple environments, allowing it to service multiple hosts.
-Alternate environments only affect account login and linking - all the environments share
-tokens and are invisible from the perspective of a service contacting the auth server to look up
-users or validate tokens.
+Alternate environments only affect the account login and linking flows and are otherwise
+not relevant to the auth system once a login or account link is complete. For example,
+a service contacting the auth service to validate a login token does not need to concern
+itself about which environment was used to create the token, and the auth service itself
+does not record any information about which environment was used to create a login
+token or link an account.
+
+## Recommendations
+
+* When using multiple environments, it may be wise to clear the default environment and use
+  alternate environments for all the environments. This makes it less likely that a
+  misconfiguration could cause an alternate environment to use settings from the default
+  environment mistakenly.
 
 ## Setup
 
@@ -14,7 +24,7 @@ The environment names, respectively, will be `host1` and `host2`.
 
 * The login and link redirect URLs for `host2` must be registered with each IDP.
   * They are usually going to be the same as the redirect URLs for `host1` with the replacement
-    of `host1.org` with `host2.org`. However, if URLs are rewritten by the remote proxy in
+    of `host1.org` with `host2.org`. However, if URLs are rewritten by the reverse proxy in
     a different manner between `host1` and `host2` that must be taken into account.
 * The login and link redirect URLs must be added to the `deploy.cfg` file as described in
   `deploy.cfg.example`. If using the Docker image, they need to be added to the environment
@@ -54,10 +64,3 @@ identity-provider-envs=<existing environments>, host2
   updateable on the fly via the API. The redirect URLs for login and linking must be updated
   appropriately for the host. In many cases, this will be simply replacing `host1.org` with
   `host2.org` but see the previously mentioned caveats regarding updating the URLs.
-
-## Notes
-
-* When using multiple environments, it may be wise to clear the default environment and use
-  alternate environments for all the environments. This makes it less likely that a
-  misconfiguration could cause an alternate environment to use settings from the default
-  environment mistakenly.
