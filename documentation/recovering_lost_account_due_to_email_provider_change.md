@@ -101,7 +101,7 @@ should be impossible.
 
 1. Add an option to the Auth command line tool to add identities to users to avoid incorrect DB
    updates. The CLI could, when possible, query the identity provider to ensure the information
-   provided command line is correct or pull additional information from the provider.
+   provided on the command line is correct or pull additional information from the provider.
 2. Develop procedures for verifying a user's possession of an account and transferring
    trusted information needed to restore access to an account.
 3. Develop and deploy user documentation recommending that users always have at least one

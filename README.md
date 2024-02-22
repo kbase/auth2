@@ -203,7 +203,9 @@ the user.
 `DELETE /testmode/api/V2/testmodeonly/clear`  
 Removes all test mode data from the system.
 
-## Admin notes
+## Administration
+
+### Notes
 
 * It is expected that this server always runs behind a reverse proxy (such as
   nginx) that enforces https / TLS and as such the auth server is configured to
@@ -215,6 +217,9 @@ Removes all test mode data from the system.
 			proxy_pass http://localhost:20002/;
 			proxy_cookie_path /login /auth/login;
 			proxy_cookie_path /link /auth/link;
+			
+			# If using alternate environments (see below)
+			add_header X-AUTH-ENV "environment_name";
 		}
 
 * Get Globus creds [here](https://developers.globus.org)
@@ -224,6 +229,11 @@ Removes all test mode data from the system.
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
 * Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
   * Note that only the public API has been tested with the auth server.
+
+#### Migration notes
+
+##### 0.6.0
+
 * In version 0.6.0, the canonicalization algorithm for user display names changed and the
   database needs to be updated.
   * See the `--recanonicalize-display-names` option for the `manage_auth` script
@@ -233,39 +243,46 @@ Removes all test mode data from the system.
     used to remove flags set on database objects to avoid reprocessing if the recanonicalize
     process does not complete.
 
-## Requirements
+### Requirements
 
-Java 8 (OpenJDK OK)  
-MongoDB 2.6+ (https://www.mongodb.com/)  
-Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
-    (see jetty-config.md for version used for testing)  
-This repo (git clone https://github.com/kbase/auth2)  
+* Java 8 (OpenJDK OK)
+* MongoDB 2.6+ (https://www.mongodb.com/)
+* Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
+* This repo (git clone https://github.com/kbase/auth2)  
 
-## To start server
+### Starting the server
 
-Either use `docker-compose --build -d`, which is easier and starts the server in test mode
-(which can be configured in the docker-compose file), or:
+#### Docker
 
-start mongodb  
-if using mongo auth, create a mongo user  
-cd into the auth2 repo
+The provided `Dockerfile` can be used to build and run an image. See the deployment template
+in `deployment/conf/.templates` for the environment variables available to configure the
+service - the `deploy.cfg.example` file provides documentation for these variables.
 
-```
+`docker-compose --build -d` can be used to start a MongoDB instance and the auth server in
+test mode (which can be configured via environment variables in the compose file).
+
+#### Manually
+
+* Start mongodb
+* If using mongo auth, create a mongo user
+* `cd` into the auth2 repo
+
+```shell
 ./gradlew war
 mkdir -p jettybase/webapps
 cp build/libs/auth2.war jettybase/webapps/ROOT.war
 cp templates jettybase/templates
 ```
 
-copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
+* copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
 
-```
+```shell
 export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>
 cd jettybase
 ./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar
 ```
 
-## Administer the server
+### Perform initial setup
 
 Create the administration script:
 
@@ -274,10 +291,15 @@ Create the administration script:
 Set a root password:  
 `build/manage_auth -d <path to deploy.cfg> -r`  
 
+* Note that the `deploy.cfg` file only needs accurate MongoDB connection information for use
+  with the auth CLI.
+
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
+
+To set up alternate login / link environments, see [Environments](documentation/Environments.md).
 
 ### Revoking tokens in an emergency
 
@@ -300,7 +322,7 @@ curl -X POST --cookie "kbase_session=<admin token>" http://<host>/admin/revokeal
 If the `token-cookie-name` deployment configuration value is not `kbase_session` change
 the request to match.
 
-## Start & stop server w/o a pid
+### Start & stop server w/o a pid
 
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
