@@ -1,6 +1,10 @@
 # Authentication service environments
 
-The auth service can support multiple environments, allowing it to service multiple hosts.
+The auth service can support multiple environments, allowing it to service multiple domains -
+for a KBase example, `narrative.kbase.us`, `appdev.kbase.us`, and `narrative-dev.kbase.us`
+are all served by the same auth service. This allows sharing user accounts and tokens between
+environments and deploying alternate versions of UIs running on the same backend.
+
 Alternate environments only affect the account login and linking flows and are otherwise
 not relevant to the auth system once a login or account link is complete. For example,
 a service contacting the auth service to validate a login token does not need to concern
