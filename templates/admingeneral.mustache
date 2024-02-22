@@ -3,9 +3,6 @@
 <form action="{{reseturl}}" method="post">
 	<input type="submit" value="Force password reset for all local users"/>
 </form>
-<form action="{{revokeallurl}}" method="post">
-	<input type="submit" value="Revoke ALL tokens for ALL users and log out"/>
-</form>
 
 <form action="{{tokenurl}}" method="post">
 	View token: <input type="text" name="token" /><br/>
@@ -34,5 +31,7 @@
 	<input type="checkbox" name="crole_{{id}}" /> {{id}}<br/>
 	{{/customroles}}
 	<input type="submit" value="Search"/>
+</form>
+
 </body>
 </html>

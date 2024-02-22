@@ -5,16 +5,18 @@ version: "3.1"
 # that is started up and polled
 services:
   auth2:
-    image: kbase/kb_auth2:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "8080:8080"
     environment:
-      - KB_DEPLOYMENT_CONFIG=/kb/deployment/conf/deployment.cfg
+       mongo_host: "mongo:27017"
+       test_mode_enabled: "true"
+       identity_providers: ""
     command:
       - "-wait"
-      - "tcp://ci-mongo:27017"
-      - "-wait"
-      - "tcp://mongoinit:8080"
+      - "tcp://mongo:27017"
       - "-timeout"
       - "120s"
       - "-template"
@@ -35,28 +37,10 @@ services:
       # you can add the following flag:
     # - "-validateCert=false"
       - "/kb/deployment/bin/start_auth2.sh"
-    depends_on: ["ci-mongo", "mongoinit"]
+    depends_on: ["mongo"]
 
-  mongoinit:
-    image: kbase/db_initialize:latest
-    volumes:
-      - ./auth2.mongodump:/mnt/auth2.mongodump
-    entrypoint:
-      - "/kb/deployment/bin/dockerize.sh"
-      - "-wait"
-      - "tcp://ci-mongo:27017"
-      - "-timeout"
-      - "120s"
-      - "mongorestore"
-      - "--host"
-      - "ci-mongo"
-      - "/mnt/auth2.mongodump"
-    depends_on: [ "ci-mongo" ]
-  
-  ci-mongo:
-    image: mongo:2
-    command:
-      - "--smallfiles"
+  mongo:
+    image: mongo:7
     ports:
       - "27017:27017"
 

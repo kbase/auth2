@@ -203,7 +203,9 @@ the user.
 `DELETE /testmode/api/V2/testmodeonly/clear`  
 Removes all test mode data from the system.
 
-## Admin notes
+## Administration
+
+### Notes
 
 * It is expected that this server always runs behind a reverse proxy (such as
   nginx) that enforces https / TLS and as such the auth server is configured to
@@ -215,6 +217,9 @@ Removes all test mode data from the system.
 			proxy_pass http://localhost:20002/;
 			proxy_cookie_path /login /auth/login;
 			proxy_cookie_path /link /auth/link;
+			
+			# If using alternate environments (see below)
+			add_header X-AUTH-ENV "environment_name";
 		}
 
 * Get Globus creds [here](https://developers.globus.org)
@@ -224,47 +229,100 @@ Removes all test mode data from the system.
 * Get Google OAuth2 creds [here](https://console.developers.google.com/apis)
 * Get OrcID creds [here](https://orcid.org/content/register-client-application-0)
   * Note that only the public API has been tested with the auth server.
+
+#### Migration notes
+
+##### 0.6.0
+
 * In version 0.6.0, the canonicalization algorithm for user display names changed and the
   database needs to be updated.
-  * See the `--recanonicalize-display-names` option for the `manage_auth` script. This can
+  * See the `--recanonicalize-display-names` option for the `manage_auth` script
+    (See the administration section below). This can
     be run while the server is live **after** updating to version 0.6.0.
   * Once the names have been recanonicalized, the `--remove-recanonicalization-flag` can be
     used to remove flags set on database objects to avoid reprocessing if the recanonicalize
     process does not complete.
 
-## Requirements
+### Requirements
 
-Java 8 (OpenJDK OK)  
-Apache Ant (http://ant.apache.org/)  
-MongoDB 2.6+ (https://www.mongodb.com/)  
-Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
-    (see jetty-config.md for version used for testing)  
-This repo (git clone https://github.com/kbase/auth2)  
-The jars repo (git clone https://github.com/kbase/jars)  
-The two repos above need to be in the same parent folder.
+* Java 8 (OpenJDK OK)
+* MongoDB 2.6+ (https://www.mongodb.com/)
+* Jetty 9.3+ (http://www.eclipse.org/jetty/download.html)
+* This repo (git clone https://github.com/kbase/auth2)  
 
-## To start server
+### Starting the server
 
-start mongodb  
-if using mongo auth, create a mongo user  
-cd into the auth2 repo  
-`ant build`  
-copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately  
-`export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>`  
-`cd jettybase`  
-`./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar`  
+#### Docker
 
-## Administer the server
+The provided `Dockerfile` can be used to build and run an image. See the deployment template
+in `deployment/conf/.templates` for the environment variables available to configure the
+service - the `deploy.cfg.example` file provides documentation for these variables.
+
+`docker-compose --build -d` can be used to start a MongoDB instance and the auth server in
+test mode (which can be configured via environment variables in the compose file).
+
+#### Manually
+
+* Start mongodb
+* If using mongo auth, create a mongo user
+* `cd` into the auth2 repo
+
+```shell
+./gradlew war
+mkdir -p jettybase/webapps
+cp build/libs/auth2.war jettybase/webapps/ROOT.war
+cp templates jettybase/templates
+```
+
+* copy `deploy.cfg.example` to `deploy.cfg` and fill in appropriately
+
+```shell
+export KB_DEPLOYMENT_CONFIG=<path to deploy.cfg>
+cd jettybase
+./jettybase$ java -jar -Djetty.port=<port> <path to jetty install>/start.jar
+```
+
+### Perform initial setup
+
+Create the administration script:
+
+`./gradlew generateManageAuthScript`
 
 Set a root password:  
-`./manage_auth -d <path to deploy.cfg> -r`  
+`build/manage_auth -d <path to deploy.cfg> -r`  
+
+* Note that the `deploy.cfg` file only needs accurate MongoDB connection information for use
+  with the auth CLI.
 
 Login to a local account as `***ROOT***` with the password you set. Create a
 local account and assign it the create administrator role. That account can
 then be used to create further administrators (including itself) without
 needing to login as root. The root account can then be disabled.
 
-## Start & stop server w/o a pid
+To set up alternate login / link environments, see [Environments](documentation/Environments.md).
+
+### Revoking tokens in an emergency
+
+The simple HTML only test UI included with the server supports most administration functions,
+but revoking all tokens in the service is not included as it has a major impact on systems the
+auth server supports, essentially shutting them down. If all tokens are revoked, the tokens for
+every single token type (agent, service, etc.) for every single user in the auth system are
+removed - the equivalent of clearing the tokens collection in MongoDB. 
+
+This feature is intended to be used in an emergency such as many tokens becoming compromised or
+the system needs to come to a near immediate halt (near immediate since services outside the auth
+server may cache and accept tokens for some period of time after they're invalidated in auth).
+
+To revoke all tokens, issue the following request to the server (curl used as an example):
+
+```
+curl -X POST --cookie "kbase_session=<admin token>" http://<host>/admin/revokeall
+```
+
+If the `token-cookie-name` deployment configuration value is not `kbase_session` change
+the request to match.
+
+### Start & stop server w/o a pid
 
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar`  
 `./jettybase$ java -DSTOP.PORT=8079 -DSTOP.KEY=foo -jar ~/jetty/jetty-distribution-9.3.11.v20160721/start.jar --stop`  
@@ -286,14 +344,14 @@ Omit the stop key to have jetty generate one for you.
   * The master branch is the stable branch. Releases are made from the develop branch to the master
     branch.
   * Update the version as per the semantic version rules in
-    `src/us/kbase/auth2/service/common/ServiceCommon.java`.
+    `src/main/java/us/kbase/auth2/Version.java`.
   * Tag the version in git and github.
 
 ### Running tests
 
 * Copy `test.cfg.example` to `test.cfg` and fill in the values appropriately.
   * If it works as is start buying lottery tickets immediately.
-* `ant test`
+* `./gradlew test`
 
 ### UI
 

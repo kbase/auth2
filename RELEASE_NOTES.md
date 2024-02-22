@@ -1,5 +1,15 @@
 # Authentication Service MKII release notes
 
+## 0.6.1
+
+* Gradle has replaced Ant as the build tool. As a consequence, all the built artifacts
+  are now located in the `build` directory, including the `manage_auth` script.
+* The MongoDB clients have been updated to the most recent version and the service tested
+  against Mongo 7.
+* Added the ``mongo-retrywrites`` configuration setting in ``deploy.cfg``, defaulting to
+  ``false``.
+* The docker-compose file has been updated to start an auth server in test mode.
+
 ## 0.6.0
 
 * ADMIN ACTION REQUIRED - after the server is upgraded, use the `manage_auth` script to

@@ -19,13 +19,11 @@ jobs:
   auth2_tests:
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
-        # Note that there's a mongo-only ant test directive. Use that for all mongo versions
-        # except for one if there's > 1 mongo version to test. No need for testing code that
-        # doesn't touch mongo against multiple mongo versions
         include:
           - java: '8'
-            mongo: 'mongodb-linux-x86_64-3.6.23'
+            mongo: 'mongodb-linux-x86_64-ubuntu2204-7.0.4'
             wired_tiger: 'false'
           - java: '11'
             mongo: 'mongodb-linux-x86_64-3.6.23'
@@ -39,13 +37,6 @@ jobs:
         with:
           distribution: 'temurin'
           java-version: ${{matrix.java}}
-
-      - name: Clone jars as sister repo
-        shell: bash
-        run: |
-          cd ..
-          git clone https://github.com/kbase/jars
-          cd -
 
       - name: Install mongo and set up test config
         shell: bash
@@ -62,7 +53,7 @@ jobs:
           cat test.cfg
 
       - name: Run tests
-        run: ant test
+        run: ./gradlew test
 
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v3
