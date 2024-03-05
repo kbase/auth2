@@ -1,5 +1,11 @@
 # Authentication Service MKII release notes
 
+## 0.7.0
+
+* BACKWARDS INCOMPATIBILITY - the auth server now logs to stdout vs. syslog.
+* The the `fatTestJar` Gradle task has been replaced with the `shadowJar` task, which builds
+  a shadowed version of the test fat jar.
+
 ## 0.6.1
 
 * Gradle has replaced Ant as the build tool. As a consequence, all the built artifacts
