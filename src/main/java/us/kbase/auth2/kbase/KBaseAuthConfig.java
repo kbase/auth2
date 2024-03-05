@@ -2,6 +2,7 @@ package us.kbase.auth2.kbase;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Path;
@@ -15,6 +16,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.ini4j.Ini;
+import org.productivity.java.syslog4j.SyslogIF;
 import org.slf4j.LoggerFactory;
 
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
@@ -25,6 +27,7 @@ import us.kbase.auth2.service.SLF4JAutoLogger;
 import us.kbase.auth2.service.exceptions.AuthConfigurationException;
 import us.kbase.common.service.JsonServerSyslog;
 import us.kbase.common.service.JsonServerSyslog.RpcInfo;
+import us.kbase.common.service.JsonServerSyslog.SyslogOutput;
 
 public class KBaseAuthConfig implements AuthStartupConfig {
 	
@@ -85,16 +88,8 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 	public KBaseAuthConfig(final Path filepath, final boolean nullLogger) 
 			throws AuthConfigurationException {
 		final Map<String, String> cfg = getConfig(filepath);
-		final String ln = getString(KEY_LOG_NAME, cfg);
-		if (nullLogger) {
-			logger = new NullLogger();
-		} else {
-			logger = new JsonServerSysLogAutoLogger(new JsonServerSyslog(
-					ln == null ? DEFAULT_LOG_NAME : ln,
-					//TODO KBASECOMMON allow null for the fake config prop arg
-					"thisisafakekeythatshouldntexistihope",
-					JsonServerSyslog.LOG_LEVEL_INFO, true));
-		}
+		final String logname = getString(KEY_LOG_NAME, cfg);
+		logger = nullLogger ? new NullLogger() : buildLogger(logname); 
 		try {
 			isTestModeEnabled = TRUE.equals(getString(KEY_TEST_MODE_ENABLED, cfg));
 			templateDir = Paths.get(getString(KEY_TEMPLATE_DIR, cfg, true));
@@ -125,6 +120,44 @@ public class KBaseAuthConfig implements AuthStartupConfig {
 		}
 	}
 	
+	private SLF4JAutoLogger buildLogger(final String logname) {
+		// Warning - this code is tested manually. Ensure
+		// logs are making it to stdout after changing
+		// TODO LOGGING just remove JsonServerSyslog altogether
+		//              and get rid of Syslog4j. Not sure how much work this'd be
+		JsonServerSyslog.setStaticUseSyslog(false);
+		final JsonServerSyslog jssl = new JsonServerSyslog(
+				logname == null ? DEFAULT_LOG_NAME : logname,
+				null,
+				JsonServerSyslog.LOG_LEVEL_INFO,
+				true
+		);
+		jssl.changeOutput(new SyslogOutput() {
+			
+			@Override
+			public void logToSystem(
+					final SyslogIF log,
+					final int level,
+					final String message) {
+				System.out.println(String.format(
+						"[Auth2] Lvl: %s Message: %s", level, message));
+			}
+			
+			@Override
+			public PrintWriter logToFile(
+					final File f,
+					final PrintWriter pw,
+					final int level,
+					final String message) {
+				System.out.println(
+						"log to file called - this is not supported and not expected");
+				return null;
+			}
+			
+		});
+		return new JsonServerSysLogAutoLogger(jssl);
+	}
+
 	private static final String INVALID_CHARS_REGEX = "[^A-Z-]+";
 	private static final Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
 	

@@ -67,11 +67,13 @@ public class TestConfigurator implements AuthStartupConfig {
 		private final JsonServerSyslog logger;
 		
 		public TestLogger() {
+			JsonServerSyslog.setStaticUseSyslog(false);
 			logger = new JsonServerSyslog(
 					"AuthTestLogger",
-					//TODO CODE update kbase-common and pass null instead
-					"thisisafakekeythatshouldntexistihope",
-					JsonServerSyslog.LOG_LEVEL_INFO, true);
+					null,
+					JsonServerSyslog.LOG_LEVEL_INFO,
+					true
+			);
 			logger.changeOutput(new SyslogOutput() {
 				
 				@Override

@@ -7,6 +7,7 @@ plugins {
 	id 'war'
 	id 'jacoco'
 	id 'org.ajoberstar.grgit' version '4.1.1'
+	id 'com.github.johnrengelman.shadow' version '8.1.1'
 }
 
 repositories {
@@ -94,28 +95,24 @@ task generateTemplateFileList {
 	}
 }
 
-
-task fatTestJar(type: Jar) {
+shadowJar {
 	// Be careful when updating jars - you may want to set the duplicates strategy to WARN
 	// to see if any of the jars are shadowing the others when building the fat jar, which
 	// has been the case in the past 
 	duplicatesStrategy = DuplicatesStrategy.EXCLUDE
 	dependsOn generateTemplateFileList
-	archiveAppendix = 'test-fat'
-	
-	// include source files
+	archiveAppendix = 'test-shadow'
 	from sourceSets.test.output
+	configurations = [project.configurations.testRuntimeClasspath]
 
-	// include all jars
-	from {
-		configurations.testimpl.collect { it.isDirectory() ? it : zipTree(it) }
-	}
-
+	enableRelocation true
+	relocationPrefix 'us.kbase.auth2.shadow'
+	
+	mergeServiceFiles()
+	
 	// Include text files from the "templates" directory
 	from('templates') { into JAR_TEMPLATE_DIR }
 	from("$buildDir/" + TEMPLATE_LIST_FILE_NAME) { into JAR_TEMPLATE_DIR }
-	
-	with jar
 }
 
 task generateManageAuthScript {
@@ -217,7 +214,6 @@ dependencies {
 		'syslog4j-0.9.46'
 	)
 	// needed for syslog4j
-	implementation 'net.java.dev.jna:jna:3.4.0'
 	implementation 'joda-time:joda-time:2.3'
 	
 	// ### Test ###
