@@ -30,7 +30,7 @@ jobs:
             wired_tiger: 'true'
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Setup java
         uses: actions/setup-java@v3
