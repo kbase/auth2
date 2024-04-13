@@ -39,7 +39,7 @@ import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.TemporaryToken;
-import us.kbase.common.test.TestException;
+import us.kbase.testutils.TestException;
 
 public class TestCommon {
 

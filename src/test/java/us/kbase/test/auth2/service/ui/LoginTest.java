@@ -79,7 +79,6 @@ import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
-import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
@@ -87,6 +86,7 @@ import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 import us.kbase.test.auth2.service.ServiceTestUtils;
+import us.kbase.testutils.RegexMatcher;
 
 public class LoginTest {
 	
