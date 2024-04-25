@@ -4,7 +4,8 @@ import static org.junit.Assert.assertThat;
 
 import org.mockito.ArgumentMatcher;
 
-import us.kbase.common.test.RegexMatcher;
+import us.kbase.testutils.RegexMatcher;
+
 
 public class PKCEChallengeMatcher implements ArgumentMatcher<String> {
 	

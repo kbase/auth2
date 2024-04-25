@@ -57,10 +57,10 @@ import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.service.AuthExternalConfig;
-import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MockIdentityProviderFactory;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.testutils.RegexMatcher;
 
 public class ServiceTestUtils {
 	

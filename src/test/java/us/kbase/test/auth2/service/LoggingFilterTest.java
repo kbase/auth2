@@ -42,10 +42,10 @@ import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.service.AuthStartupConfig;
 import us.kbase.auth2.service.LoggingFilter;
 import us.kbase.auth2.service.SLF4JAutoLogger;
-import us.kbase.common.test.RegexMatcher;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
 import us.kbase.test.auth2.TestCommon;
+import us.kbase.testutils.RegexMatcher;
 import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 
 public class LoggingFilterTest {
