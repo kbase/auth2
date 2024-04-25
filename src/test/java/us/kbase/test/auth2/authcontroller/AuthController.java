@@ -1,7 +1,7 @@
 package us.kbase.test.auth2.authcontroller;
 
-import static us.kbase.common.test.controllers.ControllerCommon.findFreePort;
-import static us.kbase.common.test.controllers.ControllerCommon.makeTempDirs;
+import static us.kbase.testutils.controllers.ControllerCommon.findFreePort;
+import static us.kbase.testutils.controllers.ControllerCommon.makeTempDirs;
 import static us.kbase.test.auth2.TestConfigurator.MONGO_HOST_KEY;
 import static us.kbase.test.auth2.TestConfigurator.MONGO_DB_KEY;
 import static us.kbase.test.auth2.TestConfigurator.MONGO_TEMPLATES_KEY;
@@ -27,7 +27,7 @@ import org.apache.commons.io.IOUtils;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import us.kbase.common.test.TestException;
+import us.kbase.testutils.TestException;
 import us.kbase.test.auth2.StandaloneAuthServer;
 
 /** Q&D utility to run the auth server in test mode for use in testing rigs. Expected to

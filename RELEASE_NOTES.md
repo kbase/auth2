@@ -1,5 +1,9 @@
 # Authentication Service MKII release notes
 
+## 0.7.1
+
+* Publishes a shadow jar on jitpack.io for supporting tests in other repos.
+
 ## 0.7.0
 
 * BACKWARDS INCOMPATIBILITY - the auth server now logs to stdout vs. syslog.
