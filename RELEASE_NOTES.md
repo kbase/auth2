@@ -1,5 +1,13 @@
 # Authentication Service MKII release notes
 
+## 0.7.2
+
+* Fixed a bug where usernames with underscores would not be matched in username searches if an
+  underscore was an interior character of a search prefix.
+* Fixed a bug where a MongoDB error would be thrown if a user search prefix resulted in no search
+  terms if it had no valid characters for the requested search, whether user name or display
+  name. Now a service error is thrown.
+
 ## 0.7.1
 
 * Publishes a shadow jar on jitpack.io for supporting tests in other repos.
