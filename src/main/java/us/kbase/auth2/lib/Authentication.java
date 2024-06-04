@@ -1181,10 +1181,17 @@ public class Authentication {
 		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
 		 * db side and search and sort db side.
 		 */
-		final UserSearchSpec spec = UserSearchSpec.getBuilder()
-				// checked that this does indeed use an index for the mongo implementation
-				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
-				.withSearchOnUserName(true).withIncludeDisabled(true).build();
+		final UserSearchSpec spec;
+		try {
+			spec = UserSearchSpec.getBuilder()
+					// checked that this does indeed use an index for the mongo implementation
+					.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
+					.withSearchOnUserName(true)
+					.withIncludeDisabled(true)
+					.build();
+		} catch (IllegalParameterException e) {
+			throw new RuntimeException("this is impossible", e);
+		}
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
 		final boolean match = users.containsKey(suggestedUserName);
 		final boolean hasNumSuffix = sugStrip.length() != sugName.length();

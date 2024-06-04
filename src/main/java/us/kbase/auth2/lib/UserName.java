@@ -1,10 +1,14 @@
 package us.kbase.auth2.lib;
 
 import static java.util.Objects.requireNonNull;
+import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -35,8 +39,8 @@ public class UserName extends Name {
 		}
 	}
 	
-	private static final String INVALID_CHARS_REGEX = "[^a-z\\d_]+";
-	private final static Pattern INVALID_CHARS = Pattern.compile(INVALID_CHARS_REGEX);
+	private static final Pattern FORCE_ALPHA_FIRST_CHAR = Pattern.compile("^[^a-z]+");
+	private final static Pattern INVALID_CHARS = Pattern.compile("[^a-z\\d_]+");
 	public final static int MAX_NAME_LENGTH = 100;
 	
 	/** Create a new user name.
@@ -75,13 +79,35 @@ public class UserName extends Name {
 	 */
 	public static Optional<UserName> sanitizeName(final String suggestedUserName) {
 		requireNonNull(suggestedUserName, "suggestedUserName");
-		final String s = suggestedUserName.toLowerCase().replaceAll(INVALID_CHARS_REGEX, "")
-				.replaceAll("^[^a-z]+", "");
+		final String s = cleanUserName(suggestedUserName);
 		try {
 			return s.isEmpty() ? Optional.empty() : Optional.of(new UserName(s));
 		} catch (IllegalParameterException | MissingParameterException e) {
 			throw new RuntimeException("This should be impossible", e);
 		}
+	}
+
+	private static String cleanUserName(final String putativeName) {
+		return FORCE_ALPHA_FIRST_CHAR.matcher(
+						INVALID_CHARS.matcher(
+								putativeName.toLowerCase())
+						.replaceAll(""))
+				.replaceAll("");
+	}
+	
+	/** Given a string, splits the string by whitespace, strips all illegal
+	 * characters from the tokens, and returns the resulting strings,
+	 * discarding repeats.
+	 * @param names the names string to process.
+	 * @return the list of canonicalized names.
+	 */
+	public static List<String> getCanonicalNames(final String names) {
+		checkStringNoCheckedException(names, "names");
+		return Arrays.asList(names.toLowerCase().split("\\s+")).stream()
+				.map(u -> cleanUserName(u))
+				.filter(u -> !u.isEmpty())
+				.distinct()
+				.collect(Collectors.toList());
 	}
 
 	@Override

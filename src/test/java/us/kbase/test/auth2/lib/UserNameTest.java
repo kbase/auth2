@@ -3,6 +3,7 @@ package us.kbase.test.auth2.lib;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.list;
 
 import org.junit.Test;
 
@@ -104,8 +105,8 @@ public class UserNameTest {
 	
 	@Test
 	public void sanitize() throws Exception {
-		assertThat("incorrect santize", UserName.sanitizeName("  999aFA8 ea6t  \t   ѱ ** J(())"),
-				is(Optional.of(new UserName("afa8ea6tj"))));
+		assertThat("incorrect santize", UserName.sanitizeName("  999aF_A8 ea6t  \t   ѱ ** J(())"),
+				is(Optional.of(new UserName("af_a8ea6tj"))));
 		assertThat("incorrect santize", UserName.sanitizeName("999  8 6  \t   ѱ ** (())"),
 				is(Optional.empty()));
 	}
@@ -117,6 +118,34 @@ public class UserNameTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("suggestedUserName"));
+		}
+	}
+	
+	@Test
+	public void getCanonicalNames() throws Exception {
+		assertThat("incorrect canonicalize",
+				UserName.getCanonicalNames(
+						"   999aF_A8 ea6t  \t  foo  _ѱaatѱ(*)  891**ѱ \n  fo-o  x\n"),
+				is(list("af_a8", "ea6t", "foo", "aat", "x")));
+		assertThat("incorrect canonicalize",
+				UserName.getCanonicalNames(
+						"   999_8 6  \t    _ѱѱ(*)  891**ѱ \n    \n"),
+				is(list()));
+	}
+	
+	@Test
+	public void getCanonicalNamesFail() throws Exception {
+		failGetCanonicalNames(null);
+		failGetCanonicalNames("   \t  ");
+	}
+	
+	private void failGetCanonicalNames(final String names) {
+		try {
+			UserName.getCanonicalNames(names);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, new IllegalArgumentException(
+					"names cannot be null or whitespace only"));
 		}
 	}
 	

@@ -17,6 +17,8 @@ import java.util.UUID;
 
 import org.junit.Test;
 
+import com.google.common.collect.ImmutableMap;
+
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
@@ -653,6 +655,25 @@ public class MongoStorageGetDisplayNamesTest extends MongoStorageTester{
 		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
 				.withSearchPrefix("fwhe").withSearchOnDisplayName(true).build(), -1),
 				is(Collections.emptyMap()));
+	}
+	
+	@Test
+	public void userSearchUnderscore() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("foo_bar"), UID1, new DisplayName("1"),
+				NOW, REMOTE1)
+				.build());
+		storage.createUser(NewUser.getBuilder(
+				new UserName("fo_obar"), UID2, new DisplayName("2"), NOW, REMOTE2)
+				.build());
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("fo_").build(), -1),
+				is(ImmutableMap.of(new UserName("fo_obar"), new DisplayName("2"))));
+		
+		assertThat("incorrect users found", storage.getUserDisplayNames(UserSearchSpec.getBuilder()
+				.withSearchPrefix("foo_b").build(), -1),
+				is(ImmutableMap.of(new UserName("foo_bar"), new DisplayName("1"))));
 	}
 	
 	@Test
