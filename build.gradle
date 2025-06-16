@@ -213,7 +213,7 @@ dependencies {
 	
 	
 	testImplementation 'commons-io:commons-io:2.4'
-	testImplementation 'nl.jqno.equalsverifier:equalsverifier:3.1.10'
+	testImplementation 'nl.jqno.equalsverifier:equalsverifier:4.0.2'
 	testImplementation 'junit:junit:4.12'
 	testImplementation('org.mock-server:mockserver-netty:3.10.4') {
 		exclude group: 'javax.inject', module: 'javax.inject'
