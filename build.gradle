@@ -200,7 +200,7 @@ dependencies {
 	implementation('org.glassfish.jersey.media:jersey-media-json-jackson:2.23.2') {
 		exclude group: 'javax.inject', module: 'javax.inject'
 	}
-	implementation('org.glassfish.jersey.ext:jersey-mvc-mustache:2.23.2') {
+	implementation('org.glassfish.jersey.ext:jersey-mvc-mustache:3.1.10') {
 		exclude group: 'javax.inject', module: 'javax.inject'
 		// The servlet namespace changed between 2.4 and 3.X, and so we need to exclude the
 		// 2.4 namespace to avoid collisions. 3.X is backwards compatible:
