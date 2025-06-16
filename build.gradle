@@ -182,7 +182,7 @@ dependencies {
 		// jar to fail to start correctly. It shouldn't be a problem, but it is
 		exclude group: 'com.github.kbase', module: 'auth2_client_java'
 	}
-	implementation 'ch.qos.logback:logback-classic:1.1.2'
+	implementation 'ch.qos.logback:logback-classic:1.5.18'
 	implementation 'org.slf4j:slf4j-api:1.7.25'
 	// TODO DEPS Need to rework the java common logger to not use syslog4j at all since it's
 	// abandonware and has a ton of CVEs, even in the newer versions.
