@@ -169,10 +169,10 @@ dependencies {
 	implementation 'com.google.guava:guava:18.0'
 	implementation 'org.ini4j:ini4j:0.5.2'
 	implementation 'com.beust:jcommander:1.48'
-	implementation 'org.mongodb:mongodb-driver-core:4.11.1'
-	implementation 'org.mongodb:mongodb-driver-sync:4.11.1'
-	implementation 'org.mongodb:bson-record-codec:4.11.1'
-	implementation 'org.mongodb:bson:4.11.1'
+	implementation 'org.mongodb:mongodb-driver-core:5.5.1'
+	implementation 'org.mongodb:mongodb-driver-sync:5.5.1'
+	implementation 'org.mongodb:bson-record-codec:5.5.1'
+	implementation 'org.mongodb:bson:5.5.1'
 	implementation('com.github.kbase:java_common:0.3.0') {
 		exclude group: 'net.java.dev.jna' // breaks shadow jar
 		exclude group: 'org.eclipse.jetty.aggregate'  // ugh, java common pollutes everything
