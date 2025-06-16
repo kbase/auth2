@@ -215,7 +215,7 @@ dependencies {
 	testImplementation 'commons-io:commons-io:2.4'
 	testImplementation 'nl.jqno.equalsverifier:equalsverifier:3.1.10'
 	testImplementation 'junit:junit:4.12'
-	testImplementation('org.mock-server:mockserver-netty:3.10.4') {
+	testImplementation('org.mock-server:mockserver-netty:5.15.0') {
 		exclude group: 'javax.inject', module: 'javax.inject'
 		// uses an old version of the activation api in a different namespace, so exclude it
 		// in favor of the new one which is a transitive dependency elsewhere
