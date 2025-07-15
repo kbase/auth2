@@ -3142,6 +3142,34 @@ public class Authentication {
 		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
 	
+	/** Get MFA status for a token by checking the token user's identities.
+	 * @param token the token to check.
+	 * @return true if MFA was used, false if password only, null if unknown or not supported.
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 */
+	public Boolean getMfaStatus(final IncomingToken token) throws AuthStorageException {
+		if (token == null) {
+			return null;
+		}
+		try {
+			final AuthUser user = getUser(token);
+			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
+			
+			// Check for identities with MFA information from supported providers
+			for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
+				final Boolean mfaStatus = identity.getDetails().isMfaAuthenticated();
+				if (mfaStatus != null) {
+					return mfaStatus;
+				}
+			}
+			
+			return null; // No MFA information available
+		} catch (Exception e) {
+			// For any errors, return null rather than failing the request
+			return null;
+		}
+	}
+	
 	/** Get the external configuration without providing any credentials.
 	 * 
 	 * This method should not be exposed in a public API.

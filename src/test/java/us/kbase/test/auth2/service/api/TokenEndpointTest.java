@@ -174,6 +174,7 @@ public class TokenEndpointTest {
 				.with("user", "foo")
 				.with("custom", ImmutableMap.of("whee", "whoo"))
 				.with("cachefor", 300000)
+				.with("mfaAuthenticated", null)
 				.build();
 		
 		assertThat("incorrect token", response, is(expected));
@@ -605,5 +606,158 @@ public class TokenEndpointTest {
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
 		assertThat("incorrect response", response, is(expected));
+	}
+	
+	@Test
+	public void getTokenWithMfaTrue() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final IncomingToken it = new IncomingToken("mfatokenvalue");
+		
+		// Create user with ORCID identity that used MFA
+		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
+				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-5678"),
+				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", true));
+		
+		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
+				new UserName("mfauser"), id, new DisplayName("MFA User"), inst(10000), orcidId)
+				.withEmailAddress(new EmailAddress("mfa@example.com")).build());
+		
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("mfauser"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withTokenName(new TokenName("mfatoken"))
+				.build(), it.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", it.getToken());
+
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is(true));
+		assertThat("incorrect user", response.get("user"), is("mfauser"));
+		assertThat("incorrect token name", response.get("name"), is("mfatoken"));
+	}
+	
+	@Test
+	public void getTokenWithMfaFalse() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final IncomingToken it = new IncomingToken("nomfatokenvalue");
+		
+		// Create user with ORCID identity that did NOT use MFA
+		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
+				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-9999"),
+				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", false));
+		
+		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
+				new UserName("nomfauser"), id, new DisplayName("No MFA User"), inst(10000), orcidId)
+				.withEmailAddress(new EmailAddress("nomfa@example.com")).build());
+		
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("nomfauser"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withTokenName(new TokenName("nomfatoken"))
+				.build(), it.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", it.getToken());
+
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is(false));
+		assertThat("incorrect user", response.get("user"), is("nomfauser"));
+		assertThat("incorrect token name", response.get("name"), is("nomfatoken"));
+	}
+	
+	@Test
+	public void getTokenWithMfaNull() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final IncomingToken it = new IncomingToken("unknownmfatokenvalue");
+		
+		// Create user with ORCID identity that has unknown MFA status
+		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
+				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-0000"),
+				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", null));
+		
+		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
+				new UserName("unknownmfauser"), id, new DisplayName("Unknown MFA User"), inst(10000), orcidId)
+				.withEmailAddress(new EmailAddress("unknownmfa@example.com")).build());
+		
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("unknownmfauser"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withTokenName(new TokenName("unknownmfatoken"))
+				.build(), it.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", it.getToken());
+
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) null));
+		assertThat("incorrect user", response.get("user"), is("unknownmfauser"));
+		assertThat("incorrect token name", response.get("name"), is("unknownmfatoken"));
+	}
+	
+	@Test
+	public void getTokenWithNonOrcidProvider() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final IncomingToken it = new IncomingToken("googletokenvalue");
+		
+		// Create user with non-ORCID identity (e.g., Google)
+		final us.kbase.auth2.lib.identity.RemoteIdentity googleId = new us.kbase.auth2.lib.identity.RemoteIdentity(
+				new us.kbase.auth2.lib.identity.RemoteIdentityID("Google", "googleid123"),
+				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("googleuser", "Google User", "google@example.com", true));
+		
+		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
+				new UserName("googleuser"), id, new DisplayName("Google User"), inst(10000), googleId)
+				.withEmailAddress(new EmailAddress("google@example.com")).build());
+		
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.AGENT, id, new UserName("googleuser"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withTokenName(new TokenName("googletoken"))
+				.build(), it.getHashedToken().getTokenHash());
+		
+		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		
+		final WebTarget wt = CLI.target(target);
+		final Builder req = wt.request()
+				.header("authorization", it.getToken());
+
+		final Response res = req.get();
+		
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response = res.readEntity(Map.class);
+		
+		// Non-ORCID providers should return null for MFA status
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) null));
+		assertThat("incorrect user", response.get("user"), is("googleuser"));
+		assertThat("incorrect token name", response.get("name"), is("googletoken"));
 	}
 }

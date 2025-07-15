@@ -54,9 +54,6 @@ public class APIPaths {
 	/** The me endpoint location. */
 	public static final String API_V2_ME = API_V2 + SEP + ME;
 	
-	/** The MFA status endpoint location. */
-	public static final String API_V2_MFA_STATUS = API_V2 + SEP + "mfastatus";
-	
 	/* test mode endpoints. */
 
 	/** The testmode root endpoint. */

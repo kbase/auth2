@@ -29,6 +29,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -55,8 +56,9 @@ public class Token {
 	@Produces(MediaType.APPLICATION_JSON)
 	public APIToken viewToken(@HeaderParam(APIConstants.HEADER_TOKEN) final String token)
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
-		final StoredToken ht = auth.getToken(getToken(token));
-		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
+		final IncomingToken it = getToken(token);
+		final StoredToken ht = auth.getToken(it);
+		return new APIToken(ht, auth.getSuggestedTokenCacheTime(), auth.getMfaStatus(it));
 	}
 	
 	private static class CreateToken extends IncomingJSON {
