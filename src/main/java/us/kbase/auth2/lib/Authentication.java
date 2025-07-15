@@ -3157,7 +3157,7 @@ public class Authentication {
 			
 			// Check for identities with MFA information from supported providers
 			for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
-				final Boolean mfaStatus = identity.getDetails().isMfaAuthenticated();
+				final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
 				if (mfaStatus != null) {
 					return mfaStatus;
 				}

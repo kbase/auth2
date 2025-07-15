@@ -80,7 +80,7 @@ public class RemoteIdentityDetails {
 	 * @return true if the user authenticated with MFA, false if not, null if MFA status 
 	 * is unknown or not supported by the provider.
 	 */
-	public Boolean isMfaAuthenticated() {
+	public Boolean getMfaAuthenticated() {
 		return mfaAuthenticated;
 	}
 

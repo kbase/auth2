@@ -1597,7 +1597,7 @@ public class MongoStorage implements AuthStorage {
 				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
 				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(pre + Fields.IDENTITIES_MFA, rid.isMfaAuthenticated()));
+				.append(pre + Fields.IDENTITIES_MFA, rid.getMfaAuthenticated()));
 		try {
 			// id might have been unlinked, so we just assume
 			// the update worked. If it was just unlinked we don't care.
@@ -1731,7 +1731,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
 				.append(Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(Fields.IDENTITIES_MFA, rid.isMfaAuthenticated());
+				.append(Fields.IDENTITIES_MFA, rid.getMfaAuthenticated());
 	}
 	
 	@Override
