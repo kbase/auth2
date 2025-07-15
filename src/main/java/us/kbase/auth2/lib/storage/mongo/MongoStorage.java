@@ -1596,7 +1596,8 @@ public class MongoStorage implements AuthStorage {
 		final Document update = new Document("$set",
 				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname()));
+				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname())
+				.append(pre + Fields.IDENTITIES_MFA, rid.isMfaAuthenticated()));
 		try {
 			// id might have been unlinked, so we just assume
 			// the update worked. If it was just unlinked we don't care.
@@ -1729,7 +1730,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_PROV_ID, id.getRemoteID().getProviderIdentityId())
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(Fields.IDENTITIES_EMAIL, rid.getEmail());
+				.append(Fields.IDENTITIES_EMAIL, rid.getEmail())
+				.append(Fields.IDENTITIES_MFA, rid.isMfaAuthenticated());
 	}
 	
 	@Override
@@ -1789,7 +1791,8 @@ public class MongoStorage implements AuthStorage {
 			final RemoteIdentityDetails det = new RemoteIdentityDetails(
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
-					i.getString(Fields.IDENTITIES_EMAIL));
+					i.getString(Fields.IDENTITIES_EMAIL),
+					i.getBoolean(Fields.IDENTITIES_MFA));
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;

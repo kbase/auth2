@@ -494,6 +494,105 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
+	@Test
+	public void getIdentityWithMfaTrue() throws Exception {
+		final String authCode = "authcodeWithMfa";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String idToken = createValidJWTWithMfa(orcID, true);
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken3", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, idToken);
+		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "mfa@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "mfa@test.com", true)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithMfaFalse() throws Exception {
+		final String authCode = "authcodeNoMfa";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String idToken = createValidJWTWithMfa(orcID, false);
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken4", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, idToken);
+		setupCallID("footoken4", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "nomfa@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "nomfa@test.com", false)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithNoIdToken() throws Exception {
+		final String authCode = "authcodeNoIdToken";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		setUpCallAuthToken(authCode, "footoken5", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
+		setupCallID("footoken5", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "noid@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "noid@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithInvalidJWT() throws Exception {
+		final String authCode = "authcodeInvalidJWT";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String invalidIdToken = "invalid.jwt.token";
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken6", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidIdToken);
+		setupCallID("footoken6", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "invalid@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "invalid@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithStringAmr() throws Exception {
+		final String authCode = "authcodeStringAmr";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String idToken = createJWTWithStringAmr(orcID, "mfa");
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken7", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, idToken);
+		setupCallID("footoken7", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "stringmfa@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", true)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
 	private void setUpCallAuthToken(
 			final String authCode,
 			final String authtoken,
@@ -590,5 +689,190 @@ public class OrcIDIdentityProviderTest {
 			ret.put((String) entries[i], entries[i + 1]);
 		}
 		return ret;
+	}
+	
+	private void setUpCallAuthTokenWithIdToken(
+			final String authCode,
+			final String authtoken,
+			final String redirect,
+			final String clientID,
+			final String clientSecret,
+			final String name,
+			final String orcID,
+			final String idToken)
+			throws Exception {
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/oauth/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("redirect_uri", redirect),
+							new Parameter("client_id", clientID),
+							new Parameter("client_secret", clientSecret))
+					),
+				Times.exactly(1)
+			).respond(
+				new HttpResponse()
+					.withStatusCode(200)
+					.withHeader(CONTENT_TYPE, APP_JSON)
+					.withBody(MAPPER.writeValueAsString(map(
+							"access_token", authtoken,
+							"name", name,
+							"orcid", orcID,
+							"id_token", idToken
+							)))
+			);
+	}
+	
+	private String createValidJWTWithMfa(final String orcID, final boolean usedMfa) {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		final String payload = usedMfa ?
+				"{\"sub\":\"" + orcID + "\",\"amr\":[\"mfa\",\"pwd\"]}" :
+				"{\"sub\":\"" + orcID + "\",\"amr\":[\"pwd\"]}";
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(payload.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
+	}
+	
+	private String createJWTWithStringAmr(final String orcID, final String amrValue) {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		final String payload = "{\"sub\":\"" + orcID + "\",\"amr\":\"" + amrValue + "\"}";
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(payload.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
+	}
+	
+	@Test
+	public void getIdentityWithMalformedJWT() throws Exception {
+		final String authCode = "authcodeMalformed";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		// Test JWT with only 2 parts
+		final String invalidJWT = "header.payload";
+		setUpCallAuthTokenWithIdToken(authCode, "footoken8", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
+		setupCallID("footoken8", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "malformed@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "malformed@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithInvalidBase64JWT() throws Exception {
+		final String authCode = "authcodeInvalidB64";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		// JWT with invalid base64 in payload
+		final String invalidJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid==base64!!.signature";
+		setUpCallAuthTokenWithIdToken(authCode, "footoken9", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
+		setupCallID("footoken9", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "invalidb64@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "invalidb64@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithMalformedJSONJWT() throws Exception {
+		final String authCode = "authcodeMalformedJSON";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		// JWT with invalid JSON in payload
+		final String invalidJSON = "{\"sub\":\"" + orcID + "\",\"amr\":}";
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(invalidJSON.getBytes());
+		final String invalidJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + encodedPayload + ".signature";
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken10", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
+		setupCallID("footoken10", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "malformedjson@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "malformedjson@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithEmptyAmrJWT() throws Exception {
+		final String authCode = "authcodeEmptyAmr";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String idToken = createJWTWithEmptyAmr(orcID);
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken11", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, idToken);
+		setupCallID("footoken11", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "emptyamr@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "emptyamr@test.com", false)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	@Test
+	public void getIdentityWithNoAmrClaimJWT() throws Exception {
+		final String authCode = "authcodeNoAmr";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String idToken = createJWTWithoutAmr(orcID);
+		
+		setUpCallAuthTokenWithIdToken(authCode, "footoken12", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, idToken);
+		setupCallID("footoken12", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "noamr@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "noamr@test.com", null)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+	
+	private String createJWTWithEmptyAmr(final String orcID) {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		final String payload = "{\"sub\":\"" + orcID + "\",\"amr\":[]}";
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(payload.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
+	}
+	
+	private String createJWTWithoutAmr(final String orcID) {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		final String payload = "{\"sub\":\"" + orcID + "\",\"iss\":\"https://orcid.org\"}";
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(payload.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
 	}
 }

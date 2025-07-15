@@ -56,6 +56,18 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	private static final RemoteIdentity REMOTE2 = new RemoteIdentity(
 			new RemoteIdentityID("prov", "bar2"),
 			new RemoteIdentityDetails("user2", "full2", "email2"));
+	
+	private static final RemoteIdentity REMOTE_MFA_TRUE = new RemoteIdentity(
+			new RemoteIdentityID("orcid", "0000-0001-1234-5678"),
+			new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", true));
+	
+	private static final RemoteIdentity REMOTE_MFA_FALSE = new RemoteIdentity(
+			new RemoteIdentityID("orcid", "0000-0001-1234-9999"),
+			new RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", false));
+	
+	private static final RemoteIdentity REMOTE_MFA_NULL = new RemoteIdentity(
+			new RemoteIdentityID("orcid", "0000-0001-1234-0000"),
+			new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", null));
 
 	@Test
 	public void createGetLocalUserMinimal() throws Exception {
@@ -592,5 +604,67 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect display name", au.getDisplayName(), is(new DisplayName("bar1")));
 		assertThat("incorrect email", au.getEmail(), is(new EmailAddress("e@g1.com")));
 		// ok, thats enough
+	}
+	
+	@Test
+	public void createUserWithMfaTrue() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("mfauser"), UID, new DisplayName("MFA User"), NOW, REMOTE_MFA_TRUE)
+				.withEmailAddress(new EmailAddress("mfa@example.com"))
+				.build());
+		
+		final AuthUser u = storage.getUser(new UserName("mfauser"));
+		
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_TRUE)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName("mfauser")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("MFA User")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("mfa@example.com")));
+	}
+	
+	@Test
+	public void createUserWithMfaFalse() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("nomfauser"), UID, new DisplayName("No MFA User"), NOW, REMOTE_MFA_FALSE)
+				.withEmailAddress(new EmailAddress("nomfa@example.com"))
+				.build());
+		
+		final AuthUser u = storage.getUser(new UserName("nomfauser"));
+		
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_FALSE)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName("nomfauser")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("No MFA User")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("nomfa@example.com")));
+	}
+	
+	@Test
+	public void createUserWithMfaNull() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("unknownmfauser"), UID, new DisplayName("Unknown MFA User"), NOW, REMOTE_MFA_NULL)
+				.withEmailAddress(new EmailAddress("unknownmfa@example.com"))
+				.build());
+		
+		final AuthUser u = storage.getUser(new UserName("unknownmfauser"));
+		
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_NULL)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName("unknownmfauser")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("Unknown MFA User")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("unknownmfa@example.com")));
+	}
+	
+	@Test
+	public void getUserByRemoteIdWithMfa() throws Exception {
+		storage.createUser(NewUser.getBuilder(
+				new UserName("mfauser"), UID, new DisplayName("MFA User"), NOW, REMOTE_MFA_TRUE)
+				.withEmailAddress(new EmailAddress("mfa@example.com"))
+				.build());
+		
+		final AuthUser u = storage.getUser(REMOTE_MFA_TRUE).get();
+		
+		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_TRUE)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName("mfauser")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("MFA User")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("mfa@example.com")));
+		assertThat("incorrect is disabled", u.isDisabled(), is(false));
+		assertThat("incorrect is local", u.isLocal(), is(false));
 	}
 }

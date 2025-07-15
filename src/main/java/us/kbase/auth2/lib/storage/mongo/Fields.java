@@ -97,6 +97,8 @@ public class Fields {
 	public static final String IDENTITIES_NAME = "fullname";
 	/** The email address of the identity. */
 	public static final String IDENTITIES_EMAIL = "email";
+	/** Whether the identity was authenticated with multi-factor authentication. */
+	public static final String IDENTITIES_MFA = "mfa";
 	
 	/* **************
 	 * token fields

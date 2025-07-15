@@ -10,6 +10,7 @@ public class RemoteIdentityDetails {
 	private final String username;
 	private final String fullname;
 	private final String email;
+	private final Boolean mfaAuthenticated;
 	
 	/** Create a new set of details.
 	 * @param username the user name of the identity.
@@ -20,6 +21,22 @@ public class RemoteIdentityDetails {
 			final String username,
 			final String fullname,
 			final String email) {
+		this(username, fullname, email, null);
+	}
+	
+	/** Create a new set of details.
+	 * @param username the user name of the identity.
+	 * @param fullname the full name of the identity. Null is acceptable.
+	 * @param email the email address of the identity. Null is acceptable.
+	 * @param mfaAuthenticated whether the user authenticated using multi-factor authentication.
+	 * True if MFA was used, false if password only, null if MFA status is unknown or not 
+	 * supported by the provider.
+	 */
+	public RemoteIdentityDetails(
+			final String username,
+			final String fullname,
+			final String email,
+			final Boolean mfaAuthenticated) {
 		super();
 		if (username == null || username.trim().isEmpty()) {
 			throw new IllegalArgumentException(
@@ -36,6 +53,7 @@ public class RemoteIdentityDetails {
 		} else {
 			this.email = email.trim();
 		}
+		this.mfaAuthenticated = mfaAuthenticated;
 	}
 
 	/** Get the user name for the identity.
@@ -57,6 +75,14 @@ public class RemoteIdentityDetails {
 	public String getEmail() {
 		return email;
 	}
+	
+	/** Get whether the user authenticated using multi-factor authentication.
+	 * @return true if the user authenticated with MFA, false if not, null if MFA status 
+	 * is unknown or not supported by the provider.
+	 */
+	public Boolean isMfaAuthenticated() {
+		return mfaAuthenticated;
+	}
 
 	@Override
 	public int hashCode() {
@@ -64,6 +90,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
+		result = prime * result + ((mfaAuthenticated == null) ? 0 : mfaAuthenticated.hashCode());
 		result = prime * result + ((username == null) ? 0 : username.hashCode());
 		return result;
 	}
@@ -94,6 +121,13 @@ public class RemoteIdentityDetails {
 		} else if (!fullname.equals(other.fullname)) {
 			return false;
 		}
+		if (mfaAuthenticated == null) {
+			if (other.mfaAuthenticated != null) {
+				return false;
+			}
+		} else if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+			return false;
+		}
 		if (username == null) {
 			if (other.username != null) {
 				return false;
@@ -113,6 +147,8 @@ public class RemoteIdentityDetails {
 		builder.append(fullname);
 		builder.append(", email=");
 		builder.append(email);
+		builder.append(", mfaAuthenticated=");
+		builder.append(mfaAuthenticated);
 		builder.append("]");
 		return builder.toString();
 	}

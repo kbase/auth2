@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -59,7 +60,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		/* Get creds: https://sandbox.orcid.org/developer-tools */
 		
 		private static final String NAME = "OrcID";
-		private static final String SCOPE = "/authenticate";
+		private static final String SCOPE = "openid";
 		private static final String LOGIN_PATH = "/oauth/authorize";
 		private static final String TOKEN_PATH = "/oauth/token";
 		private static final String RECORD_PATH = "/v2.1";
@@ -174,7 +175,8 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					new RemoteIdentityDetails(
 							accessToken.orcID,
 							accessToken.fullName,
-							email));
+							email,
+							accessToken.mfaAuthenticated));
 		}
 	
 		private Map<String, Object> orcIDGetRequest(
@@ -211,11 +213,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String accessToken;
 			private final String fullName;
 			private final String orcID;
+			private final String idToken;
+			private final Boolean mfaAuthenticated;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
 					final String fullName,
-					final String orcID)
+					final String orcID,
+					final String idToken)
 					throws IdentityRetrievalException {
 				if (accessToken == null || accessToken.trim().isEmpty()) {
 					throw new IdentityRetrievalException(
@@ -228,6 +233,61 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.accessToken = accessToken.trim();
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
+				this.idToken = idToken == null ? null : idToken.trim();
+				this.mfaAuthenticated = parseAmrClaim(this.idToken);
+			}
+			
+			/**
+			 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
+			 * to determine if multi-factor authentication was used.
+			 * 
+			 * @param idToken the JWT ID token from ORCID
+			 * @return true if MFA was used, false if password only, null if unknown or parsing failed
+			 */
+			private Boolean parseAmrClaim(final String idToken) {
+				if (idToken == null || idToken.trim().isEmpty()) {
+					return null;
+				}
+				
+				try {
+					// JWT format: header.payload.signature
+					final String[] parts = idToken.split("\\.");
+					if (parts.length != 3) {
+						// Invalid JWT format
+						return null;
+					}
+					
+					// Decode the payload (second part) - URL-safe base64
+					final String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+					
+					// Parse JSON payload to extract claims
+					@SuppressWarnings("unchecked")
+					final Map<String, Object> claims = MAPPER.readValue(payload, Map.class);
+					
+					final Object amrClaim = claims.get("amr");
+					if (amrClaim instanceof List) {
+						// OpenID Connect spec: AMR should be an array of strings
+						@SuppressWarnings("unchecked")
+						final List<String> amrList = (List<String>) amrClaim;
+						return amrList.contains("mfa");
+					} else if (amrClaim instanceof String) {
+						// ORCID may return single string - handle as fallback
+						return "mfa".equals(amrClaim);
+					}
+					
+					// AMR claim present but in unexpected format
+					return null;
+					
+				} catch (IllegalArgumentException e) {
+					// Base64 decoding failed - invalid JWT
+					return null;
+				} catch (IOException e) {
+					// JSON parsing failed - malformed payload
+					return null;
+				} catch (Exception e) {
+					// Other unexpected errors - don't fail authentication
+					return null;
+				}
 			}
 		}
 		
@@ -259,7 +319,8 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			return new OrcIDAccessTokenResponse(
 					(String) m.get("access_token"),
 					(String) m.get("name"),
-					(String) m.get("orcid"));
+					(String) m.get("orcid"),
+					(String) m.get("id_token"));
 		}
 	
 		private Map<String, Object> orcIDPostRequest(

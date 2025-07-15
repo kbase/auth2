@@ -20,9 +20,10 @@ public class RemoteIdentityTest {
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
+		assertThat("incorrect mfa authenticated", dets.getMfaAuthenticated(), is((Boolean) null));
 		assertThat("incorrect hashcode", dets.hashCode(), is(-1536596969));
 		assertThat("incorrect toString()", dets.toString(),
-				is("RemoteIdentityDetails [username=user, fullname=full, email=email]"));
+				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfaAuthenticated=null]"));
 	}
 	
 	@Test
@@ -31,17 +32,19 @@ public class RemoteIdentityTest {
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is((String) null));
 		assertThat("incorrect email", dets.getEmail(), is((String) null));
+		assertThat("incorrect mfa authenticated", dets.getMfaAuthenticated(), is((Boolean) null));
 		assertThat("incorrect hashcode", dets.hashCode(), is(3629098));
 		assertThat("incorrect toString()", dets.toString(),
-				is("RemoteIdentityDetails [username=user, fullname=null, email=null]"));
+				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfaAuthenticated=null]"));
 		
 		final RemoteIdentityDetails dets2 = new RemoteIdentityDetails("user", null, null);
 		assertThat("incorrect username", dets2.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets2.getFullname(), is((String) null));
 		assertThat("incorrect email", dets2.getEmail(), is((String) null));
+		assertThat("incorrect mfa authenticated", dets2.getMfaAuthenticated(), is((Boolean) null));
 		assertThat("incorrect hashcode", dets2.hashCode(), is(3629098));
 		assertThat("incorrect toString()", dets2.toString(),
-				is("RemoteIdentityDetails [username=user, fullname=null, email=null]"));
+				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfaAuthenticated=null]"));
 	}
 	
 	@Test
@@ -115,7 +118,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect hashcode", ri.hashCode(), is(4039350));
 		assertThat("incorrect toString()", ri.toString(),
 				is("RemoteIdentity [remoteID=RemoteIdentityID [provider=p, id=i], " +
-						"details=RemoteIdentityDetails [username=u, fullname=f, email=e]]"));
+						"details=RemoteIdentityDetails [username=u, fullname=f, email=e, mfaAuthenticated=null]]"));
 	}
 	
 	@Test
@@ -204,6 +207,50 @@ public class RemoteIdentityTest {
 			fail("expected NullPointerException");
 		} catch (NullPointerException e) {
 			assertThat("incorrect exception msg", e.getMessage(), is("other"));
+		}
+	}
+
+	@Test
+	public void remoteDetailsWithMfaTrue() throws Exception {
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", true);
+		assertThat("incorrect username", dets.getUsername(), is("user"));
+		assertThat("incorrect fullname", dets.getFullname(), is("full"));
+		assertThat("incorrect email", dets.getEmail(), is("email"));
+		assertThat("incorrect mfa authenticated", dets.getMfaAuthenticated(), is(true));
+		assertThat("incorrect toString()", dets.toString(),
+				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfaAuthenticated=true]"));
+	}
+
+	@Test
+	public void remoteDetailsWithMfaFalse() throws Exception {
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", false);
+		assertThat("incorrect username", dets.getUsername(), is("user"));
+		assertThat("incorrect fullname", dets.getFullname(), is("full"));
+		assertThat("incorrect email", dets.getEmail(), is("email"));
+		assertThat("incorrect mfa authenticated", dets.getMfaAuthenticated(), is(false));
+		assertThat("incorrect toString()", dets.toString(),
+				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfaAuthenticated=false]"));
+	}
+
+	@Test
+	public void remoteDetailsWithMfaNull() throws Exception {
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", null);
+		assertThat("incorrect username", dets.getUsername(), is("user"));
+		assertThat("incorrect fullname", dets.getFullname(), is("full"));
+		assertThat("incorrect email", dets.getEmail(), is("email"));
+		assertThat("incorrect mfa authenticated", dets.getMfaAuthenticated(), is((Boolean) null));
+		assertThat("incorrect toString()", dets.toString(),
+				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfaAuthenticated=null]"));
+	}
+
+	@Test
+	public void remoteDetailsMfaFailWithNullUser() throws Exception {
+		try {
+			new RemoteIdentityDetails(null, "full", "email", true);
+			fail("created bad details with mfa");
+		} catch (IllegalArgumentException e) {
+			assertThat("incorrect exception msg", e.getMessage(),
+					is("username cannot be null or empty"));
 		}
 	}
 }
