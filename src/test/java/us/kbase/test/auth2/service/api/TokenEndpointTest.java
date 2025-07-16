@@ -730,7 +730,7 @@ public class TokenEndpointTest {
 		// Create user with non-ORCID identity (e.g., Google)
 		final us.kbase.auth2.lib.identity.RemoteIdentity googleId = new us.kbase.auth2.lib.identity.RemoteIdentity(
 				new us.kbase.auth2.lib.identity.RemoteIdentityID("Google", "googleid123"),
-				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("googleuser", "Google User", "google@example.com", true));
+				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("googleuser", "Google User", "google@example.com", null));
 		
 		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
 				new UserName("googleuser"), id, new DisplayName("Google User"), inst(10000), googleId)
