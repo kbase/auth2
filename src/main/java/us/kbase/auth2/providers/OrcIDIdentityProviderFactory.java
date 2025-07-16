@@ -284,9 +284,6 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				} catch (IOException e) {
 					// JSON parsing failed - malformed payload
 					return null;
-				} catch (Exception e) {
-					// Other unexpected errors - don't fail authentication
-					return null;
 				}
 			}
 		}

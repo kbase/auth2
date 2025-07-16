@@ -875,4 +875,58 @@ public class OrcIDIdentityProviderTest {
 				.encodeToString(payload.getBytes());
 		return encodedHeader + "." + encodedPayload + ".signature";
 	}
+	
+	@Test
+	public void getIdentityWithInvalidJWTFormat() throws Exception {
+		final String authCode = "authcodeInvalidFormat";
+		final String orcID = "0000-0001-8607-8067";
+		
+		// JWT with only 2 parts instead of 3
+		final String invalidJWT = "header.payload";
+		
+		ms.expect(RequestMethod.POST, getTokenURL())
+		.andRespond(withSuccess(
+				"{\"access_token\": \"token\", \"orcid\": \"" + orcID + "\", " +
+				"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}", 
+				MediaType.APPLICATION_JSON));
+		
+		ms.expect(RequestMethod.GET, getEmailURL(orcID))
+		.andRespond(withSuccess(toJSON(
+				map("email", Arrays.asList(map("email", "invalid@format.com")))),
+				MediaType.APPLICATION_JSON));
+		
+		final Set<RemoteIdentity> ri = new OrcIDIdentityProviderFactory()
+				.configure(CFG).getIdentities(authCode, "pkceCodeVerifier", false, null);
+		
+		assertThat("incorrect return", ri, is(set(new RemoteIdentity(
+				new RemoteIdentityID("OrcID", orcID),
+				new RemoteIdentityDetails(orcID, "My name", "invalid@format.com", null)))));
+	}
+	
+	@Test
+	public void getIdentityWithBase64DecodingError() throws Exception {
+		final String authCode = "authcodeBase64Error";
+		final String orcID = "0000-0001-8607-8067";
+		
+		// JWT with invalid base64 in payload
+		final String invalidJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_base64!@#$.signature";
+		
+		ms.expect(RequestMethod.POST, getTokenURL())
+		.andRespond(withSuccess(
+				"{\"access_token\": \"token\", \"orcid\": \"" + orcID + "\", " +
+				"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}", 
+				MediaType.APPLICATION_JSON));
+		
+		ms.expect(RequestMethod.GET, getEmailURL(orcID))
+		.andRespond(withSuccess(toJSON(
+				map("email", Arrays.asList(map("email", "base64error@test.com")))),
+				MediaType.APPLICATION_JSON));
+		
+		final Set<RemoteIdentity> ri = new OrcIDIdentityProviderFactory()
+				.configure(CFG).getIdentities(authCode, "pkceCodeVerifier", false, null);
+		
+		assertThat("incorrect return", ri, is(set(new RemoteIdentity(
+				new RemoteIdentityID("OrcID", orcID),
+				new RemoteIdentityDetails(orcID, "My name", "base64error@test.com", null)))));
+	}
 }

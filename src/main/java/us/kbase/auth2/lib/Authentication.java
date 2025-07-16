@@ -3146,28 +3146,25 @@ public class Authentication {
 	 * @param token the token to check.
 	 * @return true if MFA was used, false if password only, null if unknown or not supported.
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
+	 * @throws InvalidTokenException if the token is invalid.
 	 */
-	public Boolean getMfaStatus(final IncomingToken token) throws AuthStorageException {
+	public Boolean getMfaStatus(final IncomingToken token) 
+			throws AuthStorageException, InvalidTokenException {
 		if (token == null) {
 			return null;
 		}
-		try {
-			final AuthUser user = getUser(token);
-			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
-			
-			// Check for identities with MFA information from supported providers
-			for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
-				final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
-				if (mfaStatus != null) {
-					return mfaStatus;
-				}
+		final AuthUser user = getUser(token);
+		final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
+		
+		// Check for identities with MFA information from supported providers
+		for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
+			final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
+			if (mfaStatus != null) {
+				return mfaStatus;
 			}
-			
-			return null; // No MFA information available
-		} catch (Exception e) {
-			// For any errors, return null rather than failing the request
-			return null;
 		}
+		
+		return null; // No MFA information available
 	}
 	
 	/** Get the external configuration without providing any credentials.
