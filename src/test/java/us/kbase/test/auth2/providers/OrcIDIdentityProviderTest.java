@@ -880,20 +880,43 @@ public class OrcIDIdentityProviderTest {
 	public void getIdentityWithInvalidJWTFormat() throws Exception {
 		final String authCode = "authcodeInvalidFormat";
 		final String orcID = "0000-0001-8607-8067";
+		final String token = "atok";
 		
 		// JWT with only 2 parts instead of 3
 		final String invalidJWT = "header.payload";
 		
-		ms.expect(RequestMethod.POST, getTokenURL())
-		.andRespond(withSuccess(
-				"{\"access_token\": \"token\", \"orcid\": \"" + orcID + "\", " +
-				"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}", 
-				MediaType.APPLICATION_JSON));
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/oauth/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("redirect_uri", "https://ologinredir.com"),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("client_id", "ofoo"),
+							new Parameter("client_secret", "obar"))))
+				.respond(
+					new HttpResponse()
+						.withStatusCode(200)
+						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withBody("{\"access_token\": \"" + token + "\", \"orcid\": \"" + orcID + "\", " +
+								"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}"));
 		
-		ms.expect(RequestMethod.GET, getEmailURL(orcID))
-		.andRespond(withSuccess(toJSON(
-				map("email", Arrays.asList(map("email", "invalid@format.com")))),
-				MediaType.APPLICATION_JSON));
+		final Map<String, Object> email = new HashMap<>();
+		email.put("email", Arrays.asList(TestCommon.map("email", "invalid@format.com")));
+		
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("GET")
+					.withPath("/v2.1/" + orcID + "/email")
+					.withHeader(ACCEPT, APP_JSON)
+					.withHeader("Authorization", "Bearer " + token))
+				.respond(
+					new HttpResponse()
+						.withStatusCode(200)
+						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withBody(new ObjectMapper().writeValueAsString(email)));
 		
 		final Set<RemoteIdentity> ri = new OrcIDIdentityProviderFactory()
 				.configure(CFG).getIdentities(authCode, "pkceCodeVerifier", false, null);
@@ -907,20 +930,43 @@ public class OrcIDIdentityProviderTest {
 	public void getIdentityWithBase64DecodingError() throws Exception {
 		final String authCode = "authcodeBase64Error";
 		final String orcID = "0000-0001-8607-8067";
+		final String token = "atok2";
 		
 		// JWT with invalid base64 in payload
 		final String invalidJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid_base64!@#$.signature";
 		
-		ms.expect(RequestMethod.POST, getTokenURL())
-		.andRespond(withSuccess(
-				"{\"access_token\": \"token\", \"orcid\": \"" + orcID + "\", " +
-				"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}", 
-				MediaType.APPLICATION_JSON));
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("POST")
+					.withPath("/oauth/token")
+					.withHeader(ACCEPT, APP_JSON)
+					.withBody(new ParameterBody(
+							new Parameter("code", authCode),
+							new Parameter("redirect_uri", "https://ologinredir.com"),
+							new Parameter("grant_type", "authorization_code"),
+							new Parameter("client_id", "ofoo"),
+							new Parameter("client_secret", "obar"))))
+				.respond(
+					new HttpResponse()
+						.withStatusCode(200)
+						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withBody("{\"access_token\": \"" + token + "\", \"orcid\": \"" + orcID + "\", " +
+								"\"name\": \"My name\", \"id_token\": \"" + invalidJWT + "\"}"));
 		
-		ms.expect(RequestMethod.GET, getEmailURL(orcID))
-		.andRespond(withSuccess(toJSON(
-				map("email", Arrays.asList(map("email", "base64error@test.com")))),
-				MediaType.APPLICATION_JSON));
+		final Map<String, Object> email = new HashMap<>();
+		email.put("email", Arrays.asList(TestCommon.map("email", "base64error@test.com")));
+		
+		mockClientAndServer.when(
+				new HttpRequest()
+					.withMethod("GET")
+					.withPath("/v2.1/" + orcID + "/email")
+					.withHeader(ACCEPT, APP_JSON)
+					.withHeader("Authorization", "Bearer " + token))
+				.respond(
+					new HttpResponse()
+						.withStatusCode(200)
+						.withHeader(new Header(CONTENT_TYPE, APP_JSON))
+						.withBody(new ObjectMapper().writeValueAsString(email)));
 		
 		final Set<RemoteIdentity> ri = new OrcIDIdentityProviderFactory()
 				.configure(CFG).getIdentities(authCode, "pkceCodeVerifier", false, null);
