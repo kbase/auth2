@@ -3153,18 +3153,23 @@ public class Authentication {
 		if (token == null) {
 			return null;
 		}
-		final AuthUser user = getUser(token);
-		final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
-		
-		// Check for identities with MFA information from supported providers
-		for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
-			final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
-			if (mfaStatus != null) {
-				return mfaStatus;
+		try {
+			final AuthUser user = getUser(token);
+			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
+			
+			// Check for identities with MFA information from supported providers
+			for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
+				final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
+				if (mfaStatus != null) {
+					return mfaStatus;
+				}
 			}
+			
+			return null; // No MFA information available
+		} catch (DisabledUserException e) {
+			// Return null for disabled users
+			return null;
 		}
-		
-		return null; // No MFA information available
 	}
 	
 	/** Get the external configuration without providing any credentials.
