@@ -23,8 +23,10 @@ public class APIToken extends ExternalToken {
 	/**
 	 * Gets the MFA authentication status for this token.
 	 * 
-	 * @return true if the user authenticated with MFA, false if password only, 
-	 *         null if unknown or not applicable
+	 * @return the MFA authentication status:
+	 *         true - User authenticated with MFA during token creation
+	 *         false - User explicitly chose not to use MFA when available  
+	 *         null - MFA status unknown or not applicable to authentication method
 	 */
 	public Boolean getMfaAuthenticated() {
 		return mfaAuthenticated;

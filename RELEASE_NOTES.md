@@ -1,5 +1,11 @@
 # Authentication Service MKII release notes
 
+## 0.8.0
+
+* Added MFA (Multi-Factor Authentication) status tracking for tokens
+* The `/api/V2/token` endpoint now returns an `mfaAuthenticated` field
+* ORCID provider updated to use OpenID Connect scope for MFA detection
+
 ## 0.7.2
 
 * BACKWARDS INCOMPATIBILITY: Repeated or trailing underscores are
