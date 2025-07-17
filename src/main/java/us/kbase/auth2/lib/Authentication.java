@@ -3153,6 +3153,19 @@ public class Authentication {
 		if (token == null) {
 			return null;
 		}
+		
+		// Get the stored token to find the username
+		final StoredToken storedToken = getToken(token);
+		final UserName userName = storedToken.getUserName();
+		
+		// Check if the user exists before trying to get user details
+		try {
+			storage.getUser(userName);
+		} catch (NoSuchUserException e) {
+			// User doesn't exist, return null for MFA status
+			return null;
+		}
+		
 		try {
 			final AuthUser user = getUser(token);
 			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
