@@ -1187,11 +1187,5 @@ public class AuthenticationTokenTest {
 		}
 	}
 	
-	@Test
-	public void getMfaStatusNull() throws Exception {
-		final Authentication auth = initTestMocks().auth;
-		
-		assertThat("incorrect mfa status", auth.getMfaStatus(null), is((Boolean) null));
-	}
 	
 }

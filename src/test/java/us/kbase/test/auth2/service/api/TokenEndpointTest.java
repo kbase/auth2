@@ -666,20 +666,20 @@ public class TokenEndpointTest {
 	public void getTokenWithMfaTrue() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken it = new IncomingToken("mfatokenvalue");
+		final UserName userName = new UserName("mfauser");
 		
-		// Create user with ORCID identity that used MFA
-		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
-				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-5678"),
-				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", true));
+		// Create simple local user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				userName, id, new DisplayName("MFA User"), inst(10000))
+				.withEmailAddress(new EmailAddress("mfa@example.com")).build(),
+				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
 		
-		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
-				new UserName("mfauser"), id, new DisplayName("MFA User"), inst(10000), orcidId)
-				.withEmailAddress(new EmailAddress("mfa@example.com")).build());
-		
+		// Create token with MFA=true
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, new UserName("mfauser"))
+				TokenType.AGENT, id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
 				.withTokenName(new TokenName("mfatoken"))
+				.withMfaAuthenticated(true)
 				.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -704,20 +704,20 @@ public class TokenEndpointTest {
 	public void getTokenWithMfaFalse() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken it = new IncomingToken("nomfatokenvalue");
+		final UserName userName = new UserName("nomfauser");
 		
-		// Create user with ORCID identity that did NOT use MFA
-		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
-				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-9999"),
-				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", false));
+		// Create simple local user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				userName, id, new DisplayName("No MFA User"), inst(10000))
+				.withEmailAddress(new EmailAddress("nomfa@example.com")).build(),
+				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
 		
-		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
-				new UserName("nomfauser"), id, new DisplayName("No MFA User"), inst(10000), orcidId)
-				.withEmailAddress(new EmailAddress("nomfa@example.com")).build());
-		
+		// Create token with MFA=false
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, new UserName("nomfauser"))
+				TokenType.AGENT, id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
 				.withTokenName(new TokenName("nomfatoken"))
+				.withMfaAuthenticated(false)
 				.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -742,20 +742,20 @@ public class TokenEndpointTest {
 	public void getTokenWithMfaNull() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken it = new IncomingToken("unknownmfatokenvalue");
+		final UserName userName = new UserName("unknownmfauser");
 		
-		// Create user with ORCID identity that has unknown MFA status
-		final us.kbase.auth2.lib.identity.RemoteIdentity orcidId = new us.kbase.auth2.lib.identity.RemoteIdentity(
-				new us.kbase.auth2.lib.identity.RemoteIdentityID("OrcID", "0000-0001-1234-0000"),
-				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", null));
+		// Create simple local user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				userName, id, new DisplayName("Unknown MFA User"), inst(10000))
+				.withEmailAddress(new EmailAddress("unknownmfa@example.com")).build(),
+				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
 		
-		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
-				new UserName("unknownmfauser"), id, new DisplayName("Unknown MFA User"), inst(10000), orcidId)
-				.withEmailAddress(new EmailAddress("unknownmfa@example.com")).build());
-		
+		// Create token with MFA=null (unknown)
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, new UserName("unknownmfauser"))
+				TokenType.AGENT, id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
 				.withTokenName(new TokenName("unknownmfatoken"))
+				.withMfaAuthenticated(null)
 				.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -777,23 +777,22 @@ public class TokenEndpointTest {
 	}
 	
 	@Test
-	public void getTokenWithNonOrcidProvider() throws Exception {
+	public void getTokenWithNoMfaSet() throws Exception {
 		final UUID id = UUID.randomUUID();
-		final IncomingToken it = new IncomingToken("googletokenvalue");
+		final IncomingToken it = new IncomingToken("nomfasettokenvalue");
+		final UserName userName = new UserName("nomfasetuser");
 		
-		// Create user with non-ORCID identity (e.g., Google)
-		final us.kbase.auth2.lib.identity.RemoteIdentity googleId = new us.kbase.auth2.lib.identity.RemoteIdentity(
-				new us.kbase.auth2.lib.identity.RemoteIdentityID("Google", "googleid123"),
-				new us.kbase.auth2.lib.identity.RemoteIdentityDetails("googleuser", "Google User", "google@example.com", null));
+		// Create simple local user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				userName, id, new DisplayName("No MFA Set User"), inst(10000))
+				.withEmailAddress(new EmailAddress("nomfaset@example.com")).build(),
+				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
 		
-		manager.storage.createUser(us.kbase.auth2.lib.user.NewUser.getBuilder(
-				new UserName("googleuser"), id, new DisplayName("Google User"), inst(10000), googleId)
-				.withEmailAddress(new EmailAddress("google@example.com")).build());
-		
+		// Create token without explicitly setting MFA (should default to null)
 		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, new UserName("googleuser"))
+				TokenType.AGENT, id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withTokenName(new TokenName("googletoken"))
+				.withTokenName(new TokenName("nomfasettoken"))
 				.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -809,9 +808,9 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		// Non-ORCID providers should return null for MFA status
+		// Should return null when MFA not explicitly set
 		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) null));
-		assertThat("incorrect user", response.get("user"), is("googleuser"));
-		assertThat("incorrect token name", response.get("name"), is("googletoken"));
+		assertThat("incorrect user", response.get("user"), is("nomfasetuser"));
+		assertThat("incorrect token name", response.get("name"), is("nomfasettoken"));
 	}
 }
