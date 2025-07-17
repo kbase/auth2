@@ -664,136 +664,46 @@ public class TokenEndpointTest {
 	
 	@Test
 	public void getTokenWithMfaTrue() throws Exception {
-		final UUID id = UUID.randomUUID();
-		final IncomingToken it = new IncomingToken("mfatokenvalue");
-		final UserName userName = new UserName("mfauser");
-		
-		// Create simple local user
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				userName, id, new DisplayName("MFA User"), inst(10000))
-				.withEmailAddress(new EmailAddress("mfa@example.com")).build(),
-				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
-		
-		// Create token with MFA=true
-		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, userName)
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withTokenName(new TokenName("mfatoken"))
-				.withMfaAuthenticated(true)
-				.build(), it.getHashedToken().getTokenHash());
-		
-		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
-		
-		final WebTarget wt = CLI.target(target);
-		final Builder req = wt.request()
-				.header("authorization", it.getToken());
-
-		final Response res = req.get();
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = res.readEntity(Map.class);
-		
-		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is(true));
-		assertThat("incorrect user", response.get("user"), is("mfauser"));
-		assertThat("incorrect token name", response.get("name"), is("mfatoken"));
+		testTokenEndpointReturnsMfaAuthenticatedField("mfauser", "MFA User", "mfa@example.com", 
+				"mfatoken", "mfatokenvalue", true);
 	}
 	
 	@Test
 	public void getTokenWithMfaFalse() throws Exception {
-		final UUID id = UUID.randomUUID();
-		final IncomingToken it = new IncomingToken("nomfatokenvalue");
-		final UserName userName = new UserName("nomfauser");
-		
-		// Create simple local user
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				userName, id, new DisplayName("No MFA User"), inst(10000))
-				.withEmailAddress(new EmailAddress("nomfa@example.com")).build(),
-				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
-		
-		// Create token with MFA=false
-		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, userName)
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withTokenName(new TokenName("nomfatoken"))
-				.withMfaAuthenticated(false)
-				.build(), it.getHashedToken().getTokenHash());
-		
-		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
-		
-		final WebTarget wt = CLI.target(target);
-		final Builder req = wt.request()
-				.header("authorization", it.getToken());
-
-		final Response res = req.get();
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = res.readEntity(Map.class);
-		
-		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is(false));
-		assertThat("incorrect user", response.get("user"), is("nomfauser"));
-		assertThat("incorrect token name", response.get("name"), is("nomfatoken"));
+		testTokenEndpointReturnsMfaAuthenticatedField("nomfauser", "No MFA User", "nomfa@example.com", 
+				"nomfatoken", "nomfatokenvalue", false);
 	}
 	
 	@Test
 	public void getTokenWithMfaNull() throws Exception {
-		final UUID id = UUID.randomUUID();
-		final IncomingToken it = new IncomingToken("unknownmfatokenvalue");
-		final UserName userName = new UserName("unknownmfauser");
-		
-		// Create simple local user
-		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				userName, id, new DisplayName("Unknown MFA User"), inst(10000))
-				.withEmailAddress(new EmailAddress("unknownmfa@example.com")).build(),
-				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
-		
-		// Create token with MFA=null (unknown)
-		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, userName)
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withTokenName(new TokenName("unknownmfatoken"))
-				.withMfaAuthenticated(null)
-				.build(), it.getHashedToken().getTokenHash());
-		
-		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
-		
-		final WebTarget wt = CLI.target(target);
-		final Builder req = wt.request()
-				.header("authorization", it.getToken());
-
-		final Response res = req.get();
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> response = res.readEntity(Map.class);
-		
-		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) null));
-		assertThat("incorrect user", response.get("user"), is("unknownmfauser"));
-		assertThat("incorrect token name", response.get("name"), is("unknownmfatoken"));
+		testTokenEndpointReturnsMfaAuthenticatedField("unknownmfauser", "Unknown MFA User", "unknownmfa@example.com", 
+				"unknownmfatoken", "unknownmfatokenvalue", null);
 	}
 	
-	@Test
-	public void getTokenWithNoMfaSet() throws Exception {
+	private void testTokenEndpointReturnsMfaAuthenticatedField(final String userName, final String displayName, 
+			final String email, final String tokenName, final String tokenValue, 
+			final Boolean mfaStatus) throws Exception {
 		final UUID id = UUID.randomUUID();
-		final IncomingToken it = new IncomingToken("nomfasettokenvalue");
-		final UserName userName = new UserName("nomfasetuser");
+		final IncomingToken it = new IncomingToken(tokenValue);
+		final UserName user = new UserName(userName);
 		
 		// Create simple local user
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
-				userName, id, new DisplayName("No MFA Set User"), inst(10000))
-				.withEmailAddress(new EmailAddress("nomfaset@example.com")).build(),
+				user, id, new DisplayName(displayName), inst(10000))
+				.withEmailAddress(new EmailAddress(email)).build(),
 				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
-		// Create token without explicitly setting MFA (should default to null)
-		manager.storage.storeToken(StoredToken.getBuilder(
-				TokenType.AGENT, id, userName)
+		// Create token with specified MFA status
+		StoredToken.OptionalsStep tokenBuilder = StoredToken.getBuilder(
+				TokenType.AGENT, id, user)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withTokenName(new TokenName("nomfasettoken"))
-				.build(), it.getHashedToken().getTokenHash());
+				.withTokenName(new TokenName(tokenName));
+		
+		if (mfaStatus != null) {
+			tokenBuilder = tokenBuilder.withMfaAuthenticated(mfaStatus);
+		}
+		
+		manager.storage.storeToken(tokenBuilder.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
 		
@@ -808,9 +718,8 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		// Should return null when MFA not explicitly set
-		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) null));
-		assertThat("incorrect user", response.get("user"), is("nomfasetuser"));
-		assertThat("incorrect token name", response.get("name"), is("nomfasettoken"));
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) mfaStatus));
+		assertThat("incorrect user", response.get("user"), is(userName));
+		assertThat("incorrect token name", response.get("name"), is(tokenName));
 	}
 }

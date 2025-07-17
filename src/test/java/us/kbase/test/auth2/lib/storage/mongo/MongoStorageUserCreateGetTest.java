@@ -608,47 +608,32 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
 	@Test
 	public void createUserWithMfaTrue() throws Exception {
-		storage.createUser(NewUser.getBuilder(
-				new UserName("mfauser"), UID, new DisplayName("MFA User"), NOW, REMOTE_MFA_TRUE)
-				.withEmailAddress(new EmailAddress("mfa@example.com"))
-				.build());
-		
-		final AuthUser u = storage.getUser(new UserName("mfauser"));
-		
-		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_TRUE)));
-		assertThat("incorrect username", u.getUserName(), is(new UserName("mfauser")));
-		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("MFA User")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("mfa@example.com")));
+		testCreateUserWithMfaAndVerifyStorage("mfauser", "MFA User", "mfa@example.com", REMOTE_MFA_TRUE);
 	}
 	
 	@Test
 	public void createUserWithMfaFalse() throws Exception {
-		storage.createUser(NewUser.getBuilder(
-				new UserName("nomfauser"), UID, new DisplayName("No MFA User"), NOW, REMOTE_MFA_FALSE)
-				.withEmailAddress(new EmailAddress("nomfa@example.com"))
-				.build());
-		
-		final AuthUser u = storage.getUser(new UserName("nomfauser"));
-		
-		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_FALSE)));
-		assertThat("incorrect username", u.getUserName(), is(new UserName("nomfauser")));
-		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("No MFA User")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("nomfa@example.com")));
+		testCreateUserWithMfaAndVerifyStorage("nomfauser", "No MFA User", "nomfa@example.com", REMOTE_MFA_FALSE);
 	}
 	
 	@Test
 	public void createUserWithMfaNull() throws Exception {
+		testCreateUserWithMfaAndVerifyStorage("unknownmfauser", "Unknown MFA User", "unknownmfa@example.com", REMOTE_MFA_NULL);
+	}
+	
+	private void testCreateUserWithMfaAndVerifyStorage(final String userName, final String displayName,
+			final String email, final RemoteIdentity remoteIdentity) throws Exception {
 		storage.createUser(NewUser.getBuilder(
-				new UserName("unknownmfauser"), UID, new DisplayName("Unknown MFA User"), NOW, REMOTE_MFA_NULL)
-				.withEmailAddress(new EmailAddress("unknownmfa@example.com"))
+				new UserName(userName), UID, new DisplayName(displayName), NOW, remoteIdentity)
+				.withEmailAddress(new EmailAddress(email))
 				.build());
 		
-		final AuthUser u = storage.getUser(new UserName("unknownmfauser"));
+		final AuthUser u = storage.getUser(new UserName(userName));
 		
-		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_NULL)));
-		assertThat("incorrect username", u.getUserName(), is(new UserName("unknownmfauser")));
-		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("Unknown MFA User")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("unknownmfa@example.com")));
+		assertThat("incorrect identities", u.getIdentities(), is(set(remoteIdentity)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName(userName)));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName(displayName)));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress(email)));
 	}
 	
 	@Test
