@@ -745,13 +745,19 @@ public class Authentication {
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
 			throws AuthStorageException {
+		return login(userName, tokenCtx, false);
+	}
+	
+	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx, 
+			final Boolean mfaAuthenticated) throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
-					TokenType.LOGIN, randGen.randomUUID(), userName)
-				.withLifeTime(clock.instant(),
-						cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
-				.withContext(tokenCtx)
-				.build(),
-				randGen.getToken());
+				TokenType.LOGIN, randGen.randomUUID(), userName)
+			.withLifeTime(clock.instant(),
+					cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
+			.withContext(tokenCtx)
+			.withMfaAuthenticated(mfaAuthenticated)
+			.build(),
+			randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		setLastLogin(userName);
 		logInfo("Logged in user {} with token {}",
@@ -905,7 +911,9 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, au.getUserName())
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
-				.withTokenName(tokenName).build(),
+				.withTokenName(tokenName)
+				.withMfaAuthenticated(null) // Agent/Dev/Serv tokens don't have MFA status
+				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		logInfo("User {} created {} token {}", au.getUserName().getName(), tokenType, id);
@@ -2043,6 +2051,7 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
 				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
 				.withNullableTokenName(tokenName)
+				.withMfaAuthenticated(null) // Test mode tokens don't have MFA status
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2339,7 +2348,9 @@ public class Authentication {
 						linked, u.get().getUserName().getName());
 			}
 		}
-		return login(u.get().getUserName(), tokenCtx);
+		final Boolean mfaStatus = ri.get().getDetails() != null ? 
+				ri.get().getDetails().getMfaAuthenticated() : null;
+		return login(u.get().getUserName(), tokenCtx, mfaStatus);
 	}
 	
 	private Optional<RemoteIdentity> getIdentity(
@@ -3142,52 +3153,6 @@ public class Authentication {
 		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
 	
-	/** Get MFA status for a token by checking the token user's identities.
-	 * @param token the token to check.
-	 * @return true if MFA was used, false if password only, null if unknown or not supported.
-	 * @throws AuthStorageException if an error occurred accessing the storage system.
-	 * @throws InvalidTokenException if the token is invalid.
-	 */
-	public Boolean getMfaStatus(final IncomingToken token) 
-			throws AuthStorageException, InvalidTokenException {
-		if (token == null) {
-			return null;
-		}
-		
-		// Get the stored token to find the username
-		final StoredToken storedToken = getToken(token);
-		final UserName userName = storedToken.getUserName();
-		
-		// Check if the user exists before trying to get user details
-		try {
-			storage.getUser(userName);
-		} catch (NoSuchUserException e) {
-			// User doesn't exist, return null for MFA status
-			return null;
-		}
-		
-		try {
-			final AuthUser user = getUser(token);
-			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
-			
-			// Check for identities with MFA information from supported providers
-			if (identities != null) {
-				for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
-					if (identity != null && identity.getDetails() != null) {
-						final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
-						if (mfaStatus != null) {
-							return mfaStatus;
-						}
-					}
-				}
-			}
-			
-			return null; // No MFA information available
-		} catch (DisabledUserException e) {
-			// Return null for disabled users
-			return null;
-		}
-	}
 	
 	/** Get the external configuration without providing any credentials.
 	 * 

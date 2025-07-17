@@ -58,7 +58,7 @@ public class Token {
 			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException {
 		final IncomingToken it = getToken(token);
 		final StoredToken ht = auth.getToken(it);
-		return new APIToken(ht, auth.getSuggestedTokenCacheTime(), auth.getMfaStatus(it));
+		return new APIToken(ht, auth.getSuggestedTokenCacheTime());
 	}
 	
 	private static class CreateToken extends IncomingJSON {

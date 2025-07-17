@@ -181,6 +181,60 @@ public class TokenEndpointTest {
 	}
 	
 	@Test
+	public void getTokenMfaIsolation() throws Exception {
+		// Create user
+		final UserName userName = new UserName("testuser");
+		final UUID userUuid = UUID.randomUUID();
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				userName, userUuid, new DisplayName("Test User"), inst(10000))
+				.withEmailAddress(new EmailAddress("test@example.com")).build(),
+				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+		
+		// Create two tokens with different MFA status
+		final UUID token1Id = UUID.randomUUID();
+		final UUID token2Id = UUID.randomUUID();
+		
+		final IncomingToken token1 = new IncomingToken("token1hash");
+		final IncomingToken token2 = new IncomingToken("token2hash");
+		
+		// Token 1 with MFA=true
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, token1Id, userName)
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withMfaAuthenticated(true)
+				.build(), token1.getHashedToken().getTokenHash());
+		
+		// Token 2 with MFA=false
+		manager.storage.storeToken(StoredToken.getBuilder(
+				TokenType.LOGIN, token2Id, userName)
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
+				.withMfaAuthenticated(false)
+				.build(), token2.getHashedToken().getTokenHash());
+		
+		// Test token1 returns MFA=true
+		final URI target1 = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt1 = CLI.target(target1);
+		final Builder req1 = wt1.request().header("authorization", token1.getToken());
+		final Response res1 = req1.get();
+		
+		assertThat("incorrect response code for token1", res1.getStatus(), is(200));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response1 = res1.readEntity(Map.class);
+		assertThat("token1 should have MFA=true", response1.get("mfaAuthenticated"), is(true));
+		
+		// Test token2 returns MFA=false
+		final URI target2 = UriBuilder.fromUri(host).path("/api/V2/token").build();
+		final WebTarget wt2 = CLI.target(target2);
+		final Builder req2 = wt2.request().header("authorization", token2.getToken());
+		final Response res2 = req2.get();
+		
+		assertThat("incorrect response code for token2", res2.getStatus(), is(200));
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> response2 = res2.readEntity(Map.class);
+		assertThat("token2 should have MFA=false", response2.get("mfaAuthenticated"), is(false));
+	}
+	
+	@Test
 	public void getTokenFailNoToken() throws Exception {
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
 		

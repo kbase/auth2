@@ -10,31 +10,10 @@ public class APIToken extends ExternalToken {
 	private final long cachefor;
 	private final Boolean mfaAuthenticated;
 	
-	/**
-	 * Constructor without MFA status calculation.
-	 * MFA status will be set to null.
-	 * 
-	 * @param token the stored token
-	 * @param tokenCacheTimeMillis the token cache time in milliseconds
-	 */
 	public APIToken(final StoredToken token, final long tokenCacheTimeMillis) {
 		super(token);
 		cachefor = tokenCacheTimeMillis;
-		mfaAuthenticated = null;
-	}
-	
-	/**
-	 * Constructor with MFA status provided.
-	 * 
-	 * @param token the stored token
-	 * @param tokenCacheTimeMillis the token cache time in milliseconds
-	 * @param mfaAuthenticated the MFA authentication status
-	 */
-	public APIToken(final StoredToken token, final long tokenCacheTimeMillis, 
-			final Boolean mfaAuthenticated) {
-		super(token);
-		cachefor = tokenCacheTimeMillis;
-		this.mfaAuthenticated = mfaAuthenticated;
+		mfaAuthenticated = token.getMfaAuthenticated();
 	}
 
 	public long getCachefor() {

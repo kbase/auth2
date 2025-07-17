@@ -23,6 +23,7 @@ public class StoredToken {
 	private final UserName userName;
 	private final Instant creationDate;
 	private final Instant expirationDate;
+	private final Boolean mfaAuthenticated;
 	
 	private StoredToken(
 			final UUID id,
@@ -31,7 +32,8 @@ public class StoredToken {
 			final UserName userName,
 			final TokenCreationContext context,
 			final Instant creationDate,
-			final Instant expirationDate) {
+			final Instant expirationDate,
+			final Boolean mfaAuthenticated) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
 		requireNonNull(creationDate, "created");
 		// no way to test this one
@@ -43,6 +45,7 @@ public class StoredToken {
 		this.expirationDate = expirationDate;
 		this.creationDate = creationDate;
 		this.id = id;
+		this.mfaAuthenticated = mfaAuthenticated;
 	}
 
 	/** Get the type of the token.
@@ -93,6 +96,13 @@ public class StoredToken {
 	public Instant getExpirationDate() {
 		return expirationDate;
 	}
+
+	/** Get whether the token was created with multi-factor authentication.
+	 * @return true if the token was created with MFA, false if not, null if unknown.
+	 */
+	public Boolean getMfaAuthenticated() {
+		return mfaAuthenticated;
+	}
 	
 	@Override
 	public int hashCode() {
@@ -105,6 +115,7 @@ public class StoredToken {
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
+		result = prime * result + ((mfaAuthenticated == null) ? 0 : mfaAuthenticated.hashCode());
 		return result;
 	}
 
@@ -163,6 +174,13 @@ public class StoredToken {
 				return false;
 			}
 		} else if (!userName.equals(other.userName)) {
+			return false;
+		}
+		if (mfaAuthenticated == null) {
+			if (other.mfaAuthenticated != null) {
+				return false;
+			}
+		} else if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
 			return false;
 		}
 		return true;
@@ -224,6 +242,12 @@ public class StoredToken {
 		 */
 		OptionalsStep withContext(TokenCreationContext context);
 		
+		/** Specify whether the token was created with multi-factor authentication.
+		 * @param mfaAuthenticated true if MFA was used, false if not, null if unknown.
+		 * @return this builder.
+		 */
+		OptionalsStep withMfaAuthenticated(Boolean mfaAuthenticated);
+		
 		/** Build the token.
 		 * @return a new StoredToken.
 		 */
@@ -239,6 +263,7 @@ public class StoredToken {
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
+		private Boolean mfaAuthenticated;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
 			requireNonNull(type, "type");
@@ -270,9 +295,15 @@ public class StoredToken {
 		}
 
 		@Override
+		public OptionalsStep withMfaAuthenticated(final Boolean mfaAuthenticated) {
+			this.mfaAuthenticated = mfaAuthenticated;
+			return this;
+		}
+
+		@Override
 		public StoredToken build() {
 			return new StoredToken(id, type, tokenName, userName, context,
-					creationDate, expirationDate);
+					creationDate, expirationDate, mfaAuthenticated);
 		}
 
 		@Override

@@ -871,7 +871,8 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orElse(null))
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
-				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
+				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()))
+				.append(Fields.TOKEN_MFA_AUTHENTICATED, token.getMfaAuthenticated());
 		try {
 			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -969,6 +970,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
+				.withMfaAuthenticated(t.getBoolean(Fields.TOKEN_MFA_AUTHENTICATED))
 				.build();
 	}
 	
