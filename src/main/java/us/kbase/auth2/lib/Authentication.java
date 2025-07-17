@@ -3158,10 +3158,14 @@ public class Authentication {
 			final Set<us.kbase.auth2.lib.identity.RemoteIdentity> identities = user.getIdentities();
 			
 			// Check for identities with MFA information from supported providers
-			for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
-				final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
-				if (mfaStatus != null) {
-					return mfaStatus;
+			if (identities != null) {
+				for (final us.kbase.auth2.lib.identity.RemoteIdentity identity : identities) {
+					if (identity != null && identity.getDetails() != null) {
+						final Boolean mfaStatus = identity.getDetails().getMfaAuthenticated();
+						if (mfaStatus != null) {
+							return mfaStatus;
+						}
+					}
 				}
 			}
 			
