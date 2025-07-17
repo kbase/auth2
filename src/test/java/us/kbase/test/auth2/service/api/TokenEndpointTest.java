@@ -188,7 +188,7 @@ public class TokenEndpointTest {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				userName, userUuid, new DisplayName("Test User"), inst(10000))
 				.withEmailAddress(new EmailAddress("test@example.com")).build(),
-				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
 		// Create two tokens with different MFA status
 		final UUID token1Id = UUID.randomUUID();
@@ -672,7 +672,7 @@ public class TokenEndpointTest {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				userName, id, new DisplayName("MFA User"), inst(10000))
 				.withEmailAddress(new EmailAddress("mfa@example.com")).build(),
-				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
 		// Create token with MFA=true
 		manager.storage.storeToken(StoredToken.getBuilder(
@@ -710,7 +710,7 @@ public class TokenEndpointTest {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				userName, id, new DisplayName("No MFA User"), inst(10000))
 				.withEmailAddress(new EmailAddress("nomfa@example.com")).build(),
-				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
 		// Create token with MFA=false
 		manager.storage.storeToken(StoredToken.getBuilder(
@@ -748,7 +748,7 @@ public class TokenEndpointTest {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				userName, id, new DisplayName("Unknown MFA User"), inst(10000))
 				.withEmailAddress(new EmailAddress("unknownmfa@example.com")).build(),
-				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
 		// Create token with MFA=null (unknown)
 		manager.storage.storeToken(StoredToken.getBuilder(
@@ -786,7 +786,7 @@ public class TokenEndpointTest {
 		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
 				userName, id, new DisplayName("No MFA Set User"), inst(10000))
 				.withEmailAddress(new EmailAddress("nomfaset@example.com")).build(),
-				new PasswordHashAndSalt("password".getBytes(), "salt".getBytes()));
+				new PasswordHashAndSalt("passwordhash1234".getBytes(), "salt".getBytes()));
 		
 		// Create token without explicitly setting MFA (should default to null)
 		manager.storage.storeToken(StoredToken.getBuilder(
