@@ -214,14 +214,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String accessToken;
 			private final String fullName;
 			private final String orcID;
-			private final String idToken;
+			private final String jwt;
 			private final MfaStatus mfa;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
 					final String fullName,
 					final String orcID,
-					final String idToken)
+					final String jwt)
 					throws IdentityRetrievalException {
 				if (accessToken == null || accessToken.trim().isEmpty()) {
 					throw new IdentityRetrievalException(
@@ -234,25 +234,25 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.accessToken = accessToken.trim();
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
-				this.idToken = idToken == null ? null : idToken.trim();
-				this.mfa = parseAmrClaim(this.idToken);
+				this.jwt = jwt == null ? null : jwt.trim();
+				this.mfa = parseAmrClaim(this.jwt);
 			}
 			
 			/**
 			 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
 			 * to determine if multi-factor authentication was used.
 			 * 
-			 * @param idToken the JWT ID token from ORCID
+			 * @param jwt the JWT ID token from ORCID
 			 * @return MfaStatus indicating whether MFA was used
 			 */
-			private MfaStatus parseAmrClaim(final String idToken) {
-				if (idToken == null || idToken.trim().isEmpty()) {
+			private MfaStatus parseAmrClaim(final String jwt) {
+				if (jwt == null || jwt.trim().isEmpty()) {
 					return MfaStatus.UNKNOWN;
 				}
 				
 				try {
 					// JWT format: header.payload.signature
-					final String[] parts = idToken.split("\\.");
+					final String[] parts = jwt.split("\\.");
 					if (parts.length != 3) {
 						// Invalid JWT format
 						return MfaStatus.UNKNOWN;

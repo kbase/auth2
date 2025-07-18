@@ -1,6 +1,6 @@
 # Authentication Service MKII release notes
 
-## 0.8.0
+## 0.7.3
 
 * Added MFA (Multi-Factor Authentication) status tracking for tokens
 * The `/api/V2/token` endpoint now returns an `mfa` field
