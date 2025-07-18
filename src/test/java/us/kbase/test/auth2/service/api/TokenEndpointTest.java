@@ -202,14 +202,14 @@ public class TokenEndpointTest {
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token1Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfaAuthenticated(MfaStatus.USED)
+				.withMfa(MfaStatus.USED)
 				.build(), token1.getHashedToken().getTokenHash());
 		
 		// Token 2 with MFA=false
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token2Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfaAuthenticated(MfaStatus.NOT_USED)
+				.withMfa(MfaStatus.NOT_USED)
 				.build(), token2.getHashedToken().getTokenHash());
 		
 		// Test token1 returns MFA=true
@@ -700,7 +700,7 @@ public class TokenEndpointTest {
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
 				.withTokenName(new TokenName(tokenName));
 		
-		tokenBuilder = tokenBuilder.withMfaAuthenticated(mfaStatus);
+		tokenBuilder = tokenBuilder.withMfa(mfaStatus);
 		
 		manager.storage.storeToken(tokenBuilder.build(), it.getHashedToken().getTokenHash());
 		

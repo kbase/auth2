@@ -913,7 +913,6 @@ public class Authentication {
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
 				.withTokenName(tokenName)
-				.withMfaAuthenticated(MfaStatus.UNKNOWN) // Agent/Dev/Serv tokens don't have MFA status
 				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2052,7 +2051,6 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
 				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
 				.withNullableTokenName(tokenName)
-				.withMfaAuthenticated(MfaStatus.UNKNOWN) // Test mode tokens don't have MFA status
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
