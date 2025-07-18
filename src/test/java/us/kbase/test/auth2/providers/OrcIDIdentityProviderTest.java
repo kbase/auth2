@@ -573,7 +573,7 @@ public class OrcIDIdentityProviderTest {
 			fail("Expected IdentityRetrievalException");
 		} catch (IdentityRetrievalException e) {
 			assertThat("incorrect exception message", e.getMessage(), 
-					containsString("Unable to decode JWT from ORCID"));
+					containsString("Unable to parse JWT payload from ORCID"));
 		}
 	}
 	

@@ -232,7 +232,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token2", res2.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NOT_USED));
+		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NOT_USED.toString()));
 	}
 	
 	@Test

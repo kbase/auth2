@@ -269,7 +269,10 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					final Map<String, Object> claims = MAPPER.readValue(payload, Map.class);
 					
 					final Object amrClaim = claims.get("amr");
-					if (amrClaim instanceof List) {
+					if (amrClaim == null) {
+						// No AMR claim present - MFA status unknown
+						return MfaStatus.UNKNOWN;
+					} else if (amrClaim instanceof List) {
 						// OpenID Connect spec: AMR should be an array of strings
 						@SuppressWarnings("unchecked")
 						final List<String> amrList = (List<String>) amrClaim;
