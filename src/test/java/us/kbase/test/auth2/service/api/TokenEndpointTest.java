@@ -35,6 +35,7 @@ import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -174,7 +175,7 @@ public class TokenEndpointTest {
 				.with("user", "foo")
 				.with("custom", ImmutableMap.of("whee", "whoo"))
 				.with("cachefor", 300000)
-				.with("mfaAuthenticated", null)
+				.with("mfaAuthenticated", MfaStatus.UNKNOWN)
 				.build();
 		
 		assertThat("incorrect token", response, is(expected));
@@ -201,14 +202,14 @@ public class TokenEndpointTest {
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token1Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfaAuthenticated(true)
+				.withMfaAuthenticated(MfaStatus.USED)
 				.build(), token1.getHashedToken().getTokenHash());
 		
 		// Token 2 with MFA=false
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token2Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfaAuthenticated(false)
+				.withMfaAuthenticated(MfaStatus.NOT_USED)
 				.build(), token2.getHashedToken().getTokenHash());
 		
 		// Test token1 returns MFA=true
@@ -220,7 +221,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token1", res1.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response1 = res1.readEntity(Map.class);
-		assertThat("token1 should have MFA=true", response1.get("mfaAuthenticated"), is(true));
+		assertThat("token1 should have MFA=true", response1.get("mfaAuthenticated"), is(MfaStatus.USED));
 		
 		// Test token2 returns MFA=false
 		final URI target2 = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -231,7 +232,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token2", res2.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		assertThat("token2 should have MFA=false", response2.get("mfaAuthenticated"), is(false));
+		assertThat("token2 should have MFA=false", response2.get("mfaAuthenticated"), is(MfaStatus.NOT_USED));
 	}
 	
 	@Test
@@ -665,24 +666,24 @@ public class TokenEndpointTest {
 	@Test
 	public void getTokenWithMfaTrue() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("mfauser", "MFA User", "mfa@example.com", 
-				"mfatoken", "mfatokenvalue", true);
+				"mfatoken", "mfatokenvalue", MfaStatus.USED);
 	}
 	
 	@Test
 	public void getTokenWithMfaFalse() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("nomfauser", "No MFA User", "nomfa@example.com", 
-				"nomfatoken", "nomfatokenvalue", false);
+				"nomfatoken", "nomfatokenvalue", MfaStatus.NOT_USED);
 	}
 	
 	@Test
 	public void getTokenWithMfaNull() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("unknownmfauser", "Unknown MFA User", "unknownmfa@example.com", 
-				"unknownmfatoken", "unknownmfatokenvalue", null);
+				"unknownmfatoken", "unknownmfatokenvalue", MfaStatus.UNKNOWN);
 	}
 	
 	private void testTokenEndpointReturnsMfaAuthenticatedField(final String userName, final String displayName, 
 			final String email, final String tokenName, final String tokenValue, 
-			final Boolean mfaStatus) throws Exception {
+			final MfaStatus mfaStatus) throws Exception {
 		final UUID id = UUID.randomUUID();
 		final IncomingToken it = new IncomingToken(tokenValue);
 		final UserName user = new UserName(userName);
@@ -699,9 +700,7 @@ public class TokenEndpointTest {
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
 				.withTokenName(new TokenName(tokenName));
 		
-		if (mfaStatus != null) {
-			tokenBuilder = tokenBuilder.withMfaAuthenticated(mfaStatus);
-		}
+		tokenBuilder = tokenBuilder.withMfaAuthenticated(mfaStatus);
 		
 		manager.storage.storeToken(tokenBuilder.build(), it.getHashedToken().getTokenHash());
 		
@@ -718,7 +717,7 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is((Object) mfaStatus));
+		assertThat("incorrect MFA status", response.get("mfaAuthenticated"), is(mfaStatus));
 		assertThat("incorrect user", response.get("user"), is(userName));
 		assertThat("incorrect token name", response.get("name"), is(tokenName));
 	}

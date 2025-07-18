@@ -35,6 +35,7 @@ import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.providers.OrcIDIdentityProviderFactory;
@@ -510,7 +511,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "mfa@test.com", true)));
+				new RemoteIdentityDetails(orcID, "My name", "mfa@test.com", MfaStatus.USED)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -530,7 +531,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "nomfa@test.com", false)));
+				new RemoteIdentityDetails(orcID, "My name", "nomfa@test.com", MfaStatus.NOT_USED)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -589,7 +590,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", true)));
+				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", MfaStatus.USED)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -832,7 +833,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "emptyamr@test.com", false)));
+				new RemoteIdentityDetails(orcID, "My name", "emptyamr@test.com", MfaStatus.NOT_USED)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	

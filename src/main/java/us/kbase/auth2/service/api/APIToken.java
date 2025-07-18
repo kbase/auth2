@@ -1,6 +1,7 @@
 package us.kbase.auth2.service.api;
 
 import us.kbase.auth2.lib.token.StoredToken;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.service.common.ExternalToken;
 
 public class APIToken extends ExternalToken {
@@ -8,7 +9,7 @@ public class APIToken extends ExternalToken {
 	//TODO JAVADOC or swagger
 	
 	private final long cachefor;
-	private final Boolean mfaAuthenticated;
+	private final MfaStatus mfaAuthenticated;
 	
 	public APIToken(final StoredToken token, final long tokenCacheTimeMillis) {
 		super(token);
@@ -23,12 +24,9 @@ public class APIToken extends ExternalToken {
 	/**
 	 * Gets the MFA authentication status for this token.
 	 * 
-	 * @return the MFA authentication status:
-	 *         true - User authenticated with MFA during token creation
-	 *         false - User explicitly chose not to use MFA when available  
-	 *         null - MFA status unknown or not applicable to authentication method
+	 * @return the MFA authentication status.
 	 */
-	public Boolean getMfaAuthenticated() {
+	public MfaStatus getMfaAuthenticated() {
 		return mfaAuthenticated;
 	}
 
@@ -37,7 +35,7 @@ public class APIToken extends ExternalToken {
 		final int prime = 31;
 		int result = super.hashCode();
 		result = prime * result + (int) (cachefor ^ (cachefor >>> 32));
-		result = prime * result + ((mfaAuthenticated == null) ? 0 : mfaAuthenticated.hashCode());
+		result = prime * result + mfaAuthenticated.hashCode();
 		return result;
 	}
 
@@ -53,11 +51,7 @@ public class APIToken extends ExternalToken {
 		if (cachefor != other.cachefor) {
 			return false;
 		}
-		if (mfaAuthenticated == null) {
-			if (other.mfaAuthenticated != null) {
-				return false;
-			}
-		} else if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+		if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
 			return false;
 		}
 		return true;

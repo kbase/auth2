@@ -31,6 +31,7 @@ import org.junit.Test;
 import com.google.common.collect.ImmutableMap;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.test.auth2.MapBuilder;
 import us.kbase.test.auth2.MongoStorageTestManager;
 import us.kbase.test.auth2.StandaloneAuthServer;
@@ -209,7 +210,7 @@ public class TestModeIntegrationTest {
 		expected.put("user", "whee");
 		expected.put("custom", Collections.emptyMap());
 		expected.put("cachefor", 300000);
-		expected.put("mfaAuthenticated", null);
+		expected.put("mfaAuthenticated", MfaStatus.UNKNOWN);
 		
 		assertThat("incorrect return", response, is(expected));
 		

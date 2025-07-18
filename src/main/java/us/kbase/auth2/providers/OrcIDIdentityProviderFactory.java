@@ -34,6 +34,7 @@ import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 
 /** A factory for a OrcID identity provider.
@@ -214,7 +215,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String fullName;
 			private final String orcID;
 			private final String idToken;
-			private final Boolean mfaAuthenticated;
+			private final MfaStatus mfaAuthenticated;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
@@ -242,11 +243,11 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			 * to determine if multi-factor authentication was used.
 			 * 
 			 * @param idToken the JWT ID token from ORCID
-			 * @return true if MFA was used, false if password only, null if unknown or parsing failed
+			 * @return MfaStatus indicating whether MFA was used
 			 */
-			private Boolean parseAmrClaim(final String idToken) {
+			private MfaStatus parseAmrClaim(final String idToken) {
 				if (idToken == null || idToken.trim().isEmpty()) {
-					return null;
+					return MfaStatus.UNKNOWN;
 				}
 				
 				try {
@@ -254,7 +255,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					final String[] parts = idToken.split("\\.");
 					if (parts.length != 3) {
 						// Invalid JWT format
-						return null;
+						return MfaStatus.UNKNOWN;
 					}
 					
 					// Decode the payload (second part) - URL-safe base64
@@ -269,21 +270,21 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 						// OpenID Connect spec: AMR should be an array of strings
 						@SuppressWarnings("unchecked")
 						final List<String> amrList = (List<String>) amrClaim;
-						return amrList.contains("mfa");
+						return amrList.contains("mfa") ? MfaStatus.USED : MfaStatus.NOT_USED;
 					} else if (amrClaim instanceof String) {
 						// ORCID may return single string - handle as fallback
-						return "mfa".equals(amrClaim);
+						return "mfa".equals(amrClaim) ? MfaStatus.USED : MfaStatus.NOT_USED;
 					}
 					
 					// AMR claim present but in unexpected format
-					return null;
+					return MfaStatus.UNKNOWN;
 					
 				} catch (IllegalArgumentException e) {
 					// Base64 decoding failed - invalid JWT
-					return null;
+					return MfaStatus.UNKNOWN;
 				} catch (IOException e) {
 					// JSON parsing failed - malformed payload
-					return null;
+					return MfaStatus.UNKNOWN;
 				}
 			}
 		}

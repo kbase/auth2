@@ -10,6 +10,7 @@ import org.junit.Test;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -39,7 +40,7 @@ public class APITokenTest {
 		
 		assertThat("incorrect id", t.getId(), is(id.toString()));
 		assertThat("incorrect cache time", t.getCachefor(), is(20000L));
-		assertThat("incorrect mfa status", t.getMfaAuthenticated(), is((Boolean) null));
+		assertThat("incorrect mfa status", t.getMfaAuthenticated(), is(MfaStatus.UNKNOWN));
 	}
 	
 	

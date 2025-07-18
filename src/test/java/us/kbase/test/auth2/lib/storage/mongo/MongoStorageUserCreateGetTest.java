@@ -31,6 +31,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -59,15 +60,15 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
 	private static final RemoteIdentity REMOTE_MFA_TRUE = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-5678"),
-			new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", true));
+			new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.USED));
 	
 	private static final RemoteIdentity REMOTE_MFA_FALSE = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-9999"),
-			new RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", false));
+			new RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", MfaStatus.NOT_USED));
 	
 	private static final RemoteIdentity REMOTE_MFA_NULL = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-0000"),
-			new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", null));
+			new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", MfaStatus.UNKNOWN));
 
 	@Test
 	public void createGetLocalUserMinimal() throws Exception {

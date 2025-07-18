@@ -8,6 +8,7 @@ import java.util.UUID;
 
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.identity.MfaStatus;
 
 /** A token associated with a user stored in the authentication storage system.
  * 
@@ -23,7 +24,7 @@ public class StoredToken {
 	private final UserName userName;
 	private final Instant creationDate;
 	private final Instant expirationDate;
-	private final Boolean mfaAuthenticated;
+	private final MfaStatus mfaAuthenticated;
 	
 	private StoredToken(
 			final UUID id,
@@ -33,7 +34,7 @@ public class StoredToken {
 			final TokenCreationContext context,
 			final Instant creationDate,
 			final Instant expirationDate,
-			final Boolean mfaAuthenticated) {
+			final MfaStatus mfaAuthenticated) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
 		requireNonNull(creationDate, "created");
 		// no way to test this one
@@ -97,10 +98,10 @@ public class StoredToken {
 		return expirationDate;
 	}
 
-	/** Get whether the token was created with multi-factor authentication.
-	 * @return true if the token was created with MFA, false if not, null if unknown.
+	/** Get the multi-factor authentication status for this token.
+	 * @return the MFA status.
 	 */
-	public Boolean getMfaAuthenticated() {
+	public MfaStatus getMfaAuthenticated() {
 		return mfaAuthenticated;
 	}
 	
@@ -115,7 +116,7 @@ public class StoredToken {
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		result = prime * result + ((mfaAuthenticated == null) ? 0 : mfaAuthenticated.hashCode());
+		result = prime * result + mfaAuthenticated.hashCode();
 		return result;
 	}
 
@@ -176,11 +177,7 @@ public class StoredToken {
 		} else if (!userName.equals(other.userName)) {
 			return false;
 		}
-		if (mfaAuthenticated == null) {
-			if (other.mfaAuthenticated != null) {
-				return false;
-			}
-		} else if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+		if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
 			return false;
 		}
 		return true;
@@ -243,10 +240,10 @@ public class StoredToken {
 		OptionalsStep withContext(TokenCreationContext context);
 		
 		/** Specify whether the token was created with multi-factor authentication.
-		 * @param mfaAuthenticated true if MFA was used, false if not, null if unknown.
+		 * @param mfaAuthenticated the MFA status.
 		 * @return this builder.
 		 */
-		OptionalsStep withMfaAuthenticated(Boolean mfaAuthenticated);
+		OptionalsStep withMfaAuthenticated(MfaStatus mfaAuthenticated);
 		
 		/** Build the token.
 		 * @return a new StoredToken.
@@ -263,7 +260,7 @@ public class StoredToken {
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
-		private Boolean mfaAuthenticated;
+		private MfaStatus mfaAuthenticated = MfaStatus.UNKNOWN;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
 			requireNonNull(type, "type");
@@ -295,7 +292,7 @@ public class StoredToken {
 		}
 
 		@Override
-		public OptionalsStep withMfaAuthenticated(final Boolean mfaAuthenticated) {
+		public OptionalsStep withMfaAuthenticated(final MfaStatus mfaAuthenticated) {
 			this.mfaAuthenticated = mfaAuthenticated;
 			return this;
 		}

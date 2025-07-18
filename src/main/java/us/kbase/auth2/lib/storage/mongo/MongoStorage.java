@@ -90,6 +90,7 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -872,7 +873,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
 				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()))
-				.append(Fields.TOKEN_MFA_AUTHENTICATED, token.getMfaAuthenticated());
+				.append(Fields.TOKEN_MFA_AUTHENTICATED, token.getMfaAuthenticated().name());
 		try {
 			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -970,7 +971,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
-				.withMfaAuthenticated(t.getBoolean(Fields.TOKEN_MFA_AUTHENTICATED))
+				.withMfaAuthenticated(MfaStatus.valueOf(t.getString(Fields.TOKEN_MFA_AUTHENTICATED)))
 				.build();
 	}
 	
@@ -1599,7 +1600,7 @@ public class MongoStorage implements AuthStorage {
 				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
 				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(pre + Fields.IDENTITIES_MFA, rid.getMfaAuthenticated()));
+				.append(pre + Fields.IDENTITIES_MFA, rid.getMfaAuthenticated().name()));
 		try {
 			// id might have been unlinked, so we just assume
 			// the update worked. If it was just unlinked we don't care.
@@ -1733,7 +1734,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
 				.append(Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(Fields.IDENTITIES_MFA, rid.getMfaAuthenticated());
+				.append(Fields.IDENTITIES_MFA, rid.getMfaAuthenticated().name());
 	}
 	
 	@Override
@@ -1794,7 +1795,7 @@ public class MongoStorage implements AuthStorage {
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL),
-					i.getBoolean(Fields.IDENTITIES_MFA));
+					MfaStatus.valueOf(i.getString(Fields.IDENTITIES_MFA)));
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;

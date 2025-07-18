@@ -77,6 +77,7 @@ import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
@@ -745,11 +746,11 @@ public class Authentication {
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
 			throws AuthStorageException {
-		return login(userName, tokenCtx, null);
+		return login(userName, tokenCtx, MfaStatus.UNKNOWN);
 	}
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx, 
-			final Boolean mfaAuthenticated) throws AuthStorageException {
+			final MfaStatus mfaAuthenticated) throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, randGen.randomUUID(), userName)
 			.withLifeTime(clock.instant(),
@@ -912,7 +913,7 @@ public class Authentication {
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
 				.withTokenName(tokenName)
-				.withMfaAuthenticated(null) // Agent/Dev/Serv tokens don't have MFA status
+				.withMfaAuthenticated(MfaStatus.UNKNOWN) // Agent/Dev/Serv tokens don't have MFA status
 				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2051,7 +2052,7 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
 				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
 				.withNullableTokenName(tokenName)
-				.withMfaAuthenticated(null) // Test mode tokens don't have MFA status
+				.withMfaAuthenticated(MfaStatus.UNKNOWN) // Test mode tokens don't have MFA status
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2348,8 +2349,8 @@ public class Authentication {
 						linked, u.get().getUserName().getName());
 			}
 		}
-		final Boolean mfaStatus = ri.get().getDetails() != null ? 
-				ri.get().getDetails().getMfaAuthenticated() : null;
+		final MfaStatus mfaStatus = ri.get().getDetails() != null ? 
+				ri.get().getDetails().getMfaAuthenticated() : MfaStatus.UNKNOWN;
 		return login(u.get().getUserName(), tokenCtx, mfaStatus);
 	}
 	
