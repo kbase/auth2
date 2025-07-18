@@ -87,7 +87,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
-		result = prime * result + mfa.hashCode();
+		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
 		result = prime * result + ((username == null) ? 0 : username.hashCode());
 		return result;
 	}
@@ -118,7 +118,11 @@ public class RemoteIdentityDetails {
 		} else if (!fullname.equals(other.fullname)) {
 			return false;
 		}
-		if (!mfa.equals(other.mfa)) {
+		if (mfa == null) {
+			if (other.mfa != null) {
+				return false;
+			}
+		} else if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		if (username == null) {
