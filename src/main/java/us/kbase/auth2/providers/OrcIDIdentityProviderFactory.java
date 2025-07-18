@@ -27,6 +27,8 @@ import javax.ws.rs.core.UriBuilder;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import org.slf4j.LoggerFactory;
+
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
@@ -245,8 +247,9 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			 * @param jwt the JWT ID token from ORCID
 			 * @return MfaStatus indicating whether MFA was used
 			 */
-			private MfaStatus parseAmrClaim(final String jwt) {
+			private MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
 				if (jwt == null || jwt.trim().isEmpty()) {
+					LoggerFactory.getLogger(getClass()).info("No JWT token provided by ORCID, MFA status unknown");
 					return MfaStatus.UNKNOWN;
 				}
 				
@@ -255,7 +258,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					final String[] parts = jwt.split("\\.");
 					if (parts.length != 3) {
 						// Invalid JWT format
-						return MfaStatus.UNKNOWN;
+						throw new IdentityRetrievalException("Invalid JWT format from ORCID: expected 3 parts, got " + parts.length);
 					}
 					
 					// Decode the payload (second part) - URL-safe base64
@@ -277,14 +280,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					}
 					
 					// AMR claim present but in unexpected format
-					return MfaStatus.UNKNOWN;
+					throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
 					
 				} catch (IllegalArgumentException e) {
 					// Base64 decoding failed - invalid JWT
-					return MfaStatus.UNKNOWN;
+					throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
 				} catch (IOException e) {
 					// JSON parsing failed - malformed payload
-					return MfaStatus.UNKNOWN;
+					throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
 				}
 			}
 		}

@@ -1,5 +1,6 @@
 package us.kbase.test.auth2.providers;
 
+import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
@@ -566,12 +567,14 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
 		setupCallID("footoken6", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "invalid@test.com")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "invalid@test.com", MfaStatus.UNKNOWN)));
-		assertThat("incorrect ident set", rids, is(expected));
+		
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(), 
+					containsString("Unable to decode JWT from ORCID"));
+		}
 	}
 	
 	@Test
@@ -763,12 +766,14 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
 		setupCallID("footoken8", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "malformed@test.com")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "malformed@test.com", MfaStatus.UNKNOWN)));
-		assertThat("incorrect ident set", rids, is(expected));
+		
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(), 
+					containsString("Invalid JWT format from ORCID: expected 3 parts, got 2"));
+		}
 	}
 	
 	@Test
@@ -784,12 +789,14 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
 		setupCallID("footoken9", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "invalidb64@test.com")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "invalidb64@test.com", MfaStatus.UNKNOWN)));
-		assertThat("incorrect ident set", rids, is(expected));
+		
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(), 
+					containsString("Unable to decode JWT from ORCID"));
+		}
 	}
 	
 	@Test
@@ -809,12 +816,14 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
 		setupCallID("footoken10", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "malformedjson@test.com")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "malformedjson@test.com", MfaStatus.UNKNOWN)));
-		assertThat("incorrect ident set", rids, is(expected));
+		
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(), 
+					containsString("Unable to parse JWT payload from ORCID"));
+		}
 	}
 	
 	@Test

@@ -2347,8 +2347,7 @@ public class Authentication {
 						linked, u.get().getUserName().getName());
 			}
 		}
-		final MfaStatus mfaStatus = ri.get().getDetails() != null ? 
-				ri.get().getDetails().getMfa() : MfaStatus.UNKNOWN;
+		final MfaStatus mfaStatus = ri.get().getDetails().getMfa();
 		return login(u.get().getUserName(), tokenCtx, mfaStatus);
 	}
 	
