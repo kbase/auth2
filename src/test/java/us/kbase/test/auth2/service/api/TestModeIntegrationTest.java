@@ -210,7 +210,7 @@ public class TestModeIntegrationTest {
 		expected.put("user", "whee");
 		expected.put("custom", Collections.emptyMap());
 		expected.put("cachefor", 300000);
-		expected.put("mfaAuthenticated", MfaStatus.UNKNOWN);
+		expected.put("mfa", MfaStatus.UNKNOWN);
 		
 		assertThat("incorrect return", response, is(expected));
 		

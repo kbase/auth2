@@ -3,7 +3,7 @@
 ## 0.8.0
 
 * Added MFA (Multi-Factor Authentication) status tracking for tokens
-* The `/api/V2/token` endpoint now returns an `mfaAuthenticated` field
+* The `/api/V2/token` endpoint now returns an `mfa` field
 * ORCID provider updated to use OpenID Connect scope for MFA detection
 
 ## 0.7.2

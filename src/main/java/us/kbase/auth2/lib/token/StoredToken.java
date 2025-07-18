@@ -24,7 +24,7 @@ public class StoredToken {
 	private final UserName userName;
 	private final Instant creationDate;
 	private final Instant expirationDate;
-	private final MfaStatus mfaAuthenticated;
+	private final MfaStatus mfa;
 	
 	private StoredToken(
 			final UUID id,
@@ -34,7 +34,7 @@ public class StoredToken {
 			final TokenCreationContext context,
 			final Instant creationDate,
 			final Instant expirationDate,
-			final MfaStatus mfaAuthenticated) {
+			final MfaStatus mfa) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
 		requireNonNull(creationDate, "created");
 		// no way to test this one
@@ -46,7 +46,7 @@ public class StoredToken {
 		this.expirationDate = expirationDate;
 		this.creationDate = creationDate;
 		this.id = id;
-		this.mfaAuthenticated = mfaAuthenticated;
+		this.mfa = mfa;
 	}
 
 	/** Get the type of the token.
@@ -101,8 +101,8 @@ public class StoredToken {
 	/** Get the multi-factor authentication status for this token.
 	 * @return the MFA status.
 	 */
-	public MfaStatus getMfaAuthenticated() {
-		return mfaAuthenticated;
+	public MfaStatus getMfa() {
+		return mfa;
 	}
 	
 	@Override
@@ -116,7 +116,7 @@ public class StoredToken {
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		result = prime * result + mfaAuthenticated.hashCode();
+		result = prime * result + mfa.hashCode();
 		return result;
 	}
 
@@ -177,7 +177,7 @@ public class StoredToken {
 		} else if (!userName.equals(other.userName)) {
 			return false;
 		}
-		if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+		if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		return true;
@@ -240,10 +240,10 @@ public class StoredToken {
 		OptionalsStep withContext(TokenCreationContext context);
 		
 		/** Specify whether the token was created with multi-factor authentication.
-		 * @param mfaAuthenticated the MFA status.
+		 * @param mfa the MFA status.
 		 * @return this builder.
 		 */
-		OptionalsStep withMfaAuthenticated(MfaStatus mfaAuthenticated);
+		OptionalsStep withMfa(MfaStatus mfa);
 		
 		/** Build the token.
 		 * @return a new StoredToken.
@@ -260,7 +260,7 @@ public class StoredToken {
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
-		private MfaStatus mfaAuthenticated = MfaStatus.UNKNOWN;
+		private MfaStatus mfa = MfaStatus.UNKNOWN;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
 			requireNonNull(type, "type");
@@ -292,15 +292,15 @@ public class StoredToken {
 		}
 
 		@Override
-		public OptionalsStep withMfaAuthenticated(final MfaStatus mfaAuthenticated) {
-			this.mfaAuthenticated = mfaAuthenticated;
+		public OptionalsStep withMfa(final MfaStatus mfa) {
+			this.mfa = mfa;
 			return this;
 		}
 
 		@Override
 		public StoredToken build() {
 			return new StoredToken(id, type, tokenName, userName, context,
-					creationDate, expirationDate, mfaAuthenticated);
+					creationDate, expirationDate, mfa);
 		}
 
 		@Override

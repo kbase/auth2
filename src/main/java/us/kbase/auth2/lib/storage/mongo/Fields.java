@@ -138,7 +138,7 @@ public class Fields {
 	/** A value for a custom context key / value pair. */
 	public static final String TOKEN_CUSTOM_VALUE = "v";
 	/** Whether the token was created with multi-factor authentication. */
-	public static final String TOKEN_MFA_AUTHENTICATED = "mfa";
+	public static final String TOKEN_MFA = "mfa";
 	
 	/* ************************
 	 * temporary session data fields

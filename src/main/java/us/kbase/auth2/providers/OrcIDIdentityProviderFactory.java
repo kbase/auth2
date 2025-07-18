@@ -177,7 +177,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 							accessToken.orcID,
 							accessToken.fullName,
 							email,
-							accessToken.mfaAuthenticated));
+							accessToken.mfa));
 		}
 	
 		private Map<String, Object> orcIDGetRequest(
@@ -215,7 +215,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String fullName;
 			private final String orcID;
 			private final String idToken;
-			private final MfaStatus mfaAuthenticated;
+			private final MfaStatus mfa;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
@@ -235,7 +235,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
 				this.idToken = idToken == null ? null : idToken.trim();
-				this.mfaAuthenticated = parseAmrClaim(this.idToken);
+				this.mfa = parseAmrClaim(this.idToken);
 			}
 			
 			/**

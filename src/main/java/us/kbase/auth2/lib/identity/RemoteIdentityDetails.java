@@ -10,7 +10,7 @@ public class RemoteIdentityDetails {
 	private final String username;
 	private final String fullname;
 	private final String email;
-	private final MfaStatus mfaAuthenticated;
+	private final MfaStatus mfa;
 	
 	/** Create a new set of details.
 	 * @param username the user name of the identity.
@@ -28,13 +28,13 @@ public class RemoteIdentityDetails {
 	 * @param username the user name of the identity.
 	 * @param fullname the full name of the identity. Null is acceptable.
 	 * @param email the email address of the identity. Null is acceptable.
-	 * @param mfaAuthenticated the multi-factor authentication status.
+	 * @param mfa the multi-factor authentication status.
 	 */
 	public RemoteIdentityDetails(
 			final String username,
 			final String fullname,
 			final String email,
-			final MfaStatus mfaAuthenticated) {
+			final MfaStatus mfa) {
 		super();
 		if (username == null || username.trim().isEmpty()) {
 			throw new IllegalArgumentException(
@@ -51,7 +51,7 @@ public class RemoteIdentityDetails {
 		} else {
 			this.email = email.trim();
 		}
-		this.mfaAuthenticated = mfaAuthenticated;
+		this.mfa = mfa;
 	}
 
 	/** Get the user name for the identity.
@@ -77,8 +77,8 @@ public class RemoteIdentityDetails {
 	/** Get the multi-factor authentication status.
 	 * @return the MFA status.
 	 */
-	public MfaStatus getMfaAuthenticated() {
-		return mfaAuthenticated;
+	public MfaStatus getMfa() {
+		return mfa;
 	}
 
 	@Override
@@ -87,7 +87,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
-		result = prime * result + mfaAuthenticated.hashCode();
+		result = prime * result + mfa.hashCode();
 		result = prime * result + ((username == null) ? 0 : username.hashCode());
 		return result;
 	}
@@ -118,7 +118,7 @@ public class RemoteIdentityDetails {
 		} else if (!fullname.equals(other.fullname)) {
 			return false;
 		}
-		if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+		if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		if (username == null) {
@@ -140,8 +140,8 @@ public class RemoteIdentityDetails {
 		builder.append(fullname);
 		builder.append(", email=");
 		builder.append(email);
-		builder.append(", mfaAuthenticated=");
-		builder.append(mfaAuthenticated);
+		builder.append(", mfa=");
+		builder.append(mfa);
 		builder.append("]");
 		return builder.toString();
 	}

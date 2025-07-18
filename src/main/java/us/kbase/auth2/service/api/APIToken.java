@@ -9,12 +9,12 @@ public class APIToken extends ExternalToken {
 	//TODO JAVADOC or swagger
 	
 	private final long cachefor;
-	private final MfaStatus mfaAuthenticated;
+	private final MfaStatus mfa;
 	
 	public APIToken(final StoredToken token, final long tokenCacheTimeMillis) {
 		super(token);
 		cachefor = tokenCacheTimeMillis;
-		mfaAuthenticated = token.getMfaAuthenticated();
+		mfa = token.getMfa();
 	}
 
 	public long getCachefor() {
@@ -26,8 +26,8 @@ public class APIToken extends ExternalToken {
 	 * 
 	 * @return the MFA authentication status.
 	 */
-	public MfaStatus getMfaAuthenticated() {
-		return mfaAuthenticated;
+	public MfaStatus getMfa() {
+		return mfa;
 	}
 
 	@Override
@@ -35,7 +35,7 @@ public class APIToken extends ExternalToken {
 		final int prime = 31;
 		int result = super.hashCode();
 		result = prime * result + (int) (cachefor ^ (cachefor >>> 32));
-		result = prime * result + mfaAuthenticated.hashCode();
+		result = prime * result + mfa.hashCode();
 		return result;
 	}
 
@@ -51,7 +51,7 @@ public class APIToken extends ExternalToken {
 		if (cachefor != other.cachefor) {
 			return false;
 		}
-		if (!mfaAuthenticated.equals(other.mfaAuthenticated)) {
+		if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		return true;

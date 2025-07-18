@@ -873,7 +873,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
 				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()))
-				.append(Fields.TOKEN_MFA_AUTHENTICATED, token.getMfaAuthenticated().name());
+				.append(Fields.TOKEN_MFA, token.getMfa().name());
 		try {
 			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -971,7 +971,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
-				.withMfaAuthenticated(MfaStatus.valueOf(t.getString(Fields.TOKEN_MFA_AUTHENTICATED)))
+				.withMfa(MfaStatus.valueOf(t.getString(Fields.TOKEN_MFA)))
 				.build();
 	}
 	
@@ -1600,7 +1600,7 @@ public class MongoStorage implements AuthStorage {
 				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
 				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(pre + Fields.IDENTITIES_MFA, rid.getMfaAuthenticated().name()));
+				.append(pre + Fields.IDENTITIES_MFA, rid.getMfa().name()));
 		try {
 			// id might have been unlinked, so we just assume
 			// the update worked. If it was just unlinked we don't care.
@@ -1734,7 +1734,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
 				.append(Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(Fields.IDENTITIES_MFA, rid.getMfaAuthenticated().name());
+				.append(Fields.IDENTITIES_MFA, rid.getMfa().name());
 	}
 	
 	@Override

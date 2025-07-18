@@ -750,13 +750,13 @@ public class Authentication {
 	}
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx, 
-			final MfaStatus mfaAuthenticated) throws AuthStorageException {
+			final MfaStatus mfa) throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, randGen.randomUUID(), userName)
 			.withLifeTime(clock.instant(),
 					cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
 			.withContext(tokenCtx)
-			.withMfaAuthenticated(mfaAuthenticated)
+			.withMfa(mfa)
 			.build(),
 			randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2350,7 +2350,7 @@ public class Authentication {
 			}
 		}
 		final MfaStatus mfaStatus = ri.get().getDetails() != null ? 
-				ri.get().getDetails().getMfaAuthenticated() : MfaStatus.UNKNOWN;
+				ri.get().getDetails().getMfa() : MfaStatus.UNKNOWN;
 		return login(u.get().getUserName(), tokenCtx, mfaStatus);
 	}
 	
