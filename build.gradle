@@ -164,7 +164,7 @@ dependencies {
 	 * shadowed in any case, so removal is presumably safe since the tests pass.
 	 */
 
-	implementation 'commons-codec:commons-codec:1.8'
+	implementation 'commons-codec:commons-codec:1.19.0'
 	implementation 'commons-validator:commons-validator:1.5.1'
 	implementation 'com.google.guava:guava:18.0'
 	implementation 'org.ini4j:ini4j:0.5.2'
