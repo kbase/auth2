@@ -22,7 +22,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
 		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.UNKNOWN));
-		assertThat("incorrect hashcode", dets.hashCode(), is(1166981462));
+		assertThat("incorrect hashcode", dets.hashCode(), is(44648981));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=UNKNOWN]"));
 	}
@@ -34,7 +34,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect fullname", dets.getFullname(), is((String) null));
 		assertThat("incorrect email", dets.getEmail(), is((String) null));
 		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.UNKNOWN));
-		assertThat("incorrect hashcode", dets.hashCode(), is(1669349283));
+		assertThat("incorrect hashcode", dets.hashCode(), is(547016802));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 		
@@ -43,7 +43,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect fullname", dets2.getFullname(), is((String) null));
 		assertThat("incorrect email", dets2.getEmail(), is((String) null));
 		assertThat("incorrect mfa authenticated", dets2.getMfa(), is(MfaStatus.UNKNOWN));
-		assertThat("incorrect hashcode", dets2.hashCode(), is(1669349283));
+		assertThat("incorrect hashcode", dets2.hashCode(), is(547016802));
 		assertThat("incorrect toString()", dets2.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 	}
@@ -116,7 +116,7 @@ public class RemoteIdentityTest {
 		final RemoteIdentity ri = new RemoteIdentity(id, dets);
 		assertThat("incorrect id", ri.getRemoteID(), is(id));
 		assertThat("incorrect details", ri.getDetails(), is(dets));
-		assertThat("incorrect hashcode", ri.hashCode(), is(194964923));
+		assertThat("incorrect hashcode", ri.hashCode(), is(-237603620));
 		assertThat("incorrect toString()", ri.toString(),
 				is("RemoteIdentity [remoteID=RemoteIdentityID [provider=p, id=i], " +
 						"details=RemoteIdentityDetails [username=u, fullname=f, email=e, mfa=UNKNOWN]]"));
