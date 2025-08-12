@@ -87,7 +87,7 @@ public class RemoteIdentityDetails {
 		int result = 1;
 		result = prime * result + ((email == null) ? 0 : email.hashCode());
 		result = prime * result + ((fullname == null) ? 0 : fullname.hashCode());
-		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
+		result = prime * result + ((mfa == null) ? 0 : mfa.name().hashCode());
 		result = prime * result + ((username == null) ? 0 : username.hashCode());
 		return result;
 	}

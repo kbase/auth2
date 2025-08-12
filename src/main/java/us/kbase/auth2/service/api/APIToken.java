@@ -35,7 +35,7 @@ public class APIToken extends ExternalToken {
 		final int prime = 31;
 		int result = super.hashCode();
 		result = prime * result + (int) (cachefor ^ (cachefor >>> 32));
-		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
+		result = prime * result + ((mfa == null) ? 0 : mfa.name().hashCode());
 		return result;
 	}
 
