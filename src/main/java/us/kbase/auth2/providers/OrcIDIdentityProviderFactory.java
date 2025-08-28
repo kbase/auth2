@@ -63,7 +63,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		/* Get creds: https://sandbox.orcid.org/developer-tools */
 		
 		private static final String NAME = "OrcID";
-		private static final String SCOPE = "openid";
+		private static final String SCOPE = "openid /authenticate";
 		private static final String LOGIN_PATH = "/oauth/authorize";
 		private static final String TOKEN_PATH = "/oauth/token";
 		private static final String RECORD_PATH = "/v2.1";
@@ -210,6 +210,59 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				}
 			}
 		}
+		
+		/**
+		 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
+		 * to determine if multi-factor authentication was used.
+		 * 
+		 * @param jwt the JWT ID token from ORCID
+		 * @return MfaStatus indicating whether MFA was used
+		 */
+		private static MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
+			if (jwt == null || jwt.trim().isEmpty()) {
+				throw new IdentityRetrievalException("No JWT token provided by ORCID despite requesting OpenID scope");
+			}
+			
+			try {
+				// JWT format: header.payload.signature
+				final String[] parts = jwt.split("\\.");
+				if (parts.length != 3) {
+					// Invalid JWT format
+					throw new IdentityRetrievalException("Invalid JWT format from ORCID: expected 3 parts, got " + parts.length);
+				}
+				
+				// Decode the payload (second part) - URL-safe base64
+				final String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+				
+				// Parse JSON payload to extract claims
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> claims = MAPPER.readValue(payload, Map.class);
+				
+				final Object amrClaim = claims.get("amr");
+				if (amrClaim == null) {
+					// No AMR claim present - MFA status unknown
+					return MfaStatus.UNKNOWN;
+				} else if (amrClaim instanceof List) {
+					// OpenID Connect spec: AMR should be an array of strings
+					@SuppressWarnings("unchecked")
+					final List<String> amrList = (List<String>) amrClaim;
+					return amrList.contains("mfa") ? MfaStatus.USED : MfaStatus.NOT_USED;
+				} else if (amrClaim instanceof String) {
+					// ORCID may return single string - handle as fallback
+					return "mfa".equals(amrClaim) ? MfaStatus.USED : MfaStatus.NOT_USED;
+				}
+				
+				// AMR claim present but in unexpected format
+				throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
+				
+			} catch (IllegalArgumentException e) {
+				// Base64 decoding failed - invalid JWT
+				throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
+			} catch (IOException e) {
+				// JSON parsing failed - malformed payload
+				throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
+			}
+		}
 	
 		private static class OrcIDAccessTokenResponse {
 			
@@ -223,7 +276,8 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					final String accessToken,
 					final String fullName,
 					final String orcID,
-					final String jwt)
+					final String jwt,
+					final MfaStatus mfa)
 					throws IdentityRetrievalException {
 				if (accessToken == null || accessToken.trim().isEmpty()) {
 					throw new IdentityRetrievalException(
@@ -237,61 +291,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
 				this.jwt = jwt == null ? null : jwt.trim();
-				this.mfa = parseAmrClaim(this.jwt);
-			}
-			
-			/**
-			 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
-			 * to determine if multi-factor authentication was used.
-			 * 
-			 * @param jwt the JWT ID token from ORCID
-			 * @return MfaStatus indicating whether MFA was used
-			 */
-			private MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
-				if (jwt == null || jwt.trim().isEmpty()) {
-					LoggerFactory.getLogger(getClass()).info("No JWT token provided by ORCID, MFA status unknown");
-					return MfaStatus.UNKNOWN;
-				}
-				
-				try {
-					// JWT format: header.payload.signature
-					final String[] parts = jwt.split("\\.");
-					if (parts.length != 3) {
-						// Invalid JWT format
-						throw new IdentityRetrievalException("Invalid JWT format from ORCID: expected 3 parts, got " + parts.length);
-					}
-					
-					// Decode the payload (second part) - URL-safe base64
-					final String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
-					
-					// Parse JSON payload to extract claims
-					@SuppressWarnings("unchecked")
-					final Map<String, Object> claims = MAPPER.readValue(payload, Map.class);
-					
-					final Object amrClaim = claims.get("amr");
-					if (amrClaim == null) {
-						// No AMR claim present - MFA status unknown
-						return MfaStatus.UNKNOWN;
-					} else if (amrClaim instanceof List) {
-						// OpenID Connect spec: AMR should be an array of strings
-						@SuppressWarnings("unchecked")
-						final List<String> amrList = (List<String>) amrClaim;
-						return amrList.contains("mfa") ? MfaStatus.USED : MfaStatus.NOT_USED;
-					} else if (amrClaim instanceof String) {
-						// ORCID may return single string - handle as fallback
-						return "mfa".equals(amrClaim) ? MfaStatus.USED : MfaStatus.NOT_USED;
-					}
-					
-					// AMR claim present but in unexpected format
-					throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
-					
-				} catch (IllegalArgumentException e) {
-					// Base64 decoding failed - invalid JWT
-					throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
-				} catch (IOException e) {
-					// JSON parsing failed - malformed payload
-					throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
-				}
+				this.mfa = mfa;
 			}
 		}
 		
@@ -320,11 +320,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IdentityRetrievalException("Authtoken retrieval failed: " +
 						msg[msg.length - 1].trim());
 			}
+			final String idToken = (String) m.get("id_token");
+			final MfaStatus mfaStatus = parseAmrClaim(idToken);
 			return new OrcIDAccessTokenResponse(
 					(String) m.get("access_token"),
 					(String) m.get("name"),
 					(String) m.get("orcid"),
-					(String) m.get("id_token"));
+					idToken,
+					mfaStatus);
 		}
 	
 		private Map<String, Object> orcIDPostRequest(
