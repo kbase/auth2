@@ -121,23 +121,23 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
 		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 	}
@@ -150,23 +150,23 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", oip.getLoginURI("foo5", "pkce", false, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo5&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo6", "pkce", true, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo6&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
 		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=openid" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 		
@@ -267,15 +267,15 @@ public class OrcIDIdentityProviderTest {
 		final IdentityRetrievalException e =
 				new IdentityRetrievalException("No access token was returned by OrcID");
 		
-		setUpCallAuthToken(acode, null, redir, cliid, clisec, "name", "fake ID");
+		setUpCallAuthTokenWithJWT(acode, null, redir, cliid, clisec, "name", "fake ID", createJWTWithoutAmr("fake ID"));
 		failGetIdentities(idp, acode, "pkce", false, e);
-		setUpCallAuthToken(acode, "\t  ", redir, cliid, clisec, "name", "fake ID");
+		setUpCallAuthTokenWithJWT(acode, "\t  ", redir, cliid, clisec, "name", "fake ID", createJWTWithoutAmr("fake ID"));
 		failGetIdentities(idp, acode, "pkce", false, e);
 		
-		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", null);
+		setUpCallAuthTokenWithJWT(acode, "fake token", redir, cliid, clisec, "my name", null, createJWTWithoutAmr("fake ID"));
 		failGetIdentities(idp, acode, "pkce", false, new IdentityRetrievalException(
 				"No id was returned by OrcID"));
-		setUpCallAuthToken(acode, "fake token", redir, cliid, clisec, "my name", "   \t  \n  ");
+		setUpCallAuthTokenWithJWT(acode, "fake token", redir, cliid, clisec, "my name", "   \t  \n  ", createJWTWithoutAmr("fake ID"));
 		failGetIdentities(idp, acode, "pkce", false, new IdentityRetrievalException(
 				"No id was returned by OrcID"));
 	}
@@ -336,37 +336,37 @@ public class OrcIDIdentityProviderTest {
 		final String authtoken = "bartoken";
 		final String orcID = "0000-0001-1234-5678";
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 200, "bleah");
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Unable to parse response from OrcID service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, "text/html", 200, MAPPER.writeValueAsString(
 				map("id", "id1", "displayName", "dispname1", "emails", Arrays.asList(
 						map("value", "email1")))));
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Unable to parse response from OrcID service."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 500, STRING1000);
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code and unparseable " +
 				"response from OrcID service: 500. Response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 500, STRING1001);
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code and unparseable " +
 				"response from OrcID service: 500. Truncated response: " + STRING1000));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 500, null);
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code with no response " +
 				"body from OrcID service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 500, "{}");
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
 				"Got unexpected HTTP code with no error in " +
@@ -398,8 +398,8 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		
-		setUpCallAuthToken(authCode, "footoken3", "https://ologinredir.com",
-				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
+		setUpCallAuthTokenWithJWT(authCode, "footoken3", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, createJWTWithoutAmr(orcID));
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(response));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
@@ -416,15 +416,15 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		
-		setUpCallAuthToken(authCode, "footoken3", "https://lo.com",
-				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
+		setUpCallAuthTokenWithJWT(authCode, "footoken3", "https://lo.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, createJWTWithoutAmr(orcID));
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email7")))));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, "e3");
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "email7")));
+				new RemoteIdentityDetails(orcID, "My name", "email7", MfaStatus.UNKNOWN)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -454,9 +454,9 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://olinkredir2.com",
+		setUpCallAuthTokenWithJWT(authCode, "footoken2", "https://olinkredir2.com",
 				idconfig.getClientID(), idconfig.getClientSecret(),
-				null, orcID);
+				null, orcID, createJWTWithoutAmr(orcID));
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				response));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, null);
@@ -483,16 +483,16 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		
-		setUpCallAuthToken(authCode, "footoken2", "https://li.com",
+		setUpCallAuthTokenWithJWT(authCode, "footoken2", "https://li.com",
 				idconfig.getClientID(), idconfig.getClientSecret(),
-				null, orcID);
+				null, orcID, createJWTWithoutAmr(orcID));
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email4")))));
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, "e3");
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, null, "email4")));
+				new RemoteIdentityDetails(orcID, null, "email4", MfaStatus.UNKNOWN)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -547,12 +547,15 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken5", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "noid@test.com")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "noid@test.com", MfaStatus.UNKNOWN)));
-		assertThat("incorrect ident set", rids, is(expected));
+		
+		// Now that JWT is required, this should fail with missing JWT error
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(), 
+					is("10030 Identity retrieval failed: No JWT token provided by ORCID despite requesting OpenID scope"));
+		}
 	}
 	
 	@Test
