@@ -569,6 +569,10 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
+	private MfaStatus getMfaStatus(final String mfaString) {
+		return mfaString != null ? MfaStatus.valueOf(mfaString) : MfaStatus.UNKNOWN;
+	}
+	
 	private EmailAddress getEmail(final String email) throws AuthStorageException {
 		if (email == null) {
 			return EmailAddress.UNKNOWN;
@@ -971,7 +975,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
-				.withMfa(MfaStatus.valueOf(t.getString(Fields.TOKEN_MFA)))
+				.withMfa(getMfaStatus(t.getString(Fields.TOKEN_MFA)))
 				.build();
 	}
 	
@@ -1795,7 +1799,7 @@ public class MongoStorage implements AuthStorage {
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL),
-					MfaStatus.valueOf(i.getString(Fields.IDENTITIES_MFA)));
+					getMfaStatus(i.getString(Fields.IDENTITIES_MFA)));
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;

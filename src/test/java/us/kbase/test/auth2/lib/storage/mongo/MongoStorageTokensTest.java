@@ -127,6 +127,30 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 	}
 	
 	@Test
+	public void getWithNullMfa() throws Exception {
+		/* Tests backwards compatibility with old tokens that don't have an MFA field
+		 * in the db.
+		 */
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final StoredToken ht = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10)).build();
+		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
+		
+		// Remove the MFA field to simulate old database records
+		db.getCollection("tokens").updateOne(new Document("id", id.toString()),
+				new Document("$unset", new Document("mfa", "")));
+		
+		final StoredToken expected = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10)).build();
+
+		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
+		assertThat("incorrect token", st, is(expected));
+	}
+	
+	@Test
 	public void storeTokenFailNull() throws Exception {
 		final StoredToken st = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), new UserName("bar"))
