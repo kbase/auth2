@@ -4,6 +4,7 @@ import static java.util.Objects.requireNonNull;
 
 import java.util.Map;
 
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 
 public class ExternalToken {
@@ -17,6 +18,7 @@ public class ExternalToken {
 	private final String name;
 	private final String user;
 	private final Map<String, String> custom;
+	private final MfaStatus mfa;
 
 	public ExternalToken(final StoredToken storedToken) {
 		requireNonNull(storedToken, "storedToken");
@@ -28,6 +30,8 @@ public class ExternalToken {
 		expires = storedToken.getExpirationDate().toEpochMilli();
 		created = storedToken.getCreationDate().toEpochMilli();
 		custom = storedToken.getContext().getCustomContext();
+		// For tokens from non-ORCID providers, MFA status defaults to UNKNOWN
+		mfa = storedToken.getMfa() != null ? storedToken.getMfa() : MfaStatus.UNKNOWN;
 	}
 
 	public String getType() {
@@ -58,6 +62,16 @@ public class ExternalToken {
 		return custom;
 	}
 
+	/**
+	 * Gets the MFA authentication status for this token.
+	 * Returns UNKNOWN for tokens from identity providers that don't support MFA.
+	 * 
+	 * @return the MFA authentication status.
+	 */
+	public MfaStatus getMfa() {
+		return mfa;
+	}
+
 	@Override
 	public int hashCode() {
 		final int prime = 31;
@@ -66,6 +80,7 @@ public class ExternalToken {
 		result = prime * result + ((custom == null) ? 0 : custom.hashCode());
 		result = prime * result + (int) (expires ^ (expires >>> 32));
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
+		result = prime * result + ((mfa == null) ? 0 : mfa.name().hashCode());
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
@@ -123,6 +138,13 @@ public class ExternalToken {
 				return false;
 			}
 		} else if (!user.equals(other.user)) {
+			return false;
+		}
+		if (mfa == null) {
+			if (other.mfa != null) {
+				return false;
+			}
+		} else if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		return true;
