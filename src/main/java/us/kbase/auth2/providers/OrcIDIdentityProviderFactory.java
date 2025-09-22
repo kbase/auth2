@@ -51,6 +51,13 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	}
 	
 	/** An identity provider for OrcID accounts.
+	 *
+	 * Multi-Factor Authentication (MFA) Status Handling:
+	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
+	 * - Missing JWT (non-member accounts): defaults to MfaStatus.UNKNOWN
+	 * - Malformed JWT during login: logs warning and defaults to MfaStatus.UNKNOWN for graceful degradation
+	 * - Valid JWT with AMR claim: returns MfaStatus.USED or MfaStatus.NOT_USED based on "mfa" presence
+	 *
 	 * @author gaprice@lbl.gov
 	 *
 	 */
@@ -72,6 +79,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		private static final Client CLI = ClientBuilder.newClient();
 		
 		private static final ObjectMapper MAPPER = new ObjectMapper();
+		private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class);
 		
 		private final IdentityProviderConfig cfg;
 		
@@ -214,13 +222,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		/**
 		 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
 		 * to determine if multi-factor authentication was used.
-		 * 
-		 * @param jwt the JWT ID token from ORCID
-		 * @return MfaStatus indicating whether MFA was used
+		 *
+		 * @param jwt the JWT ID token from ORCID (may be null/empty for non-member accounts)
+		 * @return MfaStatus indicating whether MFA was used, UNKNOWN if JWT is missing or unparseable
 		 */
 		private static MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
 			if (jwt == null || jwt.trim().isEmpty()) {
-				throw new IdentityRetrievalException("No JWT token provided by ORCID despite requesting OpenID scope");
+				// Missing JWT is expected for non-member ORCID accounts without OpenID Connect scope
+				LOGGER.debug("No JWT token provided by ORCID - defaulting MFA status to UNKNOWN");
+				return MfaStatus.UNKNOWN;
 			}
 			
 			try {
@@ -256,10 +266,12 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
 				
 			} catch (IllegalArgumentException e) {
-				// Base64 decoding failed - invalid JWT
+				// Base64 decoding failed - invalid JWT format
+				LOGGER.warn("Unable to decode JWT from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
 			} catch (IOException e) {
 				// JSON parsing failed - malformed payload
+				LOGGER.warn("Unable to parse JWT payload from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
 			}
 		}

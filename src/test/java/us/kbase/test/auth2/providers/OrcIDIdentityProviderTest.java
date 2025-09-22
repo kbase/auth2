@@ -542,22 +542,21 @@ public class OrcIDIdentityProviderTest {
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
-		
+
 		setUpCallAuthToken(authCode, "footoken5", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken5", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
-				map("email", Arrays.asList(map("email", "noid@test.com")))));
-		
-		// Now that JWT is required, this should fail with missing JWT error
-		try {
-			idp.getIdentities(authCode, "pkce", false, null);
-			fail("Expected IdentityRetrievalException");
-		} catch (IdentityRetrievalException e) {
-			assertThat("incorrect exception message", e.getMessage(), 
-					is("10030 Identity retrieval failed: No JWT token provided by ORCID despite requesting OpenID scope"));
-		}
+				map("email", Arrays.asList(map("email", "nojwt@test.com")))));
+
+		// Missing JWT from non-member ORCID accounts should default to UNKNOWN MFA status
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "nojwt@test.com", MfaStatus.UNKNOWN)));
+		assertThat("incorrect ident set", rids, is(expected));
 	}
-	
+
 	@Test
 	public void getIdentityWithInvalidJWT() throws Exception {
 		final String authCode = "authcodeInvalidJWT";

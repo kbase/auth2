@@ -18,11 +18,7 @@ public class RemoteIdentityTest {
 	@Test
 	public void remoteDetailsWithAllFields() throws Exception {
 		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user ", " full", "\temail");
-		assertThat("incorrect username", dets.getUsername(), is("user"));
-		assertThat("incorrect fullname", dets.getFullname(), is("full"));
-		assertThat("incorrect email", dets.getEmail(), is("email"));
-		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.UNKNOWN));
-		assertThat("incorrect equality", dets, is(new RemoteIdentityDetails("user", "full", "email")));
+		assertThat("incorrect details content, failed equality", dets, is(new RemoteIdentityDetails("user", "full", "email")));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=UNKNOWN]"));
 	}
@@ -30,19 +26,11 @@ public class RemoteIdentityTest {
 	@Test
 	public void remoteDetailsWithEmptyFields() throws Exception {
 		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "\t ", " \n");
-		assertThat("incorrect username", dets.getUsername(), is("user"));
-		assertThat("incorrect fullname", dets.getFullname(), is((String) null));
-		assertThat("incorrect email", dets.getEmail(), is((String) null));
-		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.UNKNOWN));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 
 		final RemoteIdentityDetails dets2 = new RemoteIdentityDetails("user", null, null);
-		assertThat("incorrect username", dets2.getUsername(), is("user"));
-		assertThat("incorrect fullname", dets2.getFullname(), is((String) null));
-		assertThat("incorrect email", dets2.getEmail(), is((String) null));
-		assertThat("incorrect mfa authenticated", dets2.getMfa(), is(MfaStatus.UNKNOWN));
-		assertThat("incorrect equality", dets2, is(dets));
+		assertThat("incorrect empty field content, failed equality", dets2, is(dets));
 		assertThat("incorrect toString()", dets2.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 	}
@@ -71,12 +59,10 @@ public class RemoteIdentityTest {
 	@Test
 	public void remoteId() throws Exception {
 		final RemoteIdentityID id = new RemoteIdentityID("foo", "bar");
-		assertThat("incorrect provider name", id.getProviderName(), is("foo"));
-		assertThat("incorrect provider id", id.getProviderIdentityId(), is("bar"));
+		assertThat("incorrect id content, failed equality", id, is(new RemoteIdentityID("foo", "bar")));
 		assertThat("incorrect unique id", id.getID(), is("5c7d96a3dd7a87850a2ef34087565a6e"));
 		// check unique id again to check memoization doesn't change result
 		assertThat("incorrect unique id", id.getID(), is("5c7d96a3dd7a87850a2ef34087565a6e"));
-		assertThat("incorrect equality", id, is(new RemoteIdentityID("foo", "bar")));
 		assertThat("incorrect toString()", id.toString(),
 				is("RemoteIdentityID [provider=foo, id=bar]"));
 	}
@@ -113,9 +99,7 @@ public class RemoteIdentityTest {
 		final RemoteIdentityID id = new RemoteIdentityID("p", "i");
 		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
 		final RemoteIdentity ri = new RemoteIdentity(id, dets);
-		assertThat("incorrect id", ri.getRemoteID(), is(id));
-		assertThat("incorrect details", ri.getDetails(), is(dets));
-		assertThat("incorrect equality", ri, is(new RemoteIdentity(
+		assertThat("incorrect identity content, failed equality", ri, is(new RemoteIdentity(
 				new RemoteIdentityID("p", "i"), new RemoteIdentityDetails("u", "f", "e"))));
 		assertThat("incorrect toString()", ri.toString(),
 				is("RemoteIdentity [remoteID=RemoteIdentityID [provider=p, id=i], " +
