@@ -19,7 +19,7 @@ public class EmailAddressTest {
 	public void construct() throws Exception {
 		final EmailAddress ea = new EmailAddress("   foo@bar.com   \n");
 		assertThat("incorrect email", ea.getAddress(), is("foo@bar.com"));
-		assertThat("incorrect hashCode", ea.hashCode(), is(1827947467));
+		assertThat("incorrect equality", ea, is(new EmailAddress("foo@bar.com")));
 		assertThat("incorrect toString", ea.toString(), is("EmailAddress [email=foo@bar.com]"));
 	}
 	

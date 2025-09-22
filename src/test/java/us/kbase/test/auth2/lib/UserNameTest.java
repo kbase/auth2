@@ -25,12 +25,14 @@ public class UserNameTest {
 		assertThat("incorrect username", un.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un.isRoot(), is(true));
 		assertThat("incorrect toString", un.toString(), is("UserName [getName()=***ROOT***]"));
-		
+		assertThat("incorrect equality", un, is(UserName.ROOT));
+
 		final UserName un2 = UserName.ROOT;
 		assertThat("incorrect username", un2.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un2.isRoot(), is(true));
 		assertThat("incorrect toString", un2.toString(), is("UserName [getName()=***ROOT***]"));
-		
+		assertThat("incorrect equality", un2, is(new UserName("***ROOT***")));
+
 		final NewUserName nun = NewUserName.ROOT;
 		assertThat("incorrect username", nun.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", nun.isRoot(), is(true));
@@ -43,8 +45,9 @@ public class UserNameTest {
 		assertThat("incorrect username", un.getName(), is("a8___nba9__"));
 		assertThat("incorrect is root", un.isRoot(), is(false));
 		assertThat("incorrect toString", un.toString(), is("UserName [getName()=a8___nba9__]"));
+		assertThat("incorrect equality", un, is(new UserName("a8___nba9__")));
 	}
-	
+
 	@Test
 	public void constructNewUser() throws Exception {
 		final NewUserName un = new NewUserName("a8_nba9");
