@@ -221,8 +221,8 @@ dependencies {
 		// in favor of the new one which is a transitive dependency elsewhere
 		exclude group: 'javax.activation', module: 'activation'
 	}
-	testImplementation 'org.eclipse.jetty:jetty-server:9.3.11.v20160721'
-	testImplementation 'org.eclipse.jetty:jetty-servlet:9.3.11.v20160721'
+	testImplementation 'org.eclipse.jetty:jetty-server:12.1.1'
+	testImplementation 'org.eclipse.jetty:jetty-servlet:12.1.1'
 	testImplementation 'io.github.java-diff-utils:java-diff-utils:2.2.0'
 	testImplementation 'de.danielbechler:java-object-diff:0.94'
 	testImplementation 'org.jsoup:jsoup:1.10.2'
