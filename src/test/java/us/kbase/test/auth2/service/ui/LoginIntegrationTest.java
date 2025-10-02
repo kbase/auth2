@@ -88,7 +88,7 @@ import us.kbase.test.auth2.StandaloneAuthServer.ServerThread;
 import us.kbase.test.auth2.service.ServiceTestUtils;
 import us.kbase.testutils.RegexMatcher;
 
-public class LoginTest {
+public class LoginIntegrationTest {
 	
 	//TODO TEST convert most of these to unit tests, but keep enough for integration tests
 	
