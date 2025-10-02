@@ -41,6 +41,7 @@ import us.kbase.auth2.lib.config.AuthConfig.TokenLifetimeType;
 import us.kbase.auth2.lib.config.AuthConfigSetWithUpdateTime;
 import us.kbase.auth2.lib.config.AuthConfigUpdate;
 import us.kbase.auth2.lib.config.ConfigAction.State;
+import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.ExternalConfigMappingException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -72,7 +73,55 @@ public class AdminTest {
 	 *  - but keep the integration tests as simple as possible. On the order of 1 happy path,
 	 *  1 unhappy path per method. Also need to test mustache templates
 	 */
+	
+	// TODO TEST need to add unit tests for happy path createLocalUser (and a lot of other stuff)
+	@Test
+	public void createLocalUserFailUnderscores() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final AuthAPIStaticConfig cfg = new AuthAPIStaticConfig("kbcookie", "fake");
+		final HttpHeaders headers = mock(HttpHeaders.class);
+		
+		final Admin admin = new Admin(auth, cfg);
+		
+		when(headers.getCookies()).thenReturn(
+				ImmutableMap.of("kbcookie", new Cookie("kbcookie", "token")));
+		
+		final String err = "New usernames cannot contain repeating underscores or trailing "
+				+ "underscores";
+		failCreateLocalUser(
+				admin,
+				headers,
+				"under__score",
+				"foo",
+				"foo@example.com",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err)
+		);
+		failCreateLocalUser(
+				admin,
+				headers,
+				"underscore_",
+				"foo",
+				"foo@example.com",
+				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err)
+		);
+	}
 
+	private void failCreateLocalUser(
+			final Admin admin,
+			final HttpHeaders headers,
+			final String userName,
+			final String displayName,
+			final String email,
+			final Exception expected
+			) throws Exception {
+		try {
+			admin.createLocalAccountComplete(headers, userName, displayName, email);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, expected);
+		}
+	}
+		
 	@Test
 	public void getConfigMinimal() throws Exception {
 		final Authentication auth = mock(Authentication.class);

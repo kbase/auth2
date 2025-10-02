@@ -32,6 +32,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
@@ -85,7 +86,7 @@ public class TestModeTest {
 		final Authentication auth = mock(Authentication.class);
 		final TestMode tm = new TestMode(auth);
 		
-		when(auth.testModeGetUser(new UserName("foobar"))).thenReturn(AuthUser.getBuilder(
+		when(auth.testModeGetUser(new NewUserName("foobar"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foobar"), UID, new DisplayName("foo bar"), inst(10000))
 				.build());
 		
@@ -107,7 +108,7 @@ public class TestModeTest {
 		
 		assertThat("incorrect user", au, is(expected));
 		
-		verify(auth).testModeCreateUser(new UserName("foobar"), new DisplayName("foo bar"));
+		verify(auth).testModeCreateUser(new NewUserName("foobar"), new DisplayName("foo bar"));
 	}
 	
 	@Test
@@ -132,7 +133,7 @@ public class TestModeTest {
 		
 		doThrow(new UnauthorizedException("Cannot create root user"))
 				.when(auth).testModeCreateUser(
-						new UserName("***ROOT***"), new DisplayName("root baby"));
+						new NewUserName("***ROOT***"), new DisplayName("root baby"));
 		
 		final TestMode tm = new TestMode(auth);
 		final CreateTestUser ctu = new CreateTestUser("***ROOT***", "root baby");
@@ -146,12 +147,26 @@ public class TestModeTest {
 		
 		final TestMode tm = new TestMode(auth);
 		
-		when(auth.testModeGetUser(new UserName("foobar")))
+		when(auth.testModeGetUser(new NewUserName("foobar")))
 				.thenThrow(new NoSuchUserException("foobar"));
 		
 		final CreateTestUser ctu = new CreateTestUser("foobar", "foo bar");
 		failCreateUser(tm, ctu, new RuntimeException(
 				"Neat, user creation is totally busted: 50000 No such user: foobar"));
+	}
+	
+	@Test
+	public void createUserFailUnderscores() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		
+		final TestMode tm = new TestMode(auth);
+		final String err = "New usernames cannot contain repeating underscores or trailing "
+				+ "underscores";
+		
+		final CreateTestUser ctu = new CreateTestUser("foo__bar", "foo bar");
+		failCreateUser(tm, ctu, new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err));
+		final CreateTestUser ctu2 = new CreateTestUser("foobar__", "foo bar");
+		failCreateUser(tm, ctu2, new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err));
 	}
 	
 	private void failCreateUser(

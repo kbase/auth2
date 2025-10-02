@@ -22,7 +22,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
-import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.exceptions.IdentityLinkedException;
 import us.kbase.auth2.lib.exceptions.NoSuchRoleException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
@@ -66,11 +66,14 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-				new RemoteIdentityDetails("user", "full", "f@h.com")));
+		auth.importUser(
+				new NewUserName("foo"),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+				new RemoteIdentityDetails("user", "full", "f@h.com"))
+		);
 		
 		verify(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
+				NewUser.getBuilder(new NewUserName("foo"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 								new RemoteIdentityDetails("user", "full", "f@h.com")))
@@ -97,10 +100,13 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-				new RemoteIdentityDetails("user", fullname, "f@h.com")));
+		auth.importUser(
+				new NewUserName("foo"),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+				new RemoteIdentityDetails("user", fullname, "f@h.com"))
+		);
 		
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), UID,
+		verify(storage).createUser(NewUser.getBuilder(new NewUserName("foo"), UID,
 				new DisplayName("unknown"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user", fullname, "f@h.com")))
@@ -124,10 +130,13 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-				new RemoteIdentityDetails("user", "full", email)));
+		auth.importUser(
+				new NewUserName("foo"),
+				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
+				new RemoteIdentityDetails("user", "full", email))
+		);
 		
-		verify(storage).createUser(NewUser.getBuilder(new UserName("foo"), UID,
+		verify(storage).createUser(NewUser.getBuilder(new NewUserName("foo"), UID,
 				new DisplayName("full"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id"),
 						new RemoteIdentityDetails("user", "full", email)))
@@ -143,7 +152,7 @@ public class AuthenticationImportUserTest {
 				new RemoteIdentityID("prov", "id"),
 				new RemoteIdentityDetails("user", "full", "email")),
 				new NullPointerException("userName"));
-		failImportUser(auth, new UserName("foo"), null,
+		failImportUser(auth, new NewUserName("foo"), null,
 				new NullPointerException("remoteIdentity"));
 	}
 	
@@ -158,15 +167,15 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), REMOTE_ID);
+		auth.importUser(new NewUserName("foo"), REMOTE_ID);
 		
 		doThrow(new UserExistsException("foo")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
+				NewUser.getBuilder(new NewUserName("foo"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());
 		
-		failImportUser(auth, new UserName("foo"), REMOTE_ID, new UserExistsException("foo"));
+		failImportUser(auth, new NewUserName("foo"), REMOTE_ID, new UserExistsException("foo"));
 	}
 	
 	@Test
@@ -180,15 +189,15 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo"), REMOTE_ID);
+		auth.importUser(new NewUserName("foo"), REMOTE_ID);
 		
 		doThrow(new IdentityLinkedException("linked")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo2"), UID, new DisplayName("full"),
+				NewUser.getBuilder(new NewUserName("foo2"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());
 		
-		failImportUser(auth, new UserName("foo2"), REMOTE_ID,
+		failImportUser(auth, new NewUserName("foo2"), REMOTE_ID,
 				new IdentityLinkedException("linked"));
 	}
 	
@@ -203,21 +212,21 @@ public class AuthenticationImportUserTest {
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.importUser(new UserName("foo2"), REMOTE_ID);
+		auth.importUser(new NewUserName("foo2"), REMOTE_ID);
 		
 		doThrow(new NoSuchRoleException("foo")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("foo"), UID, new DisplayName("full"),
+				NewUser.getBuilder(new NewUserName("foo"), UID, new DisplayName("full"),
 						Instant.ofEpochMilli(10000), REMOTE_ID)
 						.withEmailAddress(new EmailAddress("e@g.com"))
 						.build());
 		
-		failImportUser(auth, new UserName("foo"), REMOTE_ID,
+		failImportUser(auth, new NewUserName("foo"), REMOTE_ID,
 				new RuntimeException("didn't supply any roles"));
 	}
 
 	private void failImportUser(
 			final Authentication auth,
-			final UserName userName,
+			final NewUserName userName,
 			final RemoteIdentity remoteIdentity,
 			final Exception e) {
 		try {

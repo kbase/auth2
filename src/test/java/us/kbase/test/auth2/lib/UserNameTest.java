@@ -10,6 +10,7 @@ import org.junit.Test;
 import java.util.Optional;
 
 import nl.jqno.equalsverifier.EqualsVerifier;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
@@ -24,22 +25,32 @@ public class UserNameTest {
 		assertThat("incorrect username", un.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un.isRoot(), is(true));
 		assertThat("incorrect toString", un.toString(), is("UserName [getName()=***ROOT***]"));
-		assertThat("incorrect hashCode" , un.hashCode(), is(-280622915));
 		
 		final UserName un2 = UserName.ROOT;
 		assertThat("incorrect username", un2.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un2.isRoot(), is(true));
 		assertThat("incorrect toString", un2.toString(), is("UserName [getName()=***ROOT***]"));
-		assertThat("incorrect hashCode" , un2.hashCode(), is(-280622915));
+		
+		final NewUserName nun = NewUserName.ROOT;
+		assertThat("incorrect username", nun.getName(), is("***ROOT***"));
+		assertThat("incorrect is root", nun.isRoot(), is(true));
+		assertThat("incorrect toString", nun.toString(), is("NewUserName [getName()=***ROOT***]"));
 	}
 	
 	@Test
 	public void construct() throws Exception {
-		final UserName un = new UserName("a8nba9");
-		assertThat("incorrect username", un.getName(), is("a8nba9"));
+		final UserName un = new UserName("a8___nba9__");
+		assertThat("incorrect username", un.getName(), is("a8___nba9__"));
 		assertThat("incorrect is root", un.isRoot(), is(false));
-		assertThat("incorrect toString", un.toString(), is("UserName [getName()=a8nba9]"));
-		assertThat("incorrect hashCode" , un.hashCode(), is(-1462848190));
+		assertThat("incorrect toString", un.toString(), is("UserName [getName()=a8___nba9__]"));
+	}
+	
+	@Test
+	public void constructNewUser() throws Exception {
+		final NewUserName un = new NewUserName("a8_nba9");
+		assertThat("incorrect username", un.getName(), is("a8_nba9"));
+		assertThat("incorrect is root", un.isRoot(), is(false));
+		assertThat("incorrect toString", un.toString(), is("NewUserName [getName()=a8_nba9]"));
 	}
 	
 	@Test
@@ -58,12 +69,35 @@ public class UserNameTest {
 				ErrorType.ILLEGAL_PARAMETER,
 				"user name size greater than limit 100"));
 	}
+	
+	@Test
+	public void constructFailNewUser() throws Exception {
+		failConstructNewUser(null, new MissingParameterException("user name"));
+		failConstructNewUser("   \t \n    ", new MissingParameterException("user name"));
+		failConstructNewUser(
+				"xaa__baea", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+				"New usernames cannot contain repeating underscores or trailing underscores")
+		);
+		failConstructNewUser("xaabaea_", new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
+				"New usernames cannot contain repeating underscores or trailing underscores"));
+	}
 
 	private void failConstruct(
 			final String name,
 			final Exception exception) {
 		try {
 			new UserName(name);
+			fail("constructed bad name");
+		} catch (Exception e) {
+			TestCommon.assertExceptionCorrect(e, exception);
+		}
+	}
+	
+	private void failConstructNewUser(
+			final String name,
+			final Exception exception) {
+		try {
+			new NewUserName(name);
 			fail("constructed bad name");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
@@ -101,6 +135,7 @@ public class UserNameTest {
 	@Test
 	public void equals() throws Exception {
 		EqualsVerifier.forClass(UserName.class).usingGetClass().verify();
+		EqualsVerifier.forClass(NewUserName.class).usingGetClass().verify();
 	}
 	
 	@Test

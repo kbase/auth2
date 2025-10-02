@@ -2,6 +2,8 @@
 
 ## 0.7.2
 
+* BACKWARDS INCOMPATIBILITY: Multiple underscores in series or trailing underscores are
+  no longer allowed in usernames. Existing usernames are unaffected.
 * Fixed a bug where usernames with underscores would not be matched in username searches if an
   underscore was an interior character of a search prefix.
 * Fixed a bug where a MongoDB error would be thrown if a user search prefix resulted in no search

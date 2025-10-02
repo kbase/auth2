@@ -35,6 +35,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
@@ -99,7 +100,7 @@ public class TestMode {
 			throw new MissingParameterException("JSON body missing");
 		}
 		create.exceptOnAdditionalProperties();
-		final UserName user = new UserName(create.userName);
+		final NewUserName user = new NewUserName(create.userName);
 		auth.testModeCreateUser(user, new DisplayName(create.displayName));
 		try {
 			return Me.toUserMap(auth.testModeGetUser(user));
