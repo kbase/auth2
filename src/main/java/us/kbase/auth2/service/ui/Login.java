@@ -62,6 +62,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.TokenCreationContext;
@@ -106,14 +107,25 @@ public class Login {
 	private static final String TRUE = "true";
 	private static final String FALSE = "false";
 	
-	@Inject
-	private Authentication auth;
+	private final Authentication auth;
+	private final AuthAPIStaticConfig cfg;
+	private final UserAgentParser userAgentParser;
 	
+	/** Construct the login endpoint handler. This is typically done by the Jersey framework.
+	 * @param auth an instance of the core authentication class.
+	 * @param cfg the static configuration for the authentication service.
+	 * @param userAgentParser a user agent parser instance.
+	 */
 	@Inject
-	private AuthAPIStaticConfig cfg;
-	
-	@Inject
-	private UserAgentParser userAgentParser;
+	public Login(
+			final Authentication auth,
+			final AuthAPIStaticConfig cfg,
+			final UserAgentParser userAgentParser
+		) {
+		this.auth = auth;
+		this.cfg = cfg;
+		this.userAgentParser = userAgentParser;
+	}
 	
 	@GET
 	@Template(name = "/loginstart")
@@ -625,7 +637,7 @@ public class Login {
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
 				CreateChoice.getString(identityID, Fields.ID),
-				new UserName(userName),
+				new NewUserName(userName),
 				new DisplayName(displayName),
 				new EmailAddress(email),
 				CreateChoice.getPolicyIDs(policyIDs),
@@ -634,7 +646,7 @@ public class Login {
 		return createLoginResponse(redirectURI, newtoken, !FALSE.equals(session));
 	}
 	
-	private static class CreateChoice extends PickChoice {
+	public static class CreateChoice extends PickChoice {
 		
 		public final String user;
 		public final String displayName;
@@ -683,7 +695,7 @@ public class Login {
 		final NewToken newtoken = auth.createUser(
 				getLoginInProcessToken(token),
 				create.getIdentityID(),
-				new UserName(create.user),
+				new NewUserName(create.user),
 				new DisplayName(create.displayName),
 				new EmailAddress(create.email),
 				create.getPolicyIDs(),

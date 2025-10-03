@@ -43,6 +43,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
@@ -1408,12 +1409,12 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				set(new PolicyID("pid1"), new PolicyID("pid2")),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), false);
 
 		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
+				new NewUserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com"))
@@ -1423,17 +1424,17 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(any(), any());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
@@ -1478,12 +1479,12 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				set(new PolicyID("pid1"), new PolicyID("pid2")),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
+				new NewUserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com"))
@@ -1493,17 +1494,17 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(any(), any());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
@@ -1575,16 +1576,16 @@ public class AuthenticationLoginTest {
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
 		when(storage.link(
-				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+				new NewUserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
 				.thenThrow(new IdentityLinkedException("foo"));
 		
-		when(storage.link(new UserName("foo"), new RemoteIdentity(
+		when(storage.link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
 		.thenReturn(true);
 		
-		when(storage.link(new UserName("foo"), new RemoteIdentity(
+		when(storage.link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
 		.thenReturn(true);
@@ -1595,36 +1596,36 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				Collections.emptySet(),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID2, new DisplayName("bar"), Instant.ofEpochMilli(10000),
+				new NewUserName("foo"), UID2, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com")).build());
 		
-		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+		verify(storage, never()).link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")));
 		
-		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+		verify(storage, never()).link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 
 		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
@@ -1659,7 +1660,7 @@ public class AuthenticationLoginTest {
 						.login(set(REMOTE)));
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1687,7 +1688,7 @@ public class AuthenticationLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foo");
 		final String id = "bar";
-		final UserName u = UserName.ROOT;
+		final NewUserName u = NewUserName.ROOT;
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1712,7 +1713,7 @@ public class AuthenticationLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foo");
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1741,7 +1742,7 @@ public class AuthenticationLoginTest {
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1772,7 +1773,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1803,7 +1804,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1835,7 +1836,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1872,7 +1873,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar"; //yep, that won't match
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1909,14 +1910,14 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new UserExistsException("baz")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1952,14 +1953,14 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new IdentityLinkedException("ef0518c79af70ed979907969c6d0a0f7")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1995,14 +1996,14 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new NoSuchRoleException("foobar")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2048,11 +2049,11 @@ public class AuthenticationLoginTest {
 				.thenReturn(Optional.empty());
 		
 		doThrow(new NoSuchUserException("baz")).when(storage).link(
-				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new NewUserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2099,11 +2100,11 @@ public class AuthenticationLoginTest {
 				.thenReturn(Optional.empty());
 		
 		doThrow(new LinkFailedException("local")).when(storage).link(
-				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new NewUserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2145,10 +2146,10 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).setLastLogin(
-				new UserName("foo"), Instant.ofEpochMilli(30000));
+				new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		
 		failCreateUser(auth, token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				Collections.emptySet(), CTX, false, new AuthStorageException(
 						"Something is very broken. User should exist but doesn't: " +
 						"50000 No such user: foo"));
@@ -2158,7 +2159,7 @@ public class AuthenticationLoginTest {
 			final Authentication auth,
 			final IncomingToken token,
 			final String identityID,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> pids,

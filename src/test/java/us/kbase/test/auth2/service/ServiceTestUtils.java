@@ -46,6 +46,7 @@ import de.danielbechler.diff.path.NodePath;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.TokenCreationContext;
@@ -83,7 +84,7 @@ public class ServiceTestUtils {
 				new Password(rootpwd.toCharArray()),
 				TokenCreationContext.getBuilder().build()).getToken().get().getToken();
 		final Password admintemppwd = auth.createLocalUser(
-				new IncomingToken(roottoken), new UserName("admin"), new DisplayName("a"),
+				new IncomingToken(roottoken), new NewUserName("admin"), new DisplayName("a"),
 				new EmailAddress("f@h.com"));
 		auth.updateRoles(new IncomingToken(roottoken), new UserName("admin"),
 				set(Role.CREATE_ADMIN), set());

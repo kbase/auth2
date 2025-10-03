@@ -436,7 +436,7 @@ public class Authentication {
 	 */
 	public Password createLocalUser(
 			final IncomingToken adminToken,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email)
 			throws AuthStorageException, UserExistsException, UnauthorizedException,
@@ -1960,7 +1960,7 @@ public class Authentication {
 	public NewToken createUser(
 			final IncomingToken token,
 			final String identityID,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> policyIDs,
@@ -2082,7 +2082,7 @@ public class Authentication {
 	 * @throws UnauthorizedException the user name is the root user name.
 	 * @throws TestModeException if test mode is not enabled.
 	 */
-	public void testModeCreateUser(final UserName userName, final DisplayName displayName)
+	public void testModeCreateUser(final NewUserName userName, final DisplayName displayName)
 			throws UserExistsException, AuthStorageException, UnauthorizedException,
 			TestModeException {
 		ensureTestMode();
@@ -3172,7 +3172,7 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws IdentityLinkedException if the identity is already linked to a user.
 	 */
-	public void importUser(final UserName userName, final RemoteIdentity remoteIdentity)
+	public void importUser(final NewUserName userName, final RemoteIdentity remoteIdentity)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
 		requireNonNull(userName, "userName");
 		requireNonNull(remoteIdentity, "remoteIdentity");

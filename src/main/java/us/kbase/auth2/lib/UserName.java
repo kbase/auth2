@@ -20,13 +20,12 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
  * digits, and the underscore. The first character must be a letter.
  * 
  * The only exception is the user name ***ROOT***, which represents the root user.
- * @author gaprice@lbl.gov
  *
  */
 public class UserName extends Name {
 
 	// this must never be a valid username 
-	private final static String ROOT_NAME = "***ROOT***";
+	final static String ROOT_NAME = "***ROOT***";
 	
 	/** The username for the root user. */
 	public final static UserName ROOT;

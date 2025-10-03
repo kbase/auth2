@@ -24,6 +24,7 @@ import ch.qos.logback.classic.spi.ILoggingEvent;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
 import us.kbase.auth2.lib.exceptions.ErrorType;
@@ -82,9 +83,9 @@ public class AuthenticationTestModeUserTest {
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID, (UUID) null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		
-		auth.testModeCreateUser(new UserName("foo"), new DisplayName("whee"));
+		auth.testModeCreateUser(new NewUserName("foo"), new DisplayName("whee"));
 		
-		verify(storage).testModeCreateUser(new UserName("foo"), UID, new DisplayName("whee"),
+		verify(storage).testModeCreateUser(new NewUserName("foo"), UID, new DisplayName("whee"),
 				Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000));
 		
 		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, "Created test mode user foo",
@@ -96,12 +97,12 @@ public class AuthenticationTestModeUserTest {
 		final TestMocks testauth = initTestMocks(true);
 		final Authentication auth = testauth.auth;
 		
-		final UserName u = new UserName("foo");
+		final NewUserName u = new NewUserName("foo");
 		final DisplayName d = new DisplayName("bar");
 		
 		failCreateUser(auth, null, d, new NullPointerException("userName"));
 		failCreateUser(auth, u, null, new NullPointerException("displayName"));
-		failCreateUser(auth, UserName.ROOT, d,
+		failCreateUser(auth, NewUserName.ROOT, d,
 				new UnauthorizedException("Cannot create root user"));
 	}
 	
@@ -112,7 +113,7 @@ public class AuthenticationTestModeUserTest {
 		final AuthStorage storage = testauth.storageMock;
 		final Clock clock = testauth.clockMock;
 		
-		final UserName u = new UserName("foo");
+		final NewUserName u = new NewUserName("foo");
 		final DisplayName d = new DisplayName("bar");
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID, (UUID) null);
@@ -126,13 +127,13 @@ public class AuthenticationTestModeUserTest {
 	
 	@Test
 	public void createUserFailNoTestMode() throws Exception {
-		failCreateUser(initTestMocks(false).auth, new UserName("u"), new DisplayName("d"),
+		failCreateUser(initTestMocks(false).auth, new NewUserName("u"), new DisplayName("d"),
 				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
 	}
 	
 	private void failCreateUser(
 			final Authentication auth,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final Exception expected) {
 		try {

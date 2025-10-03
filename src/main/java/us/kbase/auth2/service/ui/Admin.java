@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
@@ -255,7 +256,7 @@ public class Admin {
 			NoTokenProvidedException {
 		final Password pwd = auth.createLocalUser(
 				getTokenFromCookie(headers, cfg.getTokenCookieName()),
-				new UserName(userName), new DisplayName(displayName), new EmailAddress(email));
+				new NewUserName(userName), new DisplayName(displayName), new EmailAddress(email));
 		final Map<String, String> ret = ImmutableMap.of(
 				Fields.USER, userName,
 				Fields.DISPLAY, displayName,
