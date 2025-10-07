@@ -1,11 +1,9 @@
 package us.kbase.auth2.lib;
 
-import static java.util.Objects.requireNonNull;
 import static us.kbase.auth2.lib.Utils.checkStringNoCheckedException;
 
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -25,7 +23,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 public class UserName extends Name {
 
 	// this must never be a valid username 
-	final static String ROOT_NAME = "***ROOT***";
+	protected final static String ROOT_NAME = "***ROOT***";
 	
 	/** The username for the root user. */
 	public final static UserName ROOT;
@@ -38,8 +36,8 @@ public class UserName extends Name {
 		}
 	}
 	
-	private static final Pattern FORCE_ALPHA_FIRST_CHAR = Pattern.compile("^[^a-z]+");
-	private final static Pattern INVALID_CHARS = Pattern.compile("[^a-z\\d_]+");
+	protected static final Pattern FORCE_ALPHA_FIRST_CHAR = Pattern.compile("^[^a-z]+");
+	protected final static Pattern INVALID_CHARS = Pattern.compile("[^a-z\\d_]+");
 	public final static int MAX_NAME_LENGTH = 100;
 	
 	/** Create a new user name.
@@ -71,27 +69,11 @@ public class UserName extends Name {
 		return getName().equals(ROOT_NAME);
 	}
 
-	/** Given a string, returns a new name based on that string that is a legal user name. If
-	 * it is not possible construct a valid user name, absent is returned.
-	 * @param suggestedUserName the user name to mutate into a legal user name.
-	 * @return the new user name, or absent if mutation proved impossible.
-	 */
-	public static Optional<UserName> sanitizeName(final String suggestedUserName) {
-		requireNonNull(suggestedUserName, "suggestedUserName");
-		final String s = cleanUserName(suggestedUserName);
-		try {
-			return s.isEmpty() ? Optional.empty() : Optional.of(new UserName(s));
-		} catch (IllegalParameterException | MissingParameterException e) {
-			throw new RuntimeException("This should be impossible", e);
-		}
-	}
-
 	private static String cleanUserName(final String putativeName) {
-		return FORCE_ALPHA_FIRST_CHAR.matcher(
-						INVALID_CHARS.matcher(
-								putativeName.toLowerCase())
-						.replaceAll(""))
-				.replaceAll("");
+		String cleaned = putativeName.toLowerCase();
+		cleaned = INVALID_CHARS.matcher(cleaned).replaceAll("");
+		cleaned = FORCE_ALPHA_FIRST_CHAR.matcher(cleaned).replaceAll("");
+		return cleaned;
 	}
 	
 	/** Given a string, splits the string by whitespace, strips all illegal

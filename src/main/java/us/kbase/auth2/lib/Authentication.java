@@ -1156,7 +1156,7 @@ public class Authentication {
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		requireNonNull(suggestedUserName, "suggestedUserName");
-		final Optional<UserName> target = UserName.sanitizeName(suggestedUserName);
+		final Optional<UserName> target = NewUserName.sanitizeName(suggestedUserName);
 		Optional<UserName> availableUserName = Optional.empty();
 		if (target.isPresent()) {
 			availableUserName = getAvailableUserName(target.get(), false, true);
