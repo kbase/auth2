@@ -140,16 +140,22 @@ public class UserNameTest {
 	
 	@Test
 	public void sanitize() throws Exception {
-		assertThat("incorrect santize", UserName.sanitizeName("  999aF_A8 ea6t  \t   ѱ ** J(())"),
-				is(Optional.of(new UserName("af_a8ea6tj"))));
-		assertThat("incorrect santize", UserName.sanitizeName("999  8 6  \t   ѱ ** (())"),
-				is(Optional.empty()));
+		assertThat(
+				"incorrect sanitize",
+				NewUserName.sanitizeName("  999aF____A8 ea6t  \t   ѱ ** J___(())___"),
+				is(Optional.of(new UserName("af_a8ea6tj")))
+		);
+		assertThat(
+				"incorrect sanitize",
+				NewUserName.sanitizeName("999  8 6  \t   ѱ ** (())"),
+				is(Optional.empty())
+		);
 	}
 	
 	@Test
 	public void failSanitize() {
 		try {
-			UserName.sanitizeName(null);
+			NewUserName.sanitizeName(null);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("suggestedUserName"));

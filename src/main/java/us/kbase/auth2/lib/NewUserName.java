@@ -1,5 +1,10 @@
 package us.kbase.auth2.lib;
 
+import static java.util.Objects.requireNonNull;
+
+import java.util.Optional;
+import java.util.regex.Pattern;
+
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -26,6 +31,10 @@ public class NewUserName extends UserName {
 			throw new RuntimeException("Programming error: " + e.getMessage(), e);
 		}
 	}
+	
+	private final static Pattern REPEATING_UNDERSCORES = Pattern.compile("_+");
+	// just need to match one since the repeating underscores will have removed any more
+	private final static Pattern TRAILING_UNDERSCORE = Pattern.compile("_$");
 
 	/** Create a user name for a new, to be created, user.
 	 * @param name the user name.
@@ -41,6 +50,25 @@ public class NewUserName extends UserName {
 					"New usernames cannot contain repeating underscores or "
 					+ "trailing underscores"
 			);
+		}
+	}
+	
+	/** Given a string, returns a new name based on that string that is a legal user name. If
+	 * it is not possible construct a valid user name, empty() is returned.
+	 * @param suggestedUserName the user name to mutate into a legal user name.
+	 * @return the new user name, or empty() if mutation proved impossible.
+	 */
+	public static Optional<UserName> sanitizeName(final String suggestedUserName) {
+		requireNonNull(suggestedUserName, "suggestedUserName");
+		String cleaned = suggestedUserName.toLowerCase();
+		cleaned = INVALID_CHARS.matcher(cleaned).replaceAll("");
+		cleaned = FORCE_ALPHA_FIRST_CHAR.matcher(cleaned).replaceAll("");
+		cleaned = REPEATING_UNDERSCORES.matcher(cleaned).replaceAll("_");
+		cleaned = TRAILING_UNDERSCORE.matcher(cleaned).replaceAll("");
+		try {
+			return cleaned.isEmpty() ? Optional.empty() : Optional.of(new UserName(cleaned));
+		} catch (IllegalParameterException | MissingParameterException e) {
+			throw new RuntimeException("This should be impossible", e);
 		}
 	}
 	
