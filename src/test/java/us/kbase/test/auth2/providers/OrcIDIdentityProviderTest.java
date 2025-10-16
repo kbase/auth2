@@ -887,5 +887,40 @@ public class OrcIDIdentityProviderTest {
 				.encodeToString(payload.getBytes());
 		return encodedHeader + "." + encodedPayload + ".signature";
 	}
-	
+
+	@Test
+	public void getIdentityWithInvalidAmrTypeJWT() throws Exception {
+		final String authCode = "authcodeInvalidAmrType";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+
+		// JWT with AMR claim as object (not array or string) - unexpected format
+		final String jwt = createJWTWithObjectAmr(orcID);
+
+		setUpCallAuthTokenWithJWT(authCode, "footokenInvalidAmr", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, jwt);
+		setupCallID("footokenInvalidAmr", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "invalidamr@test.com")))));
+
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					containsString("AMR claim from ORCID in unexpected format"));
+		}
+	}
+
+	private String createJWTWithObjectAmr(final String orcID) {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		// AMR as object instead of array or string - this is an invalid/unexpected format
+		final String payload = "{\"sub\":\"" + orcID + "\",\"amr\":{\"method\":\"mfa\"}}";
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(payload.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
+	}
+
 }
