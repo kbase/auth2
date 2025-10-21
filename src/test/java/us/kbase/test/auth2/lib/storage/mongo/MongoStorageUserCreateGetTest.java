@@ -629,10 +629,19 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new UserName(userName), UID, new DisplayName(displayName), NOW, remoteIdentity)
 				.withEmailAddress(new EmailAddress(email))
 				.build());
-		
+
 		final AuthUser u = storage.getUser(new UserName(userName));
-		
-		assertThat("incorrect identities", u.getIdentities(), is(set(remoteIdentity)));
+
+		// MFA is not persisted on identities - when loaded from DB, it will always be UNKNOWN
+		final RemoteIdentity expectedIdentity = new RemoteIdentity(
+				remoteIdentity.getRemoteID(),
+				new RemoteIdentityDetails(
+						remoteIdentity.getDetails().getUsername(),
+						remoteIdentity.getDetails().getFullname(),
+						remoteIdentity.getDetails().getEmail(),
+						MfaStatus.UNKNOWN));
+
+		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
 		assertThat("incorrect username", u.getUserName(), is(new UserName(userName)));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName(displayName)));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress(email)));
@@ -644,42 +653,19 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 				new UserName("mfauser"), UID, new DisplayName("MFA User"), NOW, REMOTE_MFA_TRUE)
 				.withEmailAddress(new EmailAddress("mfa@example.com"))
 				.build());
-		
+
 		final AuthUser u = storage.getUser(REMOTE_MFA_TRUE).get();
-		
-		assertThat("incorrect identities", u.getIdentities(), is(set(REMOTE_MFA_TRUE)));
+
+		// MFA is not persisted on identities - when loaded from DB, it will always be UNKNOWN
+		final RemoteIdentity expectedIdentity = new RemoteIdentity(
+				new RemoteIdentityID("orcid", "0000-0001-1234-5678"),
+				new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.UNKNOWN));
+
+		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
 		assertThat("incorrect username", u.getUserName(), is(new UserName("mfauser")));
 		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("MFA User")));
 		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("mfa@example.com")));
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
 		assertThat("incorrect is local", u.isLocal(), is(false));
-	}
-	
-	@Test
-	public void getUserWithNullMfaIdentity() throws Exception {
-		/* Tests backwards compatibility with old identities that don't have an MFA field
-		 * in the db.
-		 */
-		storage.createUser(NewUser.getBuilder(
-				new UserName("olduser"), UID, new DisplayName("Old User"), NOW, REMOTE_MFA_NULL)
-				.withEmailAddress(new EmailAddress("old@example.com"))
-				.build());
-		
-		// Remove the MFA field from the identity to simulate old database records
-		db.getCollection("users").updateOne(
-				new Document("user", "olduser"),
-				new Document("$unset", new Document("identities.0.mfa", "")));
-		
-		final AuthUser u = storage.getUser(REMOTE_MFA_NULL).get();
-		
-		// Should retrieve successfully with MFA defaulting to UNKNOWN
-		final RemoteIdentity expectedIdentity = new RemoteIdentity(
-				new RemoteIdentityID("orcid", "0000-0001-1234-0000"),
-				new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", MfaStatus.UNKNOWN));
-		
-		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
-		assertThat("incorrect username", u.getUserName(), is(new UserName("olduser")));
-		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("Old User")));
-		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("old@example.com")));
 	}
 }

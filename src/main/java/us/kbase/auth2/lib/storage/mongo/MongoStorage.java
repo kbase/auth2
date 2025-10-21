@@ -1582,7 +1582,15 @@ public class MongoStorage implements AuthStorage {
 					b.withIdentity(ri);
 				}
 			}
-			b.withIdentity(remoteID);
+			// MFA is never persisted on identities, so force it to UNKNOWN
+			final RemoteIdentity updatedIdentity = new RemoteIdentity(
+					remoteID.getRemoteID(),
+					new RemoteIdentityDetails(
+							remoteID.getDetails().getUsername(),
+							remoteID.getDetails().getFullname(),
+							remoteID.getDetails().getEmail(),
+							MfaStatus.UNKNOWN));
+			b.withIdentity(updatedIdentity);
 			user = b.build();
 			updateIdentity(remoteID);
 		}
@@ -1597,14 +1605,16 @@ public class MongoStorage implements AuthStorage {
 	private void updateIdentity(final RemoteIdentity remoteID)
 			throws AuthStorageException {
 		final Document query = makeUserQuery(remoteID);
-		
+
 		final String pre = Fields.USER_IDENTITIES + ".$.";
 		final RemoteIdentityDetails rid = remoteID.getDetails();
+		// Note: MFA status is intentionally NOT persisted to identity documents.
+		// MFA is session-only data that flows through to token creation and is stored on tokens.
+		// When identities are loaded from DB, MFA will always be UNKNOWN.
 		final Document update = new Document("$set",
 				new Document(pre + Fields.IDENTITIES_USER, rid.getUsername())
 				.append(pre + Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(pre + Fields.IDENTITIES_MFA, rid.getMfa().name()));
+				.append(pre + Fields.IDENTITIES_NAME, rid.getFullname()));
 		try {
 			// id might have been unlinked, so we just assume
 			// the update worked. If it was just unlinked we don't care.
@@ -1737,8 +1747,7 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.IDENTITIES_PROV_ID, id.getRemoteID().getProviderIdentityId())
 				.append(Fields.IDENTITIES_USER, rid.getUsername())
 				.append(Fields.IDENTITIES_NAME, rid.getFullname())
-				.append(Fields.IDENTITIES_EMAIL, rid.getEmail())
-				.append(Fields.IDENTITIES_MFA, rid.getMfa().name());
+				.append(Fields.IDENTITIES_EMAIL, rid.getEmail());
 	}
 	
 	@Override
@@ -1795,11 +1804,13 @@ public class MongoStorage implements AuthStorage {
 			final RemoteIdentityID rid = new RemoteIdentityID(
 					i.getString(Fields.IDENTITIES_PROVIDER),
 					i.getString(Fields.IDENTITIES_PROV_ID));
+			// MFA is never persisted on identities - it's session-only data stored on tokens.
+			// Identities loaded from DB always have MFA status of UNKNOWN.
 			final RemoteIdentityDetails det = new RemoteIdentityDetails(
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL),
-					getMfaStatus(i.getString(Fields.IDENTITIES_MFA)));
+					MfaStatus.UNKNOWN);
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;
