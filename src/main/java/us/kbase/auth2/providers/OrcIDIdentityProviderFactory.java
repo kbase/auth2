@@ -334,10 +334,9 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			}
 			final String idToken = (String) m.get("id_token");
 			final MfaStatus mfaStatus = parseAmrClaim(idToken);
-			final String fullName = (String) m.get("name");
 			return new OrcIDAccessTokenResponse(
 					(String) m.get("access_token"),
-					fullName != null ? fullName : "",
+					(String) m.get("name"),
 					(String) m.get("orcid"),
 					idToken,
 					mfaStatus);
