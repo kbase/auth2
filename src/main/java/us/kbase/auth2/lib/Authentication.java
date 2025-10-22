@@ -749,8 +749,11 @@ public class Authentication {
 		return login(userName, tokenCtx, MfaStatus.UNKNOWN);
 	}
 	
-	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx, 
-			final MfaStatus mfa) throws AuthStorageException {
+	private NewToken login(
+			final UserName userName,
+			final TokenCreationContext tokenCtx, 
+			final MfaStatus mfa
+			) throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, randGen.randomUUID(), userName)
 			.withLifeTime(clock.instant(),
