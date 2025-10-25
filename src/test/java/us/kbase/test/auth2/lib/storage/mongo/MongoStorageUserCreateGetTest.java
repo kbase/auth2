@@ -668,4 +668,32 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		assertThat("incorrect is disabled", u.isDisabled(), is(false));
 		assertThat("incorrect is local", u.isLocal(), is(false));
 	}
+
+	@Test
+	public void getUserByRemoteIdWithoutMfaField() throws Exception {
+		/* Tests backwards compatibility with old identity documents that don't have an MFA field
+		 * in the db.
+		 */
+		storage.createUser(NewUser.getBuilder(
+				new UserName("olduser"), UID, new DisplayName("Old User"), NOW, REMOTE1)
+				.withEmailAddress(new EmailAddress("old@example.com"))
+				.build());
+
+		// Remove the MFA field from identity to simulate old database records
+		db.getCollection("users").updateOne(
+				new Document("user", "olduser"),
+				new Document("$unset", new Document("idents.mfa", "")));
+
+		final AuthUser u = storage.getUser(REMOTE1).get();
+
+		// When MFA field is missing, it should default to UNKNOWN
+		final RemoteIdentity expectedIdentity = new RemoteIdentity(
+				new RemoteIdentityID("prov", "bar1"),
+				new RemoteIdentityDetails("user1", "full1", "email1", MfaStatus.Unknown));
+
+		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
+		assertThat("incorrect username", u.getUserName(), is(new UserName("olduser")));
+		assertThat("incorrect display name", u.getDisplayName(), is(new DisplayName("Old User")));
+		assertThat("incorrect email", u.getEmail(), is(new EmailAddress("old@example.com")));
+	}
 }
