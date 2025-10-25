@@ -123,15 +123,26 @@ public class TestMode {
 		public final String userName;
 		public final String tokenName;
 		public final String tokenType;
+		public final String mfa;
+
+		// Backwards compatible constructor for tests
+		public CreateTestToken(
+				final String userName,
+				final String tokenName,
+				final String tokenType) {
+			this(userName, tokenName, tokenType, null);
+		}
 
 		@JsonCreator
 		public CreateTestToken(
 				@JsonProperty(Fields.USER) final String userName,
 				@JsonProperty(Fields.TOKEN_NAME) final String tokenName,
-				@JsonProperty(Fields.TOKEN_TYPE) final String tokenType) {
+				@JsonProperty(Fields.TOKEN_TYPE) final String tokenType,
+				@JsonProperty("mfa") final String mfa) {
 			this.userName = userName;
 			this.tokenName = tokenName;
 			this.tokenType = tokenType;
+			this.mfa = mfa;
 		}
 	}
 	
@@ -164,13 +175,26 @@ public class TestMode {
 		return new NewAPIToken(auth.testModeCreateToken(
 				new UserName(create.userName),
 				create.tokenName == null ? null : new TokenName(create.tokenName),
-				getTokenType(create.tokenType)),
+				getTokenType(create.tokenType),
+				getMfaStatus(create.mfa)),
 				auth.getSuggestedTokenCacheTime());
 	}
 
 	private TokenType getTokenType(final String tokenType) throws IllegalParameterException {
 		try {
 			return TokenType.getType(tokenType);
+		} catch (IllegalArgumentException e) {
+			throw new IllegalParameterException(e.getMessage(), e);
+		}
+	}
+
+	private us.kbase.auth2.lib.identity.MfaStatus getMfaStatus(final String mfa)
+			throws IllegalParameterException {
+		if (mfa == null) {
+			return us.kbase.auth2.lib.identity.MfaStatus.Unknown;
+		}
+		try {
+			return us.kbase.auth2.lib.identity.MfaStatus.fromID(mfa);
 		} catch (IllegalArgumentException e) {
 			throw new IllegalParameterException(e.getMessage(), e);
 		}

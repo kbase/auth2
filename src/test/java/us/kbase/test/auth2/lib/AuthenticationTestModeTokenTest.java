@@ -28,6 +28,7 @@ import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
@@ -71,7 +72,7 @@ public class AuthenticationTestModeTokenTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");
 		
-		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT);
+		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT, MfaStatus.Unknown);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.AGENT, id, new UserName("foo"))
@@ -107,7 +108,7 @@ public class AuthenticationTestModeTokenTest {
 		when(rand.getToken()).thenReturn("whee");
 		
 		final NewToken nt = auth.testModeCreateToken(
-				new UserName("foo"), new TokenName("tok"), TokenType.SERV);
+				new UserName("foo"), new TokenName("tok"), TokenType.SERV, MfaStatus.Unknown);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.SERV, id, new UserName("foo"))
@@ -160,7 +161,7 @@ public class AuthenticationTestModeTokenTest {
 			final TokenType tokenType,
 			final Exception expected) {
 		try {
-			auth.testModeCreateToken(userName, null, tokenType);
+			auth.testModeCreateToken(userName, null, tokenType, MfaStatus.Unknown);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

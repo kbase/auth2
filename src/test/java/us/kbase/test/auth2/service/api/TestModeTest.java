@@ -45,6 +45,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -314,7 +315,7 @@ public class TestModeTest {
 		
 		final UUID uuid = UUID.randomUUID();
 		
-		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV))
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.Unknown))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
@@ -341,7 +342,7 @@ public class TestModeTest {
 		
 		final UUID uuid = UUID.randomUUID();
 		
-		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT))
+		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT, MfaStatus.Unknown))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.AGENT, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))

@@ -2044,16 +2044,19 @@ public class Authentication {
 	public NewToken testModeCreateToken(
 			final UserName userName,
 			final TokenName tokenName,
-			final TokenType tokenType)
+			final TokenType tokenType,
+			final us.kbase.auth2.lib.identity.MfaStatus mfa)
 			throws TestModeException, AuthStorageException, NoSuchUserException {
 		ensureTestMode();
 		requireNonNull(userName, "userName");
 		requireNonNull(tokenType, "tokenType");
+		requireNonNull(mfa, "mfa");
 		storage.testModeGetUser(userName); // ensure user exists
 		final UUID id = randGen.randomUUID();
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
 				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
 				.withNullableTokenName(tokenName)
+				.withMfa(mfa)
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
