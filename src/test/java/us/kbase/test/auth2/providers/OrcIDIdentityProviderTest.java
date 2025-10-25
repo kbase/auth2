@@ -424,7 +424,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "email7", MfaStatus.UNKNOWN)));
+				new RemoteIdentityDetails(orcID, "My name", "email7", MfaStatus.Unknown)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -492,7 +492,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, null, "email4", MfaStatus.UNKNOWN)));
+				new RemoteIdentityDetails(orcID, null, "email4", MfaStatus.Unknown)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -512,7 +512,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "mfa@test.com", MfaStatus.USED)));
+				new RemoteIdentityDetails(orcID, "My name", "mfa@test.com", MfaStatus.Used)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -532,7 +532,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "nomfa@test.com", MfaStatus.NOT_USED)));
+				new RemoteIdentityDetails(orcID, "My name", "nomfa@test.com", MfaStatus.NotUsed)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -553,7 +553,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "nojwt@test.com", MfaStatus.UNKNOWN)));
+				new RemoteIdentityDetails(orcID, "My name", "nojwt@test.com", MfaStatus.Unknown)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 
@@ -595,7 +595,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", MfaStatus.USED)));
+				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", MfaStatus.Used)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -844,7 +844,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "emptyamr@test.com", MfaStatus.NOT_USED)));
+				new RemoteIdentityDetails(orcID, "My name", "emptyamr@test.com", MfaStatus.NotUsed)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -864,7 +864,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "noamr@test.com", MfaStatus.UNKNOWN)));
+				new RemoteIdentityDetails(orcID, "My name", "noamr@test.com", MfaStatus.Unknown)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	

@@ -746,7 +746,7 @@ public class Authentication {
 	
 	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
 			throws AuthStorageException {
-		return login(userName, tokenCtx, MfaStatus.UNKNOWN);
+		return login(userName, tokenCtx, MfaStatus.Unknown);
 	}
 	
 	private NewToken login(

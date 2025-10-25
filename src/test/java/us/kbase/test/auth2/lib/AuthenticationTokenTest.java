@@ -1186,6 +1186,5 @@ public class AuthenticationTokenTest {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
 		}
 	}
-	
-	
+
 }

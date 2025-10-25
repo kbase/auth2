@@ -54,9 +54,9 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 *
 	 * Multi-Factor Authentication (MFA) Status Handling:
 	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
-	 * - Missing JWT (non-member accounts): defaults to MfaStatus.UNKNOWN
+	 * - Missing JWT (non-member accounts): defaults to MfaStatus.Unknown
 	 * - Malformed JWT during login: throws IdentityRetrievalException
-	 * - Valid JWT with AMR claim: returns MfaStatus.USED or MfaStatus.NOT_USED based on "mfa" presence
+	 * - Valid JWT with AMR claim: returns MfaStatus.Used or MfaStatus.NotUsed based on "mfa" presence
 	 *
 	 * @author gaprice@lbl.gov
 	 *
@@ -230,7 +230,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			if (jwt == null || jwt.trim().isEmpty()) {
 				// Missing JWT is expected for non-member ORCID accounts without OpenID Connect scope
 				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).debug("No JWT token provided by ORCID - defaulting MFA status to UNKNOWN");
-				return MfaStatus.UNKNOWN;
+				return MfaStatus.Unknown;
 			}
 			
 			try {
@@ -251,15 +251,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				final Object amrClaim = claims.get("amr");
 				if (amrClaim == null) {
 					// No AMR claim present - MFA status unknown
-					return MfaStatus.UNKNOWN;
+					return MfaStatus.Unknown;
 				} else if (amrClaim instanceof List) {
 					// OpenID Connect spec: AMR should be an array of strings
 					@SuppressWarnings("unchecked")
 					final List<String> amrList = (List<String>) amrClaim;
-					return amrList.contains("mfa") ? MfaStatus.USED : MfaStatus.NOT_USED;
+					return amrList.contains("mfa") ? MfaStatus.Used : MfaStatus.NotUsed;
 				} else if (amrClaim instanceof String) {
 					// ORCID may return single string - handle as fallback
-					return "mfa".equals(amrClaim) ? MfaStatus.USED : MfaStatus.NOT_USED;
+					return "mfa".equals(amrClaim) ? MfaStatus.Used : MfaStatus.NotUsed;
 				}
 				
 				// AMR claim present but in unexpected format

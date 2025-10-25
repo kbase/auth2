@@ -42,7 +42,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 					.withCustomContext("k1", "v1")
 					.withCustomContext("k2", "v2")
 					.build())
-			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NOT_USED)
+			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NotUsed)
 			.withTokenName(new TokenName("foo")).build();
 		storage.storeToken(store, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 
@@ -57,7 +57,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 					.withCustomContext("k1", "v1")
 					.withCustomContext("k2", "v2")
 					.build())
-			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NOT_USED)
+			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NotUsed)
 			.withTokenName(new TokenName("foo")).build();
 		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
 		assertThat("incorrect token", st, is(expected));

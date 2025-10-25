@@ -31,7 +31,7 @@ public class ExternalToken {
 		created = storedToken.getCreationDate().toEpochMilli();
 		custom = storedToken.getContext().getCustomContext();
 		// For backwards compatibility, default to UNKNOWN if mfa is null
-		mfa = storedToken.getMfa() != null ? storedToken.getMfa() : MfaStatus.UNKNOWN;
+		mfa = storedToken.getMfa() != null ? storedToken.getMfa() : MfaStatus.Unknown;
 	}
 
 	public String getType() {

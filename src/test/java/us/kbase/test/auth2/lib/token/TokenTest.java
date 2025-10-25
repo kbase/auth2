@@ -175,7 +175,7 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(5000)));
 		assertThat("incorrect context", ht.getContext(),
 				is(TokenCreationContext.getBuilder().build()));
-		assertThat("incorrect default mfa status", ht.getMfa(), is(us.kbase.auth2.lib.identity.MfaStatus.UNKNOWN));
+		assertThat("incorrect default mfa status", ht.getMfa(), is(us.kbase.auth2.lib.identity.MfaStatus.Unknown));
 	}
 	
 	@Test
@@ -184,7 +184,7 @@ public class TokenTest {
 		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("whee2"))
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
-				.withMfa(us.kbase.auth2.lib.identity.MfaStatus.USED)
+				.withMfa(us.kbase.auth2.lib.identity.MfaStatus.Used)
 				.withTokenName(new TokenName("ugh")).build();
 		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
 		assertThat("incorrect token name", ht2.getTokenName(),
@@ -197,7 +197,7 @@ public class TokenTest {
 				is(Instant.ofEpochMilli(42000)));
 		assertThat("incorrect context", ht2.getContext(),
 				is(TokenCreationContext.getBuilder().withNullableDevice("d").build()));
-		assertThat("incorrect mfa status", ht2.getMfa(), is(us.kbase.auth2.lib.identity.MfaStatus.USED));
+		assertThat("incorrect mfa status", ht2.getMfa(), is(us.kbase.auth2.lib.identity.MfaStatus.Used));
 	}
 	
 	@Test

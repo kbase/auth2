@@ -571,7 +571,7 @@ public class MongoStorage implements AuthStorage {
 	
 	private MfaStatus getMfaStatus(final String mfaString) {
 		// for backwards compatibility with versions of auth older than 0.7.2
-		return mfaString != null ? MfaStatus.valueOf(mfaString) : MfaStatus.UNKNOWN;
+		return mfaString != null ? MfaStatus.fromID(mfaString) : MfaStatus.Unknown;
 	}
 	
 	private EmailAddress getEmail(final String email) throws AuthStorageException {
@@ -1590,7 +1590,7 @@ public class MongoStorage implements AuthStorage {
 							remoteID.getDetails().getUsername(),
 							remoteID.getDetails().getFullname(),
 							remoteID.getDetails().getEmail(),
-							MfaStatus.UNKNOWN));
+							MfaStatus.Unknown));
 			b.withIdentity(updatedIdentity);
 			user = b.build();
 			updateIdentity(remoteID);
@@ -1811,7 +1811,7 @@ public class MongoStorage implements AuthStorage {
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
 					i.getString(Fields.IDENTITIES_EMAIL),
-					MfaStatus.UNKNOWN);
+					MfaStatus.Unknown);
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;

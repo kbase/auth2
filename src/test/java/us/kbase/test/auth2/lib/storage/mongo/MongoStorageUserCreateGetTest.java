@@ -61,15 +61,15 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 	
 	private static final RemoteIdentity REMOTE_MFA_TRUE = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-5678"),
-			new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.USED));
+			new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.Used));
 	
 	private static final RemoteIdentity REMOTE_MFA_FALSE = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-9999"),
-			new RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", MfaStatus.NOT_USED));
+			new RemoteIdentityDetails("orciduser2", "ORCID User 2", "orcid2@example.com", MfaStatus.NotUsed));
 	
 	private static final RemoteIdentity REMOTE_MFA_NULL = new RemoteIdentity(
 			new RemoteIdentityID("orcid", "0000-0001-1234-0000"),
-			new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", MfaStatus.UNKNOWN));
+			new RemoteIdentityDetails("orciduser3", "ORCID User 3", "orcid3@example.com", MfaStatus.Unknown));
 
 	@Test
 	public void createGetLocalUserMinimal() throws Exception {
@@ -639,7 +639,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 						remoteIdentity.getDetails().getUsername(),
 						remoteIdentity.getDetails().getFullname(),
 						remoteIdentity.getDetails().getEmail(),
-						MfaStatus.UNKNOWN));
+						MfaStatus.Unknown));
 
 		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
 		assertThat("incorrect username", u.getUserName(), is(new UserName(userName)));
@@ -659,7 +659,7 @@ public class MongoStorageUserCreateGetTest extends MongoStorageTester {
 		// MFA is not persisted on identities - when loaded from DB, it will always be UNKNOWN
 		final RemoteIdentity expectedIdentity = new RemoteIdentity(
 				new RemoteIdentityID("orcid", "0000-0001-1234-5678"),
-				new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.UNKNOWN));
+				new RemoteIdentityDetails("orciduser", "ORCID User", "orcid@example.com", MfaStatus.Unknown));
 
 		assertThat("incorrect identities", u.getIdentities(), is(set(expectedIdentity)));
 		assertThat("incorrect username", u.getUserName(), is(new UserName("mfauser")));

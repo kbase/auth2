@@ -175,7 +175,7 @@ public class TokenEndpointTest {
 				.with("user", "foo")
 				.with("custom", ImmutableMap.of("whee", "whoo"))
 				.with("cachefor", 300000)
-				.with("mfa", MfaStatus.UNKNOWN.toString())
+				.with("mfa", MfaStatus.Unknown.toString())
 				.build();
 		
 		assertThat("incorrect token", response, is(expected));
@@ -202,14 +202,14 @@ public class TokenEndpointTest {
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token1Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfa(MfaStatus.USED)
+				.withMfa(MfaStatus.Used)
 				.build(), token1.getHashedToken().getTokenHash());
 		
 		// Token 2 with MFA=false
 		manager.storage.storeToken(StoredToken.getBuilder(
 				TokenType.LOGIN, token2Id, userName)
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(1000000000000000L))
-				.withMfa(MfaStatus.NOT_USED)
+				.withMfa(MfaStatus.NotUsed)
 				.build(), token2.getHashedToken().getTokenHash());
 		
 		// Test token1 returns MFA=true
@@ -221,7 +221,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token1", res1.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response1 = res1.readEntity(Map.class);
-		assertThat("token1 should have MFA=true", response1.get("mfa"), is(MfaStatus.USED.toString()));
+		assertThat("token1 should have MFA=true", response1.get("mfa"), is(MfaStatus.Used.toString()));
 		
 		// Test token2 returns MFA=false
 		final URI target2 = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -232,7 +232,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token2", res2.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NOT_USED.toString()));
+		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NotUsed.toString()));
 	}
 	
 	@Test
@@ -666,19 +666,19 @@ public class TokenEndpointTest {
 	@Test
 	public void getTokenWithMfaTrue() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("mfauser", "MFA User", "mfa@example.com", 
-				"mfatoken", "mfatokenvalue", MfaStatus.USED);
+				"mfatoken", "mfatokenvalue", MfaStatus.Used);
 	}
 	
 	@Test
 	public void getTokenWithMfaFalse() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("nomfauser", "No MFA User", "nomfa@example.com", 
-				"nomfatoken", "nomfatokenvalue", MfaStatus.NOT_USED);
+				"nomfatoken", "nomfatokenvalue", MfaStatus.NotUsed);
 	}
 	
 	@Test
 	public void getTokenWithMfaNull() throws Exception {
 		testTokenEndpointReturnsMfaAuthenticatedField("unknownmfauser", "Unknown MFA User", "unknownmfa@example.com", 
-				"unknownmfatoken", "unknownmfatokenvalue", MfaStatus.UNKNOWN);
+				"unknownmfatoken", "unknownmfatokenvalue", MfaStatus.Unknown);
 	}
 	
 	private void testTokenEndpointReturnsMfaAuthenticatedField(final String userName, final String displayName, 
