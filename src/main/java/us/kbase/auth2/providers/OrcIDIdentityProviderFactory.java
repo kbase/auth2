@@ -233,47 +233,51 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				return MfaStatus.Unknown;
 			}
 			
+			// JWT format: header.payload.signature
+			final String[] parts = jwt.split("\\.");
+			if (parts.length != 3) {
+				// Invalid JWT format
+				throw new IdentityRetrievalException("Invalid JWT format from ORCID: expected 3 parts, got " + parts.length);
+			}
+
+			// Decode the payload (second part) - URL-safe base64
+			final String payload;
 			try {
-				// JWT format: header.payload.signature
-				final String[] parts = jwt.split("\\.");
-				if (parts.length != 3) {
-					// Invalid JWT format
-					throw new IdentityRetrievalException("Invalid JWT format from ORCID: expected 3 parts, got " + parts.length);
-				}
-				
-				// Decode the payload (second part) - URL-safe base64
-				final String payload = new String(Base64.getUrlDecoder().decode(parts[1]));
-				
-				// Parse JSON payload to extract claims
-				@SuppressWarnings("unchecked")
-				final Map<String, Object> claims = MAPPER.readValue(payload, Map.class);
-				
-				final Object amrClaim = claims.get("amr");
-				if (amrClaim == null) {
-					// No AMR claim present - MFA status unknown
-					return MfaStatus.Unknown;
-				} else if (amrClaim instanceof List) {
-					// OpenID Connect spec: AMR should be an array of strings
-					@SuppressWarnings("unchecked")
-					final List<String> amrList = (List<String>) amrClaim;
-					return amrList.contains("mfa") ? MfaStatus.Used : MfaStatus.NotUsed;
-				} else if (amrClaim instanceof String) {
-					// ORCID may return single string - handle as fallback
-					return "mfa".equals(amrClaim) ? MfaStatus.Used : MfaStatus.NotUsed;
-				}
-				
-				// AMR claim present but in unexpected format
-				throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
-				
+				payload = new String(Base64.getUrlDecoder().decode(parts[1]));
 			} catch (IllegalArgumentException e) {
 				// Base64 decoding failed - invalid JWT format
 				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).warn("Unable to decode JWT from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
+			}
+
+			// Parse JSON payload to extract claims
+			final Map<String, Object> claims;
+			try {
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> parsedClaims = MAPPER.readValue(payload, Map.class);
+				claims = parsedClaims;
 			} catch (IOException e) {
 				// JSON parsing failed - malformed payload
 				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).warn("Unable to parse JWT payload from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
 			}
+
+			final Object amrClaim = claims.get("amr");
+			if (amrClaim == null) {
+				// No AMR claim present - MFA status unknown
+				return MfaStatus.Unknown;
+			} else if (amrClaim instanceof List) {
+				// OpenID Connect spec: AMR should be an array of strings
+				@SuppressWarnings("unchecked")
+				final List<String> amrList = (List<String>) amrClaim;
+				return amrList.contains("mfa") ? MfaStatus.Used : MfaStatus.NotUsed;
+			} else if (amrClaim instanceof String) {
+				// ORCID may return single string - handle as fallback
+				return "mfa".equals(amrClaim) ? MfaStatus.Used : MfaStatus.NotUsed;
+			}
+
+			// AMR claim present but in unexpected format
+			throw new IdentityRetrievalException("AMR claim from ORCID in unexpected format: " + amrClaim);
 		}
 	
 		private static class OrcIDAccessTokenResponse {
