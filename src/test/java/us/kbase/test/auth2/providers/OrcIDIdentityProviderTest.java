@@ -372,7 +372,7 @@ public class OrcIDIdentityProviderTest {
 				"Got unexpected HTTP code with no error in " +
 				"the response body from OrcID service: 500."));
 		
-		setUpCallAuthToken(authCode, authtoken, redir, cliid, clisec, "my name", orcID);
+		setUpCallAuthTokenWithJWT(authCode, authtoken, redir, cliid, clisec, "my name", orcID, createJWTWithoutAmr(orcID));
 		setupCallID(authtoken, orcID, APP_JSON, 401, MAPPER.writeValueAsString(
 				map("error", "whee!", "error_description", "whoo!")));
 		failGetIdentities(idp, authCode, "pkce", false, new IdentityRetrievalException(
@@ -539,7 +539,17 @@ public class OrcIDIdentityProviderTest {
 	@Test
 	public void getIdentityWithNoJWT() throws Exception {
 		final String authCode = "authcodeNoJWT";
-		final IdentityProviderConfig idconfig = getTestIDConfig();
+		// Configure with MFA checking disabled for non-member ORCID accounts
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
+				OrcIDIdentityProviderFactory.class.getName(),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				"ofoo",
+				"obar",
+				new URL("https://ologinredir.com"),
+				new URL("https://olinkredir.com"))
+				.withCustomConfiguration("orcid-mfa-enabled", "false")
+				.build();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 
@@ -548,7 +558,7 @@ public class OrcIDIdentityProviderTest {
 		setupCallID("footoken5", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "nojwt@test.com")))));
 
-		// Missing JWT from non-member ORCID accounts should default to UNKNOWN MFA status
+		// MFA checking disabled - no JWT expected, MFA status should be UNKNOWN
 		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
 		assertThat("incorrect number of idents", rids.size(), is(1));
 		final Set<RemoteIdentity> expected = new HashSet<>();

@@ -54,26 +54,29 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 *
 	 * Multi-Factor Authentication (MFA) Status Handling:
 	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
-	 * - Missing JWT (non-member accounts): defaults to MfaStatus.Unknown
-	 * - Malformed JWT during login: throws IdentityRetrievalException
+	 * - Configuration option "orcid-mfa-enabled" (default: true):
+	 *   - true: Requires OpenID scope, throws error on malformed JWT
+	 *   - false: Skips MFA check, returns MfaStatus.Unknown (for non-member API apps)
 	 * - Valid JWT with AMR claim: returns MfaStatus.Used or MfaStatus.NotUsed based on "mfa" presence
 	 *
 	 * @author gaprice@lbl.gov
 	 *
 	 */
 	public static class OrcIDIdentityProvider implements IdentityProvider {
-		
+
 		// notes: I haven't been able to find documentation re the OrcID error structure, so I've
 		// reversed engineered it by passing bad input. Hopefully what I've got covers all the
 		// possibilities.
-	
+
 		/* Get creds: https://sandbox.orcid.org/developer-tools */
-		
+
 		private static final String NAME = "OrcID";
-		private static final String SCOPE = "openid /authenticate";
+		private static final String SCOPE_OPENID = "openid /authenticate";
+		private static final String SCOPE_NO_OPENID = "/authenticate";
 		private static final String LOGIN_PATH = "/oauth/authorize";
 		private static final String TOKEN_PATH = "/oauth/token";
 		private static final String RECORD_PATH = "/v2.1";
+		private static final String CFG_MFA_ENABLED = "orcid-mfa-enabled";
 		
 		//thread safe
 		private static final Client CLI = ClientBuilder.newClient();
@@ -116,9 +119,13 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				throws NoSuchEnvironmentException {
 			// note that OrcID does not currently implement PKCE so we ignore the code
 			// challenge: https://github.com/ORCID/ORCID-Source/issues/5977
+			final boolean mfaEnabled = Boolean.parseBoolean(
+					cfg.getCustomConfiguation().getOrDefault(CFG_MFA_ENABLED, "true"));
+			final String scope = mfaEnabled ? SCOPE_OPENID : SCOPE_NO_OPENID;
+
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
-					.queryParam("scope", SCOPE)
+					.queryParam("scope", scope)
 					.queryParam("state", state)
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
@@ -222,15 +229,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
 		 * to determine if multi-factor authentication was used.
 		 *
-		 * @param jwt the JWT ID token from ORCID (may be null/empty for non-member accounts)
-		 * @return MfaStatus indicating whether MFA was used, UNKNOWN if JWT is missing
-		 * @throws IdentityRetrievalException if JWT is present but malformed or unparseable
+		 * @param jwt the JWT ID token from ORCID
+		 * @return MfaStatus indicating whether MFA was used
+		 * @throws IdentityRetrievalException if JWT is missing, malformed, or unparseable
 		 */
-		private static MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
+		private MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
 			if (jwt == null || jwt.trim().isEmpty()) {
-				// Missing JWT is expected for non-member ORCID accounts without OpenID Connect scope
-				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).debug("No JWT token provided by ORCID - defaulting MFA status to UNKNOWN");
-				return MfaStatus.Unknown;
+				throw new IdentityRetrievalException(
+						"No JWT token provided by ORCID. For non-member API applications, " +
+						"set orcid-mfa-enabled=false in provider configuration");
 			}
 			
 			// JWT format: header.payload.signature
@@ -333,8 +340,20 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IdentityRetrievalException("Authtoken retrieval failed: " +
 						msg[msg.length - 1].trim());
 			}
-			final String idToken = (String) m.get("id_token");
-			final MfaStatus mfaStatus = parseAmrClaim(idToken);
+
+			// Determine MFA status based on configuration
+			final boolean mfaEnabled = Boolean.parseBoolean(
+					cfg.getCustomConfiguation().getOrDefault(CFG_MFA_ENABLED, "true"));
+			final MfaStatus mfaStatus;
+			if (!mfaEnabled) {
+				// MFA checking disabled - no OpenID scope, so no id_token expected
+				mfaStatus = MfaStatus.Unknown;
+			} else {
+				// MFA checking enabled - parse JWT from id_token
+				final String idToken = (String) m.get("id_token");
+				mfaStatus = parseAmrClaim(idToken);
+			}
+
 			return new OrcIDAccessTokenResponse(
 					(String) m.get("access_token"),
 					(String) m.get("name"),
