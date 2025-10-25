@@ -751,9 +751,9 @@ public class Authentication {
 	
 	private NewToken login(
 			final UserName userName,
-			final TokenCreationContext tokenCtx, 
+			final TokenCreationContext tokenCtx,
 			final MfaStatus mfa
-			) throws AuthStorageException {
+	) throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 				TokenType.LOGIN, randGen.randomUUID(), userName)
 			.withLifeTime(clock.instant(),
@@ -3153,8 +3153,7 @@ public class Authentication {
 	public long getSuggestedTokenCacheTime() throws AuthStorageException {
 		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
-	
-	
+
 	/** Get the external configuration without providing any credentials.
 	 * 
 	 * This method should not be exposed in a public API.

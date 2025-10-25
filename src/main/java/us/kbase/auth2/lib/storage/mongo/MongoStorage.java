@@ -570,6 +570,7 @@ public class MongoStorage implements AuthStorage {
 	}
 	
 	private MfaStatus getMfaStatus(final String mfaString) {
+		// for backwards compatibility with versions of auth older than 0.7.2
 		return mfaString != null ? MfaStatus.valueOf(mfaString) : MfaStatus.UNKNOWN;
 	}
 	

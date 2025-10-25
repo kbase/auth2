@@ -55,7 +55,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 * Multi-Factor Authentication (MFA) Status Handling:
 	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
 	 * - Missing JWT (non-member accounts): defaults to MfaStatus.UNKNOWN
-	 * - Malformed JWT during login: logs warning and defaults to MfaStatus.UNKNOWN for graceful degradation
+	 * - Malformed JWT during login: throws IdentityRetrievalException
 	 * - Valid JWT with AMR claim: returns MfaStatus.USED or MfaStatus.NOT_USED based on "mfa" presence
 	 *
 	 * @author gaprice@lbl.gov
@@ -77,10 +77,9 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		
 		//thread safe
 		private static final Client CLI = ClientBuilder.newClient();
-		
+
 		private static final ObjectMapper MAPPER = new ObjectMapper();
-		private static final org.slf4j.Logger LOGGER = LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class);
-		
+
 		private final IdentityProviderConfig cfg;
 		
 		/** Create an identity provider for OrcID.
@@ -224,12 +223,13 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		 * to determine if multi-factor authentication was used.
 		 *
 		 * @param jwt the JWT ID token from ORCID (may be null/empty for non-member accounts)
-		 * @return MfaStatus indicating whether MFA was used, UNKNOWN if JWT is missing or unparseable
+		 * @return MfaStatus indicating whether MFA was used, UNKNOWN if JWT is missing
+		 * @throws IdentityRetrievalException if JWT is present but malformed or unparseable
 		 */
 		private static MfaStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
 			if (jwt == null || jwt.trim().isEmpty()) {
 				// Missing JWT is expected for non-member ORCID accounts without OpenID Connect scope
-				LOGGER.debug("No JWT token provided by ORCID - defaulting MFA status to UNKNOWN");
+				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).debug("No JWT token provided by ORCID - defaulting MFA status to UNKNOWN");
 				return MfaStatus.UNKNOWN;
 			}
 			
@@ -267,11 +267,11 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				
 			} catch (IllegalArgumentException e) {
 				// Base64 decoding failed - invalid JWT format
-				LOGGER.warn("Unable to decode JWT from ORCID: {}", e.getMessage());
+				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).warn("Unable to decode JWT from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to decode JWT from ORCID: " + e.getMessage(), e);
 			} catch (IOException e) {
 				// JSON parsing failed - malformed payload
-				LOGGER.warn("Unable to parse JWT payload from ORCID: {}", e.getMessage());
+				LoggerFactory.getLogger(OrcIDIdentityProviderFactory.class).warn("Unable to parse JWT payload from ORCID: {}", e.getMessage());
 				throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID: " + e.getMessage(), e);
 			}
 		}
@@ -281,14 +281,12 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String accessToken;
 			private final String fullName;
 			private final String orcID;
-			private final String jwt;
 			private final MfaStatus mfa;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
 					final String fullName,
 					final String orcID,
-					final String jwt,
 					final MfaStatus mfa)
 					throws IdentityRetrievalException {
 				if (accessToken == null || accessToken.trim().isEmpty()) {
@@ -302,7 +300,6 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.accessToken = accessToken.trim();
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
-				this.jwt = jwt == null ? null : jwt.trim();
 				this.mfa = mfa;
 			}
 		}
@@ -338,7 +335,6 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 					(String) m.get("access_token"),
 					(String) m.get("name"),
 					(String) m.get("orcid"),
-					idToken,
 					mfaStatus);
 		}
 	

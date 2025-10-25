@@ -116,7 +116,7 @@ public class StoredToken {
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		result = prime * result + ((mfa == null) ? 0 : mfa.name().hashCode());
+		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
 		return result;
 	}
 
