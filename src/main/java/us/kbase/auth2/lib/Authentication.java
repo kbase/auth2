@@ -3154,9 +3154,8 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system. 
 	 */
 	public long getSuggestedTokenCacheTime() throws AuthStorageException {
-		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
-
+	
 	/** Get the external configuration without providing any credentials.
 	 * 
 	 * This method should not be exposed in a public API.
