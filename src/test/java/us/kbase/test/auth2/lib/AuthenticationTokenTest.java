@@ -1184,7 +1184,6 @@ public class AuthenticationTokenTest {
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
-		}
 	}
-
+	
 }
