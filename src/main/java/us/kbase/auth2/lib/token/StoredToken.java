@@ -297,7 +297,7 @@ public class StoredToken {
 
 		@Override
 		public OptionalsStep withMfa(final MfaStatus mfa) {
-			this.mfa = mfa;
+			this.mfa = requireNonNull(mfa, "mfa");
 			return this;
 		}
 
