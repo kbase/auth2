@@ -13,11 +13,11 @@ public enum MfaStatus {
 	 * since that field is stored in the DB.
 	 */
 	/** User authenticated with MFA during token creation. */
-	Used			("Used", "MFA used"),
+	Used			("USED", "MFA used"),
 	/** User explicitly chose not to use MFA when available. */
-	NotUsed			("NotUsed", "MFA not used"),
+	NotUsed			("NOT_USED", "MFA not used"),
 	/** MFA status unknown or not applicable to authentication method. */
-	Unknown			("Unknown", "MFA status unknown");
+	Unknown			("UNKNOWN", "MFA status unknown");
 
 	private static final Map<String, MfaStatus> STATUS_MAP = new HashMap<>();
 	static {

@@ -154,7 +154,7 @@ public class RemoteIdentityDetails {
 		builder.append(", email=");
 		builder.append(email);
 		builder.append(", mfa=");
-		builder.append(mfa);
+		builder.append(mfa == null ? null : mfa.getID());
 		builder.append("]");
 		return builder.toString();
 	}
