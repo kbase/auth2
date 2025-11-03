@@ -7,7 +7,7 @@ package us.kbase.auth2.lib.identity;
  * class is session-only and is never persisted to identity documents in the database. The MFA
  * status is extracted during OAuth callbacks from the identity provider and flows through to
  * token creation, where it is stored on the token itself. When identities are loaded from the
- * database, the MFA status will always be {@link MfaStatus#UNKNOWN} since it is not stored.
+ * database, the MFA status will always be MfaStatus.UNKNOWN since it is not stored.
  * This is by design - MFA status is transient information relevant only to the current
  * authentication session.
  *
