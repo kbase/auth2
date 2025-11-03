@@ -37,7 +37,8 @@ public class TokenTest {
 
 	@Test
 	public void equalsStoredToken() throws Exception {
-		EqualsVerifier.forClass(StoredToken.class).usingGetClass().verify();
+		EqualsVerifier.forClass(StoredToken.class).usingGetClass()
+				.withNonnullFields("mfa").verify();
 	}
 	
 	@Test

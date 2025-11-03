@@ -3,6 +3,8 @@ package us.kbase.auth2.lib.identity;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.fasterxml.jackson.annotation.JsonValue;
+
 /** An enumeration representing the multi-factor authentication status of a user's login.
  * @author dlyon@lbl.gov
  *
@@ -37,6 +39,7 @@ public enum MfaStatus {
 	/** Get the ID of this MFA status.
 	 * @return the ID.
 	 */
+	@JsonValue
 	public String getID() {
 		return id;
 	}

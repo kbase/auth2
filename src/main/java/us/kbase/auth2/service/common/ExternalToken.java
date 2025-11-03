@@ -30,8 +30,7 @@ public class ExternalToken {
 		expires = storedToken.getExpirationDate().toEpochMilli();
 		created = storedToken.getCreationDate().toEpochMilli();
 		custom = storedToken.getContext().getCustomContext();
-		// For backwards compatibility, default to UNKNOWN if mfa is null
-		mfa = storedToken.getMfa() != null ? storedToken.getMfa() : MfaStatus.Unknown;
+		mfa = storedToken.getMfa();
 	}
 
 	public String getType() {
@@ -80,7 +79,7 @@ public class ExternalToken {
 		result = prime * result + ((custom == null) ? 0 : custom.hashCode());
 		result = prime * result + (int) (expires ^ (expires >>> 32));
 		result = prime * result + ((id == null) ? 0 : id.hashCode());
-		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
+		result = prime * result + mfa.hashCode();
 		result = prime * result + ((name == null) ? 0 : name.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((user == null) ? 0 : user.hashCode());
@@ -140,11 +139,7 @@ public class ExternalToken {
 		} else if (!user.equals(other.user)) {
 			return false;
 		}
-		if (mfa == null) {
-			if (other.mfa != null) {
-				return false;
-			}
-		} else if (!mfa.equals(other.mfa)) {
+		if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		return true;

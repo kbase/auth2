@@ -24,7 +24,8 @@ public class ExternalTokenTest {
 	
 	@Test
 	public void equals() {
-		EqualsVerifier.forClass(ExternalToken.class).usingGetClass().verify();
+		EqualsVerifier.forClass(ExternalToken.class).usingGetClass()
+				.withNonnullFields("mfa").verify();
 	}
 	
 	@Test

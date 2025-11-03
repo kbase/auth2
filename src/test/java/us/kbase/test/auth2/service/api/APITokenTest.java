@@ -21,12 +21,14 @@ public class APITokenTest {
 
 	@Test
 	public void apiTokenEquals() {
-		EqualsVerifier.forClass(APIToken.class).usingGetClass().verify();
+		EqualsVerifier.forClass(APIToken.class).usingGetClass()
+				.withNonnullFields("mfa").verify();
 	}
 
 	@Test
 	public void newApiTokenEquals() {
-		EqualsVerifier.forClass(NewAPIToken.class).usingGetClass().verify();
+		EqualsVerifier.forClass(NewAPIToken.class).usingGetClass()
+				.withNonnullFields("mfa").verify();
 	}
 	
 	@Test

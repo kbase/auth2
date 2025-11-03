@@ -116,7 +116,7 @@ public class StoredToken {
 		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
 		result = prime * result + ((type == null) ? 0 : type.hashCode());
 		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		result = prime * result + ((mfa == null) ? 0 : mfa.hashCode());
+		result = prime * result + mfa.hashCode();
 		return result;
 	}
 
@@ -177,11 +177,7 @@ public class StoredToken {
 		} else if (!userName.equals(other.userName)) {
 			return false;
 		}
-		if (mfa == null) {
-			if (other.mfa != null) {
-				return false;
-			}
-		} else if (!mfa.equals(other.mfa)) {
+		if (!mfa.equals(other.mfa)) {
 			return false;
 		}
 		return true;

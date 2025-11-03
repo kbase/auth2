@@ -175,7 +175,7 @@ public class TokenEndpointTest {
 				.with("user", "foo")
 				.with("custom", ImmutableMap.of("whee", "whoo"))
 				.with("cachefor", 300000)
-				.with("mfa", MfaStatus.Unknown.toString())
+				.with("mfa", MfaStatus.Unknown.getID())
 				.build();
 		
 		assertThat("incorrect token", response, is(expected));
@@ -221,7 +221,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token1", res1.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response1 = res1.readEntity(Map.class);
-		assertThat("token1 should have MFA=true", response1.get("mfa"), is(MfaStatus.Used.toString()));
+		assertThat("token1 should have MFA=true", response1.get("mfa"), is(MfaStatus.Used.getID()));
 		
 		// Test token2 returns MFA=false
 		final URI target2 = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -232,7 +232,7 @@ public class TokenEndpointTest {
 		assertThat("incorrect response code for token2", res2.getStatus(), is(200));
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
-		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NotUsed.toString()));
+		assertThat("token2 should have MFA=false", response2.get("mfa"), is(MfaStatus.NotUsed.getID()));
 	}
 	
 	@Test
@@ -717,7 +717,7 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		
-		assertThat("incorrect MFA status", response.get("mfa"), is(mfaStatus.toString()));
+		assertThat("incorrect MFA status", response.get("mfa"), is(mfaStatus.getID()));
 		assertThat("incorrect user", response.get("user"), is(userName));
 		assertThat("incorrect token name", response.get("name"), is(tokenName));
 	}
