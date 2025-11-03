@@ -60,7 +60,7 @@ public class RemoteIdentityDetails {
 		} else {
 			this.email = email.trim();
 		}
-		this.mfa = mfa;
+		this.mfa = requireNonNull(mfa, "mfa");
 	}
 
 	/** Get the user name for the identity.
