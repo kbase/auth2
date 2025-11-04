@@ -201,13 +201,13 @@ public class MeTest {
 						ImmutableMap.of("id", "DevToken", "desc", "Create developer tokens")))
 				.with("idents", Arrays.asList(
 						ImmutableMap.of(
-								"provider", "prov2",
-								"provusername", "user2",
-								"id", "57980b7a3440a4342567e060c3e47666"),
-						ImmutableMap.of(
 								"provider", "prov",
 								"provusername", "user1",
-								"id", "c20a5e632833ab26d99906fc9cb07d6b")))
+								"id", "c20a5e632833ab26d99906fc9cb07d6b"),
+						ImmutableMap.of(
+								"provider", "prov2",
+								"provusername", "user2",
+								"id", "57980b7a3440a4342567e060c3e47666")))
 				.with("policyids", Arrays.asList(
 						ImmutableMap.of("id", "wubba", "agreedon", 50000),
 						ImmutableMap.of("id", "wugga", "agreedon", 40000)))

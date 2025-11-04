@@ -28,14 +28,14 @@ Email is only visible to you, software acting on your behalf, and system adminis
 	<input type="submit" value="Update"/>
 </form>
 <h3>Identities:</h3>
-Provider: prov2<br/>
-User id: user2<br/>
-<form action="unlink/57980b7a3440a4342567e060c3e47666" method="post">
-	<input type="submit" value="Unlink"/>
-</form>
 Provider: prov<br/>
 User id: user1<br/>
 <form action="unlink/c20a5e632833ab26d99906fc9cb07d6b" method="post">
+	<input type="submit" value="Unlink"/>
+</form>
+Provider: prov2<br/>
+User id: user2<br/>
+<form action="unlink/57980b7a3440a4342567e060c3e47666" method="post">
 	<input type="submit" value="Unlink"/>
 </form>
 

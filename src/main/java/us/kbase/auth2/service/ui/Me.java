@@ -120,7 +120,10 @@ public class Me {
 		ret.put(Fields.HAS_ROLES, !roles.isEmpty());
 		final List<Map<String, String>> idents = new LinkedList<>();
 		ret.put(Fields.IDENTITIES, idents);
-		for (final RemoteIdentity ri: u.getIdentities()) {
+		// Sort identities for deterministic ordering
+		for (final RemoteIdentity ri: u.getIdentities().stream()
+				.sorted()
+				.collect(Collectors.toList())) {
 			final Map<String, String> i = new HashMap<>();
 			i.put(Fields.PROVIDER, ri.getRemoteID().getProviderName());
 			i.put(Fields.PROV_USER, ri.getDetails().getUsername());
