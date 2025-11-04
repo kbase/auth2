@@ -140,4 +140,70 @@ public class RemoteIdentityTest {
 			assertThat("incorrect exception message", e.getMessage(), is(exception));
 		}
 	}
+
+	@Test
+	public void compareToSameProviderSameUsername() throws Exception {
+		final RemoteIdentity id1 = new RemoteIdentity(
+				new RemoteIdentityID("google", "123"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+		final RemoteIdentity id2 = new RemoteIdentity(
+				new RemoteIdentityID("google", "456"),
+				new RemoteIdentityDetails("alice", "Alice Smith", "alice@gmail.com"));
+
+		assertThat("should be equal when provider and username match", id1.compareTo(id2), is(0));
+	}
+
+	@Test
+	public void compareToSameProviderDifferentUsername() throws Exception {
+		final RemoteIdentity id1 = new RemoteIdentity(
+				new RemoteIdentityID("google", "123"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+		final RemoteIdentity id2 = new RemoteIdentity(
+				new RemoteIdentityID("google", "456"),
+				new RemoteIdentityDetails("bob", "Bob", "bob@example.com"));
+
+		assertThat("alice should come before bob", id1.compareTo(id2) < 0, is(true));
+		assertThat("bob should come after alice", id2.compareTo(id1) > 0, is(true));
+	}
+
+	@Test
+	public void compareToDifferentProviderSameUsername() throws Exception {
+		final RemoteIdentity id1 = new RemoteIdentity(
+				new RemoteIdentityID("globus", "123"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+		final RemoteIdentity id2 = new RemoteIdentity(
+				new RemoteIdentityID("google", "456"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+
+		assertThat("globus should come before google", id1.compareTo(id2) < 0, is(true));
+		assertThat("google should come after globus", id2.compareTo(id1) > 0, is(true));
+	}
+
+	@Test
+	public void compareToDifferentProviderDifferentUsername() throws Exception {
+		final RemoteIdentity id1 = new RemoteIdentity(
+				new RemoteIdentityID("globus", "123"),
+				new RemoteIdentityDetails("zoe", "Zoe", "zoe@example.com"));
+		final RemoteIdentity id2 = new RemoteIdentity(
+				new RemoteIdentityID("google", "456"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+
+		// Provider takes precedence: globus < google, regardless of username
+		assertThat("globus should come before google", id1.compareTo(id2) < 0, is(true));
+		assertThat("google should come after globus", id2.compareTo(id1) > 0, is(true));
+	}
+
+	@Test
+	public void compareToNullFails() throws Exception {
+		final RemoteIdentity id = new RemoteIdentity(
+				new RemoteIdentityID("google", "123"),
+				new RemoteIdentityDetails("alice", "Alice", "alice@example.com"));
+
+		try {
+			id.compareTo(null);
+			fail("expected NullPointerException");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception msg", e.getMessage(), is("other"));
+		}
+	}
 }
