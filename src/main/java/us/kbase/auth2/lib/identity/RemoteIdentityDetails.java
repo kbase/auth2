@@ -1,5 +1,7 @@
 package us.kbase.auth2.lib.identity;
 
+import static java.util.Objects.requireNonNull;
+
 /** A set of potentially mutable details about a remote identity. The identity provider may
  * change these details at any time.
  *

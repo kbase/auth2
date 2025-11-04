@@ -3151,9 +3151,10 @@ public class Authentication {
 	
 	/** Returns the suggested cache time for tokens in milliseconds.
 	 * @return the suggested cache time.
-	 * @throws AuthStorageException if an error occurred accessing the storage system. 
+	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 */
 	public long getSuggestedTokenCacheTime() throws AuthStorageException {
+		return cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.EXT_CACHE);
 	}
 	
 	/** Get the external configuration without providing any credentials.
