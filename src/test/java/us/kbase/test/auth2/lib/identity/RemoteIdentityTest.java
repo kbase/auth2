@@ -238,4 +238,27 @@ public class RemoteIdentityTest {
 					is("username cannot be null or empty"));
 		}
 	}
+
+	@Test
+	public void mfaStatusGetDescription() throws Exception {
+		assertThat("incorrect Used description", MfaStatus.Used.getDescription(), is("MFA used"));
+		assertThat("incorrect NotUsed description", MfaStatus.NotUsed.getDescription(), is("MFA not used"));
+		assertThat("incorrect Unknown description", MfaStatus.Unknown.getDescription(), is("MFA status unknown"));
+	}
+
+	@Test
+	public void mfaStatusFromIDNullOrEmpty() throws Exception {
+		assertThat("null ID should return Unknown", MfaStatus.fromID(null), is(MfaStatus.Unknown));
+		assertThat("empty string should return Unknown", MfaStatus.fromID(""), is(MfaStatus.Unknown));
+		assertThat("whitespace should return Unknown", MfaStatus.fromID("   "), is(MfaStatus.Unknown));
+		assertThat("tabs should return Unknown", MfaStatus.fromID("\t\t"), is(MfaStatus.Unknown));
+	}
+
+	@Test
+	public void mfaStatusFromIDUnrecognized() throws Exception {
+		assertThat("unrecognized ID should return Unknown", MfaStatus.fromID("INVALID"), is(MfaStatus.Unknown));
+		assertThat("lowercase should return Unknown", MfaStatus.fromID("used"), is(MfaStatus.Unknown));
+		assertThat("mixed case should return Unknown", MfaStatus.fromID("UsEd"), is(MfaStatus.Unknown));
+		assertThat("random string should return Unknown", MfaStatus.fromID("foobar"), is(MfaStatus.Unknown));
+	}
 }

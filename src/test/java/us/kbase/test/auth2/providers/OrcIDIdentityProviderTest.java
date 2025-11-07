@@ -568,23 +568,44 @@ public class OrcIDIdentityProviderTest {
 	}
 
 	@Test
+	public void getIdentityWithMissingJWT() throws Exception {
+		final String authCode = "authcodeMissingJWT";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+
+		// MFA checking enabled but no JWT provided in response
+		setUpCallAuthTokenWithJWT(authCode, "footokenNoJWT", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, null);
+
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					containsString("No JWT token provided by ORCID. For non-member API applications, " +
+							"set orcid-mfa-enabled=false in provider configuration"));
+		}
+	}
+
+	@Test
 	public void getIdentityWithInvalidJWT() throws Exception {
 		final String authCode = "authcodeInvalidJWT";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		final String invalidJWT = "invalid.jwt.token";
-		
+
 		setUpCallAuthTokenWithJWT(authCode, "footoken6", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, invalidJWT);
 		setupCallID("footoken6", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "invalid@test.com")))));
-		
+
 		try {
 			idp.getIdentities(authCode, "pkce", false, null);
 			fail("Expected IdentityRetrievalException");
 		} catch (IdentityRetrievalException e) {
-			assertThat("incorrect exception message", e.getMessage(), 
+			assertThat("incorrect exception message", e.getMessage(),
 					containsString("Unable to parse JWT payload from ORCID"));
 		}
 	}

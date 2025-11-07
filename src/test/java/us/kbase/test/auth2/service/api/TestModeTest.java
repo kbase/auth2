@@ -363,7 +363,34 @@ public class TestModeTest {
 		
 		assertThat("incorrect token", token, is(expected));
 	}
-	
+
+	@Test
+	public void createTokenWithMfa() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
+
+		final UUID uuid = UUID.randomUUID();
+
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.Used))
+				.thenReturn(new NewToken(StoredToken.getBuilder(
+						TokenType.DEV, uuid, new UserName("foo"))
+						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+						.build(),
+						"a token"));
+
+		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
+
+		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", null, "Dev", "USED"));
+
+		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+				TokenType.DEV, uuid, new UserName("foo"))
+				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+				.build(),
+				"a token"), 30000L);
+
+		assertThat("incorrect token", token, is(expected));
+	}
+
 	@Test
 	public void createTokenFailNoJson() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
