@@ -55,7 +55,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 * Multi-Factor Authentication (MFA) Status Handling:
 	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
 	 * - Configuration option "orcid-mfa-enabled" (default: true):
-	 *   - true: Requires OpenID scope, throws error on malformed JWT
+	 *   - true: Requires OpenID scope, throws error on missing or malformed JWT
 	 *   - false: Skips MFA check, returns MfaStatus.UNKNOWN (for non-member API apps)
 	 * - Valid JWT with AMR claim: returns MfaStatus.USED or MfaStatus.NOT_USED based on "mfa" presence
 	 *
