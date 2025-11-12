@@ -32,7 +32,7 @@ public class RemoteIdentityDetails {
 			final String username,
 			final String fullname,
 			final String email) {
-		this(username, fullname, email, MfaStatus.Unknown);
+		this(username, fullname, email, MfaStatus.UNKNOWN);
 	}
 	
 	/** Create a new set of details.

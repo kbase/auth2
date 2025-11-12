@@ -315,7 +315,7 @@ public class TestModeTest {
 		
 		final UUID uuid = UUID.randomUUID();
 		
-		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.Unknown))
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.UNKNOWN))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
@@ -342,7 +342,7 @@ public class TestModeTest {
 		
 		final UUID uuid = UUID.randomUUID();
 		
-		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT, MfaStatus.Unknown))
+		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT, MfaStatus.UNKNOWN))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.AGENT, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
@@ -371,7 +371,7 @@ public class TestModeTest {
 
 		final UUID uuid = UUID.randomUUID();
 
-		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.Used))
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MfaStatus.USED))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))

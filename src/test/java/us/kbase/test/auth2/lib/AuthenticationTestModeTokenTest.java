@@ -72,7 +72,7 @@ public class AuthenticationTestModeTokenTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");
 		
-		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT, MfaStatus.Unknown);
+		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT, MfaStatus.UNKNOWN);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.AGENT, id, new UserName("foo"))
@@ -108,7 +108,7 @@ public class AuthenticationTestModeTokenTest {
 		when(rand.getToken()).thenReturn("whee");
 		
 		final NewToken nt = auth.testModeCreateToken(
-				new UserName("foo"), new TokenName("tok"), TokenType.SERV, MfaStatus.Unknown);
+				new UserName("foo"), new TokenName("tok"), TokenType.SERV, MfaStatus.UNKNOWN);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.SERV, id, new UserName("foo"))
@@ -161,7 +161,7 @@ public class AuthenticationTestModeTokenTest {
 			final TokenType tokenType,
 			final Exception expected) {
 		try {
-			auth.testModeCreateToken(userName, null, tokenType, MfaStatus.Unknown);
+			auth.testModeCreateToken(userName, null, tokenType, MfaStatus.UNKNOWN);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);

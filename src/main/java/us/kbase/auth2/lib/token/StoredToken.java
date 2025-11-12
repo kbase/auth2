@@ -260,7 +260,7 @@ public class StoredToken {
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
-		private MfaStatus mfa = MfaStatus.Unknown;
+		private MfaStatus mfa = MfaStatus.UNKNOWN;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
 			requireNonNull(type, "type");

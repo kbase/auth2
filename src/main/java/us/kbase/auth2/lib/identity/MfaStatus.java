@@ -15,11 +15,11 @@ public enum MfaStatus {
 	 * since that field is stored in the DB.
 	 */
 	/** User authenticated with MFA during token creation. */
-	Used			("USED", "MFA used"),
+	USED			("Used", "MFA used"),
 	/** User explicitly chose not to use MFA when available. */
-	NotUsed			("NOT_USED", "MFA not used"),
+	NOT_USED		("NotUsed", "MFA not used"),
 	/** MFA status unknown or not applicable to authentication method. */
-	Unknown			("UNKNOWN", "MFA status unknown");
+	UNKNOWN			("Unknown", "MFA status unknown");
 
 	private static final Map<String, MfaStatus> STATUS_MAP = new HashMap<>();
 	static {
@@ -53,16 +53,13 @@ public enum MfaStatus {
 
 	/** Get an MFA status from its ID.
 	 * @param id the ID of the MFA status.
-	 * @return the MFA status, or Unknown if the ID is null, empty, or not recognized.
+	 * @return the MFA status.
+	 * @throws IllegalArgumentException if there is no MFA status matching the ID.
 	 */
 	public static MfaStatus fromID(final String id) {
-		if (id == null || id.trim().isEmpty()) {
-			return Unknown;
+		if (!STATUS_MAP.containsKey(id)) {
+			throw new IllegalArgumentException("Invalid MFA status: " + id);
 		}
-		final MfaStatus status = STATUS_MAP.get(id);
-		if (status == null) {
-			return Unknown;
-		}
-		return status;
+		return STATUS_MAP.get(id);
 	}
 }

@@ -56,8 +56,8 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
 	 * - Configuration option "orcid-mfa-enabled" (default: true):
 	 *   - true: Requires OpenID scope, throws error on malformed JWT
-	 *   - false: Skips MFA check, returns MfaStatus.Unknown (for non-member API apps)
-	 * - Valid JWT with AMR claim: returns MfaStatus.Used or MfaStatus.NotUsed based on "mfa" presence
+	 *   - false: Skips MFA check, returns MfaStatus.UNKNOWN (for non-member API apps)
+	 * - Valid JWT with AMR claim: returns MfaStatus.USED or MfaStatus.NOT_USED based on "mfa" presence
 	 *
 	 * @author gaprice@lbl.gov
 	 *
@@ -272,15 +272,15 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			final Object amrClaim = claims.get("amr");
 			if (amrClaim == null) {
 				// No AMR claim present - MFA status unknown
-				return MfaStatus.Unknown;
+				return MfaStatus.UNKNOWN;
 			} else if (amrClaim instanceof List) {
 				// OpenID Connect spec: AMR should be an array of strings
 				@SuppressWarnings("unchecked")
 				final List<String> amrList = (List<String>) amrClaim;
-				return amrList.contains("mfa") ? MfaStatus.Used : MfaStatus.NotUsed;
+				return amrList.contains("mfa") ? MfaStatus.USED : MfaStatus.NOT_USED;
 			} else if (amrClaim instanceof String) {
 				// ORCID may return single string - handle as fallback
-				return "mfa".equals(amrClaim) ? MfaStatus.Used : MfaStatus.NotUsed;
+				return "mfa".equals(amrClaim) ? MfaStatus.USED : MfaStatus.NOT_USED;
 			}
 
 			// AMR claim present but in unexpected format
@@ -347,7 +347,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			final MfaStatus mfaStatus;
 			if (!mfaEnabled) {
 				// MFA checking disabled - no OpenID scope, so no id_token expected
-				mfaStatus = MfaStatus.Unknown;
+				mfaStatus = MfaStatus.UNKNOWN;
 			} else {
 				// MFA checking enabled - parse JWT from id_token
 				final String idToken = (String) m.get("id_token");

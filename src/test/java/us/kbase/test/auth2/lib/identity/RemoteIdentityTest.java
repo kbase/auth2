@@ -197,33 +197,33 @@ public class RemoteIdentityTest {
 
 	@Test
 	public void remoteDetailsWithMfaTrue() throws Exception {
-		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.Used);
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.USED);
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
-		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.Used));
+		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.USED));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=USED]"));
 	}
 
 	@Test
 	public void remoteDetailsWithMfaFalse() throws Exception {
-		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.NotUsed);
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.NOT_USED);
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
-		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.NotUsed));
+		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.NOT_USED));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=NOT_USED]"));
 	}
 
 	@Test
 	public void remoteDetailsWithMfaNull() throws Exception {
-		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.Unknown);
+		final RemoteIdentityDetails dets = new RemoteIdentityDetails("user", "full", "email", MfaStatus.UNKNOWN);
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
-		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.Unknown));
+		assertThat("incorrect mfa authenticated", dets.getMfa(), is(MfaStatus.UNKNOWN));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=UNKNOWN]"));
 	}
@@ -231,7 +231,7 @@ public class RemoteIdentityTest {
 	@Test
 	public void remoteDetailsMfaFailWithNullUser() throws Exception {
 		try {
-			new RemoteIdentityDetails(null, "full", "email", MfaStatus.Used);
+			new RemoteIdentityDetails(null, "full", "email", MfaStatus.USED);
 			fail("created bad details with mfa");
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception msg", e.getMessage(),
@@ -241,24 +241,24 @@ public class RemoteIdentityTest {
 
 	@Test
 	public void mfaStatusGetDescription() throws Exception {
-		assertThat("incorrect Used description", MfaStatus.Used.getDescription(), is("MFA used"));
-		assertThat("incorrect NotUsed description", MfaStatus.NotUsed.getDescription(), is("MFA not used"));
-		assertThat("incorrect Unknown description", MfaStatus.Unknown.getDescription(), is("MFA status unknown"));
+		assertThat("incorrect Used description", MfaStatus.USED.getDescription(), is("MFA used"));
+		assertThat("incorrect NotUsed description", MfaStatus.NOT_USED.getDescription(), is("MFA not used"));
+		assertThat("incorrect Unknown description", MfaStatus.UNKNOWN.getDescription(), is("MFA status unknown"));
 	}
 
 	@Test
 	public void mfaStatusFromIDNullOrEmpty() throws Exception {
-		assertThat("null ID should return Unknown", MfaStatus.fromID(null), is(MfaStatus.Unknown));
-		assertThat("empty string should return Unknown", MfaStatus.fromID(""), is(MfaStatus.Unknown));
-		assertThat("whitespace should return Unknown", MfaStatus.fromID("   "), is(MfaStatus.Unknown));
-		assertThat("tabs should return Unknown", MfaStatus.fromID("\t\t"), is(MfaStatus.Unknown));
+		assertThat("null ID should return Unknown", MfaStatus.fromID(null), is(MfaStatus.UNKNOWN));
+		assertThat("empty string should return Unknown", MfaStatus.fromID(""), is(MfaStatus.UNKNOWN));
+		assertThat("whitespace should return Unknown", MfaStatus.fromID("   "), is(MfaStatus.UNKNOWN));
+		assertThat("tabs should return Unknown", MfaStatus.fromID("\t\t"), is(MfaStatus.UNKNOWN));
 	}
 
 	@Test
 	public void mfaStatusFromIDUnrecognized() throws Exception {
-		assertThat("unrecognized ID should return Unknown", MfaStatus.fromID("INVALID"), is(MfaStatus.Unknown));
-		assertThat("lowercase should return Unknown", MfaStatus.fromID("used"), is(MfaStatus.Unknown));
-		assertThat("mixed case should return Unknown", MfaStatus.fromID("UsEd"), is(MfaStatus.Unknown));
-		assertThat("random string should return Unknown", MfaStatus.fromID("foobar"), is(MfaStatus.Unknown));
+		assertThat("unrecognized ID should return Unknown", MfaStatus.fromID("INVALID"), is(MfaStatus.UNKNOWN));
+		assertThat("lowercase should return Unknown", MfaStatus.fromID("used"), is(MfaStatus.UNKNOWN));
+		assertThat("mixed case should return Unknown", MfaStatus.fromID("UsEd"), is(MfaStatus.UNKNOWN));
+		assertThat("random string should return Unknown", MfaStatus.fromID("foobar"), is(MfaStatus.UNKNOWN));
 	}
 }

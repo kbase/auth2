@@ -191,7 +191,7 @@ public class TestMode {
 	private us.kbase.auth2.lib.identity.MfaStatus getMfaStatus(final String mfa)
 			throws IllegalParameterException {
 		if (mfa == null) {
-			return us.kbase.auth2.lib.identity.MfaStatus.Unknown;
+			return us.kbase.auth2.lib.identity.MfaStatus.UNKNOWN;
 		}
 		try {
 			return us.kbase.auth2.lib.identity.MfaStatus.fromID(mfa);
