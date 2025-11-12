@@ -1,13 +1,10 @@
 # Authentication Service MKII release notes
 
-## 0.7.3
+## 0.7.2
 
 * Added MFA (Multi-Factor Authentication) status tracking for tokens
 * The `/api/V2/token` endpoint now returns an `mfa` field
 * ORCID provider updated to use OpenID Connect scope for MFA detection
-
-## 0.7.2
-
 * BACKWARDS INCOMPATIBILITY: Repeated or trailing underscores are
   no longer allowed in usernames. Existing usernames are unaffected.
 * Fixed a bug where usernames with underscores would not be matched in username searches if an
