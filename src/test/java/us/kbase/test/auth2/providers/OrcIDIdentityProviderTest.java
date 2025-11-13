@@ -954,4 +954,51 @@ public class OrcIDIdentityProviderTest {
 		return encodedHeader + "." + encodedPayload + ".signature";
 	}
 
+	@Test
+	public void getLoginURIWithMfaEnabled() throws Exception {
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+
+		final URI loginURI = idp.getLoginURI("mystate123", "pkce_challenge", false, null);
+
+		assertThat("incorrect URI host", loginURI.getHost(), is("localhost"));
+		assertThat("incorrect URI path", loginURI.getPath(), is("/oauth/authorize"));
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("scope=openid+/authenticate"));
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("state=mystate123"));
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("response_type=code"));
+	}
+
+	@Test
+	public void getLoginURIWithMfaDisabled() throws Exception {
+		// Configure with MFA checking disabled
+		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
+				OrcIDIdentityProviderFactory.class.getName(),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				new URL("http://localhost:" + mockClientAndServer.getPort()),
+				"ofoo",
+				"obar",
+				new URL("https://ologinredir.com"),
+				new URL("https://olinkredir.com"))
+				.withCustomConfiguration("orcid-mfa-enabled", "false")
+				.build();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+
+		final URI loginURI = idp.getLoginURI("mystate456", "pkce_challenge", false, null);
+
+		assertThat("incorrect URI host", loginURI.getHost(), is("localhost"));
+		assertThat("incorrect URI path", loginURI.getPath(), is("/oauth/authorize"));
+		// When MFA is disabled, should use SCOPE_NO_OPENID which doesn't include "openid"
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("scope=/authenticate"));
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("state=mystate456"));
+		assertThat("incorrect query string", loginURI.getQuery(),
+				containsString("response_type=code"));
+		// Verify that "openid" is NOT in the scope when MFA is disabled
+		assertThat("scope should not contain openid", !loginURI.getQuery().contains("openid"), is(true));
+	}
+
 }
