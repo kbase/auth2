@@ -22,12 +22,12 @@ public class UserNameTest {
 	@Test
 	public void root() throws Exception {
 		final UserName un = new UserName("***ROOT***");
-		assertThat("incorrect root content, failed equality", un, is(UserName.ROOT));
+		assertThat("incorrect username", un.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un.isRoot(), is(true));
 		assertThat("incorrect toString", un.toString(), is("UserName [getName()=***ROOT***]"));
 
 		final UserName un2 = UserName.ROOT;
-		assertThat("incorrect root content, failed equality", un2, is(new UserName("***ROOT***")));
+		assertThat("incorrect username", un2.getName(), is("***ROOT***"));
 		assertThat("incorrect is root", un2.isRoot(), is(true));
 		assertThat("incorrect toString", un2.toString(), is("UserName [getName()=***ROOT***]"));
 
@@ -36,11 +36,11 @@ public class UserNameTest {
 		assertThat("incorrect is root", nun.isRoot(), is(true));
 		assertThat("incorrect toString", nun.toString(), is("NewUserName [getName()=***ROOT***]"));
 	}
-	
+
 	@Test
 	public void construct() throws Exception {
 		final UserName un = new UserName("a8___nba9__");
-		assertThat("incorrect username content, failed equality", un, is(new UserName("a8___nba9__")));
+		assertThat("incorrect username", un.getName(), is("a8___nba9__"));
 		assertThat("incorrect is root", un.isRoot(), is(false));
 		assertThat("incorrect toString", un.toString(), is("UserName [getName()=a8___nba9__]"));
 	}

@@ -1178,7 +1178,7 @@ public class AuthenticationTokenTest {
 	@Test
 	public void deleteLoginOrLinkStateNull() throws Exception {
 		final Authentication auth = initTestMocks().auth;
-
+		
 		try {
 			auth.deleteLinkOrLoginState(null);
 			fail("expected exception");
@@ -1186,5 +1186,5 @@ public class AuthenticationTokenTest {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("token"));
 		}
 	}
-
+	
 }
