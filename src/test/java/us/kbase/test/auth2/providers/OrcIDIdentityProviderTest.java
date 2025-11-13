@@ -592,6 +592,27 @@ public class OrcIDIdentityProviderTest {
 	}
 
 	@Test
+	public void getIdentityWithEmptyStringJWT() throws Exception {
+		final String authCode = "authcodeEmptyStringJWT";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+
+		// MFA checking enabled but empty/whitespace JWT provided in response
+		setUpCallAuthTokenWithJWT(authCode, "footokenEmptyStringJWT", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, "   \t  \n  ");
+
+		try {
+			idp.getIdentities(authCode, "pkce", false, null);
+			fail("Expected IdentityRetrievalException");
+		} catch (IdentityRetrievalException e) {
+			assertThat("incorrect exception message", e.getMessage(),
+					containsString("No JWT token provided by ORCID. For non-member API applications, " +
+							"set orcid-mfa-enabled=false in provider configuration"));
+		}
+	}
+
+	@Test
 	public void getIdentityWithInvalidJWT() throws Exception {
 		final String authCode = "authcodeInvalidJWT";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
