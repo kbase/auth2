@@ -412,11 +412,19 @@ public class TestModeTest {
 	@Test
 	public void createTokenFailBadTokenType() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
-		
+
 		failCreateToken(tm, new CreateTestToken("whee", "foo", "Devv"),
 				new IllegalParameterException("Invalid token type: Devv"));
 	}
-	
+
+	@Test
+	public void createTokenFailInvalidMfaStatus() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+
+		failCreateToken(tm, new CreateTestToken("whee", "foo", "Dev", "InvalidMfa"),
+				new IllegalParameterException("Invalid MFA status: InvalidMfa"));
+	}
+
 	@Test
 	public void createTokenFailAddlProps() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
