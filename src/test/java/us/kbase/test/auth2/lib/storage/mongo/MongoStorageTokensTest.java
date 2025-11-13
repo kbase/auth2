@@ -128,11 +128,12 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		assertThat("incorrect token", st, is(expected));
 	}
 	
+	/**
+	 * Tests backwards compatibility with tokens created before the MFA field was added.
+	 * Uses $unset to simulate legacy database records without the MFA field.
+	 */
 	@Test
-	public void getWithNullMfa() throws Exception {
-		/* Tests backwards compatibility with old tokens that don't have an MFA field
-		 * in the db.
-		 */
+	public void getWithNullMfaBackwardsCompatibility() throws Exception {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken ht = StoredToken.getBuilder(

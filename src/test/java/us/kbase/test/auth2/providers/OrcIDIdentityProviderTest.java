@@ -2,6 +2,7 @@ package us.kbase.test.auth2.providers;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.is;
+import static org.hamcrest.CoreMatchers.not;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.TestCommon.set;
@@ -496,8 +497,9 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
+	/** Tests MFA detection when AMR array contains "mfa". */
 	@Test
-	public void getIdentityWithMfaTrue() throws Exception {
+	public void getIdentityArrayAmrWithMfa() throws Exception {
 		final String authCode = "authcodeWithMfa";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
@@ -516,8 +518,9 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
+	/** Tests MFA detection when AMR array does not contain "mfa". */
 	@Test
-	public void getIdentityWithMfaFalse() throws Exception {
+	public void getIdentityArrayAmrNoMfa() throws Exception {
 		final String authCode = "authcodeNoMfa";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
@@ -536,10 +539,10 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
+	/** Tests non-member ORCID accounts without JWTs default to UNKNOWN MFA. */
 	@Test
 	public void getIdentityWithNoJWT() throws Exception {
 		final String authCode = "authcodeNoJWT";
-		// Configure with MFA checking disabled for non-member ORCID accounts
 		final IdentityProviderConfig idconfig = IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
@@ -610,14 +613,15 @@ public class OrcIDIdentityProviderTest {
 		}
 	}
 	
+	/** Tests AMR claim as string (ORCID allows string or array). */
 	@Test
-	public void getIdentityWithStringAmr() throws Exception {
+	public void getIdentityStringAmrWithMfa() throws Exception {
 		final String authCode = "authcodeStringAmr";
 		final IdentityProviderConfig idconfig = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
 		final String jwt = createJWTWithStringAmr(orcID, "mfa");
-		
+
 		setUpCallAuthTokenWithJWT(authCode, "footoken7", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, jwt);
 		setupCallID("footoken7", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
@@ -627,6 +631,27 @@ public class OrcIDIdentityProviderTest {
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
 				new RemoteIdentityDetails(orcID, "My name", "stringmfa@test.com", MfaStatus.USED)));
+		assertThat("incorrect ident set", rids, is(expected));
+	}
+
+	/** Tests AMR claim as string without "mfa" value. */
+	@Test
+	public void getIdentityStringAmrNoMfa() throws Exception {
+		final String authCode = "authcodeStringAmrNoMfa";
+		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		final String jwt = createJWTWithStringAmr(orcID, "pwd");
+
+		setUpCallAuthTokenWithJWT(authCode, "footoken8", "https://ologinredir.com",
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, jwt);
+		setupCallID("footoken8", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
+				map("email", Arrays.asList(map("email", "stringnomfa@test.com")))));
+		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect number of idents", rids.size(), is(1));
+		final Set<RemoteIdentity> expected = new HashSet<>();
+		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+				new RemoteIdentityDetails(orcID, "My name", "stringnomfa@test.com", MfaStatus.NOT_USED)));
 		assertThat("incorrect ident set", rids, is(expected));
 	}
 	
@@ -786,6 +811,7 @@ public class OrcIDIdentityProviderTest {
 		return encodedHeader + "." + encodedPayload + ".signature";
 	}
 	
+	/** Tests JWT with 2 parts instead of 3 is rejected. */
 	@Test
 	public void getIdentityWithMalformedJWT() throws Exception {
 		final String authCode = "authcodeMalformed";
@@ -998,7 +1024,7 @@ public class OrcIDIdentityProviderTest {
 		assertThat("incorrect query string", loginURI.getQuery(),
 				containsString("response_type=code"));
 		// Verify that "openid" is NOT in the scope when MFA is disabled
-		assertThat("scope should not contain openid", !loginURI.getQuery().contains("openid"), is(true));
+		assertThat("scope should not contain openid", loginURI.getQuery(), not(containsString("openid")));
 	}
 
 }
