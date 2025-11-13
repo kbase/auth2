@@ -248,17 +248,33 @@ public class RemoteIdentityTest {
 
 	@Test
 	public void mfaStatusFromIDNullOrEmpty() throws Exception {
-		assertThat("null ID should return Unknown", MfaStatus.fromID(null), is(MfaStatus.UNKNOWN));
-		assertThat("empty string should return Unknown", MfaStatus.fromID(""), is(MfaStatus.UNKNOWN));
-		assertThat("whitespace should return Unknown", MfaStatus.fromID("   "), is(MfaStatus.UNKNOWN));
-		assertThat("tabs should return Unknown", MfaStatus.fromID("\t\t"), is(MfaStatus.UNKNOWN));
+		try {
+			MfaStatus.fromID(null);
+			fail("expected exception");
+		} catch (IllegalArgumentException e) {
+			assertThat("correct exception message", e.getMessage(), is("Invalid MFA status: null"));
+		}
+		try {
+			MfaStatus.fromID("");
+			fail("expected exception");
+		} catch (IllegalArgumentException e) {
+			assertThat("correct exception message", e.getMessage(), is("Invalid MFA status: "));
+		}
 	}
 
 	@Test
 	public void mfaStatusFromIDUnrecognized() throws Exception {
-		assertThat("unrecognized ID should return Unknown", MfaStatus.fromID("INVALID"), is(MfaStatus.UNKNOWN));
-		assertThat("lowercase should return Unknown", MfaStatus.fromID("used"), is(MfaStatus.UNKNOWN));
-		assertThat("mixed case should return Unknown", MfaStatus.fromID("UsEd"), is(MfaStatus.UNKNOWN));
-		assertThat("random string should return Unknown", MfaStatus.fromID("foobar"), is(MfaStatus.UNKNOWN));
+		try {
+			MfaStatus.fromID("INVALID");
+			fail("expected exception");
+		} catch (IllegalArgumentException e) {
+			assertThat("correct exception message", e.getMessage(), is("Invalid MFA status: INVALID"));
+		}
+		try {
+			MfaStatus.fromID("used");
+			fail("expected exception");
+		} catch (IllegalArgumentException e) {
+			assertThat("correct exception message", e.getMessage(), is("Invalid MFA status: used"));
+		}
 	}
 }

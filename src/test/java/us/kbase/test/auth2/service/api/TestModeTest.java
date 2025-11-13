@@ -380,7 +380,7 @@ public class TestModeTest {
 
 		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
 
-		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", null, "Dev", "USED"));
+		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", null, "Dev", "Used"));
 
 		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
 				TokenType.DEV, uuid, new UserName("foo"))
