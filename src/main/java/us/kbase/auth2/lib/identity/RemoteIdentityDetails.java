@@ -13,6 +13,13 @@ import static java.util.Objects.requireNonNull;
  * This is by design - MFA status is transient information relevant only to the current
  * authentication session.
  *
+ * TODO: MFA field is conceptually different from other fields in this class. Username, fullname,
+ *       and email are persistent identity attributes stored in the database. MFA status is
+ *       transient session data that never persists. Ideally these should be separated via a
+ *       wrapper class (e.g., RemoteIdentityWithSession containing RemoteIdentity + MfaStatus),
+ *       but this would require significant refactoring for modest benefit. Current approach
+ *       works correctly but conflates two different types of data in one class.
+ *
  * @author gaprice@lbl.gov
  *
  */
