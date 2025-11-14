@@ -20,6 +20,7 @@ import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.TemporarySessionData.Operation;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.ErrorType;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -45,7 +46,7 @@ public class TemporarySessionDataTest {
 		final UUID id = UUID.randomUUID();
 		final TemporarySessionData ti = TemporarySessionData.create(id, inst(10000), inst(20000))
 				.login("stategoeshere", "pkcegoeshere");
-		
+
 		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINSTART));
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(inst(10000)));
@@ -57,6 +58,7 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
 		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMfa(), is(MfaStatus.UNKNOWN));
 	}
 	
 	@Test
@@ -65,7 +67,7 @@ public class TemporarySessionDataTest {
 		final Instant now = Instant.now();
 		final TemporarySessionData ti = TemporarySessionData.create(
 				id, now, now.plusMillis(100000)).login(set(REMOTE1, REMOTE2));
-		
+
 		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINIDENTS));
 		assertThat("incorrect id", ti.getId(), is(id));
 		assertThat("incorrect created", ti.getCreated(), is(now));
@@ -77,7 +79,8 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
 		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
-		
+		assertThat("incorrect mfa", ti.getMfa(), is(MfaStatus.UNKNOWN));
+
 		assertImmutable(ti);
 	}
 	
@@ -332,6 +335,96 @@ public class TemporarySessionDataTest {
 		try {
 			TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
 					.error(error, et);
+			fail("expected exception");
+		} catch (Exception got) {
+			TestCommon.assertExceptionCorrect(got, e);
+		}
+	}
+
+	@Test
+	public void constructLoginIdentsWithMfaUsed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData ti = TemporarySessionData.create(
+				id, now, now.plusMillis(100000)).login(set(REMOTE1, REMOTE2), MfaStatus.USED);
+
+		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINIDENTS));
+		assertThat("incorrect id", ti.getId(), is(id));
+		assertThat("incorrect created", ti.getCreated(), is(now));
+		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(100000)));
+		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
+		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
+		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
+		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE2, REMOTE1))));
+		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
+		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMfa(), is(MfaStatus.USED));
+
+		assertImmutable(ti);
+	}
+
+	@Test
+	public void constructLoginIdentsWithMfaNotUsed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData ti = TemporarySessionData.create(
+				id, now, now.plusMillis(100000)).login(set(REMOTE1), MfaStatus.NOT_USED);
+
+		assertThat("incorrect mfa", ti.getMfa(), is(MfaStatus.NOT_USED));
+	}
+
+	@Test
+	public void constructLoginIdentsWithMfaUnknown() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now();
+		final TemporarySessionData ti = TemporarySessionData.create(
+				id, now, now.plusMillis(100000)).login(set(REMOTE1), MfaStatus.UNKNOWN);
+
+		assertThat("incorrect mfa", ti.getMfa(), is(MfaStatus.UNKNOWN));
+	}
+
+	@Test
+	public void getMfaDefaultsToUnknown() throws Exception {
+		// Test all operations default to UNKNOWN when MFA is not explicitly provided
+		assertThat("incorrect mfa for LOGINSTART",
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.login("state", "pkce").getMfa(),
+				is(MfaStatus.UNKNOWN));
+
+		assertThat("incorrect mfa for LOGINIDENTS without explicit MFA",
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.login(set(REMOTE1)).getMfa(),
+				is(MfaStatus.UNKNOWN));
+
+		assertThat("incorrect mfa for LINKSTART",
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.link("state", "pkce", new UserName("foo")).getMfa(),
+				is(MfaStatus.UNKNOWN));
+
+		assertThat("incorrect mfa for LINKIDENTS",
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.link(new UserName("foo"), set(REMOTE1)).getMfa(),
+				is(MfaStatus.UNKNOWN));
+
+		assertThat("incorrect mfa for ERROR",
+				TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.error("error", ErrorType.DISABLED).getMfa(),
+				is(MfaStatus.UNKNOWN));
+	}
+
+	@Test
+	public void constructLoginIdentsWithMfaFailNull() throws Exception {
+		failConstructLoginIdentsWithMfa(set(REMOTE1), null, new NullPointerException("mfa"));
+	}
+
+	private void failConstructLoginIdentsWithMfa(
+			final Set<RemoteIdentity> idents,
+			final MfaStatus mfa,
+			final Exception e) {
+		try {
+			TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
+					.login(idents, mfa);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

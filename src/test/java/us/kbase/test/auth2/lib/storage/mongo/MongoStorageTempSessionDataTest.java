@@ -15,6 +15,7 @@ import org.junit.Test;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -331,6 +332,72 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, new NullPointerException("userName"));
 		}
+	}
+
+	@Test
+	public void storeAndGetLoginIdentsWithMfaUsed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login(set(REMOTE1, REMOTE2), MfaStatus.USED);
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("mfatest1"));
+
+		final TemporarySessionData retrieved = storage.getTemporarySessionData(
+				new IncomingToken("mfatest1").getHashedToken());
+
+		assertThat("incorrect session data", retrieved, is(
+				TemporarySessionData.create(id, now, now.plusSeconds(10))
+					.login(set(REMOTE1, REMOTE2), MfaStatus.USED)));
+		assertThat("incorrect mfa", retrieved.getMfa(), is(MfaStatus.USED));
+	}
+
+	@Test
+	public void storeAndGetLoginIdentsWithMfaNotUsed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login(set(REMOTE2), MfaStatus.NOT_USED);
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("mfatest2"));
+
+		final TemporarySessionData retrieved = storage.getTemporarySessionData(
+				new IncomingToken("mfatest2").getHashedToken());
+
+		assertThat("incorrect session data", retrieved, is(
+				TemporarySessionData.create(id, now, now.plusSeconds(10))
+					.login(set(REMOTE2), MfaStatus.NOT_USED)));
+		assertThat("incorrect mfa", retrieved.getMfa(), is(MfaStatus.NOT_USED));
+	}
+
+	@Test
+	public void storeAndGetLoginIdentsWithMfaUnknown() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login(set(REMOTE1), MfaStatus.UNKNOWN);
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("mfatest3"));
+
+		final TemporarySessionData retrieved = storage.getTemporarySessionData(
+				new IncomingToken("mfatest3").getHashedToken());
+
+		assertThat("incorrect session data", retrieved, is(
+				TemporarySessionData.create(id, now, now.plusSeconds(10))
+					.login(set(REMOTE1), MfaStatus.UNKNOWN)));
+		assertThat("incorrect mfa", retrieved.getMfa(), is(MfaStatus.UNKNOWN));
+	}
+
+	@Test
+	public void storeAndGetLoginStartVerifyMfaUnknown() throws Exception {
+		// Verify that LOGINSTART operations default to MFA UNKNOWN
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
+				.login("stateystate", "pkcecode");
+		storage.storeTemporarySessionData(tsd, IncomingToken.hash("mfatest4"));
+
+		final TemporarySessionData retrieved = storage.getTemporarySessionData(
+				new IncomingToken("mfatest4").getHashedToken());
+
+		assertThat("incorrect mfa", retrieved.getMfa(), is(MfaStatus.UNKNOWN));
 	}
 
 }
