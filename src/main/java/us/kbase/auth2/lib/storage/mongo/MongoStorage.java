@@ -1583,7 +1583,17 @@ public class MongoStorage implements AuthStorage {
 					b.withIdentity(ri);
 				}
 			}
-			b.withIdentity(remoteID);
+			/* The remoteID parameter may contain MFA status from the current session (e.g., USED),
+			 * but MFA is never persisted to the database. The returned user must reflect the
+			 * database state with MFA=UNKNOWN. Using the 3-parameter constructor defaults to UNKNOWN.
+			 */
+			final RemoteIdentity updatedIdentity = new RemoteIdentity(
+					remoteID.getRemoteID(),
+					new RemoteIdentityDetails(
+							remoteID.getDetails().getUsername(),
+							remoteID.getDetails().getFullname(),
+							remoteID.getDetails().getEmail()));
+			b.withIdentity(updatedIdentity);
 			user = b.build();
 			updateIdentity(remoteID);
 		}
