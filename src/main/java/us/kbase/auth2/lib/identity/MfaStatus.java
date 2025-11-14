@@ -1,5 +1,5 @@
 package us.kbase.auth2.lib.identity;
-
+// TODO CODE move to lib/token
 import java.util.HashMap;
 import java.util.Map;
 
