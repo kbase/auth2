@@ -167,7 +167,9 @@ public class Fields {
 	public static final String TEMP_SESSION_ERROR = "err";
 	/** The type of the error associated with the temporary token. */
 	public static final String TEMP_SESSION_ERROR_TYPE = "errtype";
-	
+	/** The multi-factor authentication status associated with the temporary token. */
+	public static final String TEMP_SESSION_MFA = "mfa";
+
 	/* ********************
 	 * custom roles fields
 	 * ********************

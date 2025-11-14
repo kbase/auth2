@@ -1714,7 +1714,8 @@ public class MongoStorage implements AuthStorage {
 						data.getErrorType().get().getErrorCode() : null)
 				.append(Fields.TEMP_SESSION_IDENTITIES, ids)
 				.append(Fields.TEMP_SESSION_USER,
-						data.getUser().isPresent() ? data.getUser().get().getName() : null);
+						data.getUser().isPresent() ? data.getUser().get().getName() : null)
+				.append(Fields.TEMP_SESSION_MFA, data.getMfa().getID());
 		storeTemporarySessionData(td);
 	}
 
@@ -1773,6 +1774,7 @@ public class MongoStorage implements AuthStorage {
 		final TemporarySessionData tis;
 		@SuppressWarnings("unchecked")
 		final List<Document> ids = (List<Document>) d.get(Fields.TEMP_SESSION_IDENTITIES);
+		final MfaStatus mfa = MfaStatus.fromID(d.getString(Fields.TEMP_SESSION_MFA));
 		if (op.equals(Operation.ERROR)) {
 			tis = b.error(d.getString(Fields.TEMP_SESSION_ERROR),
 					ErrorType.fromErrorCode(d.getInteger(Fields.TEMP_SESSION_ERROR_TYPE)));
@@ -1782,7 +1784,7 @@ public class MongoStorage implements AuthStorage {
 					d.getString(Fields.TEMP_SESSION_PKCE_CODE_VERIFIER)
 			);
 		} else if (op.equals(Operation.LOGINIDENTS)) {
-			tis = b.login(toIdentities(ids));
+			tis = b.login(toIdentities(ids), mfa);
 		} else if (op.equals(Operation.LINKSTART)) {
 			tis = b.link(
 					d.getString(Fields.TEMP_SESSION_OAUTH2STATE),

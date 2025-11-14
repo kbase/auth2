@@ -1800,6 +1800,7 @@ public class Authentication {
 		storage.deleteTemporarySessionData(token.getHashedToken());
 		final Set<RemoteIdentity> ris = idp.getIdentities(
 				authcode, tids.getPKCECodeVerifier().get(), false, environment);
+		final MfaStatus mfa = ris.iterator().next().getDetails().getMfa();
 		final LoginState lstate = getLoginState(ris, Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken loginToken;
@@ -1812,23 +1813,23 @@ public class Authentication {
 			 * this call may be the result of a redirect from a 3rd party
 			 * provider. Any controllable error should be thrown when the process flow is back
 			 * under the control of the primary auth UI.
-			 * 
+			 *
 			 * There's a tiny chance here that the user could be made an admin, be enabled, or
 			 * non-admin login be enabled between this step and the getLoginState() step. The
 			 * consequence is that they'll have to choose from one account in the next step,
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, mfa);
 			} else if (user.isDisabled()) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, mfa);
 			} else {
-				loginToken = new LoginToken(login(user.getUserName(), tokenCtx));
+				loginToken = new LoginToken(login(user.getUserName(), tokenCtx, mfa));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			loginToken = storeIdentitiesTemporarily(lstate);
+			loginToken = storeIdentitiesTemporarily(lstate, mfa);
 		}
 		return loginToken;
 	}
@@ -1842,13 +1843,13 @@ public class Authentication {
 	}
 
 	// ignores expiration date of login state
-	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
+	private LoginToken storeIdentitiesTemporarily(final LoginState ls, final MfaStatus mfa)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), LOGIN_TOKEN_LIFETIME_MS)
-				.login(store);
+				.login(store, mfa);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
 		return new LoginToken(tt);
