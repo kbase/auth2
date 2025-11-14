@@ -18,6 +18,7 @@ import org.junit.Test;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
+import us.kbase.auth2.lib.identity.MfaStatus;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
@@ -42,7 +43,7 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 					.withCustomContext("k1", "v1")
 					.withCustomContext("k2", "v2")
 					.build())
-			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NOT_USED)
+			.withMfa(MfaStatus.NOT_USED)
 			.withTokenName(new TokenName("foo")).build();
 		storage.storeToken(store, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 
@@ -57,12 +58,64 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 					.withCustomContext("k1", "v1")
 					.withCustomContext("k2", "v2")
 					.build())
-			.withMfa(us.kbase.auth2.lib.identity.MfaStatus.NOT_USED)
+			.withMfa(MfaStatus.NOT_USED)
 			.withTokenName(new TokenName("foo")).build();
 		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
 		assertThat("incorrect token", st, is(expected));
 	}
-	
+
+	@Test
+	public void storeAndGetWithMfaUsed() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+		final StoredToken store = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(20))
+			.withContext(TokenCreationContext.getBuilder()
+					.withIpAddress(InetAddress.getByName("1.1.1.2"))
+					.build())
+			.withMfa(MfaStatus.USED)
+			.withTokenName(new TokenName("mfaused")).build();
+		storage.storeToken(store, new IncomingToken("mfausedtoken").getHashedToken().getTokenHash());
+
+		final StoredToken expected = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(20))
+			.withContext(TokenCreationContext.getBuilder()
+					.withIpAddress(InetAddress.getByName("1.1.1.2"))
+					.build())
+			.withMfa(MfaStatus.USED)
+			.withTokenName(new TokenName("mfaused")).build();
+		final StoredToken st = storage.getToken(new IncomingToken("mfausedtoken").getHashedToken());
+		assertThat("incorrect token", st, is(expected));
+	}
+
+	@Test
+	public void storeAndGetWithMfaUnknown() throws Exception {
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS);
+		final StoredToken store = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(20))
+			.withContext(TokenCreationContext.getBuilder()
+					.withIpAddress(InetAddress.getByName("1.1.1.2"))
+					.build())
+			.withMfa(MfaStatus.UNKNOWN)
+			.withTokenName(new TokenName("mfaunknown")).build();
+		storage.storeToken(store, new IncomingToken("mfaunknowntoken").getHashedToken().getTokenHash());
+
+		final StoredToken expected = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(20))
+			.withContext(TokenCreationContext.getBuilder()
+					.withIpAddress(InetAddress.getByName("1.1.1.2"))
+					.build())
+			.withMfa(MfaStatus.UNKNOWN)
+			.withTokenName(new TokenName("mfaunknown")).build();
+		final StoredToken st = storage.getToken(new IncomingToken("mfaunknowntoken").getHashedToken());
+		assertThat("incorrect token", st, is(expected));
+	}
+
 	@Test
 	public void storeAndGetWithLocalhost() throws Exception {
 		final UUID id = UUID.randomUUID();

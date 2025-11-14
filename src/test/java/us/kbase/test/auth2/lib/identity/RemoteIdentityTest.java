@@ -22,6 +22,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is("full"));
 		assertThat("incorrect email", dets.getEmail(), is("email"));
+		assertThat("incorrect mfa status", dets.getMfa(), is(MfaStatus.UNKNOWN));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=full, email=email, mfa=UNKNOWN]"));
 	}
@@ -32,6 +33,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect username", dets.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets.getFullname(), is((String) null));
 		assertThat("incorrect email", dets.getEmail(), is((String) null));
+		assertThat("incorrect mfa status", dets.getMfa(), is(MfaStatus.UNKNOWN));
 		assertThat("incorrect toString()", dets.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 
@@ -39,6 +41,7 @@ public class RemoteIdentityTest {
 		assertThat("incorrect username", dets2.getUsername(), is("user"));
 		assertThat("incorrect fullname", dets2.getFullname(), is((String) null));
 		assertThat("incorrect email", dets2.getEmail(), is((String) null));
+		assertThat("incorrect mfa status", dets2.getMfa(), is(MfaStatus.UNKNOWN));
 		assertThat("incorrect toString()", dets2.toString(),
 				is("RemoteIdentityDetails [username=user, fullname=null, email=null, mfa=UNKNOWN]"));
 	}
@@ -107,6 +110,7 @@ public class RemoteIdentityTest {
 	public void identity() throws Exception {
 		final RemoteIdentityID id = new RemoteIdentityID("p", "i");
 		final RemoteIdentityDetails dets = new RemoteIdentityDetails("u", "f", "e");
+		assertThat("incorrect mfa status", dets.getMfa(), is(MfaStatus.UNKNOWN));
 		final RemoteIdentity ri = new RemoteIdentity(id, dets);
 		assertThat("incorrect id", ri.getRemoteID(), is(id));
 		assertThat("incorrect details", ri.getDetails(), is(dets));
@@ -233,6 +237,16 @@ public class RemoteIdentityTest {
 		} catch (IllegalArgumentException e) {
 			assertThat("incorrect exception msg", e.getMessage(),
 					is("username cannot be null or empty"));
+		}
+	}
+
+	@Test
+	public void remoteDetailsMfaFailWithNullMfaStatus() throws Exception {
+		try {
+			new RemoteIdentityDetails("user", "full", "email", null);
+			fail("created details with null mfa status");
+		} catch (NullPointerException e) {
+			assertThat("incorrect exception msg", e.getMessage(), is("mfa"));
 		}
 	}
 

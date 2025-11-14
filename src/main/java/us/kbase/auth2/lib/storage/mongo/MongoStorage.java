@@ -1583,15 +1583,7 @@ public class MongoStorage implements AuthStorage {
 					b.withIdentity(ri);
 				}
 			}
-			// MFA is never persisted on identities, so force it to UNKNOWN
-			final RemoteIdentity updatedIdentity = new RemoteIdentity(
-					remoteID.getRemoteID(),
-					new RemoteIdentityDetails(
-							remoteID.getDetails().getUsername(),
-							remoteID.getDetails().getFullname(),
-							remoteID.getDetails().getEmail(),
-							MfaStatus.UNKNOWN));
-			b.withIdentity(updatedIdentity);
+			b.withIdentity(remoteID);
 			user = b.build();
 			updateIdentity(remoteID);
 		}
@@ -1812,8 +1804,7 @@ public class MongoStorage implements AuthStorage {
 			final RemoteIdentityDetails det = new RemoteIdentityDetails(
 					i.getString(Fields.IDENTITIES_USER),
 					i.getString(Fields.IDENTITIES_NAME),
-					i.getString(Fields.IDENTITIES_EMAIL),
-					MfaStatus.UNKNOWN);
+					i.getString(Fields.IDENTITIES_EMAIL));
 			ret.add(new RemoteIdentity(rid, det));
 		}
 		return ret;
