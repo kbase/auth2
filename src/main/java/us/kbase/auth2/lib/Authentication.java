@@ -2046,7 +2046,7 @@ public class Authentication {
 			final UserName userName,
 			final TokenName tokenName,
 			final TokenType tokenType,
-			final us.kbase.auth2.lib.identity.MfaStatus mfa)
+			final MfaStatus mfa)
 			throws TestModeException, AuthStorageException, NoSuchUserException {
 		ensureTestMode();
 		requireNonNull(userName, "userName");
