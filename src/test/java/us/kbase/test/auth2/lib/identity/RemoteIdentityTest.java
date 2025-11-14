@@ -236,6 +236,8 @@ public class RemoteIdentityTest {
 		}
 	}
 
+    //TODO CODE move the mfa status tests into their own file in lib/token
+
 	@Test
 	public void mfaStatusGetDescription() throws Exception {
 		assertThat("incorrect Used description", MfaStatus.USED.getDescription(), is("MFA used"));
