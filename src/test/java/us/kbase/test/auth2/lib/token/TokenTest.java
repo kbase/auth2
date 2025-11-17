@@ -24,6 +24,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.StoredToken.OptionalsStep;
@@ -163,75 +164,85 @@ public class TokenTest {
 	public void storedTokenMSLifetime() throws Exception {
 		
 		final UUID id = UUID.randomUUID();
-		final StoredToken ht = StoredToken.getBuilder(TokenType.LOGIN, id, new UserName("whee"))
+		final StoredToken st = StoredToken.getBuilder(TokenType.LOGIN, id, new UserName("whee"))
 				.withLifeTime(Instant.ofEpochMilli(1000), 4000).build();
-		assertThat("incorrect token type", ht.getTokenType(), is(TokenType.LOGIN));
-		assertThat("incorrect token name", ht.getTokenName(), is(Optional.empty()));
-		assertThat("incorrect token id", ht.getId(), is(id));
-		assertThat("incorrect user", ht.getUserName(), is(new UserName("whee")));
-		assertThat("incorrect creation date", ht.getCreationDate(),
+		assertThat("incorrect token type", st.getTokenType(), is(TokenType.LOGIN));
+		assertThat("incorrect token name", st.getTokenName(), is(Optional.empty()));
+		assertThat("incorrect token id", st.getId(), is(id));
+		assertThat("incorrect user", st.getUserName(), is(new UserName("whee")));
+		assertThat("incorrect creation date", st.getCreationDate(),
 				is(Instant.ofEpochMilli(1000)));
-		assertThat("incorrect expiration date", ht.getExpirationDate(),
+		assertThat("incorrect expiration date", st.getExpirationDate(),
 				is(Instant.ofEpochMilli(5000)));
-		assertThat("incorrect context", ht.getContext(),
+		assertThat("incorrect context", st.getContext(),
 				is(TokenCreationContext.getBuilder().build()));
+		assertThat("incorrect MFA", st.getMFA(), is(MFAStatus.UNKNOWN));
 	}
 	
 	@Test
 	public void storedTokenExpDateAndNameAndContext() throws Exception {
-		final UUID id2 = UUID.randomUUID();
-		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("whee2"))
+		final UUID id = UUID.randomUUID();
+		final StoredToken st = StoredToken.getBuilder(TokenType.DEV, id, new UserName("whee2"))
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
-				.withTokenName(new TokenName("ugh")).build();
-		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
-		assertThat("incorrect token name", ht2.getTokenName(),
+				.withTokenName(new TokenName("ugh"))
+				.withMFA(MFAStatus.USED)
+				.build();
+		assertThat("incorrect token type", st.getTokenType(), is(TokenType.DEV));
+		assertThat("incorrect token name", st.getTokenName(),
 				is(Optional.of(new TokenName("ugh"))));
-		assertThat("incorrect token id", ht2.getId(), is(id2));
-		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
-		assertThat("incorrect creation date", ht2.getCreationDate(),
+		assertThat("incorrect token id", st.getId(), is(id));
+		assertThat("incorrect user", st.getUserName(), is(new UserName("whee2")));
+		assertThat("incorrect creation date", st.getCreationDate(),
 				is(Instant.ofEpochMilli(27000)));
-		assertThat("incorrect expiration date", ht2.getExpirationDate(),
+		assertThat("incorrect expiration date", st.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
-		assertThat("incorrect context", ht2.getContext(),
+		assertThat("incorrect context", st.getContext(),
 				is(TokenCreationContext.getBuilder().withNullableDevice("d").build()));
+		assertThat("incorrect MFA", st.getMFA(), is(MFAStatus.USED));
 	}
 	
 	@Test
 	public void storedTokenNullableName() throws Exception {
-		final UUID id2 = UUID.randomUUID();
-		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("whee2"))
+		final UUID id = UUID.randomUUID();
+		final StoredToken st = StoredToken.getBuilder(TokenType.DEV, id, new UserName("whee2"))
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
-				.withNullableTokenName(new TokenName("ugh")).build();
-		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
-		assertThat("incorrect token name", ht2.getTokenName(),
+				.withNullableTokenName(new TokenName("ugh"))
+				.withMFA(MFAStatus.NOT_USED)
+				.build();
+		assertThat("incorrect token type", st.getTokenType(), is(TokenType.DEV));
+		assertThat("incorrect token name", st.getTokenName(),
 				is(Optional.of(new TokenName("ugh"))));
-		assertThat("incorrect token id", ht2.getId(), is(id2));
-		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
-		assertThat("incorrect creation date", ht2.getCreationDate(),
+		assertThat("incorrect token id", st.getId(), is(id));
+		assertThat("incorrect user", st.getUserName(), is(new UserName("whee2")));
+		assertThat("incorrect creation date", st.getCreationDate(),
 				is(Instant.ofEpochMilli(27000)));
-		assertThat("incorrect expiration date", ht2.getExpirationDate(),
+		assertThat("incorrect expiration date", st.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
-		assertThat("incorrect context", ht2.getContext(),
+		assertThat("incorrect context", st.getContext(),
 				is(TokenCreationContext.getBuilder().build()));
+		assertThat("incorrect MFA", st.getMFA(), is(MFAStatus.NOT_USED));
 	}
 	
 	@Test
 	public void storedTokenEmptyNullableName() throws Exception {
-		final UUID id2 = UUID.randomUUID();
-		final StoredToken ht2 = StoredToken.getBuilder(TokenType.DEV, id2, new UserName("whee2"))
+		final UUID id = UUID.randomUUID();
+		final StoredToken st = StoredToken.getBuilder(TokenType.DEV, id, new UserName("whee2"))
 				.withLifeTime(Instant.ofEpochMilli(27000), Instant.ofEpochMilli(42000))
-				.withNullableTokenName(null).build();
-		assertThat("incorrect token type", ht2.getTokenType(), is(TokenType.DEV));
-		assertThat("incorrect token name", ht2.getTokenName(), is(Optional.empty()));
-		assertThat("incorrect token id", ht2.getId(), is(id2));
-		assertThat("incorrect user", ht2.getUserName(), is(new UserName("whee2")));
-		assertThat("incorrect creation date", ht2.getCreationDate(),
+				.withNullableTokenName(null)
+				.withMFA(MFAStatus.UNKNOWN)
+				.build();
+		assertThat("incorrect token type", st.getTokenType(), is(TokenType.DEV));
+		assertThat("incorrect token name", st.getTokenName(), is(Optional.empty()));
+		assertThat("incorrect token id", st.getId(), is(id));
+		assertThat("incorrect user", st.getUserName(), is(new UserName("whee2")));
+		assertThat("incorrect creation date", st.getCreationDate(),
 				is(Instant.ofEpochMilli(27000)));
-		assertThat("incorrect expiration date", ht2.getExpirationDate(),
+		assertThat("incorrect expiration date", st.getExpirationDate(),
 				is(Instant.ofEpochMilli(42000)));
-		assertThat("incorrect context", ht2.getContext(),
+		assertThat("incorrect context", st.getContext(),
 				is(TokenCreationContext.getBuilder().build()));
+		assertThat("incorrect MFA", st.getMFA(), is(MFAStatus.UNKNOWN));
 	}
 	
 	@Test
@@ -255,21 +266,24 @@ public class TokenTest {
 		final Instant e = Instant.ofEpochMilli(2);
 		final TokenName tn = new TokenName("ugh");
 		final TokenCreationContext ctx = TokenCreationContext.getBuilder().build();
-		failCreateStoredToken(null, tn, id, u, c, e, ctx, new NullPointerException("type"));
-		failCreateStoredToken(TokenType.LOGIN, null, id, u, c, e, ctx,
+		final MFAStatus m = MFAStatus.UNKNOWN;
+		failCreateStoredToken(null, tn, id, u, c, e, ctx, m, new NullPointerException("type"));
+		failCreateStoredToken(TokenType.LOGIN, null, id, u, c, e, ctx, m,
 				new NullPointerException("tokenName"));
-		failCreateStoredToken(TokenType.LOGIN, tn, null, u, c, e, ctx,
+		failCreateStoredToken(TokenType.LOGIN, tn, null, u, c, e, ctx, m,
 				new NullPointerException("id"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, null, c, e, ctx,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, null, c, e, ctx, m,
 				new NullPointerException("userName"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, null, e, ctx,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, null, e, ctx, m,
 				new NullPointerException("created"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, null, ctx,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, null, ctx, m,
 				new NullPointerException("expires"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, e, c, ctx,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, e, c, ctx, m,
 				new IllegalArgumentException("expires must be > created"));
-		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, e, null,
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, e, null, m,
 				new NullPointerException("context"));
+		failCreateStoredToken(TokenType.LOGIN, tn, id, u, c, e, ctx, null,
+				new NullPointerException("mfa"));
 	}
 	
 	private void failCreateStoredToken(
@@ -280,10 +294,15 @@ public class TokenTest {
 			final Instant creationDate,
 			final Instant expirationDate,
 			final TokenCreationContext ctx,
+			final MFAStatus mfa,
 			final Exception exception) {
 		try {
-			StoredToken.getBuilder(type, id, userName).withLifeTime(creationDate, expirationDate)
-					.withTokenName(tokenName).withContext(ctx).build();
+			StoredToken.getBuilder(type, id, userName)
+					.withLifeTime(creationDate, expirationDate)
+					.withTokenName(tokenName)
+					.withContext(ctx)
+					.withMFA(mfa)
+					.build();
 			fail("made bad hashed token");
 		} catch (Exception e) {
 			TestCommon.assertExceptionCorrect(e, exception);
