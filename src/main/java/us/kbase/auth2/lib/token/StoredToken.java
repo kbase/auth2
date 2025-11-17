@@ -3,6 +3,7 @@ package us.kbase.auth2.lib.token;
 import static java.util.Objects.requireNonNull;
 
 import java.time.Instant;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -23,6 +24,7 @@ public class StoredToken {
 	private final UserName userName;
 	private final Instant creationDate;
 	private final Instant expirationDate;
+	private final MFAStatus mfa;
 	
 	private StoredToken(
 			final UUID id,
@@ -31,7 +33,9 @@ public class StoredToken {
 			final UserName userName,
 			final TokenCreationContext context,
 			final Instant creationDate,
-			final Instant expirationDate) {
+			final Instant expirationDate,
+			final MFAStatus mfa
+	) {
 		// this stuff is here just in case naughty users use casting to skip a builder step
 		requireNonNull(creationDate, "created");
 		// no way to test this one
@@ -43,6 +47,7 @@ public class StoredToken {
 		this.expirationDate = expirationDate;
 		this.creationDate = creationDate;
 		this.id = id;
+		this.mfa = mfa;
 	}
 
 	/** Get the type of the token.
@@ -94,78 +99,37 @@ public class StoredToken {
 		return expirationDate;
 	}
 	
+	/** Get the MFA status of the token.
+	 * @return the MFA status.
+	 */
+	public MFAStatus getMFA() {
+		return mfa;
+	}
+	
 	@Override
 	public int hashCode() {
-		final int prime = 31;
-		int result = 1;
-		result = prime * result + ((context == null) ? 0 : context.hashCode());
-		result = prime * result + ((creationDate == null) ? 0 : creationDate.hashCode());
-		result = prime * result + ((expirationDate == null) ? 0 : expirationDate.hashCode());
-		result = prime * result + ((id == null) ? 0 : id.hashCode());
-		result = prime * result + ((tokenName == null) ? 0 : tokenName.hashCode());
-		result = prime * result + ((type == null) ? 0 : type.hashCode());
-		result = prime * result + ((userName == null) ? 0 : userName.hashCode());
-		return result;
+		return Objects.hash(
+				context, creationDate, expirationDate, id, mfa, tokenName, type, userName
+		);
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) {
+		if (this == obj)
 			return true;
-		}
-		if (obj == null) {
+		if (obj == null)
 			return false;
-		}
-		if (getClass() != obj.getClass()) {
+		if (getClass() != obj.getClass())
 			return false;
-		}
 		StoredToken other = (StoredToken) obj;
-		if (context == null) {
-			if (other.context != null) {
-				return false;
-			}
-		} else if (!context.equals(other.context)) {
-			return false;
-		}
-		if (creationDate == null) {
-			if (other.creationDate != null) {
-				return false;
-			}
-		} else if (!creationDate.equals(other.creationDate)) {
-			return false;
-		}
-		if (expirationDate == null) {
-			if (other.expirationDate != null) {
-				return false;
-			}
-		} else if (!expirationDate.equals(other.expirationDate)) {
-			return false;
-		}
-		if (id == null) {
-			if (other.id != null) {
-				return false;
-			}
-		} else if (!id.equals(other.id)) {
-			return false;
-		}
-		if (tokenName == null) {
-			if (other.tokenName != null) {
-				return false;
-			}
-		} else if (!tokenName.equals(other.tokenName)) {
-			return false;
-		}
-		if (type != other.type) {
-			return false;
-		}
-		if (userName == null) {
-			if (other.userName != null) {
-				return false;
-			}
-		} else if (!userName.equals(other.userName)) {
-			return false;
-		}
-		return true;
+		return Objects.equals(context, other.context)
+				&& Objects.equals(creationDate, other.creationDate)
+				&& Objects.equals(expirationDate, other.expirationDate)
+				&& Objects.equals(id, other.id)
+				&& mfa == other.mfa
+				&& Objects.equals(tokenName, other.tokenName)
+				&& type == other.type
+				&& Objects.equals(userName, other.userName);
 	}
 	
 	/** Get a builder for a StoredToken.
@@ -224,6 +188,12 @@ public class StoredToken {
 		 */
 		OptionalsStep withContext(TokenCreationContext context);
 		
+		/** Specify the MFA status; default is {@link MFAStatus#UNKNOWN}.
+		 * @param context the MFA status.
+		 * @return this builder.
+		 */
+		OptionalsStep withMFA(MFAStatus mfa);
+		
 		/** Build the token.
 		 * @return a new StoredToken.
 		 */
@@ -239,20 +209,17 @@ public class StoredToken {
 		private final UserName userName;
 		private Instant creationDate;
 		private Instant expirationDate;
+		private MFAStatus mfa = MFAStatus.UNKNOWN;
 	
 		private Builder(final TokenType type, final UUID id, final UserName userName) {
-			requireNonNull(type, "type");
-			requireNonNull(id, "id");
-			requireNonNull(userName, "userName");
-			this.id = id;
-			this.type = type;
-			this.userName = userName;
+			this.id = requireNonNull(id, "id");
+			this.type = requireNonNull(type, "type");
+			this.userName = requireNonNull(userName, "userName");;
 		}
 
 		@Override
 		public OptionalsStep withTokenName(final TokenName tokenName) {
-			requireNonNull(tokenName, "tokenName");
-			this.tokenName = Optional.of(tokenName);
+			this.tokenName = Optional.of(requireNonNull(tokenName, "tokenName"));
 			return this;
 		}
 		
@@ -264,15 +231,20 @@ public class StoredToken {
 		
 		@Override
 		public OptionalsStep withContext(final TokenCreationContext context) {
-			requireNonNull(context, "context");
-			this.context = context;
+			this.context = requireNonNull(context, "context");
+			return this;
+		}
+		
+		@Override
+		public OptionalsStep withMFA(final MFAStatus mfa) {
+			this.mfa = requireNonNull(mfa, "mfa");
 			return this;
 		}
 
 		@Override
 		public StoredToken build() {
 			return new StoredToken(id, type, tokenName, userName, context,
-					creationDate, expirationDate);
+					creationDate, expirationDate, mfa);
 		}
 
 		@Override
@@ -290,9 +262,8 @@ public class StoredToken {
 		@Override
 		public OptionalsStep withLifeTime(
 				final Instant created,
-				final long lifeTimeInMilliseconds) {
-			requireNonNull(created, "created");
-			this.creationDate = created;
+				final long lifeTimeInMilliseconds) { // TODO CODE check > 0
+			this.creationDate = requireNonNull(created, "created");
 			this.expirationDate = created.plusMillis(lifeTimeInMilliseconds);
 			return this;
 		}
