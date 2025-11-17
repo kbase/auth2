@@ -49,7 +49,7 @@ public interface IdentityProvider {
 	 * @throws IdentityRetrievalException if getting the idenities failed.
 	 * @throws NoSuchEnvironmentException if there is no such environment configured. 
 	 */
-	Set<RemoteIdentity> getIdentities(
+	IdentityProviderResponse getIdentities(
 			String authcode, String pkceCodeVerifier, boolean link, String environment)
 			throws IdentityRetrievalException, NoSuchEnvironmentException;
 	

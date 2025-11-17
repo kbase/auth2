@@ -14,9 +14,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Base64;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.junit.After;
@@ -40,6 +38,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.providers.GoogleIdentityProviderFactory;
 import us.kbase.auth2.providers.GoogleIdentityProviderFactory.GoogleIdentityProvider;
 import us.kbase.test.auth2.TestCommon;
@@ -425,12 +424,13 @@ public class GoogleIdentityProviderTest {
 		
 		setUpOAuthCall(authCode, "pkcewithstuff", "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkcewithstuff", false, env);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
-				new RemoteIdentityDetails("email3", null, "email3")));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(
+				authCode, "pkcewithstuff", false, env
+		);
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id7"),
+						new RemoteIdentityDetails("email3", null, "email3"))
+		)));
 	}
 	
 	@Test
@@ -466,12 +466,11 @@ public class GoogleIdentityProviderTest {
 		
 		setUpOAuthCall(authCode, "pixy", "foo." + b64json(payload) + ".bar", url,
 				idconfig.getClientID(), idconfig.getClientSecret());
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pixy", true, env);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),
-				new RemoteIdentityDetails("email1", "dispname1", "email1")));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pixy", true, env);
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(GOOGLE, "id1"),
+						new RemoteIdentityDetails("email1", "dispname1", "email1"))
+		)));
 	}
 	
 	private void setUpOAuthCall(

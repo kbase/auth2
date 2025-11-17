@@ -61,6 +61,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -499,7 +500,7 @@ public class LinkTest {
 
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		when(provmock.getIdentities(authcode, "pkceisgoodfordiptheria", true, env))
-				.thenReturn(set(REMOTE1, REMOTE2));
+				.thenReturn(IdentityProviderResponse.from(set(REMOTE1, REMOTE2)));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -549,7 +550,7 @@ public class LinkTest {
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		when(provmock.getIdentities(authcode, "pkcebludgeonsjoyintoyoursoul", true, env))
-				.thenReturn(set(REMOTE1, REMOTE3));
+				.thenReturn(IdentityProviderResponse.from(set(REMOTE1, REMOTE3)));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -597,7 +598,7 @@ public class LinkTest {
 
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		when(provmock.getIdentities(authcode, "pkcewhateverfeckit", true, env))
-				.thenReturn(set(REMOTE1));
+				.thenReturn(IdentityProviderResponse.from(REMOTE1));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -669,7 +670,7 @@ public class LinkTest {
 
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
 		when(provmock.getIdentities(authcode, "pkcewowbaggerismyhomie", true, env)).thenReturn(
-				set(REMOTE1, REMOTE2, REMOTE3));
+				IdentityProviderResponse.from(set(REMOTE1, REMOTE2, REMOTE3)));
 		
 		final WebTarget wt = linkCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()

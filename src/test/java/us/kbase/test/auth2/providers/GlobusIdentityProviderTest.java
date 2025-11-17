@@ -41,6 +41,7 @@ import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory;
 import us.kbase.auth2.providers.GlobusIdentityProviderFactory.GlobusIdentityProvider;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
@@ -701,7 +702,7 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pixypixy", false, "myenv");
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pixypixy", false, "myenv");
 		final Set<RemoteIdentity> expected = new HashSet<>();
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
 				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
@@ -709,7 +710,7 @@ public class GlobusIdentityProviderTest {
 				new RemoteIdentityDetails("user1", "name1", null)));
 		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "id2"),
 				new RemoteIdentityDetails("user2", null, "email2")));
-		assertThat("incorrect ident set", rids, is(expected));
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(expected)));
 	}
 	
 	@Test
@@ -741,11 +742,11 @@ public class GlobusIdentityProviderTest {
 				MAPPER.writeValueAsString(ImmutableMap.of("identities", idents)));
 				
 				
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
-				new RemoteIdentityDetails("aUsername", "fullname", "anEmail")));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID"),
+						new RemoteIdentityDetails("aUsername", "fullname", "anEmail"))
+		)));
 	}
 
 	private void setupCallSecondaryID(
@@ -805,12 +806,12 @@ public class GlobusIdentityProviderTest {
 					"name", null,
 					"email", null,
 					"identities_set", Arrays.asList("anID2  \n"))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(
+		final IdentityProviderResponse ipr = idp.getIdentities(
 				authCode, "pkcepkcepkcepkcepkcepkce", true, env);
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
-				new RemoteIdentityDetails("aUsername2", null, null)));
-		assertThat("incorrect ident set", rids, is(expected));
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(GLOBUS, "anID2"),
+						new RemoteIdentityDetails("aUsername2", null, null))
+		)));
 	}
 	
 	private Map<String, Object> map(final Object... entries) {

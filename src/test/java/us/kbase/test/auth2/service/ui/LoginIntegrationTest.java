@@ -69,6 +69,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchIdentityProviderException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -937,7 +938,7 @@ public class LoginIntegrationTest {
 				new RemoteIdentityID("prov1", "prov1id"),
 				new RemoteIdentityDetails("user", "full", "email@email.com"));
 		when(provmock.getIdentities(authcode, pkce, false, environment))
-				.thenReturn(set(remoteIdentity));
+				.thenReturn(IdentityProviderResponse.from(remoteIdentity));
 		return remoteIdentity;
 	}
 	
