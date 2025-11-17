@@ -3,11 +3,11 @@ package us.kbase.test.auth2.providers;
 import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
+import static us.kbase.test.auth2.TestCommon.list;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.MalformedURLException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +34,8 @@ import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.token.MFAStatus;
+import us.kbase.auth2.lib.identity.IdentityProviderConfig.Builder;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
 import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.providers.OrcIDIdentityProviderFactory;
@@ -90,10 +92,11 @@ public class OrcIDIdentityProviderTest {
 		mockClientAndServer.reset();
 	}
 	
-	private static final IdentityProviderConfig CFG;
+	private static final IdentityProviderConfig CFG_NO_MFA;
+	private static final IdentityProviderConfig CFG_MFA;
 	static {
 		try {
-			CFG = IdentityProviderConfig.getBuilder(
+			Builder base = IdentityProviderConfig.getBuilder(
 					OrcIDIdentityProviderFactory.class.getName(),
 					new URL("https://ologin.com"),
 					new URL("https://osetapiurl.com"),
@@ -102,47 +105,48 @@ public class OrcIDIdentityProviderTest {
 					new URL("https://ologinredir.com"),
 					new URL("https://olinkredir.com"))
 					.withEnvironment("myenv",
-							new URL("https://myologinred.com"), new URL("https://myolinkred.com"))
-					.build();
+							new URL("https://myologinred.com"), new URL("https://myolinkred.com"));
+			CFG_MFA = base.build();
+			CFG_NO_MFA = base.withCustomConfiguration("disable-mfa", "true").build();
 		} catch (IdentityProviderConfigurationException | MalformedURLException e) {
 			throw new RuntimeException("Fix yer tests newb", e);
 		}
 	}
 	
 	@Test
-	public void simpleOperationsWithConfigurator() throws Exception {
+	public void simpleOperationsWithConfiguratorWithMFA() throws Exception {
 		final OrcIDIdentityProviderFactory gc = new OrcIDIdentityProviderFactory();
 		
-		final IdentityProvider oip = gc.configure(CFG);
+		final IdentityProvider oip = gc.configure(CFG_MFA);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=%2Fauthenticate" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fologinredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, null),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=%2Fauthenticate" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Folinkredir.com" +
 						"&response_type=code&client_id=ofoo")));
 		
 		assertThat("incorrect login url", oip.getLoginURI("foo3", "pkce", false, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=%2Fauthenticate" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo3&redirect_uri=https%3A%2F%2Fmyologinred.com" +
 						"&response_type=code&client_id=ofoo")));
 		assertThat("incorrect link url", oip.getLoginURI("foo4", "pkce", true, "myenv"),
 				is(new URI("https://ologin.com/oauth/authorize?" +
-						"scope=%2Fauthenticate" +
+						"scope=openid+%2Fauthenticate" +
 						"&state=foo4&redirect_uri=https%3A%2F%2Fmyolinkred.com" +
 						"&response_type=code&client_id=ofoo")));
 	}
 	
 	@Test
-	public void simpleOperationsWithoutConfigurator() throws Exception {
+	public void simpleOperationsWithoutConfiguratorWithoutMFA() throws Exception {
 		
-		final IdentityProvider oip = new OrcIDIdentityProvider(CFG);
+		final IdentityProvider oip = new OrcIDIdentityProvider(CFG_NO_MFA);
 		assertThat("incorrect provider name", oip.getProviderName(), is("OrcID"));
 		assertThat("incorrect environments", oip.getEnvironments(), is(set("myenv")));
 		assertThat("incorrect login url", oip.getLoginURI("foo5", "pkce", false, null),
@@ -174,12 +178,12 @@ public class OrcIDIdentityProviderTest {
 		failCreate(null, new NullPointerException("idc"));
 		failCreate(IdentityProviderConfig.getBuilder(
 				"foo",
-				CFG.getLoginURL(),
-				CFG.getApiURL(),
-				CFG.getClientID(),
-				CFG.getClientSecret(),
-				CFG.getLoginRedirectURL(),
-				CFG.getLinkRedirectURL())
+				CFG_NO_MFA.getLoginURL(),
+				CFG_NO_MFA.getApiURL(),
+				CFG_NO_MFA.getClientID(),
+				CFG_NO_MFA.getClientSecret(),
+				CFG_NO_MFA.getLoginRedirectURL(),
+				CFG_NO_MFA.getLinkRedirectURL())
 				.build(),
 				new IllegalArgumentException(
 						"Configuration class name doesn't match factory class name: foo"));
@@ -196,7 +200,7 @@ public class OrcIDIdentityProviderTest {
 	
 	@Test
 	public void illegalAuthcode() throws Exception {
-		final IdentityProvider idp = new OrcIDIdentityProvider(CFG);
+		final IdentityProvider idp = new OrcIDIdentityProvider(CFG_NO_MFA);
 		failGetIdentities(idp, null, "pkce", true, new IllegalArgumentException(
 				"authcode cannot be null or empty"));
 		failGetIdentities(idp, "  \t  \n  ", "pkce", true, new IllegalArgumentException(
@@ -205,7 +209,7 @@ public class OrcIDIdentityProviderTest {
 	
 	@Test
 	public void noSuchEnvironment() throws Exception {
-		final IdentityProvider idp = new OrcIDIdentityProvider(CFG);
+		final IdentityProvider idp = new OrcIDIdentityProvider(CFG_NO_MFA);
 		
 		failGetIdentities(idp, "foo", "pkce", true, "myenv1",
 				new NoSuchEnvironmentException("myenv1"));
@@ -238,10 +242,12 @@ public class OrcIDIdentityProviderTest {
 		}
 	}
 	
-	private IdentityProviderConfig getTestIDConfig()
-			throws IdentityProviderConfigurationException, MalformedURLException,
-			URISyntaxException {
-		return IdentityProviderConfig.getBuilder(
+	private IdentityProviderConfig getTestIDConfig() throws Exception {
+		return getTestIDConfig(false);
+	}
+	
+	private IdentityProviderConfig getTestIDConfig(final boolean withMFA) throws Exception {
+		final Builder b = IdentityProviderConfig.getBuilder(
 				OrcIDIdentityProviderFactory.class.getName(),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
 				new URL("http://localhost:" + mockClientAndServer.getPort()),
@@ -249,8 +255,12 @@ public class OrcIDIdentityProviderTest {
 				"obar",
 				new URL("https://ologinredir.com"),
 				new URL("https://olinkredir.com"))
-				.withEnvironment("e3", new URL("https://lo.com"), new URL("https://li.com"))
-				.build();
+				.withEnvironment(
+						"e3", new URL("https://lo.com"), new URL("https://li.com"));
+		if (!withMFA) {
+			b.withCustomConfiguration("disable-mfa", "true");
+		}
+		return b.build();
 	}
 	
 	@Test
@@ -323,6 +333,68 @@ public class OrcIDIdentityProviderTest {
 	}
 	
 	@Test
+	public void returnsBadResponseJWT() throws Exception {
+		final String orcID = "0000-0001-1234-5678";
+				
+		failParseJWT(null, new IdentityRetrievalException(
+				"No JWT token provided by ORCID. For non-member API applications, "
+				+ "set disable-mfa to true in provider configuration"
+		));
+		failParseJWT("  \t   ", new IdentityRetrievalException(
+				"No JWT token provided by ORCID. For non-member API applications, "
+				+ "set disable-mfa to true in provider configuration"
+		));
+		failParseJWT("who wrote this bloody token", new IdentityRetrievalException(
+				"Invalid JWT format from ORCID: expected 3 parts, got 1")
+		);
+		failParseJWT("header.payload", new IdentityRetrievalException(
+				"Invalid JWT format from ORCID: expected 3 parts, got 2"));
+		failParseJWT("invalid.jwt.token", new IdentityRetrievalException(
+				"Unable to parse JWT payload from ORCID"
+		));
+		failParseJWT(
+				"eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.invalid==base64!!.signature",
+				new IdentityRetrievalException("Unable to decode JWT from ORCID")
+		);
+		final String invalidJSON = "{\"sub\":\"" + orcID + "\",\"amr\":}";
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(invalidJSON.getBytes());
+		final String invalidJWT = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9." + 
+				encodedPayload + ".signature";
+		failParseJWT(invalidJWT, new IdentityRetrievalException(
+				"Unable to parse JWT payload from ORCID")
+		);
+		failParseJWT(
+				jwt(orcID, map("amr", Collections.emptyMap())), new IdentityRetrievalException(
+						"AMR claim from ORCID in unexpected format: {}"));
+	}
+	
+	private void failParseJWT(final String jwt, final Exception expected) throws Exception {
+		final String authCode = "authcode2";
+		final IdentityProviderConfig idconfig = getTestIDConfig(true);
+		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
+		final String orcID = "0000-0001-1234-5678";
+		
+		setUpCallAuthToken(
+				authCode,
+				"footoken3",
+				"https://ologinredir.com",
+				idconfig.getClientID(),
+				idconfig.getClientSecret(),
+				" My name ",
+				orcID,
+				jwt
+		);
+		failGetIdentities(
+				idp,
+				authCode,
+				"pkce",
+				false,
+				expected
+		);
+	}
+	
+	@Test
 	public void returnsBadResponseIdentity() throws Exception {
 		final IdentityProviderConfig cfg = getTestIDConfig();
 		final IdentityProvider idp = new OrcIDIdentityProvider(cfg);
@@ -379,29 +451,80 @@ public class OrcIDIdentityProviderTest {
 	
 	@Test
 	public void getIdentityWithLoginURL() throws Exception {
-		getIdentityWithLoginURL(null, map());
-		getIdentityWithLoginURL(null, map("email", null));
-		getIdentityWithLoginURL(null, map("email", Collections.emptyList()));
-		getIdentityWithLoginURL(null, map("email", Arrays.asList(map())));
-		getIdentityWithLoginURL(null, map("email", Arrays.asList(map("email", null))));
-		getIdentityWithLoginURL(null, map("email", Arrays.asList(map("email", "   \t   \n "))));
-		getIdentityWithLoginURL("email3", map("email", Arrays.asList(map("email", "email3"))));
+		/* For now we only test MFA with login since it's only relevant there and the code
+		 * path is identical to linking. The only difference is the redirect url transmitted to
+		 * OrcID
+		 */
+		final String orcID = "0000-0001-1234-5678";
+		// MFA checking is skipped 
+		getIdentityWithLoginURL(orcID, null, map(), null, MFAStatus.UNKNOWN);
+		getIdentityWithLoginURL(
+				orcID,
+				null,
+				map("email", null),
+				jwt(orcID, map("iss", "https://orcid.org")),
+				MFAStatus.UNKNOWN
+		);
+		getIdentityWithLoginURL(
+				orcID,
+				null,
+				map("email", Collections.emptyList()),
+				jwt(orcID, map("amr", "pwd")),
+				MFAStatus.NOT_USED
+		);
+		getIdentityWithLoginURL(
+				orcID,
+				null,
+				map("email", Arrays.asList(map())),
+				jwt(orcID, map("amr", "mfa")),
+				MFAStatus.USED
+		);
+		getIdentityWithLoginURL(
+				orcID,
+				null,
+				map("email", Arrays.asList(map("email", null))),
+				jwt(orcID, map("amr", list())),
+				MFAStatus.NOT_USED
+		);
+		getIdentityWithLoginURL(
+				orcID,
+				null,
+				map("email", Arrays.asList(map("email", "   \t   \n "))),
+				jwt(orcID, map("amr", list("pwd"))),
+				MFAStatus.NOT_USED
+		);
+		getIdentityWithLoginURL(
+				orcID,
+				"email3",
+				map("email", Arrays.asList(map("email", "email3"))),
+				jwt(orcID, map("amr", list("pwd", "mfa"))),
+				MFAStatus.USED
+		);
 	}
 	
-	private void getIdentityWithLoginURL(final String email, final Map<String, Object> response)
-			throws Exception {
+	private void getIdentityWithLoginURL(
+			final String orcID,
+			final String email,
+			final Map<String, Object> identityResponse,
+			final String jwt,
+			final MFAStatus mfa
+	) throws Exception {
 		final String authCode = "authcode2";
-		final IdentityProviderConfig idconfig = getTestIDConfig();
+		final IdentityProviderConfig idconfig = getTestIDConfig(jwt != null);
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
-		final String orcID = "0000-0001-1234-5678";
 		
 		setUpCallAuthToken(authCode, "footoken3", "https://ologinredir.com",
-				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
-		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(response));
+				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID, jwt
+		);
+		setupCallID(
+				"footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(identityResponse)
+		);
 		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", false, null);
 		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
 				new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-						new RemoteIdentityDetails(orcID, "My name", email))
+						new RemoteIdentityDetails(orcID, "My name", email)
+				),
+				mfa
 		)));
 	}
 	
@@ -445,6 +568,7 @@ public class OrcIDIdentityProviderTest {
 				"bar2",
 				new URL("https://ologinredir2.com"),
 				new URL("https://olinkredir2.com"))
+				.withCustomConfiguration("disable-mfa", "true")
 				.build();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
@@ -473,6 +597,7 @@ public class OrcIDIdentityProviderTest {
 				new URL("https://ologinredir2.com"),
 				new URL("https://olinkredir2.com"))
 				.withEnvironment("e3", new URL("https://lo.com"), new URL("https://li.com"))
+				.withCustomConfiguration("disable-mfa", "true")
 				.build();
 		final IdentityProvider idp = new OrcIDIdentityProvider(idconfig);
 		final String orcID = "0000-0001-1234-5678";
@@ -498,6 +623,30 @@ public class OrcIDIdentityProviderTest {
 			final String name,
 			final String orcID)
 			throws Exception {
+		setUpCallAuthToken(
+				authCode, authtoken, redirect, clientID, clientSecret, name, orcID, null
+		);
+	}
+	
+	private void setUpCallAuthToken(
+			final String authCode,
+			final String authtoken,
+			final String redirect,
+			final String clientID,
+			final String clientSecret,
+			final String name,
+			final String orcID,
+			final String idToken
+			)
+			throws Exception {
+		Map<String, Object> resp = map(
+				"access_token", authtoken,
+				"name", name,
+				"orcid", orcID
+		);
+		if (idToken != null) {
+			resp.put("id_token", idToken);
+		}
 		mockClientAndServer.when(
 				new HttpRequest()
 					.withMethod("POST")
@@ -515,11 +664,7 @@ public class OrcIDIdentityProviderTest {
 				new HttpResponse()
 					.withStatusCode(200)
 					.withHeader(CONTENT_TYPE, APP_JSON)
-					.withBody(MAPPER.writeValueAsString(map(
-							"access_token", authtoken,
-							"name", name,
-							"orcid", orcID
-							)))
+					.withBody(MAPPER.writeValueAsString(resp))
 			);
 	}
 	
@@ -574,6 +719,18 @@ public class OrcIDIdentityProviderTest {
 						.withHeader(new Header(CONTENT_TYPE, contentType))
 						.withBody(body)
 				);
+	}
+	
+	private String jwt(final String orcID, final Map<String, Object> payload) throws Exception {
+		final String header = "{\"alg\":\"HS256\",\"typ\":\"JWT\"}";
+		payload.put("sub", orcID);
+		final String paystr = MAPPER.writeValueAsString(payload);
+		
+		final String encodedHeader = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(header.getBytes());
+		final String encodedPayload = java.util.Base64.getUrlEncoder().withoutPadding()
+				.encodeToString(paystr.getBytes());
+		return encodedHeader + "." + encodedPayload + ".signature";
 	}
 	
 	private Map<String, Object> map(final Object... entries) {
