@@ -12,9 +12,7 @@ import java.net.URL;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
 import org.junit.After;
 import org.junit.BeforeClass;
@@ -37,6 +35,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig.IdentityProviderConfigurationException;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.providers.OrcIDIdentityProviderFactory;
 import us.kbase.auth2.providers.OrcIDIdentityProviderFactory.OrcIDIdentityProvider;
 import us.kbase.test.auth2.TestCommon;
@@ -399,12 +398,11 @@ public class OrcIDIdentityProviderTest {
 		setUpCallAuthToken(authCode, "footoken3", "https://ologinredir.com",
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", email)));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", false, null);
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+						new RemoteIdentityDetails(orcID, "My name", email))
+		)));
 	}
 	
 	@Test
@@ -418,12 +416,11 @@ public class OrcIDIdentityProviderTest {
 				idconfig.getClientID(), idconfig.getClientSecret(), " My name ", orcID);
 		setupCallID("footoken3", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email7")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", false, "e3");
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, "My name", "email7")));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", false, "e3");
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+						new RemoteIdentityDetails(orcID, "My name", "email7"))
+		)));
 	}
 	
 	@Test
@@ -457,12 +454,11 @@ public class OrcIDIdentityProviderTest {
 				null, orcID);
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				response));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, null);
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, null, email)));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", true, null);
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+						new RemoteIdentityDetails(orcID, null, email))
+		)));
 	}
 	
 	@Test
@@ -486,12 +482,11 @@ public class OrcIDIdentityProviderTest {
 				null, orcID);
 		setupCallID("footoken2", orcID, APP_JSON, 200, MAPPER.writeValueAsString(
 				map("email", Arrays.asList(map("email", "email4")))));
-		final Set<RemoteIdentity> rids = idp.getIdentities(authCode, "pkce", true, "e3");
-		assertThat("incorrect number of idents", rids.size(), is(1));
-		final Set<RemoteIdentity> expected = new HashSet<>();
-		expected.add(new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
-				new RemoteIdentityDetails(orcID, null, "email4")));
-		assertThat("incorrect ident set", rids, is(expected));
+		final IdentityProviderResponse ipr = idp.getIdentities(authCode, "pkce", true, "e3");
+		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
+				new RemoteIdentity(new RemoteIdentityID(ORCID, orcID),
+						new RemoteIdentityDetails(orcID, null, "email4"))
+		)));
 	}
 	
 	private void setUpCallAuthToken(

@@ -35,6 +35,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -152,7 +153,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 		}
 		
 		@Override
-		public Set<RemoteIdentity> getIdentities(
+		public IdentityProviderResponse getIdentities(
 				final String authcode,
 				final String pkceCodeVerifier,
 				final boolean link,
@@ -169,7 +170,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			final Set<RemoteIdentity> secondaries = getSecondaryIdentities(
 					accessToken, idents.secondaryIDs);
 			secondaries.add(idents.primary);
-			return secondaries;
+			return IdentityProviderResponse.from(secondaries);
 		}
 	
 		private Set<RemoteIdentity> getSecondaryIdentities(

@@ -74,6 +74,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -270,7 +271,7 @@ public class AuthenticationLoginTest {
 				.login("suporstate", "pkceughherewegoagain"));
 
 		when(idp.getIdentities("foobar", "pkceughherewegoagain", false, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
 				.thenReturn(null);
@@ -372,7 +373,7 @@ public class AuthenticationLoginTest {
 				.login("suporstate2", "pkceisathingiguess"));
 		
 		when(idp.getIdentities("foobar", "pkceisathingiguess", false, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
 				.thenReturn(null);
@@ -447,7 +448,7 @@ public class AuthenticationLoginTest {
 				.login("veryneatstate", "pkcewhoopdefndoo"));
 		
 		when(idp.getIdentities("foobar", "pkcewhoopdefndoo", false, "env2"))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
 				.thenReturn(null);
@@ -513,13 +514,13 @@ public class AuthenticationLoginTest {
 				.login("somestate", "pkceverifierlalalalala"));
 		
 		when(idp.getIdentities("foobar", "pkceverifierlalalalala", false, null))
-				.thenReturn(set(
+				.thenReturn(IdentityProviderResponse.from(set(
 						new RemoteIdentity(
 								new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "e@g.com"))
-						))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(
@@ -593,13 +594,15 @@ public class AuthenticationLoginTest {
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
 				.login("suporstateystate", "pkceohgodpleasestop"));
 		
-		when(idp.getIdentities("foobar", "pkceohgodpleasestop", false, null)).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+		when(idp.getIdentities("foobar", "pkceohgodpleasestop", false, null)).thenReturn(
+				IdentityProviderResponse.from(set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "d@g.com"))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(
@@ -687,13 +690,15 @@ public class AuthenticationLoginTest {
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
 				.login("state.thatisall", "pkceithinkimightgomad"));
 		
-		when(idp.getIdentities("foobar", "pkceithinkimightgomad", false, null)).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+		when(idp.getIdentities("foobar", "pkceithinkimightgomad", false, null)).thenReturn(
+				IdentityProviderResponse.from(set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "d@g.com"))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(

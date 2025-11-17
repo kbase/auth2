@@ -6,8 +6,6 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -31,6 +29,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchEnvironmentException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
 import us.kbase.auth2.lib.identity.IdentityProviderFactory;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
@@ -134,7 +133,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		}
 	
 		@Override
-		public Set<RemoteIdentity> getIdentities(
+		public IdentityProviderResponse getIdentities(
 				final String authcode,
 				final String pkceCodeVerifier,
 				final boolean link,
@@ -148,7 +147,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			final OrcIDAccessTokenResponse accessToken = getAccessToken(
 					authcode, link, environment);
 			final RemoteIdentity ri = getIdentity(accessToken);
-			return new HashSet<>(Arrays.asList(ri));
+			return IdentityProviderResponse.from(ri);
 		}
 	
 		private RemoteIdentity getIdentity(final OrcIDAccessTokenResponse accessToken)

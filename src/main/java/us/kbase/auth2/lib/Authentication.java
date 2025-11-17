@@ -76,6 +76,7 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -905,8 +906,10 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, au.getUserName())
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
-				.withTokenName(tokenName).build(),
-				randGen.getToken());
+				.withTokenName(tokenName)
+				.build(),
+				randGen.getToken()
+		);
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		logInfo("User {} created {} token {}", au.getUserName().getName(), tokenType, id);
 		return nt;
@@ -1787,9 +1790,9 @@ public class Authentication {
 				Optional.empty(), Operation.LOGINSTART, token);
 		checkState(tids, oauth2State);
 		storage.deleteTemporarySessionData(token.getHashedToken());
-		final Set<RemoteIdentity> ris = idp.getIdentities(
+		final IdentityProviderResponse ipr = idp.getIdentities(
 				authcode, tids.getPKCECodeVerifier().get(), false, environment);
-		final LoginState lstate = getLoginState(ris, Instant.MIN);
+		final LoginState lstate = getLoginState(ipr.getIdentities(), Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken loginToken;
 		if (lstate.getUsers().size() == 1 &&
@@ -2527,8 +2530,8 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = idp.getIdentities(
-				authcode, tids.getPKCECodeVerifier().get(), true, environment);
+		final Set<RemoteIdentity> ids = idp.getIdentities(  // don't care about MFA here (yet)
+				authcode, tids.getPKCECodeVerifier().get(), true, environment).getIdentities();
 		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
 		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
