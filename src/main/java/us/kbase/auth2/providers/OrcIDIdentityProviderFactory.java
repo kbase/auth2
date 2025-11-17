@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.util.Base64;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -33,6 +34,7 @@ import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.token.MFAStatus;
 
 /** A factory for a OrcID identity provider.
  * @author gaprice@lbl.gov
@@ -46,7 +48,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	}
 	
 	/** An identity provider for OrcID accounts.
-	 * @author gaprice@lbl.gov
+	 * 
+	 * Multi-Factor Authentication (MFA) Status Handling:
+	 * - Uses OpenID Connect JWT tokens to determine MFA status via AMR claims
+	 * - Configuration option "disable-mfa" (default: false):
+	 *   - false: Requires OpenID scope, throws error on missing or malformed JWT
+	 *   - true: Skips MFA check, returns MFAStatus.UNKNOWN (for non-member API apps)
+	 * - Valid JWT with AMR claim: returns MFAStatus.USED or MFAStatus.NOT_USED based on
+	 *   "mfa" presence
 	 *
 	 */
 	public static class OrcIDIdentityProvider implements IdentityProvider {
@@ -57,8 +66,10 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 	
 		/* Get creds: https://sandbox.orcid.org/developer-tools */
 		
+		private static final String DISABLE_MFA = "disable-mfa";
 		private static final String NAME = "OrcID";
-		private static final String SCOPE = "/authenticate";
+		private static final String SCOPE_OPENID = "openid /authenticate";
+		private static final String SCOPE_NO_OPENID = "/authenticate";
 		private static final String LOGIN_PATH = "/oauth/authorize";
 		private static final String TOKEN_PATH = "/oauth/token";
 		private static final String RECORD_PATH = "/v2.1";
@@ -69,6 +80,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 		private static final ObjectMapper MAPPER = new ObjectMapper();
 		
 		private final IdentityProviderConfig cfg;
+		private final boolean skipMFA;
 		
 		/** Create an identity provider for OrcID.
 		 * @param idc the configuration for this provider.
@@ -82,6 +94,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 						idc.getIdentityProviderFactoryClassName());
 			}
 			this.cfg = idc;
+			skipMFA = "true".equals(idc.getCustomConfiguation().get(DISABLE_MFA));
 		}
 	
 		@Override
@@ -102,11 +115,12 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				final boolean link,
 				final String environment)
 				throws NoSuchEnvironmentException {
+			final String scope = skipMFA ? SCOPE_NO_OPENID : SCOPE_OPENID;
 			// note that OrcID does not currently implement PKCE so we ignore the code
 			// challenge: https://github.com/ORCID/ORCID-Source/issues/5977
 			return UriBuilder.fromUri(toURI(cfg.getLoginURL()))
 					.path(LOGIN_PATH)
-					.queryParam("scope", SCOPE)
+					.queryParam("scope", scope)
 					.queryParam("state", state)
 					.queryParam("redirect_uri", getRedirectURL(link, environment))
 					.queryParam("response_type", "code")
@@ -147,7 +161,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			final OrcIDAccessTokenResponse accessToken = getAccessToken(
 					authcode, link, environment);
 			final RemoteIdentity ri = getIdentity(accessToken);
-			return IdentityProviderResponse.from(ri);
+			return IdentityProviderResponse.from(ri, accessToken.mfa);
 		}
 	
 		private RemoteIdentity getIdentity(final OrcIDAccessTokenResponse accessToken)
@@ -210,11 +224,14 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 			private final String accessToken;
 			private final String fullName;
 			private final String orcID;
+			private final MFAStatus mfa;
 			
 			private OrcIDAccessTokenResponse(
 					final String accessToken,
 					final String fullName,
-					final String orcID)
+					final String orcID,
+					final MFAStatus mfaStatus
+			)
 					throws IdentityRetrievalException {
 				if (accessToken == null || accessToken.trim().isEmpty()) {
 					throw new IdentityRetrievalException(
@@ -227,6 +244,7 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				this.accessToken = accessToken.trim();
 				this.fullName = fullName == null ? null : fullName.trim();
 				this.orcID = orcID.trim();
+				this.mfa = mfaStatus;
 			}
 		}
 		
@@ -255,10 +273,88 @@ public class OrcIDIdentityProviderFactory implements IdentityProviderFactory {
 				throw new IdentityRetrievalException("Authtoken retrieval failed: " +
 						msg[msg.length - 1].trim());
 			}
+
+			// Determine MFA status based on configuration
+			final MFAStatus mfaStatus;
+			if (skipMFA) {
+				// MFA checking disabled - no OpenID scope, so no id_token expected
+				mfaStatus = MFAStatus.UNKNOWN;
+			} else {
+				// MFA checking enabled - parse JWT from id_token
+				final String idToken = (String) m.get("id_token");
+				mfaStatus = parseAmrClaim(idToken);
+			}
+			
 			return new OrcIDAccessTokenResponse(
 					(String) m.get("access_token"),
 					(String) m.get("name"),
-					(String) m.get("orcid"));
+					(String) m.get("orcid"),
+					mfaStatus
+			);
+		}
+		
+		/**
+		 * Parses the Authentication Method Reference (AMR) claim from an OpenID Connect ID token
+		 * to determine if multi-factor authentication was used.
+		 *
+		 * @param jwt the JWT ID token from ORCID
+		 * @return MFAStatus indicating whether MFA was used
+		 * @throws IdentityRetrievalException if JWT is missing, malformed, or unparseable
+		 */
+		private MFAStatus parseAmrClaim(final String jwt) throws IdentityRetrievalException {
+			if (jwt == null || jwt.trim().isEmpty()) {
+				throw new IdentityRetrievalException(
+						"No JWT token provided by ORCID. For non-member API applications, " +
+						"set disable-mfa to true in provider configuration");
+			}
+			
+			// JWT format: header.payload.signature
+			final String[] parts = jwt.split("\\.");
+			if (parts.length != 3) {
+				// Invalid JWT format
+				throw new IdentityRetrievalException(
+						"Invalid JWT format from ORCID: expected 3 parts, got " + parts.length
+				);
+			}
+
+			// Decode the payload (second part) - URL-safe base64
+			final String payload;
+			try {
+				payload = new String(Base64.getUrlDecoder().decode(parts[1]));
+			} catch (IllegalArgumentException e) {
+				// Base64 decoding failed - invalid JWT format
+				throw new IdentityRetrievalException("Unable to decode JWT from ORCID", e);
+			}
+
+			// Parse JSON payload to extract claims
+			final Map<String, Object> claims;
+			try {
+				@SuppressWarnings("unchecked")
+				final Map<String, Object> parsedClaims = MAPPER.readValue(payload, Map.class);
+				claims = parsedClaims;
+			} catch (IOException e) {
+				// JSON parsing failed - malformed payload
+				throw new IdentityRetrievalException("Unable to parse JWT payload from ORCID", e);
+			}
+
+			final Object amrClaim = claims.get("amr");
+			if (amrClaim == null) {
+				// No AMR claim present - MFA status unknown
+				return MFAStatus.UNKNOWN;
+			} else if (amrClaim instanceof List) {
+				// OpenID Connect spec: AMR should be an array of strings
+				@SuppressWarnings("unchecked")
+				final List<String> amrList = (List<String>) amrClaim;
+				return amrList.contains("mfa") ? MFAStatus.USED : MFAStatus.NOT_USED;
+			} else if (amrClaim instanceof String) {
+				// ORCID may return single string - handle as fallback
+				return "mfa".equals(amrClaim) ? MFAStatus.USED : MFAStatus.NOT_USED;
+			}
+
+			// AMR claim present but in unexpected format
+			throw new IdentityRetrievalException(
+					"AMR claim from ORCID in unexpected format: " + amrClaim
+			);
 		}
 	
 		private Map<String, Object> orcIDPostRequest(
