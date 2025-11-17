@@ -95,6 +95,7 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -871,7 +872,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orElse(null))
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
-				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
+				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()))
+				.append(Fields.TOKEN_MFA, token.getMFA().getID())
+		;
 		try {
 			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -959,6 +962,11 @@ public class MongoStorage implements AuthStorage {
 		return htoken;
 	}
 	
+	private MFAStatus getMFA(final String mfa) {
+		// compatibility with auth versions 0.7.1 and earlier, which don't have the MFA field
+		return mfa == null ? MFAStatus.UNKNOWN : MFAStatus.fromID(mfa);
+	}
+	
 	private StoredToken getToken(final Document t) throws AuthStorageException {
 		return StoredToken.getBuilder(
 					TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
@@ -969,6 +977,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
+				.withMFA(getMFA(t.getString(Fields.TOKEN_MFA)))
 				.build();
 	}
 	

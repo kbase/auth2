@@ -20,6 +20,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -71,7 +72,9 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 			.withContext(TokenCreationContext.getBuilder()
 					.withIpAddress(InetAddress.getByName("localhost"))
 					.build())
-			.withTokenName(new TokenName("foo")).build();
+			.withTokenName(new TokenName("foo"))
+			.withMFA(MFAStatus.USED)
+			.build();
 		storage.storeToken(store, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 		
 		final StoredToken expected  = StoredToken.getBuilder(
@@ -80,7 +83,9 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 			.withContext(TokenCreationContext.getBuilder()
 					.withIpAddress(InetAddress.getByName("127.0.0.1"))
 					.build())
-			.withTokenName(new TokenName("foo")).build();
+			.withTokenName(new TokenName("foo"))
+			.withMFA(MFAStatus.USED)
+			.build();
 		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
 		assertThat("incorrect token", st, is(expected));
 	}
@@ -91,13 +96,16 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
-			.withLifeTime(now, now.plusSeconds(10)).build();
+			.withLifeTime(now, now.plusSeconds(10))
+			.withMFA(MFAStatus.UNKNOWN)
+			.build();
 		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 
 		
 		final StoredToken expected = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
-			.withLifeTime(now, now.plusSeconds(10)).build();
+			.withLifeTime(now, now.plusSeconds(10))
+			.build();
 
 		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
 		assertThat("incorrect token", st, is(expected));
@@ -112,12 +120,42 @@ public class MongoStorageTokensTest extends MongoStorageTester {
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
-			.withLifeTime(now, now.plusSeconds(10)).build();
+			.withLifeTime(now, now.plusSeconds(10))
+			.withMFA(MFAStatus.NOT_USED)
+			.build();
 		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
 		
 		db.getCollection("tokens").updateOne(new Document("id", id.toString()),
 				new Document("$set", new Document("custctx", null)));
 		
+		final StoredToken expected = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10))
+			.withMFA(MFAStatus.NOT_USED)
+			.build();
+
+		final StoredToken st = storage.getToken(new IncomingToken("sometoken").getHashedToken());
+		assertThat("incorrect token", st, is(expected));
+	}
+	
+	@Test
+	public void getWithNullMfaBackwardsCompatibility() throws Exception {
+		/*
+		 * Tests backwards compatibility with tokens created before the MFA field was added.
+		 */
+		final UUID id = UUID.randomUUID();
+		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
+		final StoredToken ht = StoredToken.getBuilder(
+				TokenType.LOGIN, id, new UserName("bar"))
+			.withLifeTime(now, now.plusSeconds(10))
+			.withMFA(MFAStatus.USED)
+			.build();
+		storage.storeToken(ht, "nJKFR6Xc4vzCeI3jT+FjlC9k5Q/qVw0zd0gi1erL8ew=");
+
+		// Remove the MFA field to simulate old database records
+		db.getCollection("tokens").updateOne(new Document("id", id.toString()),
+				new Document("$unset", new Document("mfa", "")));
+
 		final StoredToken expected = StoredToken.getBuilder(
 				TokenType.LOGIN, id, new UserName("bar"))
 			.withLifeTime(now, now.plusSeconds(10)).build();

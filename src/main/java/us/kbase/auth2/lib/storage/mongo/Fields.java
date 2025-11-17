@@ -113,6 +113,8 @@ public class Fields {
 	public static final String TOKEN_EXPIRY = "expires";
 	/** The ID of the token. */
 	public static final String TOKEN_ID = "id";
+	/** The MFA status for the token. */
+	public static final String TOKEN_MFA = "mfa";
 	/** The name of the token, if any. */
 	public static final String TOKEN_NAME = "name";
 	/** The date the token was created. */
