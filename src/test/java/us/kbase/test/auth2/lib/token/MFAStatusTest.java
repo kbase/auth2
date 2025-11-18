@@ -19,11 +19,11 @@ public class MFAStatusTest {
 	@Test
 	public void testMFAStatusGetDescription() throws Exception {
 		assertThat("incorrect Used description", MFAStatus.USED.getDescription(),
-				is("MFA used"));
+				is("Used"));
 		assertThat("incorrect NotUsed description", MFAStatus.NOT_USED.getDescription(),
-				is("MFA not used"));
+				is("NotUsed"));
 		assertThat("incorrect Unknown description", MFAStatus.UNKNOWN.getDescription(),
-				is("MFA status unknown"));
+				is("Unknown"));
 	}
 
 	@Test
