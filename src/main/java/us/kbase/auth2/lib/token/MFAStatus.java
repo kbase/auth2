@@ -9,11 +9,18 @@ public enum MFAStatus {
 	/* first arg is ID, second arg is description. ID CANNOT change
 	 * since that field is stored in the DB.
 	 */
+
 	/** User authenticated with MFA during token creation. */
 	USED			("Used", "MFA used"),
+
 	/** User explicitly chose not to use MFA when available. */
 	NOT_USED		("NotUsed", "MFA not used"),
-	/** MFA status unknown or not applicable to authentication method. */
+
+	/** MFA status catch all. Covers
+	 * - source did not provide enough information to determine MFA status
+	 * - source does not support MFA
+	 * - MFA is not applicable to the data (e.g. token types other than Login)
+	 */
 	UNKNOWN			("Unknown", "MFA status unknown");
 
 	private static final Map<String, MFAStatus> STATUS_MAP = new HashMap<>();
