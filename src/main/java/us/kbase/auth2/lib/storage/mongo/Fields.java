@@ -161,6 +161,8 @@ public class Fields {
 	public static final String TEMP_SESSION_USER = "user";
 	/** The remote identities associated with the temporary token. */
 	public static final String TEMP_SESSION_IDENTITIES = "idents";
+	/** The MFA status associated with the temporary token. */
+	public static final String TEMP_SESSION_MFA = "mfa";
 	/** The error associated with the temporary token. */
 	public static final String TEMP_SESSION_ERROR = "err";
 	/** The type of the error associated with the temporary token. */

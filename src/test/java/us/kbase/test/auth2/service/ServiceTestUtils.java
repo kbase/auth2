@@ -54,6 +54,7 @@ import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.exceptions.AuthException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -224,6 +225,7 @@ public class ServiceTestUtils {
 			final Map<String, String> customContext,
 			final UserName userName,
 			final TokenType type,
+			final MFAStatus mfa,
 			final String name,
 			final long lifetime,
 			final boolean checkAgentContext)
@@ -248,7 +250,7 @@ public class ServiceTestUtils {
 		}
 		
 		checkStoredToken(manager, (String) uitoken.get("token"), id, created, customContext,
-				userName, type, name, lifetime);
+				userName, type, mfa, name, lifetime);
 	}
 	
 	public static void checkStoredToken(
@@ -259,9 +261,10 @@ public class ServiceTestUtils {
 			final Map<String, String> customContext,
 			final UserName userName,
 			final TokenType type,
+			final MFAStatus mfa,
 			final String name,
-			final long lifetime)
-			throws Exception {
+			final long lifetime
+			) throws Exception {
 		
 		assertThat("incorrect token", token, is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
@@ -291,6 +294,7 @@ public class ServiceTestUtils {
 		assertThat("incorrect id", st.getId(), is(UUID.fromString(id)));
 		assertThat("incorrect name", st.getTokenName(), is(tn));
 		assertThat("incorrect user", st.getUserName(), is(userName));
+		assertThat("incorrect mfa", st.getMFA(), is(mfa));
 	}
 	
 	// combine with above somehow?
@@ -300,9 +304,10 @@ public class ServiceTestUtils {
 			final Map<String, String> customContext,
 			final UserName userName,
 			final TokenType type,
+			final MFAStatus mfa,
 			final String name,
-			final long lifetime)
-			throws Exception {
+			final long lifetime
+			) throws Exception {
 		
 		assertThat("incorrect token", token, is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
@@ -332,6 +337,7 @@ public class ServiceTestUtils {
 		assertThat("incorrect id", st.getId(), isA(UUID.class));
 		assertThat("incorrect name", st.getTokenName(), is(tn));
 		assertThat("incorrect user", st.getUserName(), is(userName));
+		assertThat("incorrect mfa", st.getMFA(), is(mfa));
 	}
 	
 	public static void resetServer(

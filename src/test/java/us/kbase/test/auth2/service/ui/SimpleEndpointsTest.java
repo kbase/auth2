@@ -55,6 +55,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.PasswordMismatchException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.LocalUser;
@@ -521,7 +522,8 @@ public class SimpleEndpointsTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		
 		ServiceTestUtils.checkStoredToken(manager, token.getValue(), Collections.emptyMap(),
-				new UserName("whoo"), TokenType.LOGIN, null, 14 * 24 * 3600 * 1000);
+				new UserName("whoo"), TokenType.LOGIN, MFAStatus.UNKNOWN, null,
+				14 * 24 * 3600 * 1000);
 	}
 	
 	@Test
@@ -556,7 +558,8 @@ public class SimpleEndpointsTest {
 		
 		ServiceTestUtils.checkStoredToken(manager, token.getValue(), 
 				ImmutableMap.of("foo", "bar", "baz", "bat"),
-				new UserName("whoo"), TokenType.LOGIN, null, 14 * 24 * 3600 * 1000);
+				new UserName("whoo"), TokenType.LOGIN, MFAStatus.UNKNOWN, null,
+				14 * 24 * 3600 * 1000);
 	}
 	
 	@Test

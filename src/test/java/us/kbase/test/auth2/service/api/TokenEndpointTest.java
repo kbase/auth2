@@ -44,6 +44,7 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
@@ -226,7 +227,8 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		ServiceTestUtils.checkReturnedToken(manager, response, Collections.emptyMap(),
-				new UserName("foo"), TokenType.AGENT, "whee", 7 * 24 * 3600 * 1000, false);
+				new UserName("foo"), TokenType.AGENT, MFAStatus.UNKNOWN, "whee",
+				7 * 24 * 3600 * 1000, false);
 	}
 	
 	@Test
@@ -246,7 +248,8 @@ public class TokenEndpointTest {
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> response = res.readEntity(Map.class);
 		ServiceTestUtils.checkReturnedToken(manager, response, ImmutableMap.of("foo", "bar"),
-				new UserName("foo"), TokenType.AGENT, "whee", 7 * 24 * 3600 * 1000, false);
+				new UserName("foo"), TokenType.AGENT, MFAStatus.UNKNOWN, "whee",
+				7 * 24 * 3600 * 1000, false);
 	}
 	
 	@Test

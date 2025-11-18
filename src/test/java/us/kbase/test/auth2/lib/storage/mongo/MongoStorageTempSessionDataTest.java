@@ -23,6 +23,7 @@ import us.kbase.auth2.lib.TemporarySessionData;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.test.auth2.TestCommon;
 
 public class MongoStorageTempSessionDataTest extends MongoStorageTester {
@@ -54,13 +55,13 @@ public class MongoStorageTempSessionDataTest extends MongoStorageTester {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now().truncatedTo(ChronoUnit.MILLIS); // mongo truncates
 		final TemporarySessionData tsd = TemporarySessionData.create(id, now, now.plusSeconds(10))
-				.login(set(REMOTE2));
+				.login(set(REMOTE2), MFAStatus.USED);
 		storage.storeTemporarySessionData(tsd, IncomingToken.hash("foobar"));
 	
 		assertThat("incorrect session data", storage.getTemporarySessionData(
 				new IncomingToken("foobar").getHashedToken()), is(
 						TemporarySessionData.create(id, now, now.plusSeconds(10))
-							.login(set(REMOTE2))));
+							.login(set(REMOTE2), MFAStatus.USED)));
 	}
 	
 	@Test
