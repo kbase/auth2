@@ -60,7 +60,8 @@ import us.kbase.auth2.service.common.IncomingJSON;
 @Path(UIPaths.TOKENS_ROOT)
 public class Tokens {
 	
-	//TODO JAVADOC or swagger
+	// TODO JAVADOC or swagger
+	// TODO TEST unit tests
 
 	@Inject
 	private Authentication auth;
@@ -196,7 +197,7 @@ public class Tokens {
 	private NewUIToken createtoken(
 			final HttpServletRequest req,
 			final String tokenName,
-			final String tokenType,
+			String tokenType,
 			final IncomingToken userToken,
 			final Map<String, String> customContext)
 			throws AuthStorageException, MissingParameterException,
@@ -204,6 +205,7 @@ public class Tokens {
 				UnauthorizedException, IllegalParameterException {
 		final TokenCreationContext tcc = getTokenContext(
 				userAgentParser, req, isIgnoreIPsInHeaders(auth), customContext);
+		tokenType = tokenType == null ? null : tokenType.toLowerCase();
 		return new NewUIToken(auth.createToken(userToken, new TokenName(tokenName),
 				Fields.TOKEN_SERVICE.equals(tokenType) ? TokenType.SERV : TokenType.DEV, tcc));
 	}

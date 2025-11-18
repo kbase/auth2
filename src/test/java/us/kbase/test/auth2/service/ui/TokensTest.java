@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import static us.kbase.test.auth2.TestCommon.inst;
+import static us.kbase.test.auth2.TestCommon.list;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.InetAddress;
@@ -421,62 +422,64 @@ public class TokensTest {
 				.build(),
 				token.getHashedToken().getTokenHash());
 		
-		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
-		final WebTarget wt = CLI.target(target);
-
-		final Builder req = wt.request()
-				.cookie(COOKIE_NAME, token.getToken());
-		
-		final Form form = new Form();
-		form.param("name", "foo");
-		form.param("type", "service");
-		form.param("customcontext", "foo, bar ; baz, bat");
-		
-		final Response res = req.post(Entity.form(form));
-		final String html = res.readEntity(String.class);
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
-				TestCommon.getCurrentMethodName()), "whoo", "foo");
-		
-		final Pattern p = Pattern.compile(regex);
-		
-		final Matcher m = p.matcher(html);
-		if (!m.matches()) {
-			fail("pattern did not match token page");
-		}
-		final String id = m.group(1);
-		final String newtoken = m.group(2);
-		final long created = Long.parseLong(m.group(3));
-		final long expires = Long.parseLong(m.group(4));
-
-		UUID.fromString(id); // ensures the id is a valid uuid
-		TestCommon.assertCloseToNow(created);
-		assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
-		
-		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
-				ImmutableMap.of("foo", "bar", "baz", "bat"),
-				new UserName("whoo"), TokenType.SERV, "foo", 100_000_000L * 24 * 3600 * 1000L);
+		for (final String tokenType: list("Service", "service")) {
+			final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+			final WebTarget wt = CLI.target(target);
+	
+			final Builder req = wt.request()
+					.cookie(COOKIE_NAME, token.getToken());
 			
-		
-		final Builder req2 = wt.request()
-				.header("authorization", token.getToken())
-				.header("accept", MediaType.APPLICATION_JSON);
-		
-		final Response jsonresp = req2.post(Entity.json(ImmutableMap.of(
-				"name", "foo",
-				"type", "service",
-				"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> json = jsonresp.readEntity(Map.class);
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		ServiceTestUtils.checkReturnedToken(manager, json,
-				ImmutableMap.of("foo", "bar", "baz", "bat"),
-				new UserName("whoo"), TokenType.SERV, "foo",
-				100_000_000L * 24 * 3600 * 1000L, true);
+			final Form form = new Form();
+			form.param("name", "foo");
+			form.param("type", tokenType);
+			form.param("customcontext", "foo, bar ; baz, bat");
+			
+			final Response res = req.post(Entity.form(form));
+			final String html = res.readEntity(String.class);
+			
+			assertThat("incorrect response code", res.getStatus(), is(200));
+			
+			final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
+					TestCommon.getCurrentMethodName()), "whoo", "foo");
+			
+			final Pattern p = Pattern.compile(regex);
+			
+			final Matcher m = p.matcher(html);
+			if (!m.matches()) {
+				fail("pattern did not match token page");
+			}
+			final String id = m.group(1);
+			final String newtoken = m.group(2);
+			final long created = Long.parseLong(m.group(3));
+			final long expires = Long.parseLong(m.group(4));
+	
+			UUID.fromString(id); // ensures the id is a valid uuid
+			TestCommon.assertCloseToNow(created);
+			assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
+			
+			ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
+					ImmutableMap.of("foo", "bar", "baz", "bat"),
+					new UserName("whoo"), TokenType.SERV, "foo", 100_000_000L * 24 * 3600 * 1000L);
+				
+			
+			final Builder req2 = wt.request()
+					.header("authorization", token.getToken())
+					.header("accept", MediaType.APPLICATION_JSON);
+			
+			final Response jsonresp = req2.post(Entity.json(ImmutableMap.of(
+					"name", "foo",
+					"type", tokenType,
+					"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> json = jsonresp.readEntity(Map.class);
+			
+			assertThat("incorrect response code", res.getStatus(), is(200));
+			
+			ServiceTestUtils.checkReturnedToken(manager, json,
+					ImmutableMap.of("foo", "bar", "baz", "bat"),
+					new UserName("whoo"), TokenType.SERV, "foo",
+					100_000_000L * 24 * 3600 * 1000L, true);
+		}
 	}
 	
 	@Test
