@@ -190,7 +190,7 @@ public class TestModeIntegrationTest {
 				ImmutableMap.of("user", "whee", "display", "whoo")));
 		assertThat("user create failed", ures.getStatus(), is(200));
 		
-		final Map<String, Object> response = createToken("whee", "Login", "foo", "Used");
+		final Map<String, Object> response = createToken("whee", "Login", "foo", "NotUsed");
 		
 		final long created = (long) response.get("created");
 		response.remove("created");
@@ -205,6 +205,7 @@ public class TestModeIntegrationTest {
 		
 		final Map<String, Object> expected = new HashMap<>();
 		expected.put("type", "Login");
+		expected.put("mfa", "NotUsed");
 		expected.put("name", "foo");
 		expected.put("user", "whee");
 		expected.put("custom", Collections.emptyMap());
