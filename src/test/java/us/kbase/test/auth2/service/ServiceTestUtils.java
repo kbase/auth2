@@ -233,6 +233,7 @@ public class ServiceTestUtils {
 		
 		assertThat("incorrect token context", uitoken.get("custom"), is(customContext));
 		assertThat("incorrect token type", uitoken.get("type"), is(type.getDescription()));
+		assertThat("incorrect mfa", uitoken.get("mfa"), is(mfa.getDescription()));
 		final long created = (long) uitoken.get("created");
 		TestCommon.assertCloseToNow(created);
 		assertThat("incorrect expires", uitoken.get("expires"),

@@ -1,4 +1,3 @@
-version: "3.1"
 # This is just an example that shows the relationships between the auth2 image
 # and other services. Many of these things would be overidden in the actual
 # deployment docker-compose file - for example, the name of the mongodb instance

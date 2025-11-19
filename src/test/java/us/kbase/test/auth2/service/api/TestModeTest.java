@@ -319,7 +319,6 @@ public class TestModeTest {
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withMFA(MFAStatus.UNKNOWN)
 						.build(),
 						"a token"));
 		
@@ -333,7 +332,7 @@ public class TestModeTest {
 			final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
 					TokenType.DEV, uuid, new UserName("foo"))
 					.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-					.withMFA(MFAStatus.USED)
+					.withMFA(MFAStatus.UNKNOWN)
 					.build(),
 					"a token"), 30000L);
 			
@@ -367,6 +366,7 @@ public class TestModeTest {
 				TokenType.AGENT, uuid, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
 				.withTokenName(new TokenName("whee"))
+				.withMFA(MFAStatus.USED)
 				.build(),
 				"a token"), 30000L);
 		
@@ -438,6 +438,7 @@ public class TestModeTest {
 		when(auth.testModeGetToken(new IncomingToken("a token"))).thenReturn(
 				StoredToken.getBuilder(TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+						.withMFA(MFAStatus.NOT_USED)
 						.build());
 		
 		when(auth.getSuggestedTokenCacheTime()).thenReturn(40000L);
@@ -447,6 +448,7 @@ public class TestModeTest {
 		final APIToken expected = new APIToken(StoredToken.getBuilder(
 				TokenType.DEV, uuid, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+				.withMFA(MFAStatus.NOT_USED)
 				.build(),
 				40000);
 		

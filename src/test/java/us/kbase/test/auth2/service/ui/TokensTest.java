@@ -154,6 +154,7 @@ public class TokensTest {
 				.with("service", false)
 				.with("current", MapBuilder.newHashMap()
 						.with("type", "Login")
+						.with("mfa", "Unknown")
 						.with("id", id)
 						.with("expires", 1000000000010000L)
 						.with("created", 10000)
@@ -200,6 +201,7 @@ public class TokensTest {
 						.withNullableDevice("dev")
 						.withNullableOS("o", "osv")
 						.build())
+				.withMFA(MFAStatus.USED)
 				.build(),
 				token.getHashedToken().getTokenHash());
 		
@@ -211,6 +213,7 @@ public class TokensTest {
 						.withNullableAgent("ag2", "agv2")
 						.withNullableDevice("dev2")
 						.build())
+				.withMFA(MFAStatus.NOT_USED)  // this should never happen for an agent token fwiw
 				.build(),
 				"somehash");
 		
@@ -256,6 +259,7 @@ public class TokensTest {
 				.with("service", true)
 				.with("current", MapBuilder.newHashMap()
 						.with("type", "Login")
+						.with("mfa", "Used")
 						.with("id", id)
 						.with("expires", 1000000000010000L)
 						.with("created", 10000)
@@ -272,6 +276,7 @@ public class TokensTest {
 				.with("tokens", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("type", "Developer")
+								.with("mfa", "Unknown")
 								.with("id", id3)
 								.with("expires", 3000000000030000L)
 								.with("created", 30000)
@@ -287,6 +292,7 @@ public class TokensTest {
 								.build(),
 						MapBuilder.newHashMap()
 								.with("type", "Agent")
+								.with("mfa", "NotUsed")
 								.with("id", id2)
 								.with("expires", 2000000000020000L)
 								.with("created", 20000)

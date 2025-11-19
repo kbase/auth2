@@ -14,6 +14,7 @@ import com.google.common.collect.ImmutableMap;
 import nl.jqno.equalsverifier.EqualsVerifier;
 import us.kbase.auth2.lib.TokenCreationContext;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -46,6 +47,7 @@ public class ExternalTokenTest {
 		assertThat("incorrect name", et.getName(), is("bar"));
 		assertThat("incorrect custom context", et.getCustom(),
 				is(ImmutableMap.of("whee", "whoo")));
+		assertThat("incorrect MFA", et.getMfa(), is("Unknown"));
 	}
 	
 	@Test
@@ -56,6 +58,7 @@ public class ExternalTokenTest {
 				.withLifeTime(Instant.ofEpochMilli(10000), 15000)
 				.withContext(TokenCreationContext.getBuilder()
 						.withCustomContext("whee", "whoo").build())
+				.withMFA(MFAStatus.USED)
 				.build());
 		
 		assertThat("incorrect type", et.getType(), is("Agent"));
@@ -66,6 +69,7 @@ public class ExternalTokenTest {
 		assertThat("incorrect name", et.getName(), is((String) null));
 		assertThat("incorrect custom context", et.getCustom(),
 				is(ImmutableMap.of("whee", "whoo")));
+		assertThat("incorrect MFA", et.getMfa(), is("Used"));
 	}
 	
 	@Test

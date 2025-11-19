@@ -151,6 +151,7 @@ public class TokenEndpointTest {
 				.withTokenName(new TokenName("bar"))
 				.withContext(TokenCreationContext.getBuilder()
 						.withCustomContext("whee", "whoo").build())
+				.withMFA(MFAStatus.USED)
 				.build(), it.getHashedToken().getTokenHash());
 		
 		final URI target = UriBuilder.fromUri(host).path("/api/V2/token").build();
@@ -168,6 +169,7 @@ public class TokenEndpointTest {
 		
 		final Map<String, Object> expected = MapBuilder.<String, Object>newHashMap()
 				.with("type", "Agent")
+				.with("mfa", "Used")
 				.with("id", id.toString())
 				.with("created", 10000)
 				.with("expires", 1000000000000000L)
