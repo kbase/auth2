@@ -1,14 +1,22 @@
 # Authentication Service MKII release notes
 
-## 0.7.2
+## 0.8.0
 
+* BACKWARDS INCOMPATIBILITY: In flight login sessions when the server is upgraded will fail.
+  For a completely safe transition, stop the server, remove any temporary session data, and
+  bring the new server up.
 * BACKWARDS INCOMPATIBILITY: Repeated or trailing underscores are
   no longer allowed in usernames. Existing usernames are unaffected.
+* The MultiFactor Authentication status is now available for tokens fetched from the service.
+  Currently only OrcID supports MFA statuses other than `Unknown`. Other statuses are `Used` and
+  `Not Used`.
 * Fixed a bug where usernames with underscores would not be matched in username searches if an
   underscore was an interior character of a search prefix.
 * Fixed a bug where a MongoDB error would be thrown if a user search prefix resulted in no search
   terms if it had no valid characters for the requested search, whether user name or display
   name. Now a service error is thrown.
+* The `/tokens` endpoint can now accept `Service` or `service` to specify that a service token
+  should be created.
 
 ## 0.7.1
 
