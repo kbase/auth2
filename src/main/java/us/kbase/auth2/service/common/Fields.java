@@ -174,6 +174,8 @@ public class Fields {
 	public static final String TOKEN_NAME = "name";
 	/** The type of a token. */
 	public static final String TOKEN_TYPE = "type";
+	/** The mfa status of a token. */
+	public static final String TOKEN_MFA = "mfa";
 	/** Whether the user can create developer tokens. */
 	public static final String TOKEN_DEV = "dev";
 	/** Whether the user can create service tokens. */

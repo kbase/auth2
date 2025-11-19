@@ -50,6 +50,7 @@ import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -119,22 +120,6 @@ public class TestMode {
 		return Me.toUserMap(auth.testModeGetUser(new UserName(userName)));
 	}
 	
-	public static class CreateTestToken extends IncomingJSON {
-		public final String userName;
-		public final String tokenName;
-		public final String tokenType;
-
-		@JsonCreator
-		public CreateTestToken(
-				@JsonProperty(Fields.USER) final String userName,
-				@JsonProperty(Fields.TOKEN_NAME) final String tokenName,
-				@JsonProperty(Fields.TOKEN_TYPE) final String tokenType) {
-			this.userName = userName;
-			this.tokenName = tokenName;
-			this.tokenType = tokenType;
-		}
-	}
-	
 	@GET
 	@Path(APIPaths.TESTMODE_USER_DISPLAY)
 	@Produces(MediaType.APPLICATION_JSON)
@@ -150,6 +135,26 @@ public class TestMode {
 				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
 	}
 	
+	public static class CreateTestToken extends IncomingJSON {
+		public final String userName;
+		public final String tokenName;
+		public final String tokenType;
+		public final String mfa;
+
+		@JsonCreator
+		public CreateTestToken(
+				@JsonProperty(Fields.USER) final String userName,
+				@JsonProperty(Fields.TOKEN_NAME) final String tokenName,
+				@JsonProperty(Fields.TOKEN_TYPE) final String tokenType,
+				@JsonProperty(Fields.TOKEN_MFA) final String mfa
+		) {
+			this.userName = userName;
+			this.tokenName = tokenName;
+			this.tokenType = tokenType;
+			this.mfa = mfa;
+		}
+	}
+	
 	@POST
 	@Path(APIPaths.TESTMODE_TOKEN_CREATE)
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -161,10 +166,24 @@ public class TestMode {
 			throw new MissingParameterException("JSON body missing");
 		}
 		create.exceptOnAdditionalProperties();
+		final MFAStatus mfa;
+		if (create.mfa == null || create.mfa.trim().isEmpty()) {
+			mfa = MFAStatus.UNKNOWN;
+		} else {
+			try {
+				// TODO CODE this should really be from description, but they're identical
+				//           currently so we just use fromID
+				mfa = MFAStatus.fromID(create.mfa.trim());
+			} catch (IllegalArgumentException e) {
+				throw new IllegalParameterException("Unknown MFA state: " + create.mfa);
+			}
+		}
 		return new NewAPIToken(auth.testModeCreateToken(
-				new UserName(create.userName),
-				create.tokenName == null ? null : new TokenName(create.tokenName),
-				getTokenType(create.tokenType)),
+					new UserName(create.userName),
+					create.tokenName == null ? null : new TokenName(create.tokenName),
+					getTokenType(create.tokenType),
+					mfa
+				),
 				auth.getSuggestedTokenCacheTime());
 	}
 

@@ -30,6 +30,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
@@ -71,17 +72,21 @@ public class AuthenticationTestModeTokenTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000));
 		when(rand.getToken()).thenReturn("whee");
 		
-		final NewToken nt = auth.testModeCreateToken(new UserName("foo"), null, TokenType.AGENT);
+		final NewToken nt = auth.testModeCreateToken(
+				new UserName("foo"), null, TokenType.AGENT, MFAStatus.USED
+		);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.AGENT, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
+				.withMFA(MFAStatus.USED)
 				.build(),
 				"whee")));
 		
 		verify(storage).testModeStoreToken(StoredToken.getBuilder(
 				TokenType.AGENT, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
+				.withMFA(MFAStatus.USED)
 				.build(),
 				IncomingToken.hash("whee"));
 		
@@ -107,12 +112,13 @@ public class AuthenticationTestModeTokenTest {
 		when(rand.getToken()).thenReturn("whee");
 		
 		final NewToken nt = auth.testModeCreateToken(
-				new UserName("foo"), new TokenName("tok"), TokenType.SERV);
+				new UserName("foo"), new TokenName("tok"), TokenType.SERV, MFAStatus.NOT_USED);
 		
 		assertThat("incorrect token", nt, is(new NewToken(StoredToken.getBuilder(
 				TokenType.SERV, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
 				.withTokenName(new TokenName("tok"))
+				.withMFA(MFAStatus.NOT_USED)
 				.build(),
 				"whee")));
 		
@@ -120,6 +126,7 @@ public class AuthenticationTestModeTokenTest {
 				TokenType.SERV, id, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(3610000))
 				.withTokenName(new TokenName("tok"))
+				.withMFA(MFAStatus.NOT_USED)
 				.build(),
 				IncomingToken.hash("whee"));
 		
@@ -131,14 +138,19 @@ public class AuthenticationTestModeTokenTest {
 	@Test
 	public void createTokenFailNulls() throws Exception {
 		final Authentication auth = initTestMocks(true).auth;
-		failCreateToken(auth, null, TokenType.DEV, new NullPointerException("userName"));
-		failCreateToken(auth, new UserName("u"), null, new NullPointerException("tokenType"));
+		final TokenType tt = TokenType.DEV;
+		final MFAStatus m = MFAStatus.NOT_USED;
+		failCreateToken(auth, null, tt, m, new NullPointerException("userName"));
+		failCreateToken(auth, new UserName("u"), null, m, new NullPointerException("tokenType"));
+		failCreateToken(auth, new UserName("u"), tt, null, new NullPointerException("mfa"));
 	}
 	
 	@Test
 	public void createTokenFailNoTestMode() throws Exception {
-		failCreateToken(initTestMocks(false).auth, new UserName("u"), TokenType.DEV,
-				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled"));
+		failCreateToken(
+				initTestMocks(false).auth, new UserName("u"), TokenType.DEV, MFAStatus.UNKNOWN,
+				new TestModeException(ErrorType.UNSUPPORTED_OP, "Test mode is not enabled")
+		);
 	}
 	
 	@Test
@@ -150,7 +162,7 @@ public class AuthenticationTestModeTokenTest {
 		when(storage.testModeGetUser(new UserName("foo")))
 				.thenThrow(new NoSuchUserException("foo"));
 		
-		failCreateToken(auth, new UserName("foo"), TokenType.AGENT,
+		failCreateToken(auth, new UserName("foo"), TokenType.AGENT, MFAStatus.UNKNOWN,
 				new NoSuchUserException("foo"));
 	}
 	
@@ -158,9 +170,10 @@ public class AuthenticationTestModeTokenTest {
 			final Authentication auth,
 			final UserName userName,
 			final TokenType tokenType,
+			final MFAStatus mfa,
 			final Exception expected) {
 		try {
-			auth.testModeCreateToken(userName, null, tokenType);
+			auth.testModeCreateToken(userName, null, tokenType, mfa);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, expected);
