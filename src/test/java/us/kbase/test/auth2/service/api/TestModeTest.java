@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -342,35 +343,43 @@ public class TestModeTest {
 	
 	@Test
 	public void createTokenWithName() throws Exception {
-		final Authentication auth = mock(Authentication.class);
-		final TestMode tm = new TestMode(auth);
-		
-		final UUID uuid = UUID.randomUUID();
-		
-		when(auth.testModeCreateToken(
-				new UserName("foo"), new TokenName("whee"), TokenType.AGENT, MFAStatus.USED))
-				.thenReturn(new NewToken(StoredToken.getBuilder(
-						TokenType.AGENT, uuid, new UserName("foo"))
-						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withTokenName(new TokenName("whee"))
-						.withMFA(MFAStatus.USED)
-						.build(),
-						"a token"));
-		
-		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
-		
-		final NewAPIToken token = tm.createTestToken(
-				new CreateTestToken("foo", "whee", "Agent", "  Used  \t  "));
-		
-		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
-				TokenType.AGENT, uuid, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-				.withTokenName(new TokenName("whee"))
-				.withMFA(MFAStatus.USED)
-				.build(),
-				"a token"), 30000L);
-		
-		assertThat("incorrect token", token, is(expected));
+		final Map<String, MFAStatus> tests = ImmutableMap.of(
+				"   Used  \t  ", MFAStatus.USED,
+				"  \n NotUsed  ", MFAStatus.NOT_USED,
+				"Unknown", MFAStatus.UNKNOWN
+		);
+		for (final Entry<String, MFAStatus> e: tests.entrySet()) {
+			
+			final Authentication auth = mock(Authentication.class);
+			final TestMode tm = new TestMode(auth);
+			
+			final UUID uuid = UUID.randomUUID();
+			
+			when(auth.testModeCreateToken(
+					new UserName("foo"), new TokenName("whee"), TokenType.AGENT, e.getValue()))
+					.thenReturn(new NewToken(StoredToken.getBuilder(
+							TokenType.AGENT, uuid, new UserName("foo"))
+							.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+							.withTokenName(new TokenName("whee"))
+							.withMFA(e.getValue())
+							.build(),
+							"a token"));
+			
+			when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
+			
+			final NewAPIToken token = tm.createTestToken(
+					new CreateTestToken("foo", "whee", "Agent", e.getKey()));
+			
+			final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+					TokenType.AGENT, uuid, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+					.withTokenName(new TokenName("whee"))
+					.withMFA(e.getValue())
+					.build(),
+					"a token"), 30000L);
+			
+			assertThat("incorrect token", token, is(expected));
+		}
 	}
 	
 	@Test
