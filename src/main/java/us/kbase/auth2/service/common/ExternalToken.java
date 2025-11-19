@@ -37,7 +37,7 @@ public class ExternalToken {
 		return type;
 	}
 	
-	public String getMfa() { // must be Lowercase or templates don't work
+	public String getMfa() { // method name must be Lowercase or templates don't work
 		return mfa;
 	}
 
