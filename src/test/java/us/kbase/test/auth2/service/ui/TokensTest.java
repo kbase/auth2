@@ -51,6 +51,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -389,7 +390,8 @@ public class TokensTest {
 		assertThat("incorrect expires", expires, is(created + 90 * 24 * 3600 * 1000L));
 		
 		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created, Collections.emptyMap(),
-				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L);
+				new UserName("whoo"), TokenType.DEV, MFAStatus.UNKNOWN, "foo",
+				90 * 24 * 3600 * 1000L);
 			
 		
 		final Builder req2 = wt.request()
@@ -403,7 +405,8 @@ public class TokensTest {
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		ServiceTestUtils.checkReturnedToken(manager, json, Collections.emptyMap(),
-				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L, true);
+				new UserName("whoo"), TokenType.DEV, MFAStatus.UNKNOWN, "foo",
+				90 * 24 * 3600 * 1000L, true);
 	}
 	
 	@Test
@@ -459,7 +462,8 @@ public class TokensTest {
 			
 			ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
 					ImmutableMap.of("foo", "bar", "baz", "bat"),
-					new UserName("whoo"), TokenType.SERV, "foo", 100_000_000L * 24 * 3600 * 1000L);
+					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
+					100_000_000L * 24 * 3600 * 1000L);
 				
 			
 			final Builder req2 = wt.request()
@@ -477,7 +481,7 @@ public class TokensTest {
 			
 			ServiceTestUtils.checkReturnedToken(manager, json,
 					ImmutableMap.of("foo", "bar", "baz", "bat"),
-					new UserName("whoo"), TokenType.SERV, "foo",
+					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
 					100_000_000L * 24 * 3600 * 1000L, true);
 		}
 	}

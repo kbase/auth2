@@ -75,6 +75,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
 import us.kbase.auth2.lib.user.AuthUser;
@@ -429,7 +430,7 @@ public class LoginIntegrationTest {
 		
 		saveTemporarySessionData(state, "pkceohgodohgod", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, "pkceohgodohgod", env);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkceohgodohgod", env, MFAStatus.UNKNOWN);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -450,7 +451,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
-		loginCompleteImmediateLoginCheckToken(token);
+		loginCompleteImmediateLoginCheckToken(token, MFAStatus.UNKNOWN);
 	}
 	
 	@Test
@@ -468,7 +469,9 @@ public class LoginIntegrationTest {
 		
 		saveTemporarySessionData(state, "pkcethisisinhumane", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, "pkcethisisinhumane", null);
+		loginCompleteImmediateLoginStoreUser(
+				authcode, "pkcethisisinhumane", null, MFAStatus.USED
+		);
 		
 		final WebTarget wt = loginCompleteSetUpWebTargetEmptyError(authcode, state);
 		final Response res = wt.request()
@@ -488,7 +491,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
-		loginCompleteImmediateLoginCheckToken(token);
+		loginCompleteImmediateLoginCheckToken(token, MFAStatus.USED);
 	}
 	
 	@Test
@@ -519,7 +522,7 @@ public class LoginIntegrationTest {
 		
 		saveTemporarySessionData(state, "pkcepkcepkcepkce", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, "pkcepkcepkcepkce", env);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkcepkcepkcepkce", env, MFAStatus.NOT_USED);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -542,7 +545,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		
-		loginCompleteImmediateLoginCheckToken(token);
+		loginCompleteImmediateLoginCheckToken(token, MFAStatus.NOT_USED);
 	}
 	
 	@Test
@@ -559,7 +562,7 @@ public class LoginIntegrationTest {
 		
 		saveTemporarySessionData(state, "pkceoohhooohhhmm", "foobartoken");
 		
-		loginCompleteImmediateLoginStoreUser(authcode, "pkceoohhooohhhmm", null);
+		loginCompleteImmediateLoginStoreUser(authcode, "pkceoohhooohhhmm", null, MFAStatus.USED);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -581,16 +584,17 @@ public class LoginIntegrationTest {
 		assertThat("incorrect token", token.getValue(), is(RegexMatcher.matches("[A-Z2-7]{32}")));
 		TestCommon.assertCloseTo(token.getMaxAge(), 14 * 24 * 3600, 10);
 		
-		loginCompleteImmediateLoginCheckToken(token);
+		loginCompleteImmediateLoginCheckToken(token, MFAStatus.USED);
 	}
 
 	private void loginCompleteImmediateLoginStoreUser(
 			final String authcode,
 			final String pkce,
-			final String environment)
+			final String environment,
+			final MFAStatus mfa)
 			throws Exception {
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, pkce, environment);
+				authcode, pkce, environment, mfa);
 		
 		manager.storage.createUser(NewUser.getBuilder(
 				new UserName("whee"), UID, new DisplayName("dn"), Instant.ofEpochMilli(20000),
@@ -598,27 +602,30 @@ public class LoginIntegrationTest {
 				.build());
 	}
 
-	private void loginCompleteImmediateLoginCheckToken(final NewCookie token) throws Exception {
-		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("whee"));
+	private void loginCompleteImmediateLoginCheckToken(final NewCookie token, final MFAStatus mfa
+			) throws Exception {
+		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("whee"), mfa);
 	}
 	
 	private void checkLoginToken(
 			final Map<String, Object> uitoken,
 			final Map<String, String> customContext,
-			final UserName userName)
+			final UserName userName,
+			final MFAStatus mfa)
 			throws Exception {
 		
 		ServiceTestUtils.checkReturnedToken(manager, uitoken, customContext, userName,
-				TokenType.LOGIN, null, 14 * 24 * 3600 * 1000, true);
+				TokenType.LOGIN, mfa, null, 14 * 24 * 3600 * 1000, true);
 	}
 	
 	private void checkLoginToken(
 			final String token,
 			final Map<String, String> customContext,
-			final UserName userName)
+			final UserName userName,
+			final MFAStatus mfa)
 			throws Exception {
 		ServiceTestUtils.checkStoredToken(manager, token, customContext, userName, TokenType.LOGIN,
-				null, 14 * 24 * 3600 * 1000);
+				mfa, null, 14 * 24 * 3600 * 1000);
 	}
 
 	private void assertLoginProcessTokensRemoved(final Response res) {
@@ -685,7 +692,7 @@ public class LoginIntegrationTest {
 		saveTemporarySessionData(state, "pkceopraisethedarkgodsbelow", "foobartoken");
 		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, "pkceopraisethedarkgodsbelow", env);
+				authcode, "pkceopraisethedarkgodsbelow", env, MFAStatus.USED);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -710,7 +717,7 @@ public class LoginIntegrationTest {
 		
 		assertEnvironmentCookieCorrect(res, env, 30 * 60);
 		
-		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, MFAStatus.USED, res);
 	}
 
 	@Test
@@ -744,7 +751,7 @@ public class LoginIntegrationTest {
 		saveTemporarySessionData(state, "pkceisinmybrainicanseeall", "foobartoken");
 		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, "pkceisinmybrainicanseeall", env);
+				authcode, "pkceisinmybrainicanseeall", env, MFAStatus.NOT_USED);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -771,7 +778,7 @@ public class LoginIntegrationTest {
 		
 		assertEnvironmentCookieCorrect(res, env, 30 * 60);
 		
-		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, MFAStatus.NOT_USED, res);
 	}
 	
 	@Test
@@ -810,7 +817,7 @@ public class LoginIntegrationTest {
 		saveTemporarySessionData(state, "pkcuwgahngalftaghn", "foobartoken");
 		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, "pkcuwgahngalftaghn", env);
+				authcode, "pkcuwgahngalftaghn", env, MFAStatus.UNKNOWN);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Builder b = wt.request()
@@ -840,7 +847,7 @@ public class LoginIntegrationTest {
 		
 		assertEnvironmentCookieCorrect(res, env, 30 * 60);
 		
-		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, MFAStatus.UNKNOWN, res);
 	}
 	
 	@Test
@@ -859,7 +866,7 @@ public class LoginIntegrationTest {
 		saveTemporarySessionData(state, "pkceifeelmoistandsprightly", "foobartoken");
 		
 		final RemoteIdentity remoteIdentity = loginCompleteSetUpProviderMock(
-				authcode, "pkceifeelmoistandsprightly", null);
+				authcode, "pkceifeelmoistandsprightly", null, MFAStatus.NOT_USED);
 		
 		final WebTarget wt = loginCompleteSetUpWebTarget(authcode, state);
 		final Response res = wt.request()
@@ -885,11 +892,12 @@ public class LoginIntegrationTest {
 		assertThat("incorrect session cookie less max age", session, is(expectedsession));
 		TestCommon.assertCloseTo(session.getMaxAge(), 30 * 60, 10);
 		
-		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, res);
+		loginCompleteDelayedCheckTempAndStateCookies(remoteIdentity, MFAStatus.NOT_USED, res);
 	}
 
 	private void loginCompleteDelayedCheckTempAndStateCookies(
 			final RemoteIdentity remoteIdentity,
+			final MFAStatus mfa,
 			final Response res)
 			throws Exception {
 		
@@ -903,6 +911,7 @@ public class LoginIntegrationTest {
 				new IncomingToken(tempCookie.getValue()).getHashedToken());
 		
 		assertThat("incorrect stored ids", tis.getIdentities().get(), is(set(remoteIdentity)));
+		assertThat("incorrect mfa", tis.getMFA().get(), is(mfa));
 	}
 
 	private WebTarget loginCompleteSetUpWebTarget(final String authcode, final String state) {
@@ -930,7 +939,8 @@ public class LoginIntegrationTest {
 	private RemoteIdentity loginCompleteSetUpProviderMock(
 			final String authcode,
 			final String pkce,
-			final String environment)
+			final String environment,
+			final MFAStatus mfa)
 			throws Exception {
 		
 		final IdentityProvider provmock = MockIdentityProviderFactory.MOCKS.get("prov1");
@@ -938,7 +948,7 @@ public class LoginIntegrationTest {
 				new RemoteIdentityID("prov1", "prov1id"),
 				new RemoteIdentityDetails("user", "full", "email@email.com"));
 		when(provmock.getIdentities(authcode, pkce, false, environment))
-				.thenReturn(IdentityProviderResponse.from(remoteIdentity));
+				.thenReturn(IdentityProviderResponse.from(remoteIdentity, mfa));
 		return remoteIdentity;
 	}
 	
@@ -1154,7 +1164,7 @@ public class LoginIntegrationTest {
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(idents);
+				.login(idents, MFAStatus.USED);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1280,7 +1290,7 @@ public class LoginIntegrationTest {
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(idents);
+				.login(idents, MFAStatus.NOT_USED);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1378,7 +1388,7 @@ public class LoginIntegrationTest {
 		}
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(idents);
+				.login(idents, MFAStatus.UNKNOWN);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1464,7 +1474,7 @@ public class LoginIntegrationTest {
 		}
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(idents);
+				.login(idents, MFAStatus.USED);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1685,8 +1695,13 @@ public class LoginIntegrationTest {
 	public void loginCancelPOST() throws Exception {
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-								new RemoteIdentityDetails("user", "full", "e@g.com"))));
+				.login(
+						set(new RemoteIdentity(
+								new RemoteIdentityID("prov", "id"),
+								new RemoteIdentityDetails("user", "full", "e@g.com")
+						)),
+						MFAStatus.UNKNOWN
+				);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1710,8 +1725,13 @@ public class LoginIntegrationTest {
 	public void loginCancelDELETE() throws Exception {
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id"),
-								new RemoteIdentityDetails("user", "full", "e@g.com"))));
+				.login(
+						set(new RemoteIdentity(
+								new RemoteIdentityID("prov", "id"),
+								new RemoteIdentityDetails("user", "full", "e@g.com")
+						)),
+						MFAStatus.UNKNOWN
+				);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -1769,7 +1789,7 @@ public class LoginIntegrationTest {
 	}
 	
 	private void loginPickFormMinimalInput(final String env) throws Exception {
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.UNKNOWN);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1785,7 +1805,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickOrCreateCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res, MFAStatus.UNKNOWN);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1806,7 +1826,7 @@ public class LoginIntegrationTest {
 	}
 	
 	private void loginPickJSONMinimalInput(final String env) throws Exception {
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1826,7 +1846,7 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"), MFAStatus.USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1847,7 +1867,7 @@ public class LoginIntegrationTest {
 	}
 	
 	private void loginPickFormMaximalInput(final String env, final String url) throws Exception {
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.NOT_USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1869,7 +1889,9 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
+		loginPickOrCreateCheckExtendedToken(
+				res, ImmutableMap.of("a", "1", "b", "2"), MFAStatus.NOT_USED
+		);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1893,7 +1915,7 @@ public class LoginIntegrationTest {
 	}
 
 	private void loginPickJsonMaximalInput(final String env, final String url) throws Exception {
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.UNKNOWN);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1918,7 +1940,9 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, ImmutableMap.of("a", "1", "b", "2"), new UserName("u1"));
+		checkLoginToken(
+				token, ImmutableMap.of("a", "1", "b", "2"), new UserName("u1"), MFAStatus.UNKNOWN
+		);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1934,7 +1958,7 @@ public class LoginIntegrationTest {
 	@Test
 	public void loginPickFormEmptyStrings() throws Exception {
 		
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1953,7 +1977,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickOrCreateCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res, MFAStatus.USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -1966,7 +1990,7 @@ public class LoginIntegrationTest {
 	@Test
 	public void loginPickJsonEmptyData() throws Exception {
 		
-		final TemporaryToken tt = loginPickSetup();
+		final TemporaryToken tt = loginPickSetup(MFAStatus.NOT_USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/pick").build();
 		
@@ -1991,7 +2015,7 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"), MFAStatus.NOT_USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2306,7 +2330,8 @@ public class LoginIntegrationTest {
 
 	private void loginPickOrCreateCheckExtendedToken(
 			final Response res,
-			final Map<String, String> customContext)
+			final Map<String, String> customContext,
+			final MFAStatus mfa)
 			throws Exception {
 		assertLoginProcessTokensRemoved(res);
 		
@@ -2316,10 +2341,10 @@ public class LoginIntegrationTest {
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		TestCommon.assertCloseTo(token.getMaxAge(), 14 * 24 * 3600, 10);
 		
-		checkLoginToken(token.getValue(), customContext, new UserName("u1"));
+		checkLoginToken(token.getValue(), customContext, new UserName("u1"), mfa);
 	}
 
-	private void loginPickOrCreateCheckSessionToken(final Response res)
+	private void loginPickOrCreateCheckSessionToken(final Response res, final MFAStatus mfa)
 			throws Exception, MissingParameterException, IllegalParameterException {
 		assertLoginProcessTokensRemoved(res);
 		
@@ -2328,7 +2353,7 @@ public class LoginIntegrationTest {
 				"/", null, "authtoken", -1, false);
 		assertThat("incorrect auth cookie less token", token, is(expectedtoken));
 		
-		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("u1"));
+		checkLoginToken(token.getValue(), Collections.emptyMap(), new UserName("u1"), mfa);
 	}
 
 	private Builder loginPickOrCreateRequestBuilder(
@@ -2344,7 +2369,7 @@ public class LoginIntegrationTest {
 		return req;
 	}
 
-	private TemporaryToken loginPickSetup() throws Exception {
+	private TemporaryToken loginPickSetup(final MFAStatus mfa) throws Exception {
 		
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
@@ -2354,7 +2379,7 @@ public class LoginIntegrationTest {
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(set(REMOTE1, REMOTE2, REMOTE3));
+				.login(set(REMOTE1, REMOTE2, REMOTE3), mfa);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		
@@ -2380,7 +2405,7 @@ public class LoginIntegrationTest {
 	}
 	
 	private void loginCreateFormMinimalInput(final String env) throws Exception {
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.UNKNOWN);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2399,7 +2424,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickOrCreateCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res, MFAStatus.UNKNOWN);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2423,7 +2448,7 @@ public class LoginIntegrationTest {
 
 	
 	private void loginCreateJSONMinimalInput(final String env) throws Exception {
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2448,7 +2473,7 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"), MFAStatus.USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2471,7 +2496,7 @@ public class LoginIntegrationTest {
 	}
 	
 	private void loginCreateFormMaximalInput(final String env, final String url) throws Exception {
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.NOT_USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2496,7 +2521,9 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(url)));
 		
-		loginPickOrCreateCheckExtendedToken(res, ImmutableMap.of("a", "1", "b", "2"));
+		loginPickOrCreateCheckExtendedToken(
+				res, ImmutableMap.of("a", "1", "b", "2"), MFAStatus.NOT_USED
+		);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2511,7 +2538,6 @@ public class LoginIntegrationTest {
 		assertNoTempToken(tt);
 	}
 	
-	
 	@Test
 	public void loginCreateJSONMaximalInput() throws Exception {
 		loginCreateJSONMaximalInput(null, "https://foo.com/baz/bat");
@@ -2523,7 +2549,7 @@ public class LoginIntegrationTest {
 	}
 
 	private void loginCreateJSONMaximalInput(final String env, final String url) throws Exception {
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.UNKNOWN);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2555,7 +2581,9 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, ImmutableMap.of("a", "1", "b", "2"), new UserName("u1"));
+		checkLoginToken(
+				token, ImmutableMap.of("a", "1", "b", "2"), new UserName("u1"), MFAStatus.UNKNOWN
+		);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2573,7 +2601,7 @@ public class LoginIntegrationTest {
 	@Test
 	public void loginCreateFormEmptyStrings() throws Exception {
 		
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2597,7 +2625,7 @@ public class LoginIntegrationTest {
 		assertThat("incorrect response code", res.getStatus(), is(303));
 		assertThat("incorrect target uri", res.getLocation(), is(new URI(host + "/me")));
 		
-		loginPickOrCreateCheckSessionToken(res);
+		loginPickOrCreateCheckSessionToken(res, MFAStatus.USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2612,7 +2640,7 @@ public class LoginIntegrationTest {
 	@Test
 	public void loginCreateJSONEmptyInput() throws Exception {
 		
-		final TemporaryToken tt = loginChoiceSetup();
+		final TemporaryToken tt = loginCreateSetup(MFAStatus.NOT_USED);
 		
 		final URI target = UriBuilder.fromUri(host).path("/login/create").build();
 		
@@ -2645,7 +2673,7 @@ public class LoginIntegrationTest {
 		
 		@SuppressWarnings("unchecked")
 		final Map<String, Object> token = (Map<String, Object>) response.get("token");
-		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"));
+		checkLoginToken(token, Collections.emptyMap(), new UserName("u1"), MFAStatus.NOT_USED);
 		
 		final AuthUser u = manager.storage.getUser(new UserName("u1"));
 		TestCommon.assertCloseToNow(u.getLastLogin().get());
@@ -2689,7 +2717,7 @@ public class LoginIntegrationTest {
 	@Test
 	public void loginCreateFailBadToken() throws Exception {
 		
-		loginChoiceSetup();
+		loginCreateSetup(MFAStatus.UNKNOWN);
 		
 		final URI target = UriBuilder.fromUri(host)
 				.path("/login/create")
@@ -2884,7 +2912,7 @@ public class LoginIntegrationTest {
 						"e1@g.@com"));
 	}
 
-	private TemporaryToken loginChoiceSetup() throws Exception {
+	private TemporaryToken loginCreateSetup(final MFAStatus mfa) throws Exception {
 		final IncomingToken admintoken = ServiceTestUtils.getAdminToken(manager);
 		
 		enableLogin(host, admintoken);
@@ -2893,7 +2921,7 @@ public class LoginIntegrationTest {
 		
 		final TemporarySessionData data = TemporarySessionData.create(
 				UUID.randomUUID(), Instant.ofEpochMilli(1493000000000L), 10000000000000L)
-				.login(set(REMOTE1, REMOTE2));
+				.login(set(REMOTE1, REMOTE2), mfa);
 		
 		final TemporaryToken tt = new TemporaryToken(data, "this is a token");
 		

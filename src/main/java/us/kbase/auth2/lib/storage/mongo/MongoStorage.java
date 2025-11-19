@@ -1698,13 +1698,14 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TEMP_SESSION_OAUTH2STATE, data.getOAuth2State().orElse(null))
 				.append(Fields.TEMP_SESSION_PKCE_CODE_VERIFIER,
 						data.getPKCECodeVerifier().orElse(null))
-				.append(Fields.TEMP_SESSION_ERROR,
-						data.getError().isPresent() ? data.getError().get() : null)
+				.append(Fields.TEMP_SESSION_ERROR, data.getError().orElse(null))
 				.append(Fields.TEMP_SESSION_ERROR_TYPE, data.getErrorType().isPresent() ?
 						data.getErrorType().get().getErrorCode() : null)
 				.append(Fields.TEMP_SESSION_IDENTITIES, ids)
-				.append(Fields.TEMP_SESSION_USER,
-						data.getUser().isPresent() ? data.getUser().get().getName() : null);
+				.append(Fields.TEMP_SESSION_USER, data.getUser().isPresent() ?
+						data.getUser().get().getName() : null)
+				.append(Fields.TEMP_SESSION_MFA, data.getMFA().isPresent() ?
+						data.getMFA().get().getID() : null);
 		storeTemporarySessionData(td);
 	}
 
@@ -1772,7 +1773,8 @@ public class MongoStorage implements AuthStorage {
 					d.getString(Fields.TEMP_SESSION_PKCE_CODE_VERIFIER)
 			);
 		} else if (op.equals(Operation.LOGINIDENTS)) {
-			tis = b.login(toIdentities(ids));
+			final MFAStatus mfa = MFAStatus.fromID(d.getString(Fields.TEMP_SESSION_MFA));
+			tis = b.login(toIdentities(ids), mfa);
 		} else if (op.equals(Operation.LINKSTART)) {
 			tis = b.link(
 					d.getString(Fields.TEMP_SESSION_OAUTH2STATE),

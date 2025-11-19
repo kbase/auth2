@@ -92,6 +92,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 
 /** The main class for the Authentication application.
  * 
@@ -512,7 +513,7 @@ public class Authentication {
 					userName.getName());
 			return new LocalLoginResult(u.getUserName());
 		}
-		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
+		return new LocalLoginResult(login(u.getUserName(), tokenCtx, MFAStatus.UNKNOWN));
 	}
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
@@ -744,13 +745,15 @@ public class Authentication {
 				admin.getUserName().getName());
 	}
 	
-	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
+	private NewToken login(
+			final UserName userName, final TokenCreationContext tokenCtx, final MFAStatus mfa)
 			throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 					TokenType.LOGIN, randGen.randomUUID(), userName)
 				.withLifeTime(clock.instant(),
 						cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
 				.withContext(tokenCtx)
+				.withMFA(mfa)
 				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -1795,9 +1798,11 @@ public class Authentication {
 		final LoginState lstate = getLoginState(ipr.getIdentities(), Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken loginToken;
-		if (lstate.getUsers().size() == 1 &&
-				lstate.getIdentities().isEmpty() &&
-				!pc.isForceLoginChoice()) {
+		if (
+				lstate.getUsers().size() == 1
+				&& lstate.getIdentities().isEmpty()
+				&& !pc.isForceLoginChoice())
+		{
 			final UserName userName = lstate.getUsers().iterator().next();
 			final AuthUser user = lstate.getUser(userName);
 			/* Don't throw an error here since an auth UI may not be controlling the call -
@@ -1811,16 +1816,16 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 			} else if (user.isDisabled()) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 			} else {
-				loginToken = new LoginToken(login(user.getUserName(), tokenCtx));
+				loginToken = new LoginToken(login(user.getUserName(), tokenCtx, ipr.getMFA()));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			loginToken = storeIdentitiesTemporarily(lstate);
+			loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 		}
 		return loginToken;
 	}
@@ -1834,13 +1839,13 @@ public class Authentication {
 	}
 
 	// ignores expiration date of login state
-	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
+	private LoginToken storeIdentitiesTemporarily(final LoginState ls, final MFAStatus mfa)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), LOGIN_TOKEN_LIFETIME_MS)
-				.login(store);
+				.login(store, mfa);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
 		return new LoginToken(tt);
@@ -1871,6 +1876,7 @@ public class Authentication {
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
+		// TODO CODE this ignores the MFA state. May want to add it to LoginState in the future
 		final TemporarySessionData ids = getTemporarySessionData(
 				Optional.empty(), Operation.LOGINIDENTS, token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
@@ -1984,11 +1990,12 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException("Account creation is disabled");
 		}
-		// allow mutation of the identity set
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
-				.getIdentities().get());
+		final TemporarySessionData tsd = getTemporarySessionData(
+				Optional.empty(), Operation.LOGINIDENTS, token
+		);
 		storage.deleteTemporarySessionData(token.getHashedToken());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(tsd.getIdentities().get());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -2020,7 +2027,7 @@ public class Authentication {
 						linked, userName.getName());
 			}
 		}
-		return login(userName, tokenCtx);
+		return login(userName, tokenCtx, tsd.getMFA().get());
 	}
 	
 	/** Create a test token. The token is entirely separate from standard tokens and is
@@ -2308,11 +2315,12 @@ public class Authentication {
 		requireNonNull(policyIDs, "policyIDs");
 		requireNonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
-		// allow mutation of the identity set
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
-				.getIdentities().get());
+		final TemporarySessionData tsd = getTemporarySessionData(
+				Optional.empty(), Operation.LOGINIDENTS, token
+		);
 		storage.deleteTemporarySessionData(token.getHashedToken());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(tsd.getIdentities().get());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -2342,7 +2350,7 @@ public class Authentication {
 						linked, u.get().getUserName().getName());
 			}
 		}
-		return login(u.get().getUserName(), tokenCtx);
+		return login(u.get().getUserName(), tokenCtx, tsd.getMFA().get());
 	}
 	
 	private Optional<RemoteIdentity> getIdentity(

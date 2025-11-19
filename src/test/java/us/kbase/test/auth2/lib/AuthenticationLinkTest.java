@@ -72,6 +72,7 @@ import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -885,7 +886,7 @@ public class AuthenticationLinkTest {
 		final UUID tid = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tid, Instant.now(), Instant.now())
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkWithToken(auth, token, "prov", "foo", null, "state", new InvalidTokenException(
@@ -1573,7 +1574,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tempTokenID, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failGetLinkState(auth, userToken, tempToken, new InvalidTokenException(
@@ -1867,7 +1868,7 @@ public class AuthenticationLinkTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid", new InvalidTokenException(
@@ -2384,7 +2385,7 @@ public class AuthenticationLinkTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkAll(auth, userToken, tempToken,  new InvalidTokenException(
