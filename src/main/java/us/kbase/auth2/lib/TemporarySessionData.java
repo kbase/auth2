@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.token.MFAStatus;
 
 /** Temporary session data that may include a set of temporary identities and / or an associated
  * user, or an error that was stored instead of the identities.
@@ -33,6 +34,7 @@ public class TemporarySessionData {
 	private final String error;
 	private final ErrorType errorType;
 	private final UserName user;
+	private final MFAStatus mfa;
 	
 	private TemporarySessionData(
 			final Operation op,
@@ -44,7 +46,9 @@ public class TemporarySessionData {
 			final Set<RemoteIdentity> identities,
 			final UserName user,
 			final String error,
-			final ErrorType errorType) {
+			final ErrorType errorType,
+			final MFAStatus mfa
+	) {
 		this.op = op;
 		this.id = id;
 		this.created = created;
@@ -55,6 +59,7 @@ public class TemporarySessionData {
 		this.user = user;
 		this.error = error;
 		this.errorType = errorType;
+		this.mfa = mfa;
 	}
 
 	/** Get the operation this temporary session data supports.
@@ -76,6 +81,13 @@ public class TemporarySessionData {
 	 */
 	public Optional<Set<RemoteIdentity>> getIdentities() {
 		return Optional.ofNullable(identities);
+	}
+	
+	/** Get the MFA status, if any.
+	 * @return the MFA status.
+	 */
+	public Optional<MFAStatus> getMFA() {
+		return Optional.ofNullable(mfa);
 	}
 
 	/** Get the date of creation for the session data.
@@ -139,27 +151,31 @@ public class TemporarySessionData {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(created, error, errorType, expires, id, identities, oauth2State, op, pkceCodeVerifier,
-				user);
+		return Objects.hash(created, error, errorType, expires, id, identities, mfa, oauth2State,
+				op, pkceCodeVerifier, user
+		);
 	}
 
 	@Override
 	public boolean equals(Object obj) {
-		if (this == obj) {
+		if (this == obj)
 			return true;
-		}
-		if (obj == null) {
+		if (obj == null)
 			return false;
-		}
-		if (getClass() != obj.getClass()) {
+		if (getClass() != obj.getClass())
 			return false;
-		}
 		TemporarySessionData other = (TemporarySessionData) obj;
-		return Objects.equals(created, other.created) && Objects.equals(error, other.error)
-				&& errorType == other.errorType && Objects.equals(expires, other.expires)
-				&& Objects.equals(id, other.id) && Objects.equals(identities, other.identities)
-				&& Objects.equals(oauth2State, other.oauth2State) && op == other.op
-				&& Objects.equals(pkceCodeVerifier, other.pkceCodeVerifier) && Objects.equals(user, other.user);
+		return Objects.equals(created, other.created)
+				&& Objects.equals(error, other.error)
+				&& errorType == other.errorType
+				&& Objects.equals(expires, other.expires)
+				&& Objects.equals(id, other.id)
+				&& Objects.equals(identities, other.identities)
+				&& mfa == other.mfa
+				&& Objects.equals(oauth2State, other.oauth2State)
+				&& op == other.op
+				&& Objects.equals(pkceCodeVerifier, other.pkceCodeVerifier)
+				&& Objects.equals(user, other.user);
 	}
 	
 	/** The operation this session data is associated with.
@@ -242,7 +258,7 @@ public class TemporarySessionData {
 			requireNonNull(errorType, "errorType");
 			return new TemporarySessionData(
 					Operation.ERROR, id, created, expires,
-					null, null, null, null, error, errorType);
+					null, null, null, null, error, errorType, null);
 		}
 		
 		/** Create temporary session data for the start of a login operation.
@@ -258,18 +274,32 @@ public class TemporarySessionData {
 			checkStringNoCheckedException(pkceCodeVerifier, "pkceCodeVerifier");
 			return new TemporarySessionData(
 					Operation.LOGINSTART, id, created, expires,
-					oauth2State, pkceCodeVerifier, null, null, null, null);
+					oauth2State, pkceCodeVerifier, null, null, null, null, null);
 		}
 		
 		/** Create temporary session data for a login operation where remote identities are
 		 * involved.
 		 * @param identities the remote identities involved in the login.
+		 * @param mfa the MFA state from the login.
 		 * @return the temporary session data.
 		 */
-		public TemporarySessionData login(final Set<RemoteIdentity> identities) {
+		public TemporarySessionData login(
+				final Set<RemoteIdentity> identities,
+				final MFAStatus mfa
+		) {
 			return new TemporarySessionData(
-					Operation.LOGINIDENTS, id, created, expires,
-					null, null, checkIdents(identities), null, null, null);
+					Operation.LOGINIDENTS,
+					id,
+					created,
+					expires,
+					null,
+					null,
+					checkIdents(identities),
+					null,
+					null,
+					null,
+					requireNonNull(mfa, "mfa")
+			);
 		}
 
 		private Set<RemoteIdentity> checkIdents(final Set<RemoteIdentity> identities) {
@@ -299,7 +329,7 @@ public class TemporarySessionData {
 			requireNonNull(userName, "userName");
 			return new TemporarySessionData(
 					Operation.LINKSTART, id, created, expires,
-					oauth2State, pkceCodeVerifier, null, userName, null, null);
+					oauth2State, pkceCodeVerifier, null, userName, null, null, null);
 		}
 		
 		/** Create temporary session data for a linking operation when remote identities are
@@ -314,7 +344,7 @@ public class TemporarySessionData {
 			requireNonNull(userName, "userName");
 			return new TemporarySessionData(
 					Operation.LINKIDENTS, id, created, expires,
-					null, null, checkIdents(identities), userName, null, null);
+					null, null, checkIdents(identities), userName, null, null, null);
 		}
 	}
 }

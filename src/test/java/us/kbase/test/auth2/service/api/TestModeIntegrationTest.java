@@ -190,7 +190,7 @@ public class TestModeIntegrationTest {
 				ImmutableMap.of("user", "whee", "display", "whoo")));
 		assertThat("user create failed", ures.getStatus(), is(200));
 		
-		final Map<String, Object> response = createToken("whee", "Login", "foo");
+		final Map<String, Object> response = createToken("whee", "Login", "foo", "NotUsed");
 		
 		final long created = (long) response.get("created");
 		response.remove("created");
@@ -205,6 +205,7 @@ public class TestModeIntegrationTest {
 		
 		final Map<String, Object> expected = new HashMap<>();
 		expected.put("type", "Login");
+		expected.put("mfa", "NotUsed");
 		expected.put("name", "foo");
 		expected.put("user", "whee");
 		expected.put("custom", Collections.emptyMap());
@@ -240,19 +241,30 @@ public class TestModeIntegrationTest {
 		final Map<String, Object> response2 = res2.readEntity(Map.class);
 		return response2;
 	}
-	
 
 	private Map<String, Object> createToken(
 			final String user,
 			final String type,
 			final String name) {
+		return createToken(user, type, name, null);
+	}
+	
+	private Map<String, Object> createToken(
+			final String user,
+			final String type,
+			final String name,
+			final String mfa) {
 		final URI target = UriBuilder.fromUri(host).path("/testmode/api/V2/testmodeonly/token/")
 				.build();
 		final WebTarget wt = CLI.target(target);
 		final Builder req = wt.request();
+		final Map<String, String> json = new HashMap<>();
+		json.put("user", user);
+		json.put("type", type);
+		json.put("name", name);
+		json.put("mfa", mfa);
 		
-		final Response res = req.post(Entity.json(
-				ImmutableMap.of("user", user, "type", type, "name", name)));
+		final Response res = req.post(Entity.json(json));
 		
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		

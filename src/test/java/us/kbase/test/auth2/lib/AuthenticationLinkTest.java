@@ -65,12 +65,14 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TemporaryToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -323,7 +325,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceverifiedforyourcomfort", true, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("Prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -383,7 +385,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkcecuresacne", true, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("Prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -441,7 +443,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceambrosiaofthegods", true, null))
-				.thenReturn(set(
+				.thenReturn(IdentityProviderResponse.from(set(
 						new RemoteIdentity(
 							new RemoteIdentityID("Prov", "id2"),
 							new RemoteIdentityDetails("user2", "full2", "f2@g.com")
@@ -449,7 +451,7 @@ public class AuthenticationLinkTest {
 						new RemoteIdentity(
 								new RemoteIdentityID("Prov", "id3"),
 								new RemoteIdentityDetails("user3", "full3", "f3@g.com"))
-						))
+						)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -524,7 +526,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkcehasgreatretirementbenefits", true, "myenv"))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -591,7 +593,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceisnotsnakeoilatall", true, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -663,13 +665,14 @@ public class AuthenticationLinkTest {
 		
 		when(idp.getIdentities(
 				"authcode", "pkcemakesanexcellentbodywashandenginegrease", true, null))
-				.thenReturn(set(
+				.thenReturn(IdentityProviderResponse.from(set(
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "f2@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 								new RemoteIdentityDetails("user3", "full3", "f3@g.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-								new RemoteIdentityDetails("user4", "full4", "f4@g.com"))))
+								new RemoteIdentityDetails("user4", "full4", "f4@g.com")))
+				))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID2 = new RemoteIdentity(
@@ -883,7 +886,7 @@ public class AuthenticationLinkTest {
 		final UUID tid = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tid, Instant.now(), Instant.now())
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkWithToken(auth, token, "prov", "foo", null, "state", new InvalidTokenException(
@@ -1157,7 +1160,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceimkindofgettingboredwiththis", true, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("Prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -1207,7 +1210,7 @@ public class AuthenticationLinkTest {
 				.withIdentity(REMOTE).build()).thenReturn(null);
 		
 		when(idp.getIdentities("authcode", "pkceohwhocares", true, null))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("Prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "f2@g.com"))))
 				.thenReturn(null);
@@ -1571,7 +1574,7 @@ public class AuthenticationLinkTest {
 		
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tempTokenID, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failGetLinkState(auth, userToken, tempToken, new InvalidTokenException(
@@ -1865,7 +1868,7 @@ public class AuthenticationLinkTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkIdentity(auth, userToken, tempToken, "fakeid", new InvalidTokenException(
@@ -2382,7 +2385,7 @@ public class AuthenticationLinkTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(tempToken.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, NOW, NOW)
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLinkAll(auth, userToken, tempToken,  new InvalidTokenException(

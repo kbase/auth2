@@ -37,7 +37,7 @@ public class IdentityProviderConfigTest {
 				new URL("http://api.com"),
 				"foo",
 				"bar",
-				new URL("https://loginredirect.com"),
+				new URL("https://fakeloginredirect.com"),
 				new URL("https://linkredirect.com"))
 				.withCustomConfiguration("foo", "bar")
 				.withCustomConfiguration("baz", "bat")
@@ -61,7 +61,7 @@ public class IdentityProviderConfigTest {
 		assertThat("incorrect link redirect URL", c.getLinkRedirectURL("env2"),
 				is(new URL("https://linkredirect2.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL(),
-				is(new URL("https://loginredirect.com")));
+				is(new URL("https://fakeloginredirect.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL("env1"),
 				is(new URL("https://loginredirect1.com")));
 		assertThat("incorrect login redirect URL", c.getLoginRedirectURL("env2"),
@@ -265,7 +265,7 @@ public class IdentityProviderConfigTest {
 	
 	@Test
 	public void immutable() throws Exception {
-		final IdentityProviderConfig c = IdentityProviderConfig.getBuilder(
+		Builder b = IdentityProviderConfig.getBuilder(
 				"MyProv",
 				new URL("http://login.com"),
 				new URL("http://api.com"),
@@ -275,8 +275,8 @@ public class IdentityProviderConfigTest {
 				new URL("https://linkredirect.com"))
 				.withCustomConfiguration("foo", "bar")
 				.withCustomConfiguration("baz", "bat")
-				.withEnvironment("e", new URL("http://foo.com"), new URL("http://foo.com"))
-				.build();
+				.withEnvironment("e", new URL("http://foo.com"), new URL("http://foo.com"));
+		final IdentityProviderConfig c = b.build();
 		
 		try {
 			c.getCustomConfiguation().put("foo", "bar");
@@ -291,6 +291,14 @@ public class IdentityProviderConfigTest {
 		} catch (UnsupportedOperationException e) {
 			// test passed
 		}
+		
+		// bugfix check - ensure modifying the builders maps doesn't modify old builds 
+		b.withCustomConfiguration("whee", "whoo")
+			.withEnvironment("e1", new URL("http://whoo.com"), new URL("http://whee.com"));
+		assertThat("incorrect custom config", c.getCustomConfiguation(), is(ImmutableMap.of(
+				"foo", "bar", "baz", "bat"
+		)));
+		assertThat("incorrect envs", c.getEnvironments(), is(set("e")));
 	}
 	
 }

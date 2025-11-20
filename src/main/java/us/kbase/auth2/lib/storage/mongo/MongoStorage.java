@@ -95,6 +95,7 @@ import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
 import us.kbase.auth2.lib.token.IncomingHashedToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -871,7 +872,9 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TOKEN_DEVICE, ctx.getDevice().orElse(null))
 				.append(Fields.TOKEN_IP, ctx.getIpAddress().isPresent() ?
 						ctx.getIpAddress().get().getHostAddress() : null)
-				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()));
+				.append(Fields.TOKEN_CUSTOM_CONTEXT, toCustomContextList(ctx.getCustomContext()))
+				.append(Fields.TOKEN_MFA, token.getMFA().getID())
+		;
 		try {
 			db.getCollection(collection).insertOne(td);
 		} catch (MongoWriteException mwe) {
@@ -959,6 +962,11 @@ public class MongoStorage implements AuthStorage {
 		return htoken;
 	}
 	
+	private MFAStatus getMFA(final String mfa) {
+		// compatibility with auth versions 0.7.1 and earlier, which don't have the MFA field
+		return mfa == null ? MFAStatus.UNKNOWN : MFAStatus.fromID(mfa);
+	}
+	
 	private StoredToken getToken(final Document t) throws AuthStorageException {
 		return StoredToken.getBuilder(
 					TokenType.getType(t.getString(Fields.TOKEN_TYPE)),
@@ -969,6 +977,7 @@ public class MongoStorage implements AuthStorage {
 						t.getDate(Fields.TOKEN_EXPIRY).toInstant())
 				.withNullableTokenName(getTokenName(t.getString(Fields.TOKEN_NAME)))
 				.withContext(toTokenCreationContext(t))
+				.withMFA(getMFA(t.getString(Fields.TOKEN_MFA)))
 				.build();
 	}
 	
@@ -1131,6 +1140,11 @@ public class MongoStorage implements AuthStorage {
 		
 	}
 
+	// the only reason for the sort field is to have deterministic results for
+	// tests. Only submit sort fields for fields on which you're querying,
+	// otherwise an in memory sort could occur.
+	// If we want sort to actually be an API guarantee it needs a lot more thought as the
+	// way it works now doesn't make much sense in some cases (display names in particular)
 	private Map<UserName, DisplayName> getDisplayNames(
 			final String collection,
 			final Document query,
@@ -1156,6 +1170,7 @@ public class MongoStorage implements AuthStorage {
 		}
 	}
 	
+	// Sort on a field we're querying otherwise a table scan could occur 
 	private static final Map<UserSearchSpec.SearchField, String> SEARCHFIELD_TO_FIELD;
 	static {
 		final Map<UserSearchSpec.SearchField, String> m = new HashMap<>();
@@ -1166,9 +1181,9 @@ public class MongoStorage implements AuthStorage {
 		SEARCHFIELD_TO_FIELD = m;
 	}
 	
-	private Document andRegexes(final String field, final List<Document> regexes) {
-		return new Document("$and", regexes.stream()
-				.map(regex -> new Document(field, regex))
+	private Document andRegexes(final String field, final List<String> prefixes) {
+		return new Document("$and", prefixes.stream()
+				.map(t -> new Document(field, new Document("$regex", "^" + Pattern.quote(t))))
 				.collect(Collectors.toList()));
 	}
 
@@ -1180,16 +1195,14 @@ public class MongoStorage implements AuthStorage {
 		requireNonNull(spec, "spec");
 		final Document query = new Document();
 		if (spec.hasSearchPrefixes()) {
-			final List<Document> regexes = spec.getSearchPrefixes().stream()
-					.map(token -> new Document("$regex", "^" + Pattern.quote(token)))
-					.collect(Collectors.toList());
 			final List<Document> queries = new LinkedList<>();
 			if (spec.isDisplayNameSearch()) {
-				queries.add(andRegexes(Fields.USER_DISPLAY_NAME_CANONICAL, regexes));
+				queries.add(andRegexes(
+						Fields.USER_DISPLAY_NAME_CANONICAL, spec.getSearchDisplayPrefixes()));
 			}
 			if (spec.isUserNameSearch() ) {
 				// this means if there's > 1 token nothing will match, but that seems right
-				queries.add(andRegexes(Fields.USER_NAME, regexes));
+				queries.add(andRegexes(Fields.USER_NAME, spec.getSearchUserNamePrefixes()));
 			}
 			query.put("$or", queries);
 		}
@@ -1685,13 +1698,14 @@ public class MongoStorage implements AuthStorage {
 				.append(Fields.TEMP_SESSION_OAUTH2STATE, data.getOAuth2State().orElse(null))
 				.append(Fields.TEMP_SESSION_PKCE_CODE_VERIFIER,
 						data.getPKCECodeVerifier().orElse(null))
-				.append(Fields.TEMP_SESSION_ERROR,
-						data.getError().isPresent() ? data.getError().get() : null)
+				.append(Fields.TEMP_SESSION_ERROR, data.getError().orElse(null))
 				.append(Fields.TEMP_SESSION_ERROR_TYPE, data.getErrorType().isPresent() ?
 						data.getErrorType().get().getErrorCode() : null)
 				.append(Fields.TEMP_SESSION_IDENTITIES, ids)
-				.append(Fields.TEMP_SESSION_USER,
-						data.getUser().isPresent() ? data.getUser().get().getName() : null);
+				.append(Fields.TEMP_SESSION_USER, data.getUser().isPresent() ?
+						data.getUser().get().getName() : null)
+				.append(Fields.TEMP_SESSION_MFA, data.getMFA().isPresent() ?
+						data.getMFA().get().getID() : null);
 		storeTemporarySessionData(td);
 	}
 
@@ -1759,7 +1773,8 @@ public class MongoStorage implements AuthStorage {
 					d.getString(Fields.TEMP_SESSION_PKCE_CODE_VERIFIER)
 			);
 		} else if (op.equals(Operation.LOGINIDENTS)) {
-			tis = b.login(toIdentities(ids));
+			final MFAStatus mfa = MFAStatus.fromID(d.getString(Fields.TEMP_SESSION_MFA));
+			tis = b.login(toIdentities(ids), mfa);
 		} else if (op.equals(Operation.LINKSTART)) {
 			tis = b.link(
 					d.getString(Fields.TEMP_SESSION_OAUTH2STATE),

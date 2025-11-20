@@ -60,6 +60,20 @@ public class AuthenticationGetAvailableUserNameTest {
 	}
 
 	@Test
+	public void getAvailableUserNameNoMatchUnderscores() throws Exception {
+		
+		final String suggestedUserName = "  !# 999  45F___OO___*(^";
+		final String searchName = "f_oo";
+		final Map<UserName, DisplayName> names = new HashMap<>();
+		names.put(new UserName("f_oo1"), DISPNAME);
+		names.put(new UserName("f_oo2"), DISPNAME);
+		names.put(new UserName("f_oo26"), DISPNAME);
+		final Optional<UserName> expected = Optional.of(new UserName("f_oo"));
+
+		getAvailableUserName(suggestedUserName, searchName, expected, names);
+	}
+	
+	@Test
 	public void getAvailableUserNameNoMatchNum0() throws Exception {
 		
 		final String suggestedUserName = "  !# 999  45FOO0*(^";

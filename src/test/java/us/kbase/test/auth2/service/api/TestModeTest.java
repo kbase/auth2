@@ -17,6 +17,7 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.UUID;
 
 import javax.ws.rs.core.HttpHeaders;
@@ -32,6 +33,7 @@ import com.google.common.collect.ImmutableMap;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.ViewableUser;
@@ -45,6 +47,7 @@ import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.TestModeException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
@@ -85,7 +88,7 @@ public class TestModeTest {
 		final Authentication auth = mock(Authentication.class);
 		final TestMode tm = new TestMode(auth);
 		
-		when(auth.testModeGetUser(new UserName("foobar"))).thenReturn(AuthUser.getBuilder(
+		when(auth.testModeGetUser(new NewUserName("foobar"))).thenReturn(AuthUser.getBuilder(
 				new UserName("foobar"), UID, new DisplayName("foo bar"), inst(10000))
 				.build());
 		
@@ -107,7 +110,7 @@ public class TestModeTest {
 		
 		assertThat("incorrect user", au, is(expected));
 		
-		verify(auth).testModeCreateUser(new UserName("foobar"), new DisplayName("foo bar"));
+		verify(auth).testModeCreateUser(new NewUserName("foobar"), new DisplayName("foo bar"));
 	}
 	
 	@Test
@@ -132,7 +135,7 @@ public class TestModeTest {
 		
 		doThrow(new UnauthorizedException("Cannot create root user"))
 				.when(auth).testModeCreateUser(
-						new UserName("***ROOT***"), new DisplayName("root baby"));
+						new NewUserName("***ROOT***"), new DisplayName("root baby"));
 		
 		final TestMode tm = new TestMode(auth);
 		final CreateTestUser ctu = new CreateTestUser("***ROOT***", "root baby");
@@ -146,12 +149,26 @@ public class TestModeTest {
 		
 		final TestMode tm = new TestMode(auth);
 		
-		when(auth.testModeGetUser(new UserName("foobar")))
+		when(auth.testModeGetUser(new NewUserName("foobar")))
 				.thenThrow(new NoSuchUserException("foobar"));
 		
 		final CreateTestUser ctu = new CreateTestUser("foobar", "foo bar");
 		failCreateUser(tm, ctu, new RuntimeException(
 				"Neat, user creation is totally busted: 50000 No such user: foobar"));
+	}
+	
+	@Test
+	public void createUserFailUnderscores() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		
+		final TestMode tm = new TestMode(auth);
+		final String err = "New usernames cannot contain repeating underscores or trailing "
+				+ "underscores";
+		
+		final CreateTestUser ctu = new CreateTestUser("foo__bar", "foo bar");
+		failCreateUser(tm, ctu, new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err));
+		final CreateTestUser ctu2 = new CreateTestUser("foobar__", "foo bar");
+		failCreateUser(tm, ctu2, new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, err));
 	}
 	
 	private void failCreateUser(
@@ -299,7 +316,7 @@ public class TestModeTest {
 		
 		final UUID uuid = UUID.randomUUID();
 		
-		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV))
+		when(auth.testModeCreateToken(new UserName("foo"), null, TokenType.DEV, MFAStatus.UNKNOWN))
 				.thenReturn(new NewToken(StoredToken.getBuilder(
 						TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
@@ -308,44 +325,61 @@ public class TestModeTest {
 		
 		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
 		
-		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", null, "Dev"));
-		
-		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
-				TokenType.DEV, uuid, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-				.build(),
-				"a token"), 30000L);
-		
-		assertThat("incorrect token", token, is(expected));
+		for (final String mfa: Arrays.asList(null, "", "   \t   ")) {
+			final NewAPIToken token = tm.createTestToken(
+					new CreateTestToken("foo", null, "Dev", mfa
+			));
+			
+			final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+					TokenType.DEV, uuid, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+					.withMFA(MFAStatus.UNKNOWN)
+					.build(),
+					"a token"), 30000L);
+			
+			assertThat("incorrect token", token, is(expected));
+		}
 	}
 	
 	@Test
 	public void createTokenWithName() throws Exception {
-		final Authentication auth = mock(Authentication.class);
-		final TestMode tm = new TestMode(auth);
-		
-		final UUID uuid = UUID.randomUUID();
-		
-		when(auth.testModeCreateToken(new UserName("foo"), new TokenName("whee"), TokenType.AGENT))
-				.thenReturn(new NewToken(StoredToken.getBuilder(
-						TokenType.AGENT, uuid, new UserName("foo"))
-						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-						.withTokenName(new TokenName("whee"))
-						.build(),
-						"a token"));
-		
-		when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
-		
-		final NewAPIToken token = tm.createTestToken(new CreateTestToken("foo", "whee", "Agent"));
-		
-		final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
-				TokenType.AGENT, uuid, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
-				.withTokenName(new TokenName("whee"))
-				.build(),
-				"a token"), 30000L);
-		
-		assertThat("incorrect token", token, is(expected));
+		final Map<String, MFAStatus> tests = ImmutableMap.of(
+				"   Used  \t  ", MFAStatus.USED,
+				"  \n NotUsed  ", MFAStatus.NOT_USED,
+				"Unknown", MFAStatus.UNKNOWN
+		);
+		for (final Entry<String, MFAStatus> e: tests.entrySet()) {
+			
+			final Authentication auth = mock(Authentication.class);
+			final TestMode tm = new TestMode(auth);
+			
+			final UUID uuid = UUID.randomUUID();
+			
+			when(auth.testModeCreateToken(
+					new UserName("foo"), new TokenName("whee"), TokenType.AGENT, e.getValue()))
+					.thenReturn(new NewToken(StoredToken.getBuilder(
+							TokenType.AGENT, uuid, new UserName("foo"))
+							.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+							.withTokenName(new TokenName("whee"))
+							.withMFA(e.getValue())
+							.build(),
+							"a token"));
+			
+			when(auth.getSuggestedTokenCacheTime()).thenReturn(30000L);
+			
+			final NewAPIToken token = tm.createTestToken(
+					new CreateTestToken("foo", "whee", "Agent", e.getKey()));
+			
+			final NewAPIToken expected = new NewAPIToken(new NewToken(StoredToken.getBuilder(
+					TokenType.AGENT, uuid, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(20000))
+					.withTokenName(new TokenName("whee"))
+					.withMFA(e.getValue())
+					.build(),
+					"a token"), 30000L);
+			
+			assertThat("incorrect token", token, is(expected));
+		}
 	}
 	
 	@Test
@@ -358,11 +392,11 @@ public class TestModeTest {
 	public void createTokenFailNulls() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
 		
-		failCreateToken(tm, new CreateTestToken(null, "foo", "Dev"),
+		failCreateToken(tm, new CreateTestToken(null, "foo", "Dev", null),
 				new MissingParameterException("user name"));
-		failCreateToken(tm, new CreateTestToken("foo", "  \t  \n ", "Dev"),
+		failCreateToken(tm, new CreateTestToken("foo", "  \t  \n ", "Dev", null),
 				new MissingParameterException("token name"));
-		failCreateToken(tm, new CreateTestToken("whee", "foo", null),
+		failCreateToken(tm, new CreateTestToken("whee", "foo", null, null),
 				new IllegalParameterException("Invalid token type: null"));
 	}
 	
@@ -370,14 +404,22 @@ public class TestModeTest {
 	public void createTokenFailBadTokenType() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
 		
-		failCreateToken(tm, new CreateTestToken("whee", "foo", "Devv"),
+		failCreateToken(tm, new CreateTestToken("whee", "foo", "Devv", null),
 				new IllegalParameterException("Invalid token type: Devv"));
+	}
+	
+	@Test
+	public void createTokenFailBadMFAType() {
+		final TestMode tm = new TestMode(mock(Authentication.class));
+		
+		failCreateToken(tm, new CreateTestToken("whee", "foo", "Dev", "SlightlyUsed"),
+				new IllegalParameterException("Unknown MFA state: SlightlyUsed"));
 	}
 	
 	@Test
 	public void createTokenFailAddlProps() {
 		final TestMode tm = new TestMode(mock(Authentication.class));
-		final CreateTestToken create = new CreateTestToken("foo", "bar", "baz");
+		final CreateTestToken create = new CreateTestToken("foo", "bar", "baz", null);
 		create.setAdditionalProperties("whee", "whoo");
 		failCreateToken(tm, create, new IllegalParameterException(
 				"Unexpected parameters in request: whee"));
@@ -405,6 +447,7 @@ public class TestModeTest {
 		when(auth.testModeGetToken(new IncomingToken("a token"))).thenReturn(
 				StoredToken.getBuilder(TokenType.DEV, uuid, new UserName("foo"))
 						.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+						.withMFA(MFAStatus.NOT_USED)
 						.build());
 		
 		when(auth.getSuggestedTokenCacheTime()).thenReturn(40000L);
@@ -414,6 +457,7 @@ public class TestModeTest {
 		final APIToken expected = new APIToken(StoredToken.getBuilder(
 				TokenType.DEV, uuid, new UserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), Instant.ofEpochMilli(30000))
+				.withMFA(MFAStatus.NOT_USED)
 				.build(),
 				40000);
 		

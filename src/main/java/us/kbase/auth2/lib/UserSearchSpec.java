@@ -10,6 +10,8 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+
 /** A specification for how a user search should be conducted.
  * 
  * If a search prefix or regex is supplied and neither withSearchOnUserName() nor
@@ -24,7 +26,8 @@ public class UserSearchSpec {
 	
 	//TODO ZLATER CODE don't expose regex externally. Not sure how best to do this without duplicating a lot of the class. For now setting regex is default access (package only).
 	
-	private final List<String> prefixes;
+	private final List<String> userNamePrefixes;
+	private final List<String> displayPrefixes;
 	private final String regex;
 	private final boolean searchUser;
 	private final boolean searchDisplayName;
@@ -34,7 +37,8 @@ public class UserSearchSpec {
 	private final boolean includeDisabled;
 
 	private UserSearchSpec(
-			final List<String> prefixes,
+			final List<String> userNamePrefixes,
+			final List<String> displayPrefixes,
 			final String regex,
 			final boolean searchUser,
 			final boolean searchDisplayName,
@@ -42,7 +46,10 @@ public class UserSearchSpec {
 			final Set<String> searchCustomRoles,
 			final boolean includeRoot,
 			final boolean includeDisabled) {
-		this.prefixes = prefixes == null ? null : Collections.unmodifiableList(prefixes);
+		this.userNamePrefixes = userNamePrefixes == null ? null :
+				Collections.unmodifiableList(userNamePrefixes);
+		this.displayPrefixes = displayPrefixes == null ? null :
+				Collections.unmodifiableList(displayPrefixes);
 		this.regex = regex;
 		this.searchUser = searchUser;
 		this.searchDisplayName = searchDisplayName;
@@ -52,13 +59,21 @@ public class UserSearchSpec {
 		this.includeDisabled = includeDisabled;
 	}
 
-	/** Returns the user and/or display name prefixes for the search, if any.
-	 * The prefixes match the start of the username or the start of any part of the whitespace
+	/** Returns the user name prefixes for the search, if any.
+	 * The prefixes match the start of the user name.
+	 * @return the search prefix.
+	 */
+	public List<String> getSearchUserNamePrefixes() {
+		return userNamePrefixes == null ? Collections.emptyList() : userNamePrefixes;
+	}
+	
+	/** Returns the display name prefixes for the search, if any.
+	 * The prefixes match the start of any part of the whitespace
 	 * tokenized display name.
 	 * @return the search prefix.
 	 */
-	public List<String> getSearchPrefixes() {
-		return prefixes == null ? Collections.emptyList() : prefixes;
+	public List<String> getSearchDisplayPrefixes() {
+		return displayPrefixes == null ? Collections.emptyList() : displayPrefixes;
 	}
 	
 	/** Returns the user and/or display name regex for the search, if any.
@@ -80,35 +95,33 @@ public class UserSearchSpec {
 	 * @return true if the search prefixes are set.
 	 */
 	public boolean hasSearchPrefixes() {
-		return prefixes != null;
+		return displayPrefixes != null;
 	}
 	
-	private boolean hasSearchString() {
-		return prefixes != null || regex != null;
-	}
-
 	/** Returns true if a search should occur on the user's user name.
 	 * 
-	 * True when a) a prefix or regex is provided and b) withSearchOnUserName() was called with a
-	 * true argument or neither withSearchOnUserName() nor withSearchOnDisplayName() were called
-	 * with a true argument.
+	 * True when
+	 * a) a prefix with a valid format for a username or regex is provided and
+	 * b) withSearchOnUserName() was called with a true argument or neither or both of
+	 * withSearchOnUserName() and withSearchOnDisplayName() were called with a true argument.
 	 * @return whether the search should occur on the user's user name with the provided prefix or
 	 * regex.
 	 */
 	public boolean isUserNameSearch() {
-		return searchUser || (hasSearchString() && !searchDisplayName);
+		return (regex != null || userNamePrefixes != null) && (searchUser || !searchDisplayName);
 	}
 
 	/** Returns true if a search should occur on the user's tokenized display name.
 	 * 
-	 * True when a) a prefix or regex is provided and b) withSearchOnDisplayName() was called with
-	 * a true argument or neither withSearchOnUserName() nor withSearchOnDisplayName() were
-	 * called with a true argument.
+	 * True when
+	 * a) a prefix or regex is provided and
+	 * b) withSearchOnDisplayName() was called with a true argument or neither or both of
+	 * withSearchOnUserName() and withSearchOnDisplayName() were called with a true argument.
 	 * @return whether the search should occur on the users's display name with the provided
 	 * prefix or regex.
 	 */
 	public boolean isDisplayNameSearch() {
-		return searchDisplayName || (hasSearchString() && !searchUser);
+		return (regex != null || displayPrefixes != null) && (searchDisplayName || !searchUser);
 	}
 	
 	/** Returns true if a search should occur on the user's roles.
@@ -202,8 +215,8 @@ public class UserSearchSpec {
 
 	@Override
 	public int hashCode() {
-		return Objects.hash(includeDisabled, includeRoot, prefixes, regex,
-				searchCustomRoles, searchDisplayName, searchRoles, searchUser);
+		return Objects.hash(displayPrefixes, includeDisabled, includeRoot, regex,
+				searchCustomRoles, searchDisplayName, searchRoles, searchUser, userNamePrefixes);
 	}
 
 	@Override
@@ -218,14 +231,15 @@ public class UserSearchSpec {
 			return false;
 		}
 		UserSearchSpec other = (UserSearchSpec) obj;
-		return includeDisabled == other.includeDisabled
+		return Objects.equals(displayPrefixes, other.displayPrefixes)
+				&& includeDisabled == other.includeDisabled
 				&& includeRoot == other.includeRoot
-				&& Objects.equals(prefixes, other.prefixes)
 				&& Objects.equals(regex, other.regex)
 				&& Objects.equals(searchCustomRoles, other.searchCustomRoles)
 				&& searchDisplayName == other.searchDisplayName
 				&& Objects.equals(searchRoles, other.searchRoles)
-				&& searchUser == other.searchUser;
+				&& searchUser == other.searchUser
+				&& Objects.equals(userNamePrefixes, other.userNamePrefixes);
 	}
 
 	/** A builder for a UserSearchSpec.
@@ -234,7 +248,7 @@ public class UserSearchSpec {
 	 */
 	public static class Builder {
 		
-		private List<String> prefixes = null;
+		private String prefix;
 		private String regex = null;
 		private boolean searchUser = false;
 		private boolean searchDisplayName = false;
@@ -249,15 +263,16 @@ public class UserSearchSpec {
 		 * The prefix will replace the search regex, if any.
 		 * The prefix matches the start of the username or the start of any part of the whitespace
 		 * and hyphen tokenized display name.
-		 * The prefix is always split by whitespace and hyphens, punctuation removed, and
-		 * converted to lower case.
+		 * The user name prefix is split by whitespace and all illegal characters removed.
+		 * The display name prefix is split by whitespace and hyphens, punctuation removed,
+		 * and converted to lower case.
 		 * Once the prefix or search regex is set in this builder it cannot be removed.
 		 * @param prefix the prefix.
 		 * @return this builder.
 		 */
 		public Builder withSearchPrefix(final String prefix) {
 			checkStringNoCheckedException(prefix, "prefix");
-			this.prefixes = DisplayName.getCanonicalDisplayName(prefix);
+			this.prefix = prefix;
 			this.regex = null;
 			return this;
 		}
@@ -273,12 +288,14 @@ public class UserSearchSpec {
 		 */
 		Builder withSearchRegex(final String regex) {
 			this.regex = checkStringNoCheckedException(regex, "regex");
-			this.prefixes = null;
+			this.prefix = null;
 			return this;
 		}
 		
 		/** Specify whether a search on a users's user name should occur.
 		 * A prefix must be set prior to calling this method.
+		 * If neither a user nor a display search is set (the default) and a prefix is set, then
+		 * the search occurs on both fields.
 		 * @param search whether the search should occur on the user's user name.
 		 * @return this builder.
 		 */
@@ -290,6 +307,8 @@ public class UserSearchSpec {
 		
 		/** Specify whether a search on a users's display name should occur.
 		 * A prefix must be set prior to calling this method.
+		 * If neither a user nor a display search is set (the default) and a prefix is set, then
+		 * the search occurs on both fields.
 		 * @param search whether the search should occur on the user's display name.
 		 * @return this builder.
 		 */
@@ -300,7 +319,7 @@ public class UserSearchSpec {
 		}
 
 		private void checkSearchPrefix(final boolean search) {
-			if (search && prefixes == null && regex == null) {
+			if (search && prefix == null && regex == null) {
 				throw new IllegalStateException(
 						"Must provide a prefix or regex if a name search is to occur");
 			}
@@ -353,10 +372,50 @@ public class UserSearchSpec {
 		
 		/** Build a UserSearchSpec instance.
 		 * @return a UserSearchSpec.
+		 * @throws IllegalParameterException if a prefix is set that, after normalizing, contains
+		 * no characters for the requested search(es).
 		 */
-		public UserSearchSpec build() {
-			return new UserSearchSpec(prefixes, regex, searchUser, searchDisplayName, searchRoles,
-					searchCustomRoles, includeRoot, includeDisabled);
+		public UserSearchSpec build() throws IllegalParameterException {
+			List<String> userNamePrefixes = null;
+			List<String> displayPrefixes = null;
+			if (this.prefix != null) {
+				/*	UsrSrch	DisSrch	UsrOK	DisOK	Throw exception?
+				 *	T		T		Y implies Y		
+				 *	T		T		No		Y		No, just go with display search
+				 *	T		T		No		No		Display or user exception
+				 *
+				 *	T		F		Y implies Y		
+				 *	T		F		No		Y		User exception
+				 *	T		F		No		No		User exception
+				 *
+				 *	F		T		Y implies Y		
+				 * 	F		T		No		Y		
+				 * 	F		T		No		No		Display exception
+				 * 
+				 * Note that:
+				 *   * If the user search is ok (UsrOK) the display search must be ok since the
+				 *     user search has at least one a-z char.
+				 *   * The first block where UsrSrch and DisSrch are all true is equivalent
+				 *     to a block where they're all false, and so that block is omitted.
+				 */
+				userNamePrefixes = UserName.getCanonicalNames(prefix);
+				userNamePrefixes = userNamePrefixes.isEmpty() ? null : userNamePrefixes;
+				displayPrefixes = DisplayName.getCanonicalDisplayName(prefix);
+				displayPrefixes = displayPrefixes.isEmpty() ? null : displayPrefixes;
+				if (searchUser && !searchDisplayName && userNamePrefixes == null) {
+					throw new IllegalParameterException(String.format(
+							"The search prefix %s contains no valid username prefix "
+									+ "and a user name search was requested", this.prefix));
+				}
+				if (displayPrefixes == null) {
+					throw new IllegalParameterException(String.format(
+							"The search prefix %s contains only punctuation and a "
+							+ "display name search was requested", this.prefix));
+				}
+			}
+			return new UserSearchSpec(userNamePrefixes, displayPrefixes, regex, searchUser,
+					searchDisplayName, searchRoles, searchCustomRoles,
+					includeRoot, includeDisabled);
 		}
 	}
 }

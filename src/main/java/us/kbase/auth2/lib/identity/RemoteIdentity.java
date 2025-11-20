@@ -6,7 +6,7 @@ import static java.util.Objects.requireNonNull;
  * @author gaprice@lbl.gov
  *
  */
-public class RemoteIdentity {
+public class RemoteIdentity implements Comparable<RemoteIdentity> {
 	
 	private final RemoteIdentityID remoteID;
 	private final RemoteIdentityDetails details;
@@ -76,6 +76,17 @@ public class RemoteIdentity {
 			return false;
 		}
 		return true;
+	}
+
+	@Override
+	public int compareTo(final RemoteIdentity other) {
+		requireNonNull(other, "other");
+		// Sort by provider name first, then by provider username
+		int cmp = this.remoteID.getProviderName().compareTo(other.remoteID.getProviderName());
+		if (cmp != 0) {
+			return cmp;
+		}
+		return this.details.getUsername().compareTo(other.details.getUsername());
 	}
 
 	@Override

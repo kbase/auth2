@@ -76,6 +76,7 @@ import us.kbase.auth2.lib.exceptions.UnLinkFailedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
@@ -91,6 +92,7 @@ import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.user.LocalUser;
 import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 
 /** The main class for the Authentication application.
  * 
@@ -436,7 +438,7 @@ public class Authentication {
 	 */
 	public Password createLocalUser(
 			final IncomingToken adminToken,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email)
 			throws AuthStorageException, UserExistsException, UnauthorizedException,
@@ -511,7 +513,7 @@ public class Authentication {
 					userName.getName());
 			return new LocalLoginResult(u.getUserName());
 		}
-		return new LocalLoginResult(login(u.getUserName(), tokenCtx));
+		return new LocalLoginResult(login(u.getUserName(), tokenCtx, MFAStatus.UNKNOWN));
 	}
 
 	private LocalUser getLocalUser(final UserName userName, final Password password)
@@ -743,13 +745,15 @@ public class Authentication {
 				admin.getUserName().getName());
 	}
 	
-	private NewToken login(final UserName userName, final TokenCreationContext tokenCtx)
+	private NewToken login(
+			final UserName userName, final TokenCreationContext tokenCtx, final MFAStatus mfa)
 			throws AuthStorageException {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(
 					TokenType.LOGIN, randGen.randomUUID(), userName)
 				.withLifeTime(clock.instant(),
 						cfg.getAppConfig().getTokenLifetimeMS(TokenLifetimeType.LOGIN))
 				.withContext(tokenCtx)
+				.withMFA(mfa)
 				.build(),
 				randGen.getToken());
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
@@ -905,8 +909,10 @@ public class Authentication {
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, au.getUserName())
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
-				.withTokenName(tokenName).build(),
-				randGen.getToken());
+				.withTokenName(tokenName)
+				.build(),
+				randGen.getToken()
+		);
 		storage.storeToken(nt.getStoredToken(), nt.getTokenHash());
 		logInfo("User {} created {} token {}", au.getUserName().getName(), tokenType, id);
 		return nt;
@@ -1156,7 +1162,7 @@ public class Authentication {
 	public Optional<UserName> getAvailableUserName(final String suggestedUserName)
 			throws AuthStorageException {
 		requireNonNull(suggestedUserName, "suggestedUserName");
-		final Optional<UserName> target = UserName.sanitizeName(suggestedUserName);
+		final Optional<UserName> target = NewUserName.sanitizeName(suggestedUserName);
 		Optional<UserName> availableUserName = Optional.empty();
 		if (target.isPresent()) {
 			availableUserName = getAvailableUserName(target.get(), false, true);
@@ -1181,10 +1187,17 @@ public class Authentication {
 		 * problems. Make this smarter if necessary. E.g. could store username and numeric suffix
 		 * db side and search and sort db side.
 		 */
-		final UserSearchSpec spec = UserSearchSpec.getBuilder()
-				// checked that this does indeed use an index for the mongo implementation
-				.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
-				.withSearchOnUserName(true).withIncludeDisabled(true).build();
+		final UserSearchSpec spec;
+		try {
+			spec = UserSearchSpec.getBuilder()
+					// checked that this does indeed use an index for the mongo implementation
+					.withSearchRegex("^" + Pattern.quote(sugStrip) + "\\d*$")
+					.withSearchOnUserName(true)
+					.withIncludeDisabled(true)
+					.build();
+		} catch (IllegalParameterException e) {
+			throw new RuntimeException("this is impossible", e);
+		}
 		final Map<UserName, DisplayName> users = storage.getUserDisplayNames(spec, -1);
 		final boolean match = users.containsKey(suggestedUserName);
 		final boolean hasNumSuffix = sugStrip.length() != sugName.length();
@@ -1780,14 +1793,16 @@ public class Authentication {
 				Optional.empty(), Operation.LOGINSTART, token);
 		checkState(tids, oauth2State);
 		storage.deleteTemporarySessionData(token.getHashedToken());
-		final Set<RemoteIdentity> ris = idp.getIdentities(
+		final IdentityProviderResponse ipr = idp.getIdentities(
 				authcode, tids.getPKCECodeVerifier().get(), false, environment);
-		final LoginState lstate = getLoginState(ris, Instant.MIN);
+		final LoginState lstate = getLoginState(ipr.getIdentities(), Instant.MIN);
 		final ProviderConfig pc = cfg.getAppConfig().getProviderConfig(idp.getProviderName());
 		final LoginToken loginToken;
-		if (lstate.getUsers().size() == 1 &&
-				lstate.getIdentities().isEmpty() &&
-				!pc.isForceLoginChoice()) {
+		if (
+				lstate.getUsers().size() == 1
+				&& lstate.getIdentities().isEmpty()
+				&& !pc.isForceLoginChoice())
+		{
 			final UserName userName = lstate.getUsers().iterator().next();
 			final AuthUser user = lstate.getUser(userName);
 			/* Don't throw an error here since an auth UI may not be controlling the call -
@@ -1801,16 +1816,16 @@ public class Authentication {
 			 * so who cares.
 			 */
 			if (!cfg.getAppConfig().isLoginAllowed() && !Role.isAdmin(user.getRoles())) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 			} else if (user.isDisabled()) {
-				loginToken = storeIdentitiesTemporarily(lstate);
+				loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 			} else {
-				loginToken = new LoginToken(login(user.getUserName(), tokenCtx));
+				loginToken = new LoginToken(login(user.getUserName(), tokenCtx, ipr.getMFA()));
 			}
 		} else {
 			// store the identities so the user can create an account or choose from more than one
 			// account
-			loginToken = storeIdentitiesTemporarily(lstate);
+			loginToken = storeIdentitiesTemporarily(lstate, ipr.getMFA());
 		}
 		return loginToken;
 	}
@@ -1824,13 +1839,13 @@ public class Authentication {
 	}
 
 	// ignores expiration date of login state
-	private LoginToken storeIdentitiesTemporarily(final LoginState ls)
+	private LoginToken storeIdentitiesTemporarily(final LoginState ls, final MFAStatus mfa)
 			throws AuthStorageException {
 		final Set<RemoteIdentity> store = new HashSet<>(ls.getIdentities());
 		ls.getUsers().stream().forEach(u -> store.addAll(ls.getIdentities(u)));
 		final TemporarySessionData data = TemporarySessionData.create(
 				randGen.randomUUID(), clock.instant(), LOGIN_TOKEN_LIFETIME_MS)
-				.login(store);
+				.login(store, mfa);
 		final TemporaryToken tt = storeTemporarySessionData(data);
 		logInfo("Stored temporary token {} with {} login identities", tt.getId(), store.size());
 		return new LoginToken(tt);
@@ -1861,6 +1876,7 @@ public class Authentication {
 	public LoginState getLoginState(final IncomingToken token)
 			throws AuthStorageException, InvalidTokenException, IdentityProviderErrorException,
 				UnauthorizedException {
+		// TODO CODE this ignores the MFA state. May want to add it to LoginState in the future
 		final TemporarySessionData ids = getTemporarySessionData(
 				Optional.empty(), Operation.LOGINIDENTS, token);
 		logInfo("Accessed temporary login token {} with {} identities", ids.getId(),
@@ -1953,7 +1969,7 @@ public class Authentication {
 	public NewToken createUser(
 			final IncomingToken token,
 			final String identityID,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> policyIDs,
@@ -1974,11 +1990,12 @@ public class Authentication {
 		if (!cfg.getAppConfig().isLoginAllowed()) {
 			throw new UnauthorizedException("Account creation is disabled");
 		}
-		// allow mutation of the identity set
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
-				.getIdentities().get());
+		final TemporarySessionData tsd = getTemporarySessionData(
+				Optional.empty(), Operation.LOGINIDENTS, token
+		);
 		storage.deleteTemporarySessionData(token.getHashedToken());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(tsd.getIdentities().get());
 		final Optional<RemoteIdentity> match = getIdentity(identityID, ids);
 		if (!match.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -2010,7 +2027,7 @@ public class Authentication {
 						linked, userName.getName());
 			}
 		}
-		return login(userName, tokenCtx);
+		return login(userName, tokenCtx, tsd.getMFA().get());
 	}
 	
 	/** Create a test token. The token is entirely separate from standard tokens and is
@@ -2026,16 +2043,19 @@ public class Authentication {
 	public NewToken testModeCreateToken(
 			final UserName userName,
 			final TokenName tokenName,
-			final TokenType tokenType)
+			final TokenType tokenType,
+			final MFAStatus mfa)
 			throws TestModeException, AuthStorageException, NoSuchUserException {
 		ensureTestMode();
 		requireNonNull(userName, "userName");
 		requireNonNull(tokenType, "tokenType");
+		requireNonNull(mfa, "mfa");
 		storage.testModeGetUser(userName); // ensure user exists
 		final UUID id = randGen.randomUUID();
 		final NewToken nt = new NewToken(StoredToken.getBuilder(tokenType, id, userName)
 				.withLifeTime(clock.instant(), TEST_MODE_DATA_LIFETIME_MS)
 				.withNullableTokenName(tokenName)
+				.withMFA(mfa)
 				.build(),
 				randGen.getToken());
 		storage.testModeStoreToken(nt.getStoredToken(), nt.getTokenHash());
@@ -2075,7 +2095,7 @@ public class Authentication {
 	 * @throws UnauthorizedException the user name is the root user name.
 	 * @throws TestModeException if test mode is not enabled.
 	 */
-	public void testModeCreateUser(final UserName userName, final DisplayName displayName)
+	public void testModeCreateUser(final NewUserName userName, final DisplayName displayName)
 			throws UserExistsException, AuthStorageException, UnauthorizedException,
 			TestModeException {
 		ensureTestMode();
@@ -2298,11 +2318,12 @@ public class Authentication {
 		requireNonNull(policyIDs, "policyIDs");
 		requireNonNull(tokenCtx, "tokenCtx");
 		noNulls(policyIDs, "null item in policyIDs");
-		// allow mutation of the identity set
-		final Set<RemoteIdentity> ids = new HashSet<>(
-				getTemporarySessionData(Optional.empty(), Operation.LOGINIDENTS, token)
-				.getIdentities().get());
+		final TemporarySessionData tsd = getTemporarySessionData(
+				Optional.empty(), Operation.LOGINIDENTS, token
+		);
 		storage.deleteTemporarySessionData(token.getHashedToken());
+		// allow mutation of the identity set
+		final Set<RemoteIdentity> ids = new HashSet<>(tsd.getIdentities().get());
 		final Optional<RemoteIdentity> ri = getIdentity(identityID, ids);
 		if (!ri.isPresent()) {
 			throw new UnauthorizedException(String.format(
@@ -2332,7 +2353,7 @@ public class Authentication {
 						linked, u.get().getUserName().getName());
 			}
 		}
-		return login(u.get().getUserName(), tokenCtx);
+		return login(u.get().getUserName(), tokenCtx, tsd.getMFA().get());
 	}
 	
 	private Optional<RemoteIdentity> getIdentity(
@@ -2520,8 +2541,8 @@ public class Authentication {
 			throw new LinkFailedException("Cannot link identities to local account " +
 					u.getUserName().getName());
 		}
-		final Set<RemoteIdentity> ids = idp.getIdentities(
-				authcode, tids.getPKCECodeVerifier().get(), true, environment);
+		final Set<RemoteIdentity> ids = idp.getIdentities(  // don't care about MFA here (yet)
+				authcode, tids.getPKCECodeVerifier().get(), true, environment).getIdentities();
 		final Set<RemoteIdentity> filtered = new HashSet<>(ids);
 		filterLinkCandidates(filtered);
 		/* Don't throw an error if ids are empty since an auth UI is not controlling the call in
@@ -3165,7 +3186,7 @@ public class Authentication {
 	 * @throws AuthStorageException if an error occurred accessing the storage system.
 	 * @throws IdentityLinkedException if the identity is already linked to a user.
 	 */
-	public void importUser(final UserName userName, final RemoteIdentity remoteIdentity)
+	public void importUser(final NewUserName userName, final RemoteIdentity remoteIdentity)
 			throws UserExistsException, AuthStorageException, IdentityLinkedException {
 		requireNonNull(userName, "userName");
 		requireNonNull(remoteIdentity, "remoteIdentity");

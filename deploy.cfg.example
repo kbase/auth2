@@ -98,3 +98,5 @@ identity-provider-OrcID-client-id =
 identity-provider-OrcID-client-secret =
 identity-provider-OrcID-login-redirect-url = https://kbase.us/services/auth/login/complete/orcid
 identity-provider-OrcID-link-redirect-url = https://kbase.us/services/auth/link/complete/orcid
+# uncomment to disable using MFA. Required if OrcID plan doesn't support MFA
+#identity-provider-OrcID-custom-disable-mfa = true

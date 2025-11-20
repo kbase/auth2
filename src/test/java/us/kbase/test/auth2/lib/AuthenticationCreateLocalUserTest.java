@@ -29,6 +29,7 @@ import us.kbase.auth2.cryptutils.RandomDataGenerator;
 import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.Password;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
@@ -134,7 +135,7 @@ public class AuthenticationCreateLocalUserTest {
 		when(clock.instant()).thenReturn(create);
 		
 		final LocalUser expected = LocalUser.getLocalUserBuilder(
-				new UserName("foo"), uid, new DisplayName("bar"), create)
+				new NewUserName("foo"), uid, new DisplayName("bar"), create)
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withForceReset(true).build();
 		
@@ -145,7 +146,8 @@ public class AuthenticationCreateLocalUserTest {
 				any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
 		final Password pwd = auth.createLocalUser(
-				token, new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"));
+				token, new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com")
+		);
 		assertThat("incorrect pwd", pwd.getPassword(), is(pwdChar));
 		assertClear(matcher.savedSalt);
 		assertClear(matcher.savedHash);
@@ -198,7 +200,7 @@ public class AuthenticationCreateLocalUserTest {
 		doThrow(new UserExistsException("foo")).when(storage)
 				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+		failCreateLocalUser(auth, token, new NewUserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@h.com"), new UserExistsException("foo"));
 	}
 	
@@ -238,7 +240,7 @@ public class AuthenticationCreateLocalUserTest {
 		doThrow(new NoSuchRoleException("foo")).when(storage)
 				.createLocalUser(any(LocalUser.class), any(PasswordHashAndSalt.class));
 		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+		failCreateLocalUser(auth, token, new NewUserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@h.com"), new RuntimeException("didn't supply any roles"));
 	}
 	
@@ -266,7 +268,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(rand.getTemporaryPassword(10)).thenThrow(new RuntimeException("booga"));
 		
-		failCreateLocalUser(auth, token, new UserName("foo"), new DisplayName("bar"),
+		failCreateLocalUser(auth, token, new NewUserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@h.com"), new RuntimeException("booga"));
 	}
 	
@@ -282,7 +284,7 @@ public class AuthenticationCreateLocalUserTest {
 			
 			@Override
 			public void execute(final Authentication auth) throws Exception {
-				auth.createLocalUser(token, new UserName("whee"), new DisplayName("bar"),
+				auth.createLocalUser(token, new NewUserName("whee"), new DisplayName("bar"),
 						new EmailAddress("f@h.com"));
 			}
 
@@ -303,18 +305,18 @@ public class AuthenticationCreateLocalUserTest {
 		final TestMocks testauth = initTestMocks();
 		final Authentication auth = testauth.auth;
 		
-		failCreateLocalUser(auth, null, new UserName("foo"), new DisplayName("bar"),
+		failCreateLocalUser(auth, null, new NewUserName("foo"), new DisplayName("bar"),
 				new EmailAddress("f@h.com"), new NullPointerException("token"));
 		
 		failCreateLocalUser(auth, new IncomingToken("whee"), null,
 				new DisplayName("bar"), new EmailAddress("f@h.com"),
 				new NullPointerException("userName"));
 		
-		failCreateLocalUser(auth, new IncomingToken("whee"), new UserName("foo"),
+		failCreateLocalUser(auth, new IncomingToken("whee"), new NewUserName("foo"),
 				null, new EmailAddress("f@h.com"),
 				new NullPointerException("displayName"));
 		
-		failCreateLocalUser(auth, new IncomingToken("whee"), new UserName("foo"),
+		failCreateLocalUser(auth, new IncomingToken("whee"), new NewUserName("foo"),
 				new DisplayName("bar"), null,
 				new NullPointerException("email"));
 	}
@@ -340,7 +342,7 @@ public class AuthenticationCreateLocalUserTest {
 		
 		when(storage.getUser(new UserName("admin"))).thenReturn(admin);
 		
-		failCreateLocalUser(auth, token, UserName.ROOT, new DisplayName("bar"),
+		failCreateLocalUser(auth, token, NewUserName.ROOT, new DisplayName("bar"),
 				new EmailAddress("f@h.com"), new UnauthorizedException(ErrorType.UNAUTHORIZED,
 						"Cannot create ROOT user"));
 		
@@ -353,7 +355,7 @@ public class AuthenticationCreateLocalUserTest {
 	public void failCreateLocalUser(
 			final Authentication auth,
 			final IncomingToken token,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName display,
 			final EmailAddress email,
 			final Exception e) {

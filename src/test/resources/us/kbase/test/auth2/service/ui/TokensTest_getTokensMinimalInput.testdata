@@ -11,6 +11,7 @@ Expiration and creation dates are in milliseconds from the epoch.
 <h3>Current token:</h3>
 ID: edc1dcbb-d370-4660-a639-01a72f0d578a<br/>
 Type: Login<br/>
+MFA: Unknown<br/>
 Created: 10000<br/>
 Expires: 1000000000010000<br/>
 OS:  <br/>

@@ -43,6 +43,7 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.EmailAddress;
 import us.kbase.auth2.lib.LoginState;
 import us.kbase.auth2.lib.LoginToken;
+import us.kbase.auth2.lib.NewUserName;
 import us.kbase.auth2.lib.OAuth2StartData;
 import us.kbase.auth2.lib.PolicyID;
 import us.kbase.auth2.lib.Role;
@@ -73,12 +74,14 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.exceptions.UserExistsException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -87,6 +90,8 @@ import us.kbase.auth2.lib.user.NewUser;
 import us.kbase.test.auth2.TestCommon;
 import us.kbase.test.auth2.lib.AuthenticationTester.LogEvent;
 import us.kbase.test.auth2.lib.AuthenticationTester.TestMocks;
+
+// TODO CODE it seems like there's a lot of repetition in these tests, maybe could consolidate
 
 public class AuthenticationLoginTest {
 	
@@ -240,93 +245,106 @@ public class AuthenticationLoginTest {
 			final Role userRole,
 			final boolean allowLogin)
 			throws Exception {
-		logEvents.clear();
-		
-		final IdentityProvider idp = mock(IdentityProvider.class);
-
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final RandomDataGenerator rand = testauth.randGenMock;
-		final Clock clock = testauth.clockMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"prov", new ProviderConfig(true, false, false));
-
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(allowLogin, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		final IncomingToken token = new IncomingToken("inctoken");
-
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("suporstate", "pkceughherewegoagain"));
-
-		when(idp.getIdentities("foobar", "pkceughherewegoagain", false, null))
-				.thenReturn(set(new RemoteIdentity(
-						new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
-				.thenReturn(null);
-
-		final RemoteIdentity storageRemoteID = new RemoteIdentity(
-				new RemoteIdentityID("prov", "id1"),
-				new RemoteIdentityDetails("user1", "full1", "f@h.com"));
-		
-		final AuthUser user = AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
-				Instant.ofEpochMilli(10000L))
-				.withRole(userRole)
-				.withIdentity(storageRemoteID).build();
-		
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.of(user)).thenReturn(null);
-		
-		final UUID tokenID = UUID.randomUUID();
-		
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
-		when(rand.getToken()).thenReturn("thisisatoken").thenReturn(null);
-		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
-			.thenReturn(Instant.ofEpochMilli(30000)).thenReturn(null);
-		
-		final LoginToken lt = auth.login(
-				token,
-				"prov",
-				"foobar",
-				null,
-				TokenCreationContext.getBuilder().withNullableAgent("a", "v").build(),
-				"suporstate");
-		
-		verify(storage).deleteTemporarySessionData(token.getHashedToken());
-		
-		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
-				.withContext(TokenCreationContext.getBuilder()
-						.withNullableAgent("a", "v").build()).build(),
-				"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=");
-		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
-		
-		final LoginToken expected = new LoginToken(
-				new NewToken(StoredToken.getBuilder(
-						TokenType.LOGIN, tokenID, new UserName("foo"))
-						.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
-						.withContext(TokenCreationContext.getBuilder()
-								.withNullableAgent("a", "v").build()).build(),
-						"thisisatoken"));
-		
-		assertThat("incorrect login token", lt, is(expected));
-		
-		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-				"Logged in user foo with token " + tokenID, Authentication.class));
+		for (final MFAStatus mfa: MFAStatus.values()) {
+			logEvents.clear();
+			
+			final IdentityProvider idp = mock(IdentityProvider.class);
+	
+			when(idp.getProviderName()).thenReturn("prov");
+			
+			final TestMocks testauth = initTestMocks(set(idp));
+			final AuthStorage storage = testauth.storageMock;
+			final RandomDataGenerator rand = testauth.randGenMock;
+			final Clock clock = testauth.clockMock;
+			final Authentication auth = testauth.auth;
+			
+			AuthenticationTester.setConfigUpdateInterval(auth, -1);
+			
+			final Map<String, ProviderConfig> providers = ImmutableMap.of(
+					"prov", new ProviderConfig(true, false, false));
+	
+			when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+					.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+							new AuthConfig(allowLogin, providers, null),
+							new CollectingExternalConfig(Collections.emptyMap())));
+			
+			final IncomingToken token = new IncomingToken("inctoken");
+	
+			when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+					TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
+					.login("suporstate", "pkceughherewegoagain"));
+	
+			when(idp.getIdentities("foobar", "pkceughherewegoagain", false, null))
+					.thenReturn(IdentityProviderResponse.from(
+							new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")
+							),
+							mfa
+					))
+					.thenReturn(null);
+	
+			final RemoteIdentity storageRemoteID = new RemoteIdentity(
+					new RemoteIdentityID("prov", "id1"),
+					new RemoteIdentityDetails("user1", "full1", "f@h.com"));
+			
+			final AuthUser user = AuthUser.getBuilder(
+					new UserName("foo"), UID, new DisplayName("bar"),
+					Instant.ofEpochMilli(10000L))
+					.withRole(userRole)
+					.withIdentity(storageRemoteID).build();
+			
+			when(storage.getUser(storageRemoteID)).thenReturn(Optional.of(user)).thenReturn(null);
+			
+			final UUID tokenID = UUID.randomUUID();
+			
+			when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+			when(rand.getToken()).thenReturn("thisisatoken").thenReturn(null);
+			when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
+				.thenReturn(Instant.ofEpochMilli(30000)).thenReturn(null);
+			
+			final LoginToken lt = auth.login(
+					token,
+					"prov",
+					"foobar",
+					null,
+					TokenCreationContext.getBuilder().withNullableAgent("a", "v").build(),
+					"suporstate");
+			
+			verify(storage).deleteTemporarySessionData(token.getHashedToken());
+			
+			verify(storage).storeToken(StoredToken.getBuilder(
+					TokenType.LOGIN, tokenID, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+					.withContext(TokenCreationContext.getBuilder()
+							.withNullableAgent("a", "v").build())
+					.withMFA(mfa)
+					.build(),
+					"rIWdQ6H23g7MLjLjJTz8k7A6zEbn6+Cnwm5anDwasLc=");
+			
+			verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+			
+			final LoginToken expected = new LoginToken(
+					new NewToken(StoredToken.getBuilder(
+							TokenType.LOGIN, tokenID, new UserName("foo"))
+							.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+							.withContext(TokenCreationContext.getBuilder()
+									.withNullableAgent("a", "v").build())
+							.withMFA(mfa)
+							.build(),
+							"thisisatoken"));
+			
+			assertThat("incorrect login token", lt, is(expected));
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"Logged in user foo with token " + tokenID, Authentication.class));
+		}
 	}
 	
 	@Test
 	public void loginContinueStoreSingleIdentity() throws Exception {
+		// this covers all the paths through the login continue method other than immediate
+		// login, so we test all MFA types here
 		loginContinueStoreSingleLinkedIdentity(Role.DEV_TOKEN, false, false, false);
 		loginContinueStoreSingleLinkedIdentity(Role.DEV_TOKEN, true, true, false);
 		loginContinueStoreSingleLinkedIdentity(Role.ADMIN, true, false, false);
@@ -342,78 +360,85 @@ public class AuthenticationLoginTest {
 			final boolean allowLogin,
 			final boolean forceLoginChoice)
 			throws Exception {
-		logEvents.clear();
-		
-		final IdentityProvider idp = mock(IdentityProvider.class);
-
-		when(idp.getProviderName()).thenReturn("prov");
-		
-		final TestMocks testauth = initTestMocks(set(idp));
-		final AuthStorage storage = testauth.storageMock;
-		final RandomDataGenerator rand = testauth.randGenMock;
-		final Clock clock = testauth.clockMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-		
-		final Map<String, ProviderConfig> providers = ImmutableMap.of(
-				"prov", new ProviderConfig(true, forceLoginChoice, false));
-
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(allowLogin, providers, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		final IncomingToken token = new IncomingToken("inctoken");
-
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
-				.login("suporstate2", "pkceisathingiguess"));
-		
-		when(idp.getIdentities("foobar", "pkceisathingiguess", false, null))
-				.thenReturn(set(new RemoteIdentity(
-						new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
+		for (final MFAStatus mfa: MFAStatus.values()) {
+			logEvents.clear();
+			
+			final IdentityProvider idp = mock(IdentityProvider.class);
+	
+			when(idp.getProviderName()).thenReturn("prov");
+			
+			final TestMocks testauth = initTestMocks(set(idp));
+			final AuthStorage storage = testauth.storageMock;
+			final RandomDataGenerator rand = testauth.randGenMock;
+			final Clock clock = testauth.clockMock;
+			final Authentication auth = testauth.auth;
+			
+			AuthenticationTester.setConfigUpdateInterval(auth, -1);
+			
+			final Map<String, ProviderConfig> providers = ImmutableMap.of(
+					"prov", new ProviderConfig(true, forceLoginChoice, false));
+	
+			when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+					.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+							new AuthConfig(allowLogin, providers, null),
+							new CollectingExternalConfig(Collections.emptyMap())));
+			
+			final IncomingToken token = new IncomingToken("inctoken");
+	
+			when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+					TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
+					.login("suporstate2", "pkceisathingiguess"));
+			
+			when(idp.getIdentities("foobar", "pkceisathingiguess", false, null))
+					.thenReturn(IdentityProviderResponse.from(
+							new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")
+							),
+							mfa
+					))
+					.thenReturn(null);
+	
+			final RemoteIdentity storageRemoteID = new RemoteIdentity(
+					new RemoteIdentityID("prov", "id1"),
+					new RemoteIdentityDetails("user1", "full1", "f@h.com"));
+			
+			final AuthUser.Builder user = AuthUser.getBuilder(new UserName("foo"), UID,
+					new DisplayName("bar"), Instant.ofEpochMilli(10000L))
+					.withRole(userRole)
+					.withIdentity(storageRemoteID);
+			if (disabled) {
+				user.withUserDisabledState(new UserDisabledState(
+						"d", new UserName("baz"), Instant.ofEpochMilli(5000)));
+			}
+			when(storage.getUser(storageRemoteID)).thenReturn(Optional.of(user.build()))
+					.thenReturn(null);
+			
+			final UUID tokenID = UUID.randomUUID();
+			
+			when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+			when(rand.getToken()).thenReturn("thisisatoken").thenReturn(null);
+			when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
 				.thenReturn(null);
-
-		final RemoteIdentity storageRemoteID = new RemoteIdentity(
-				new RemoteIdentityID("prov", "id1"),
-				new RemoteIdentityDetails("user1", "full1", "f@h.com"));
-		
-		final AuthUser.Builder user = AuthUser.getBuilder(new UserName("foo"), UID,
-				new DisplayName("bar"), Instant.ofEpochMilli(10000L))
-				.withRole(userRole)
-				.withIdentity(storageRemoteID);
-		if (disabled) {
-			user.withUserDisabledState(new UserDisabledState(
-					"d", new UserName("baz"), Instant.ofEpochMilli(5000)));
+			
+			final LoginToken lt = auth.login(token, "prov", "foobar", null, CTX, "suporstate2");
+			
+			verify(storage).deleteTemporarySessionData(token.getHashedToken());
+			
+			verify(storage).storeTemporarySessionData(TemporarySessionData
+					.create(tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
+					.login(set(storageRemoteID), mfa),
+					IncomingToken.hash("thisisatoken"));
+			
+			final LoginToken expected = new LoginToken(tempToken(
+					tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000, "thisisatoken"));
+			
+			assertThat("incorrect login token", lt, is(expected));
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
+					"Stored temporary token %s with 1 login identities", tokenID),
+					Authentication.class));
 		}
-		when(storage.getUser(storageRemoteID)).thenReturn(Optional.of(user.build()))
-				.thenReturn(null);
-		
-		final UUID tokenID = UUID.randomUUID();
-		
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
-		when(rand.getToken()).thenReturn("thisisatoken").thenReturn(null);
-		when(clock.instant()).thenReturn(Instant.ofEpochMilli(20000))
-			.thenReturn(null);
-		
-		final LoginToken lt = auth.login(token, "prov", "foobar", null, CTX, "suporstate2");
-		
-		verify(storage).deleteTemporarySessionData(token.getHashedToken());
-		
-		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
-				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000).login(set(storageRemoteID)),
-				IncomingToken.hash("thisisatoken"));
-		
-		final LoginToken expected = new LoginToken(tempToken(
-				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000, "thisisatoken"));
-		
-		assertThat("incorrect login token", lt, is(expected));
-		
-		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO, String.format(
-				"Stored temporary token %s with 1 login identities", tokenID),
-				Authentication.class));
 	}
 	
 	@Test
@@ -446,7 +471,7 @@ public class AuthenticationLoginTest {
 				.login("veryneatstate", "pkcewhoopdefndoo"));
 		
 		when(idp.getIdentities("foobar", "pkcewhoopdefndoo", false, "env2"))
-				.thenReturn(set(new RemoteIdentity(
+				.thenReturn(IdentityProviderResponse.from(new RemoteIdentity(
 						new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com"))))
 				.thenReturn(null);
@@ -469,8 +494,9 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
-		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
-				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000).login(set(storageRemoteID)),
+		verify(storage).storeTemporarySessionData(TemporarySessionData
+				.create(tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
+				.login(set(storageRemoteID), MFAStatus.UNKNOWN),
 				IncomingToken.hash("thisisatoken"));
 		
 		final LoginToken expected = new LoginToken(tempToken(
@@ -512,13 +538,13 @@ public class AuthenticationLoginTest {
 				.login("somestate", "pkceverifierlalalalala"));
 		
 		when(idp.getIdentities("foobar", "pkceverifierlalalalala", false, null))
-				.thenReturn(set(
+				.thenReturn(IdentityProviderResponse.from(set(
 						new RemoteIdentity(
 								new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 								new RemoteIdentityDetails("user2", "full2", "e@g.com"))
-						))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(
@@ -551,7 +577,7 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
-				.login(set(storageRemoteID1, storageRemoteID2)),
+				.login(set(storageRemoteID1, storageRemoteID2), MFAStatus.UNKNOWN),
 				IncomingToken.hash("thisisatoken"));
 		
 		final LoginToken expected = new LoginToken(tempToken(
@@ -592,13 +618,15 @@ public class AuthenticationLoginTest {
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
 				.login("suporstateystate", "pkceohgodpleasestop"));
 		
-		when(idp.getIdentities("foobar", "pkceohgodpleasestop", false, null)).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+		when(idp.getIdentities("foobar", "pkceohgodpleasestop", false, null)).thenReturn(
+				IdentityProviderResponse.from(set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "d@g.com"))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(
@@ -645,7 +673,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
-				.login(set(storageRemoteID1, storageRemoteID2, storageRemoteID3)),
+				.login(
+						set(storageRemoteID1, storageRemoteID2, storageRemoteID3),
+						MFAStatus.UNKNOWN
+				),
 				IncomingToken.hash("thisisatoken"));
 		
 		final LoginToken expected = new LoginToken(tempToken(
@@ -686,13 +717,15 @@ public class AuthenticationLoginTest {
 				TemporarySessionData.create(UUID.randomUUID(), now(), now().plusSeconds(10))
 				.login("state.thatisall", "pkceithinkimightgomad"));
 		
-		when(idp.getIdentities("foobar", "pkceithinkimightgomad", false, null)).thenReturn(set(
-				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-						new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-						new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
+		when(idp.getIdentities("foobar", "pkceithinkimightgomad", false, null)).thenReturn(
+				IdentityProviderResponse.from(set(
+						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
+						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+								new RemoteIdentityDetails("user3", "full3", "d@g.com"))
+				)))
 				.thenReturn(null);
 
 		final RemoteIdentity storageRemoteID1 = new RemoteIdentity(
@@ -728,7 +761,10 @@ public class AuthenticationLoginTest {
 		
 		verify(storage).storeTemporarySessionData(TemporarySessionData.create(
 				tokenID, Instant.ofEpochMilli(20000), 30 * 60 * 1000)
-				.login(set(storageRemoteID1, storageRemoteID2, storageRemoteID3)),
+				.login(
+						set(storageRemoteID1, storageRemoteID2, storageRemoteID3),
+						MFAStatus.UNKNOWN
+				),
 				IncomingToken.hash("thisisatoken"));
 		
 		final LoginToken expected = new LoginToken(tempToken(
@@ -823,7 +859,7 @@ public class AuthenticationLoginTest {
 		final UUID tid = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(tid, Instant.now(), Instant.now())
-				.login(set(REMOTE)))
+				.login(set(REMOTE), MFAStatus.UNKNOWN))
 				.thenReturn(null);
 		
 		failLoginContinue(auth, token, "ip2", "foo", null, CTX, "state",
@@ -1029,8 +1065,13 @@ public class AuthenticationLoginTest {
 		final UUID id = UUID.randomUUID();
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+						.login(
+								set(new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)),
+								MFAStatus.UNKNOWN
+						))
 				.thenReturn(null);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
@@ -1067,13 +1108,21 @@ public class AuthenticationLoginTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		final UUID id = UUID.randomUUID();
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(id, SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
-				.thenReturn(null);
+		final TemporarySessionData tsd = TemporarySessionData.create(id, SMALL, 10000).login(
+				set(
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")
+						),
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")
+						)
+				),
+				MFAStatus.UNKNOWN
+		);
+		when(storage.getTemporarySessionData(token.getHashedToken()))
+				.thenReturn(tsd).thenReturn(null);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
@@ -1118,8 +1167,13 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
 				TemporarySessionData.create(id, SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+						.login(
+								set(new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)),
+								MFAStatus.UNKNOWN
+						))
 				.thenReturn(null);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
@@ -1164,13 +1218,21 @@ public class AuthenticationLoginTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		final UUID id = UUID.randomUUID();
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(id, SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
-				.thenReturn(null);
+		final TemporarySessionData tsd = TemporarySessionData.create(id, SMALL, 10000).login(
+				set(
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@h.com")
+						),
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")
+						)
+				),
+				MFAStatus.UNKNOWN
+		);
+		when(storage.getTemporarySessionData(token.getHashedToken()))
+				.thenReturn(tsd).thenReturn(null);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
@@ -1234,13 +1296,21 @@ public class AuthenticationLoginTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		
 		final UUID id = UUID.randomUUID();
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(id, SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
-				.thenReturn(null);
+		final TemporarySessionData tsd = TemporarySessionData.create(id, SMALL, 10000).login(
+				set(
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")
+						),
+						new RemoteIdentity(
+								new RemoteIdentityID("prov", "id2"),
+								new RemoteIdentityDetails("user2", "full2", "e@g.com")
+						)
+				),
+				MFAStatus.UNKNOWN
+		);
+		when(storage.getTemporarySessionData(token.getHashedToken()))
+				.thenReturn(tsd).thenReturn(null);
 		
 		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
 				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
@@ -1378,72 +1448,93 @@ public class AuthenticationLoginTest {
 	
 	@Test
 	public void createUser() throws Exception {
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final RandomDataGenerator rand = testauth.randGenMock;
-		final Clock clock = testauth.clockMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-
-		final IncomingToken token = new IncomingToken("foobar");
-		final UUID tokenID = UUID.randomUUID();
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(true, null, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
-				.thenReturn(null);
-		
-		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
-		when(rand.randomUUID()).thenReturn(UID).thenReturn(tokenID).thenReturn(null);
-		when(rand.getToken()).thenReturn("mfingtoken");
-		
-		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
-				set(new PolicyID("pid1"), new PolicyID("pid2")),
-				TokenCreationContext.getBuilder().withNullableDevice("d").build(), false);
-
-		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
-				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
-				.withEmailAddress(new EmailAddress("f@h.com"))
-				.withPolicyID(new PolicyID("pid1"), Instant.ofEpochMilli(10000))
-				.withPolicyID(new PolicyID("pid2"), Instant.ofEpochMilli(10000)).build());
-		
-		verify(storage, never()).link(any(), any());
-		
-		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
-				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
-				.build(),
-				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
-		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
-		verify(storage).deleteTemporarySessionData(token.getHashedToken());
-		
-		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
-				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
-				.build(),
-				"mfingtoken")));
-		
-		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-				"Created user foo linked to remote identity " +
-						"ef0518c79af70ed979907969c6d0a0f7 prov id1 user1", Authentication.class),
-				new LogEvent(Level.INFO, "Logged in user foo with token " + tokenID,
-						Authentication.class));
+		// There's only one happy path through createUser wrt MFA so we just test here
+		for (final MFAStatus mfa: MFAStatus.values()) {
+			logEvents.clear();
+			final TestMocks testauth = initTestMocks();
+			final AuthStorage storage = testauth.storageMock;
+			final RandomDataGenerator rand = testauth.randGenMock;
+			final Clock clock = testauth.clockMock;
+			final Authentication auth = testauth.auth;
+			
+			AuthenticationTester.setConfigUpdateInterval(auth, -1);
+	
+			final IncomingToken token = new IncomingToken("foobar");
+			final UUID tokenID = UUID.randomUUID();
+			
+			when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+					.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+							new AuthConfig(true, null, null),
+							new CollectingExternalConfig(Collections.emptyMap())));
+	
+			final TemporarySessionData tsd = TemporarySessionData.create(
+					UUID.randomUUID(), SMALL, 10000)
+					.login(
+							set(
+									new RemoteIdentity(
+											new RemoteIdentityID("prov", "id1"),
+											new RemoteIdentityDetails("user1", "full1", "f@h.com")
+									),
+									new RemoteIdentity(
+											new RemoteIdentityID("prov", "id2"),
+											new RemoteIdentityDetails("user2", "full2", "e@g.com")
+									)
+							),
+							mfa
+					);
+			when(storage.getTemporarySessionData(token.getHashedToken()))
+					.thenReturn(tsd).thenReturn(null);
+			
+			when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+					Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
+			when(rand.randomUUID()).thenReturn(UID).thenReturn(tokenID).thenReturn(null);
+			when(rand.getToken()).thenReturn("mfingtoken");
+			
+			final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
+					new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+					set(new PolicyID("pid1"), new PolicyID("pid2")),
+					TokenCreationContext.getBuilder().withNullableDevice("d").build(), false);
+	
+			verify(storage).createUser(NewUser.getBuilder(
+							new NewUserName("foo"),
+							UID,
+							new DisplayName("bar"),
+							Instant.ofEpochMilli(10000),
+							new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+									new RemoteIdentityDetails("user1", "full1", "f@h.com")
+							)
+					)
+					.withEmailAddress(new EmailAddress("f@h.com"))
+					.withPolicyID(new PolicyID("pid1"), Instant.ofEpochMilli(10000))
+					.withPolicyID(new PolicyID("pid2"), Instant.ofEpochMilli(10000)).build());
+			
+			verify(storage, never()).link(any(), any());
+			
+			verify(storage).storeToken(StoredToken.getBuilder(
+					TokenType.LOGIN, tokenID, new NewUserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+					.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+					.withMFA(mfa)
+					.build(),
+					"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
+			
+			verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
+			verify(storage).deleteTemporarySessionData(token.getHashedToken());
+			
+			assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+					TokenType.LOGIN, tokenID, new NewUserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
+					.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
+					.withMFA(mfa)
+					.build(),
+					"mfingtoken")));
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"Created user foo linked to remote identity " +
+							"ef0518c79af70ed979907969c6d0a0f7 prov id1 user1", Authentication.class),
+					new LogEvent(Level.INFO, "Logged in user foo with token " + tokenID,
+							Authentication.class));
+		}
 	}
 	
 	@Test
@@ -1467,10 +1558,14 @@ public class AuthenticationLoginTest {
 						new CollectingExternalConfig(Collections.emptyMap())));
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
-				.thenReturn(null);
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(new RemoteIdentity(
+								new RemoteIdentityID("prov", "id1"),
+								new RemoteIdentityDetails("user1", "full1", "f@h.com")
+						)),
+						MFAStatus.UNKNOWN
+				)
+		).thenReturn(null);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
 				Instant.ofEpochMilli(20000L), Instant.ofEpochMilli(30000L), null);
@@ -1478,12 +1573,12 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				set(new PolicyID("pid1"), new PolicyID("pid2")),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
+				new NewUserName("foo"), UID, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com"))
@@ -1493,17 +1588,17 @@ public class AuthenticationLoginTest {
 		verify(storage, never()).link(any(), any());
 		
 		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 100000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
@@ -1540,19 +1635,34 @@ public class AuthenticationLoginTest {
 						new AuthConfig(true, null, null),
 						new CollectingExternalConfig(Collections.emptyMap())));
 
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "d@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-								new RemoteIdentityDetails("user4", "full4", "c@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
-								new RemoteIdentityDetails("user5", "full5", "b@g.com")))))
-				.thenReturn(null);
+		TemporarySessionData tsd = TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
+				.login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id3"),
+										new RemoteIdentityDetails("user3", "full3", "d@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id4"),
+										new RemoteIdentityDetails("user4", "full4", "c@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id5"),
+										new RemoteIdentityDetails("user5", "full5", "b@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				);
+		when(storage.getTemporarySessionData(token.getHashedToken()))
+				.thenReturn(tsd).thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
@@ -1575,16 +1685,16 @@ public class AuthenticationLoginTest {
 		
 		//the identity was linked after identity filtering. Code should just ignore this.
 		when(storage.link(
-				new UserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
+				new NewUserName("foo"), new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
 				new RemoteIdentityDetails("user3", "full3", "d@g.com"))))
 				.thenThrow(new IdentityLinkedException("foo"));
 		
-		when(storage.link(new UserName("foo"), new RemoteIdentity(
+		when(storage.link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id2"),
 				new RemoteIdentityDetails("user2", "full2", "e@g.com"))))
 		.thenReturn(true);
 		
-		when(storage.link(new UserName("foo"), new RemoteIdentity(
+		when(storage.link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id4"),
 				new RemoteIdentityDetails("user4", "full4", "c@g.com"))))
 		.thenReturn(true);
@@ -1595,36 +1705,36 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		final NewToken nt = auth.createUser(token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				Collections.emptySet(),
 				TokenCreationContext.getBuilder().withNullableDevice("d").build(), true);
 
 		verify(storage).createUser(NewUser.getBuilder(
-				new UserName("foo"), UID2, new DisplayName("bar"), Instant.ofEpochMilli(10000),
+				new NewUserName("foo"), UID2, new DisplayName("bar"), Instant.ofEpochMilli(10000),
 				new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 						new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 				.withEmailAddress(new EmailAddress("f@h.com")).build());
 		
-		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+		verify(storage, never()).link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")));
 		
-		verify(storage, never()).link(new UserName("foo"), new RemoteIdentity(
+		verify(storage, never()).link(new NewUserName("foo"), new RemoteIdentity(
 				new RemoteIdentityID("prov", "id5"),
 				new RemoteIdentityDetails("user5", "full5", "b@g.com")));
 
 		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
 				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
 		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(30000));
+		verify(storage).setLastLogin(new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		verify(storage).deleteTemporarySessionData(token.getHashedToken());
 		
 		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
+				TokenType.LOGIN, tokenID, new NewUserName("foo"))
 				.withLifeTime(Instant.ofEpochMilli(20000), 14 * 24 * 3600 * 1000)
 				.withContext(TokenCreationContext.getBuilder().withNullableDevice("d").build())
 				.build(),
@@ -1656,10 +1766,10 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), SMALL, SMALL)
-						.login(set(REMOTE)));
+						.login(set(REMOTE), MFAStatus.UNKNOWN));
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1687,7 +1797,7 @@ public class AuthenticationLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foo");
 		final String id = "bar";
-		final UserName u = UserName.ROOT;
+		final NewUserName u = NewUserName.ROOT;
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1712,7 +1822,7 @@ public class AuthenticationLoginTest {
 		
 		final IncomingToken t = new IncomingToken("foo");
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1741,7 +1851,7 @@ public class AuthenticationLoginTest {
 				.thenThrow(new NoSuchTokenException("foo"));
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1772,7 +1882,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1803,7 +1913,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1835,7 +1945,7 @@ public class AuthenticationLoginTest {
 				.thenReturn(null);
 		
 		final String id = "bar";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1867,12 +1977,18 @@ public class AuthenticationLoginTest {
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+						.login(
+								set(new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)),
+								MFAStatus.UNKNOWN
+						)
+				)
 				.thenReturn(null);
 		
 		final String id = "bar"; //yep, that won't match
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1900,23 +2016,29 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new UserExistsException("baz")).when(storage).createUser(
-				NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1942,9 +2064,15 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
@@ -1952,14 +2080,14 @@ public class AuthenticationLoginTest {
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new IdentityLinkedException("ef0518c79af70ed979907969c6d0a0f7")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -1986,23 +2114,29 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L)).thenReturn(null);
 		
 		doThrow(new NoSuchRoleException("foobar")).when(storage)
-				.createUser(NewUser.getBuilder(new UserName("baz"), UID, new DisplayName("bat"),
+				.createUser(NewUser.getBuilder(new NewUserName("baz"), UID, new DisplayName("bat"),
 						Instant.ofEpochMilli(10000),
 						new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
 						.withEmailAddress(new EmailAddress("e@g.com")).build());
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2029,11 +2163,19 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
@@ -2048,11 +2190,11 @@ public class AuthenticationLoginTest {
 				.thenReturn(Optional.empty());
 		
 		doThrow(new NoSuchUserException("baz")).when(storage).link(
-				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new NewUserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2079,11 +2221,19 @@ public class AuthenticationLoginTest {
 		final IncomingToken t = new IncomingToken("foo");
 
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(testauth.randGenMock.randomUUID()).thenReturn(UID).thenReturn(null);
@@ -2099,11 +2249,11 @@ public class AuthenticationLoginTest {
 				.thenReturn(Optional.empty());
 		
 		doThrow(new LinkFailedException("local")).when(storage).link(
-				new UserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
+				new NewUserName("baz"), new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
 						new RemoteIdentityDetails("user2", "full2", "e@g.com")));
 		
 		final String id = "ef0518c79af70ed979907969c6d0a0f7";
-		final UserName u = new UserName("baz");
+		final NewUserName u = new NewUserName("baz");
 		final DisplayName d = new DisplayName("bat");
 		final EmailAddress e = new EmailAddress("e@g.com");
 		final Set<PolicyID> pids = Collections.emptySet();
@@ -2132,11 +2282,19 @@ public class AuthenticationLoginTest {
 						new CollectingExternalConfig(Collections.emptyMap())));
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
@@ -2145,10 +2303,10 @@ public class AuthenticationLoginTest {
 		when(rand.getToken()).thenReturn("mfingtoken");
 		
 		doThrow(new NoSuchUserException("foo")).when(storage).setLastLogin(
-				new UserName("foo"), Instant.ofEpochMilli(30000));
+				new NewUserName("foo"), Instant.ofEpochMilli(30000));
 		
 		failCreateUser(auth, token, "ef0518c79af70ed979907969c6d0a0f7",
-				new UserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
+				new NewUserName("foo"), new DisplayName("bar"), new EmailAddress("f@h.com"),
 				Collections.emptySet(), CTX, false, new AuthStorageException(
 						"Something is very broken. User should exist but doesn't: " +
 						"50000 No such user: foo"));
@@ -2158,7 +2316,7 @@ public class AuthenticationLoginTest {
 			final Authentication auth,
 			final IncomingToken token,
 			final String identityID,
-			final UserName userName,
+			final NewUserName userName,
 			final DisplayName displayName,
 			final EmailAddress email,
 			final Set<PolicyID> pids,
@@ -2175,81 +2333,100 @@ public class AuthenticationLoginTest {
 	
 	@Test
 	public void completeLogin() throws Exception {
+		// There's only one happy path through the final login method wrt MFA so we just test here
 		completeLogin(Role.DEV_TOKEN, true);
 		completeLogin(Role.ADMIN, false);
 		completeLogin(Role.CREATE_ADMIN, false);
 	}
 
-	private void completeLogin(final Role userRole, final boolean allowLogin)
-			throws Exception {
-		logEvents.clear();
-		
-		final TestMocks testauth = initTestMocks();
-		final AuthStorage storage = testauth.storageMock;
-		final RandomDataGenerator rand = testauth.randGenMock;
-		final Clock clock = testauth.clockMock;
-		final Authentication auth = testauth.auth;
-		
-		AuthenticationTester.setConfigUpdateInterval(auth, -1);
-
-		final IncomingToken token = new IncomingToken("foobar");
-		final UUID tokenID = UUID.randomUUID();
-
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
-				.thenReturn(null);
-		
-		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-				new RemoteIdentityDetails("user1", "full1", "f@h.com")))).thenReturn(Optional.of(
-						AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
-								Instant.ofEpochMilli(70000))
-						.withRole(userRole)
-						.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))
-						.build()));
-		
-		when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
-				.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
-						new AuthConfig(allowLogin, null, null),
-						new CollectingExternalConfig(Collections.emptyMap())));
-		
-		when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
-				Instant.ofEpochMilli(20000L), null);
-		when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
-		when(rand.getToken()).thenReturn("mfingtoken");
-		
-		final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
-				set(new PolicyID("pid1"),  new PolicyID("pid2")),
-				TokenCreationContext.getBuilder().withNullableDevice("dev").build(), false);
-		
-		verify(storage).addPolicyIDs(new UserName("foo"),
-				set(new PolicyID("pid1"), new PolicyID("pid2")));
-		
-		verify(storage, never()).link(any(), any());
-		
-		verify(storage).storeToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
-				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
-				.build(),
-				"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
-		
-		verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
-		verify(storage).deleteTemporarySessionData(token.getHashedToken());
-		
-		assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
-				TokenType.LOGIN, tokenID, new UserName("foo"))
-				.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
-				.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev").build())
-				.build(),
-				"mfingtoken")));
-		
-		assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
-				"Logged in user foo with token " + tokenID, Authentication.class));
+	private void completeLogin(final Role userRole, final boolean allowLogin) throws Exception {
+		for (final MFAStatus mfa: MFAStatus.values()) {
+			logEvents.clear();
+			
+			final TestMocks testauth = initTestMocks();
+			final AuthStorage storage = testauth.storageMock;
+			final RandomDataGenerator rand = testauth.randGenMock;
+			final Clock clock = testauth.clockMock;
+			final Authentication auth = testauth.auth;
+			
+			AuthenticationTester.setConfigUpdateInterval(auth, -1);
+	
+			final IncomingToken token = new IncomingToken("foobar");
+			final UUID tokenID = UUID.randomUUID();
+	
+			when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
+					TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+							set(
+									new RemoteIdentity(
+											new RemoteIdentityID("prov", "id1"),
+											new RemoteIdentityDetails("user1", "full1", "f@h.com")
+									),
+									new RemoteIdentity(
+											new RemoteIdentityID("prov", "id2"),
+											new RemoteIdentityDetails("user2", "full2", "e@g.com")
+									)
+							),
+							mfa
+					))
+					.thenReturn(null);
+			
+			when(storage.getUser(
+					new RemoteIdentity(
+							new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@h.com")
+					)
+			)).thenReturn(Optional.of(
+					AuthUser.getBuilder(new UserName("foo"), UID, new DisplayName("bar"),
+							Instant.ofEpochMilli(70000))
+					.withRole(userRole)
+					.withIdentity(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
+							new RemoteIdentityDetails("user1", "full1", "f@h.com")))
+					.build()
+			));
+			
+			when(storage.getConfig(isA(CollectingExternalConfigMapper.class)))
+					.thenReturn(new AuthConfigSet<CollectingExternalConfig>(
+							new AuthConfig(allowLogin, null, null),
+							new CollectingExternalConfig(Collections.emptyMap())));
+			
+			when(clock.instant()).thenReturn(Instant.ofEpochMilli(10000L),
+					Instant.ofEpochMilli(20000L), null);
+			when(rand.randomUUID()).thenReturn(tokenID).thenReturn(null);
+			when(rand.getToken()).thenReturn("mfingtoken");
+			
+			final NewToken nt = auth.login(token, "ef0518c79af70ed979907969c6d0a0f7",
+					set(new PolicyID("pid1"),  new PolicyID("pid2")),
+					TokenCreationContext.getBuilder().withNullableDevice("dev").build(), false);
+			
+			verify(storage).addPolicyIDs(new UserName("foo"),
+					set(new PolicyID("pid1"), new PolicyID("pid2")));
+			
+			verify(storage, never()).link(any(), any());
+			
+			verify(storage).storeToken(StoredToken.getBuilder(
+					TokenType.LOGIN, tokenID, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+					.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev")
+							.build())
+					.withMFA(mfa)
+					.build(),
+					"hQ9Z3p0WaYunsmIBRUcJgBn5Pd4BCYhOEQCE3enFOzA=");
+			
+			verify(storage).setLastLogin(new UserName("foo"), Instant.ofEpochMilli(20000));
+			verify(storage).deleteTemporarySessionData(token.getHashedToken());
+			
+			assertThat("incorrect new token", nt, is(new NewToken(StoredToken.getBuilder(
+					TokenType.LOGIN, tokenID, new UserName("foo"))
+					.withLifeTime(Instant.ofEpochMilli(10000), 14 * 24 * 3600 * 1000)
+					.withContext(TokenCreationContext.getBuilder().withNullableDevice("dev")
+							.build())
+					.withMFA(mfa)
+					.build(),
+					"mfingtoken")));
+			
+			assertLogEventsCorrect(logEvents, new LogEvent(Level.INFO,
+					"Logged in user foo with token " + tokenID, Authentication.class));
+		}
 	}
 	
 	@Test
@@ -2267,9 +2444,15 @@ public class AuthenticationLoginTest {
 		final UUID tokenID = UUID.randomUUID();
 
 		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2340,19 +2523,34 @@ public class AuthenticationLoginTest {
 		final IncomingToken token = new IncomingToken("foobar");
 		final UUID tokenID = UUID.randomUUID();
 
-		when(storage.getTemporarySessionData(token.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id3"),
-								new RemoteIdentityDetails("user3", "full3", "d@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id4"),
-								new RemoteIdentityDetails("user4", "full4", "c@g.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id5"),
-								new RemoteIdentityDetails("user5", "full5", "b@g.com")))))
-				.thenReturn(null);
+		TemporarySessionData tsd = TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
+				.login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id3"),
+										new RemoteIdentityDetails("user3", "full3", "d@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id4"),
+										new RemoteIdentityDetails("user4", "full4", "c@g.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id5"),
+										new RemoteIdentityDetails("user5", "full5", "b@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				);
+		when(storage.getTemporarySessionData(token.getHashedToken()))
+				.thenReturn(tsd).thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
 				new RemoteIdentityDetails("user1", "full1", "f@h.com")))).thenReturn(Optional.of(
@@ -2460,7 +2658,7 @@ public class AuthenticationLoginTest {
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
 				TemporarySessionData.create(UUID.randomUUID(), SMALL, SMALL)
-						.login(set(REMOTE)));
+						.login(set(REMOTE), MFAStatus.UNKNOWN));
 		
 		failCompleteLogin(auth, null, id, pids, CTX, l,
 				new NullPointerException("Temporary token"));
@@ -2568,9 +2766,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		failCompleteLogin(auth, t, id, pids, CTX, l,
@@ -2590,9 +2794,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2616,9 +2826,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2652,9 +2868,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2690,9 +2912,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2730,11 +2958,19 @@ public class AuthenticationLoginTest {
 		final boolean l = true;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2776,11 +3012,19 @@ public class AuthenticationLoginTest {
 		final boolean l = true;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")),
-						new RemoteIdentity(new RemoteIdentityID("prov", "id2"),
-								new RemoteIdentityDetails("user2", "full2", "e@g.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								),
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id2"),
+										new RemoteIdentityDetails("user2", "full2", "e@g.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
@@ -2824,9 +3068,15 @@ public class AuthenticationLoginTest {
 		final boolean l = false;
 		
 		when(storage.getTemporarySessionData(t.getHashedToken())).thenReturn(
-				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000)
-						.login(set(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),
-								new RemoteIdentityDetails("user1", "full1", "f@h.com")))))
+				TemporarySessionData.create(UUID.randomUUID(), SMALL, 10000).login(
+						set(
+								new RemoteIdentity(
+										new RemoteIdentityID("prov", "id1"),
+										new RemoteIdentityDetails("user1", "full1", "f@h.com")
+								)
+						),
+						MFAStatus.UNKNOWN
+				))
 				.thenReturn(null);
 		
 		when(storage.getUser(new RemoteIdentity(new RemoteIdentityID("prov", "id1"),

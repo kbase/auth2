@@ -46,9 +46,9 @@ public class IdentityProviderConfig {
 		this.apiURL = apiURL;
 		this.defaultLoginRedirectURL = defaultLoginRedirectURL;
 		this.defaultLinkRedirectURL = defaultLinkRedirectURL;
-		this.customConfig = Collections.unmodifiableMap(customConfig);
-		this.envLoginRedirectURL = Collections.unmodifiableMap(envLoginRedirectURL);
-		this.envLinkRedirectURL = Collections.unmodifiableMap(envLinkRedirectURL);
+		this.customConfig = Collections.unmodifiableMap(new HashMap<>(customConfig));
+		this.envLoginRedirectURL = Collections.unmodifiableMap(new HashMap<>(envLoginRedirectURL));
+		this.envLinkRedirectURL = Collections.unmodifiableMap(new HashMap<>(envLinkRedirectURL));
 	}
 
 	/** Get the class name of the identity provider factory for this configuration.

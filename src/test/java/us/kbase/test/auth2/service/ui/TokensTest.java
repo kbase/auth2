@@ -6,6 +6,7 @@ import static org.junit.Assert.fail;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestHTML;
 import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 import static us.kbase.test.auth2.TestCommon.inst;
+import static us.kbase.test.auth2.TestCommon.list;
 import static us.kbase.test.auth2.TestCommon.set;
 
 import java.net.InetAddress;
@@ -50,6 +51,7 @@ import us.kbase.auth2.lib.exceptions.MissingParameterException;
 import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
 import us.kbase.auth2.lib.token.TokenType;
@@ -152,6 +154,7 @@ public class TokensTest {
 				.with("service", false)
 				.with("current", MapBuilder.newHashMap()
 						.with("type", "Login")
+						.with("mfa", "Unknown")
 						.with("id", id)
 						.with("expires", 1000000000010000L)
 						.with("created", 10000)
@@ -198,6 +201,7 @@ public class TokensTest {
 						.withNullableDevice("dev")
 						.withNullableOS("o", "osv")
 						.build())
+				.withMFA(MFAStatus.USED)
 				.build(),
 				token.getHashedToken().getTokenHash());
 		
@@ -209,6 +213,7 @@ public class TokensTest {
 						.withNullableAgent("ag2", "agv2")
 						.withNullableDevice("dev2")
 						.build())
+				.withMFA(MFAStatus.NOT_USED)  // this should never happen for an agent token fwiw
 				.build(),
 				"somehash");
 		
@@ -254,6 +259,7 @@ public class TokensTest {
 				.with("service", true)
 				.with("current", MapBuilder.newHashMap()
 						.with("type", "Login")
+						.with("mfa", "Used")
 						.with("id", id)
 						.with("expires", 1000000000010000L)
 						.with("created", 10000)
@@ -270,6 +276,7 @@ public class TokensTest {
 				.with("tokens", Arrays.asList(
 						MapBuilder.newHashMap()
 								.with("type", "Developer")
+								.with("mfa", "Unknown")
 								.with("id", id3)
 								.with("expires", 3000000000030000L)
 								.with("created", 30000)
@@ -285,6 +292,7 @@ public class TokensTest {
 								.build(),
 						MapBuilder.newHashMap()
 								.with("type", "Agent")
+								.with("mfa", "NotUsed")
 								.with("id", id2)
 								.with("expires", 2000000000020000L)
 								.with("created", 20000)
@@ -388,7 +396,8 @@ public class TokensTest {
 		assertThat("incorrect expires", expires, is(created + 90 * 24 * 3600 * 1000L));
 		
 		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created, Collections.emptyMap(),
-				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L);
+				new UserName("whoo"), TokenType.DEV, MFAStatus.UNKNOWN, "foo",
+				90 * 24 * 3600 * 1000L);
 			
 		
 		final Builder req2 = wt.request()
@@ -402,7 +411,8 @@ public class TokensTest {
 		assertThat("incorrect response code", res.getStatus(), is(200));
 		
 		ServiceTestUtils.checkReturnedToken(manager, json, Collections.emptyMap(),
-				new UserName("whoo"), TokenType.DEV, "foo", 90 * 24 * 3600 * 1000L, true);
+				new UserName("whoo"), TokenType.DEV, MFAStatus.UNKNOWN, "foo",
+				90 * 24 * 3600 * 1000L, true);
 	}
 	
 	@Test
@@ -421,62 +431,65 @@ public class TokensTest {
 				.build(),
 				token.getHashedToken().getTokenHash());
 		
-		final URI target = UriBuilder.fromUri(host).path("/tokens").build();
-		final WebTarget wt = CLI.target(target);
-
-		final Builder req = wt.request()
-				.cookie(COOKIE_NAME, token.getToken());
-		
-		final Form form = new Form();
-		form.param("name", "foo");
-		form.param("type", "service");
-		form.param("customcontext", "foo, bar ; baz, bat");
-		
-		final Response res = req.post(Entity.form(form));
-		final String html = res.readEntity(String.class);
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
-				TestCommon.getCurrentMethodName()), "whoo", "foo");
-		
-		final Pattern p = Pattern.compile(regex);
-		
-		final Matcher m = p.matcher(html);
-		if (!m.matches()) {
-			fail("pattern did not match token page");
-		}
-		final String id = m.group(1);
-		final String newtoken = m.group(2);
-		final long created = Long.parseLong(m.group(3));
-		final long expires = Long.parseLong(m.group(4));
-
-		UUID.fromString(id); // ensures the id is a valid uuid
-		TestCommon.assertCloseToNow(created);
-		assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
-		
-		ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
-				ImmutableMap.of("foo", "bar", "baz", "bat"),
-				new UserName("whoo"), TokenType.SERV, "foo", 100_000_000L * 24 * 3600 * 1000L);
+		for (final String tokenType: list("Service", "service")) {
+			final URI target = UriBuilder.fromUri(host).path("/tokens").build();
+			final WebTarget wt = CLI.target(target);
+	
+			final Builder req = wt.request()
+					.cookie(COOKIE_NAME, token.getToken());
 			
-		
-		final Builder req2 = wt.request()
-				.header("authorization", token.getToken())
-				.header("accept", MediaType.APPLICATION_JSON);
-		
-		final Response jsonresp = req2.post(Entity.json(ImmutableMap.of(
-				"name", "foo",
-				"type", "service",
-				"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
-		@SuppressWarnings("unchecked")
-		final Map<String, Object> json = jsonresp.readEntity(Map.class);
-		
-		assertThat("incorrect response code", res.getStatus(), is(200));
-		
-		ServiceTestUtils.checkReturnedToken(manager, json,
-				ImmutableMap.of("foo", "bar", "baz", "bat"),
-				new UserName("whoo"), TokenType.SERV, "foo",
-				100_000_000L * 24 * 3600 * 1000L, true);
+			final Form form = new Form();
+			form.param("name", "foo");
+			form.param("type", tokenType);
+			form.param("customcontext", "foo, bar ; baz, bat");
+			
+			final Response res = req.post(Entity.form(form));
+			final String html = res.readEntity(String.class);
+			
+			assertThat("incorrect response code", res.getStatus(), is(200));
+			
+			final String regex = String.format(TestCommon.getTestExpectedData(getClass(),
+					TestCommon.getCurrentMethodName()), "whoo", "foo");
+			
+			final Pattern p = Pattern.compile(regex);
+			
+			final Matcher m = p.matcher(html);
+			if (!m.matches()) {
+				fail("pattern did not match token page");
+			}
+			final String id = m.group(1);
+			final String newtoken = m.group(2);
+			final long created = Long.parseLong(m.group(3));
+			final long expires = Long.parseLong(m.group(4));
+	
+			UUID.fromString(id); // ensures the id is a valid uuid
+			TestCommon.assertCloseToNow(created);
+			assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
+			
+			ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
+					ImmutableMap.of("foo", "bar", "baz", "bat"),
+					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
+					100_000_000L * 24 * 3600 * 1000L);
+				
+			
+			final Builder req2 = wt.request()
+					.header("authorization", token.getToken())
+					.header("accept", MediaType.APPLICATION_JSON);
+			
+			final Response jsonresp = req2.post(Entity.json(ImmutableMap.of(
+					"name", "foo",
+					"type", tokenType,
+					"customcontext", ImmutableMap.of("foo", "bar", "baz", "bat"))));
+			@SuppressWarnings("unchecked")
+			final Map<String, Object> json = jsonresp.readEntity(Map.class);
+			
+			assertThat("incorrect response code", res.getStatus(), is(200));
+			
+			ServiceTestUtils.checkReturnedToken(manager, json,
+					ImmutableMap.of("foo", "bar", "baz", "bat"),
+					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
+					100_000_000L * 24 * 3600 * 1000L, true);
+		}
 	}
 	
 	@Test

@@ -23,6 +23,7 @@ import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
 import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
 import us.kbase.auth2.lib.identity.RemoteIdentityID;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.test.auth2.TestCommon;
 
 public class TemporarySessionDataTest {
@@ -52,11 +53,12 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(inst(20000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(opt("stategoeshere")));
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(opt("pkcegoeshere")));
-		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
-		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect user", ti.getUser(), is(opt()));
+		assertThat("incorrect idents", ti.getIdentities(), is(opt()));
+		assertThat("incorrect error", ti.getError(), is(opt()));
+		assertThat("incorrect error type", ti.getErrorType(), is(opt()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt()));
 	}
 	
 	@Test
@@ -64,7 +66,7 @@ public class TemporarySessionDataTest {
 		final UUID id = UUID.randomUUID();
 		final Instant now = Instant.now();
 		final TemporarySessionData ti = TemporarySessionData.create(
-				id, now, now.plusMillis(100000)).login(set(REMOTE1, REMOTE2));
+				id, now, now.plusMillis(100000)).login(set(REMOTE1, REMOTE2), MFAStatus.USED);
 		
 		assertThat("incorrect op", ti.getOperation(), is(Operation.LOGINIDENTS));
 		assertThat("incorrect id", ti.getId(), is(id));
@@ -72,11 +74,12 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(100000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
-		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
+		assertThat("incorrect user", ti.getUser(), is(opt()));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE2, REMOTE1))));
-		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect error", ti.getError(), is(opt()));
+		assertThat("incorrect error type", ti.getErrorType(), is(opt()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt(MFAStatus.USED)));
 		
 		assertImmutable(ti);
 	}
@@ -95,11 +98,12 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(ES));
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
-		assertThat("incorrect user", ti.getUser(), is(Optional.empty()));
+		assertThat("incorrect idents", ti.getIdentities(), is(opt()));
+		assertThat("incorrect user", ti.getUser(), is(opt()));
 		assertThat("incorrect error", ti.getError(), is(Optional.of("foo")));
 		assertThat("incorrect error type", ti.getErrorType(), is(Optional.of(ErrorType.DISABLED)));
 		assertThat("incorrect has error", ti.hasError(), is(true));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt()));
 	}
 	
 	@Test
@@ -115,11 +119,12 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect expires", ti.getExpires(), is(now.plusMillis(10000)));
 		assertThat("incorrect state", ti.getOAuth2State(), is(opt("somestate")));
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(opt("pkce")));
-		assertThat("incorrect idents", ti.getIdentities(), is(Optional.empty()));
+		assertThat("incorrect idents", ti.getIdentities(), is(opt()));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect error", ti.getError(), is(opt()));
+		assertThat("incorrect error type", ti.getErrorType(), is(opt()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt()));
 	}
 	
 	
@@ -139,9 +144,10 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect error", ti.getError(), is(opt()));
+		assertThat("incorrect error type", ti.getErrorType(), is(opt()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt()));
 		
 		assertImmutable(ti);
 	}
@@ -161,9 +167,10 @@ public class TemporarySessionDataTest {
 		assertThat("incorrect pkce", ti.getPKCECodeVerifier(), is(ES));
 		assertThat("incorrect idents", ti.getIdentities(), is(Optional.of(set(REMOTE1, REMOTE2))));
 		assertThat("incorrect user", ti.getUser(), is(Optional.of(new UserName("bar"))));
-		assertThat("incorrect error", ti.getError(), is(Optional.empty()));
-		assertThat("incorrect error type", ti.getErrorType(), is(Optional.empty()));
+		assertThat("incorrect error", ti.getError(), is(opt()));
+		assertThat("incorrect error type", ti.getErrorType(), is(opt()));
 		assertThat("incorrect has error", ti.hasError(), is(false));
+		assertThat("incorrect mfa", ti.getMFA(), is(opt()));
 		
 		assertImmutable(ti);
 	}
@@ -245,16 +252,23 @@ public class TemporarySessionDataTest {
 
 	@Test
 	public void constructLoginIdentsFailNulls() throws Exception {
-		failConstructLoginIdents(null, new NullPointerException("identities"));
+		final MFAStatus m = MFAStatus.UNKNOWN;
+		failConstructLoginIdents(null, m, new NullPointerException("identities"));
+		failConstructLoginIdents(set(REMOTE1), null, new NullPointerException("mfa"));
 		failConstructLoginIdents(
-				set(REMOTE1, null), new NullPointerException("null item in identities"));
-		failConstructLoginIdents(set(), new IllegalArgumentException("empty identities"));
+				set(REMOTE1, null), m, new NullPointerException("null item in identities")
+		);
+		failConstructLoginIdents(set(), m, new IllegalArgumentException("empty identities"));
 	}
 	
-	private void failConstructLoginIdents(final Set<RemoteIdentity> idents, final Exception e) {
+	private void failConstructLoginIdents(
+			final Set<RemoteIdentity> idents,
+			final MFAStatus mfa,
+			final Exception e
+	) {
 		try {
 			TemporarySessionData.create(UUID.randomUUID(), Instant.now(), Instant.now())
-					.login(idents);
+					.login(idents, mfa);
 			fail("expected exception");
 		} catch (Exception got) {
 			TestCommon.assertExceptionCorrect(got, e);

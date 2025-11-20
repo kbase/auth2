@@ -39,7 +39,10 @@ import us.kbase.auth2.lib.config.ConfigAction.State;
 import us.kbase.auth2.lib.exceptions.IdentityRetrievalException;
 import us.kbase.auth2.lib.identity.IdentityProvider;
 import us.kbase.auth2.lib.identity.IdentityProviderConfig;
+import us.kbase.auth2.lib.identity.IdentityProviderResponse;
 import us.kbase.auth2.lib.identity.RemoteIdentity;
+import us.kbase.auth2.lib.identity.RemoteIdentityDetails;
+import us.kbase.auth2.lib.identity.RemoteIdentityID;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
 import us.kbase.auth2.lib.storage.exceptions.StorageInitException;
@@ -158,13 +161,15 @@ public class AuthenticationConstructorTest {
 		}
 
 		@Override
-		public Set<RemoteIdentity> getIdentities(
+		public IdentityProviderResponse getIdentities(
 				final String authcode,
 				final String pkceVerifier,
 				final boolean link,
 				final String environment)
 				throws IdentityRetrievalException {
-			return Collections.emptySet();
+			return IdentityProviderResponse.from(new RemoteIdentity(
+					new RemoteIdentityID("p", "i"), new RemoteIdentityDetails("u", "f", "e"))
+			);
 		}
 
 		@Override

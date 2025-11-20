@@ -169,6 +169,10 @@ public class TestCommon {
 	
 	public static final Optional<String> ES = Optional.empty();
 	
+	public static <T> Optional<T> opt() {
+		return Optional.empty();
+	}
+	
 	public static <T> Optional<T> opt(final T obj) {
 		return Optional.of(obj);
 	}
