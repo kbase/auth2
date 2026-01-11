@@ -123,14 +123,22 @@ public class Admin {
 		final UserName user = new UserName(userName);
 
 		// Convert string lists to appropriate sets, handling nulls
-		final Set<Role> addRoles = toRoleSet(
-				update.addRoles == null ? Collections.emptyList() : update.addRoles);
-		final Set<Role> removeRoles = toRoleSet(
-				update.removeRoles == null ? Collections.emptyList() : update.removeRoles);
-		final Set<String> addCustomRoles = toStringSet(
-				update.addCustomRoles == null ? Collections.emptyList() : update.addCustomRoles);
-		final Set<String> removeCustomRoles = toStringSet(
-				update.removeCustomRoles == null ? Collections.emptyList() : update.removeCustomRoles);
+		final List<String> addRolesList = update.addRoles == null ?
+				Collections.emptyList() : update.addRoles;
+		final List<String> removeRolesList = update.removeRoles == null ?
+				Collections.emptyList() : update.removeRoles;
+		final List<String> addCustomList = update.addCustomRoles == null ?
+				Collections.emptyList() : update.addCustomRoles;
+		final List<String> removeCustomList = update.removeCustomRoles == null ?
+				Collections.emptyList() : update.removeCustomRoles;
+
+		noNulls(addRolesList, "Null item in roles");
+		noNulls(removeRolesList, "Null item in roles");
+		noNulls(addCustomList, "Null item in custom roles");
+		noNulls(removeCustomList, "Null item in custom roles");
+
+		final Set<Role> addRoles = toRoles(addRolesList);
+		final Set<Role> removeRoles = toRoles(removeRolesList);
 
 		// Update built-in roles if any specified
 		if (!addRoles.isEmpty() || !removeRoles.isEmpty()) {
@@ -138,35 +146,33 @@ public class Admin {
 		}
 
 		// Update custom roles if any specified
-		if (!addCustomRoles.isEmpty() || !removeCustomRoles.isEmpty()) {
-			auth.updateCustomRoles(getToken(token), user, addCustomRoles, removeCustomRoles);
+		if (!addCustomList.isEmpty() || !removeCustomList.isEmpty()) {
+			auth.updateCustomRoles(
+					getToken(token), user,
+					new HashSet<>(addCustomList),
+					new HashSet<>(removeCustomList));
 		}
 	}
 
-	private Set<Role> toRoleSet(final List<String> roles) throws IllegalParameterException {
+	private Set<Role> toRoles(final List<String> roles) throws IllegalParameterException {
 		final Set<Role> ret = new HashSet<>();
 		for (final String role : roles) {
-			if (role == null) {
-				throw new IllegalParameterException("Null item in roles list");
-			}
 			try {
 				ret.add(Role.getRole(role));
 			} catch (IllegalArgumentException e) {
-				throw new IllegalParameterException("Invalid role: " + role);
+				throw new IllegalParameterException(e.getMessage(), e);
 			}
 		}
 		return ret;
 	}
 
-	private Set<String> toStringSet(final List<String> items) throws IllegalParameterException {
-		final Set<String> ret = new HashSet<>();
-		for (final String item : items) {
+	private void noNulls(final List<String> list, final String message)
+			throws IllegalParameterException {
+		for (final String item : list) {
 			if (item == null) {
-				throw new IllegalParameterException("Null item in custom roles list");
+				throw new IllegalParameterException(message);
 			}
-			ret.add(item);
 		}
-		return ret;
 	}
 
 }

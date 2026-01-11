@@ -297,6 +297,6 @@ public class AdminIntegrationTest {
 				.put(Entity.json("{\"addRoles\": [\"NotARealRole\"]}"));
 
 		failRequestJSON(res, 400, "Bad Request",
-				new IllegalParameterException("Invalid role: NotARealRole"));
+				new IllegalParameterException("Invalid role id: NotARealRole"));
 	}
 }

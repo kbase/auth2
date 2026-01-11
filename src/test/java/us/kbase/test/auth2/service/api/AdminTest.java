@@ -142,7 +142,7 @@ public class AdminTest {
 				Arrays.asList("InvalidRole"), null, null, null);
 
 		updateUserRolesFail(admin, "token", "username", update,
-				new IllegalParameterException("Invalid role: InvalidRole"));
+				new IllegalParameterException("Invalid role id: InvalidRole"));
 	}
 
 	@Test
@@ -154,7 +154,7 @@ public class AdminTest {
 				Arrays.asList("Admin", null), null, null, null);
 
 		updateUserRolesFail(admin, "token", "username", update,
-				new IllegalParameterException("Null item in roles list"));
+				new IllegalParameterException("Null item in roles"));
 	}
 
 	@Test
@@ -166,7 +166,7 @@ public class AdminTest {
 				null, null, Arrays.asList("custom1", null), null);
 
 		updateUserRolesFail(admin, "token", "username", update,
-				new IllegalParameterException("Null item in custom roles list"));
+				new IllegalParameterException("Null item in custom roles"));
 	}
 
 	@Test
