@@ -12,6 +12,7 @@ import java.util.UUID;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.ClientBuilder;
+import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -29,7 +30,10 @@ import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.exceptions.IllegalParameterException;
+import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.lib.token.IncomingToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenType;
@@ -164,5 +168,135 @@ public class AdminIntegrationTest {
 				.header("authorization", token.getToken());
 
 		failRequestJSON(req.get(), 403, "Forbidden", new UnauthorizedException());
+	}
+
+	/* updateUserRoles integration tests */
+
+	@Test
+	public void updateUserRolesSuccess() throws Exception {
+		final PasswordHashAndSalt pwd = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+
+		// Create admin user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("admin"), UUID.randomUUID(), new DisplayName("Admin"), inst(20000))
+				.withRole(Role.ADMIN)
+				.build(),
+				pwd);
+
+		// Create target user with DevToken role (to be removed)
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("targetuser"), UUID.randomUUID(), new DisplayName("Target"), inst(20000))
+				.withRole(Role.DEV_TOKEN)
+				.build(),
+				pwd);
+
+		final IncomingToken token = new IncomingToken("admintoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("admin")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+
+		final URI target = UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/targetuser/roles")
+				.build();
+
+		final String body = "{\"addRoles\": [\"ServToken\"], \"removeRoles\": [\"DevToken\"]}";
+
+		final Response res = CLI.target(target).request()
+				.header("authorization", token.getToken())
+				.header("content-type", MediaType.APPLICATION_JSON)
+				.put(Entity.json(body));
+
+		assertThat("incorrect response code", res.getStatus(), is(204));
+
+		// Verify roles were updated
+		final AuthUser user = manager.storage.getUser(new UserName("targetuser"));
+		assertThat("should have ServToken", user.hasRole(Role.SERV_TOKEN), is(true));
+		assertThat("should not have DevToken", user.hasRole(Role.DEV_TOKEN), is(false));
+	}
+
+	@Test
+	public void updateUserRolesFailNotAdmin() throws Exception {
+		final PasswordHashAndSalt pwd = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+
+		// Create non-admin user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("nonadmin"), UUID.randomUUID(), new DisplayName("NonAdmin"), inst(20000))
+				.build(),
+				pwd);
+
+		// Create target user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("targetuser"), UUID.randomUUID(), new DisplayName("Target"), inst(20000))
+				.build(),
+				pwd);
+
+		final IncomingToken token = new IncomingToken("usertoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("nonadmin")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+
+		final URI target = UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/targetuser/roles")
+				.build();
+
+		final Response res = CLI.target(target).request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.header("content-type", MediaType.APPLICATION_JSON)
+				.put(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+
+		// Non-admin users cannot grant Admin role - the error message includes the user and role
+		failRequestJSON(res, 403, "Forbidden", new UnauthorizedException(
+				"User nonadmin is not authorized to grant role(s): Administrator"));
+	}
+
+	@Test
+	public void updateUserRolesFailNoToken() throws Exception {
+		final URI target = UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/testuser/roles")
+				.build();
+
+		final Response res = CLI.target(target).request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("content-type", MediaType.APPLICATION_JSON)
+				.put(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+
+		// NoTokenProvidedException extends AuthException (not AuthenticationException)
+		// so it maps to 400 Bad Request
+		failRequestJSON(res, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+	}
+
+	@Test
+	public void updateUserRolesFailInvalidRole() throws Exception {
+		final PasswordHashAndSalt pwd = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+
+		// Create admin user
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("admin"), UUID.randomUUID(), new DisplayName("Admin"), inst(20000))
+				.withRole(Role.ADMIN)
+				.build(),
+				pwd);
+
+		final IncomingToken token = new IncomingToken("admintoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("admin")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+
+		final URI target = UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/admin/roles")
+				.build();
+
+		final Response res = CLI.target(target).request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.header("content-type", MediaType.APPLICATION_JSON)
+				.put(Entity.json("{\"addRoles\": [\"NotARealRole\"]}"));
+
+		failRequestJSON(res, 400, "Bad Request",
+				new IllegalParameterException("Invalid role: NotARealRole"));
 	}
 }
