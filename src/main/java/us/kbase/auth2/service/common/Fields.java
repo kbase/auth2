@@ -127,6 +127,14 @@ public class Fields {
 	 * names from conflicting with other items in the form.
 	 */
 	public static final String CUSTOM_ROLE_FORM_PREFIX = "crole_";
+	/** Roles to add to a user. */
+	public static final String ADD_ROLES = "addRoles";
+	/** Roles to remove from a user. */
+	public static final String REMOVE_ROLES = "removeRoles";
+	/** Custom roles to add to a user. */
+	public static final String ADD_CUSTOM_ROLES = "addCustomRoles";
+	/** Custom roles to remove from a user. */
+	public static final String REMOVE_CUSTOM_ROLES = "removeCustomRoles";
 	
 	/* search */
 	

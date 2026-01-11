@@ -42,6 +42,9 @@ public class APIPaths {
 	public static final String API_V2_ADMIN = API_V2 + SEP + ADMIN;
 	/** The anonymous ID lookup endpoint location relative to the admin root. */
 	public static final String ANONYMOUS_ID_LOOKUP = "anonids";
+
+	/** The admin user roles endpoint location relative to the admin root. */
+	public static final String ADMIN_USER_ROLES = USERS + SEP + "{" + USERNAME + "}" + SEP + "roles";
 	
 	/** The token introspection endpoint location. */
 	public static final String API_V2_TOKEN = API_V2 + SEP + TOKEN;
