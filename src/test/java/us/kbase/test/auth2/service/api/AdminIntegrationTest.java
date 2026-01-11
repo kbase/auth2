@@ -205,7 +205,7 @@ public class AdminIntegrationTest {
 		final Response res = CLI.target(target).request()
 				.header("authorization", token.getToken())
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.put(Entity.json(body));
+				.post(Entity.json(body));
 
 		assertThat("incorrect response code", res.getStatus(), is(204));
 
@@ -245,7 +245,7 @@ public class AdminIntegrationTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("authorization", token.getToken())
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.put(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+				.post(Entity.json("{\"addRoles\": [\"Admin\"]}"));
 
 		// Non-admin users cannot grant Admin role - the error message includes the user and role
 		failRequestJSON(res, 403, "Forbidden", new UnauthorizedException(
@@ -261,7 +261,7 @@ public class AdminIntegrationTest {
 		final Response res = CLI.target(target).request()
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.put(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+				.post(Entity.json("{\"addRoles\": [\"Admin\"]}"));
 
 		// NoTokenProvidedException extends AuthException (not AuthenticationException)
 		// so it maps to 400 Bad Request
@@ -294,7 +294,7 @@ public class AdminIntegrationTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("authorization", token.getToken())
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.put(Entity.json("{\"addRoles\": [\"NotARealRole\"]}"));
+				.post(Entity.json("{\"addRoles\": [\"NotARealRole\"]}"));
 
 		failRequestJSON(res, 400, "Bad Request",
 				new IllegalParameterException("Invalid role id: NotARealRole"));
