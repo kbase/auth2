@@ -1,5 +1,12 @@
 # Authentication Service MKII release notes
 
+## 0.8.1
+
+* Agent, Developer, and Service tokens will now inherit the MFA status of the Login token used
+  to create them.
+* Replaced the deprecated Globus `identities_set` directive with `identity_set`.
+  See https://docs.globus.org/api/auth/reference/#token-introspect
+
 ## 0.8.0
 
 * BACKWARDS INCOMPATIBILITY: In flight login sessions when the server is upgraded will fail.
