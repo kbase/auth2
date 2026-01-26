@@ -892,8 +892,11 @@ public class Authentication {
 			throw new IllegalArgumentException("Cannot create a login token without logging in");
 		}
 		// check for disabled user for all token type targets as well
-		final AuthUser au = getUser(token,
-				new OpReqs("create {} token", tokenType.getDescription()).types(TokenType.LOGIN));
+		final UserAndToken uat = getUserAndToken(
+				token,
+				new OpReqs("create {} token", tokenType.getDescription()).types(TokenType.LOGIN)
+		);
+		final AuthUser au = uat.user;
 		if (!TokenType.AGENT.equals(tokenType)) {
 			final Role reqRole = TokenType.SERV.equals(tokenType) ?
 					Role.SERV_TOKEN : Role.DEV_TOKEN;
@@ -910,6 +913,7 @@ public class Authentication {
 				.withLifeTime(clock.instant(), life)
 				.withContext(tokenCtx)
 				.withTokenName(tokenName)
+				.withMFA(uat.token.getMFA())
 				.build(),
 				randGen.getToken()
 		);
@@ -953,8 +957,27 @@ public class Authentication {
 			final IncomingToken token,
 			final OpReqs reqs)
 			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
-		final StoredToken ht = getToken(token, reqs);
-		final AuthUser u = getUser(ht.getUserName());
+		return getUserAndToken(token, reqs).user;
+	}
+	
+	private static class UserAndToken {
+		public final AuthUser user;
+		public final StoredToken token;
+		
+		private UserAndToken(final AuthUser user, final StoredToken token) {
+			super();
+			this.user = user;
+			this.token = token;
+		}
+	}
+	
+	// requires the user to have at least one of the required roles
+	private UserAndToken getUserAndToken(
+			final IncomingToken token,
+			final OpReqs reqs)
+			throws AuthStorageException, InvalidTokenException, UnauthorizedException {
+		final StoredToken st = getToken(token, reqs);
+		final AuthUser u = getUser(st.getUserName());
 		if (reqs.requiredRoles.size() > 0) {
 			final Set<Role> has = u.getRoles().stream().flatMap(r -> r.included().stream())
 					.collect(Collectors.toSet());
@@ -964,7 +987,7 @@ public class Authentication {
 				throw new UnauthorizedException();
 			}
 		}
-		return u;
+		return new UserAndToken(u, st);
 	}
 
 	// assumes that the token has already been checked and is valid for this user.

@@ -329,7 +329,7 @@ public class GlobusIdentityProviderTest {
 					.put("username", "aUsername")
 					.put("name", "fullname")
 					.put("email", "anEmail")
-					.put("identities_set",
+					.put("identity_set",
 							Arrays.asList("ident1", "anID", "ident2"))
 					.build()));
 		failGetIdentities(idp, authCode, "pixydust", false, new IdentityRetrievalException(
@@ -408,7 +408,7 @@ public class GlobusIdentityProviderTest {
 				.put("username", "aUsername")
 				.put("name", "fullname")
 				.put("email", "anEmail")
-				.put("identities_set",
+				.put("identity_set",
 						Arrays.asList("id1  ", "anID", "\nid2"))
 				.build()));
 		
@@ -443,7 +443,7 @@ public class GlobusIdentityProviderTest {
 				.put("username", "aUsername")
 				.put("name", "fullname")
 				.put("email", "anEmail")
-				.put("identities_set",
+				.put("identity_set",
 						Arrays.asList("id1  ", "anID"))
 				.build());
 		
@@ -543,12 +543,12 @@ public class GlobusIdentityProviderTest {
 		final ParameterBody parameterBody;
 		if (includeIdentitiesSet) {
 			parameterBody = new ParameterBody(
-					new Parameter("include", "identities_set"),
+					new Parameter("include", "identity_set"),
 					new Parameter("token", authtoken));
 		} else {
 			parameterBody = new ParameterBody(
 					new Parameter("token", authtoken),
-					new Parameter(not("include"), not("identities_set")));
+					new Parameter(not("include"), not("identity_set")));
 		}
 		mockClientAndServer.when(
 				new HttpRequest()
@@ -691,7 +691,7 @@ public class GlobusIdentityProviderTest {
 						.put("username", "aUsername")
 						.put("name", "fullname")
 						.put("email", "anEmail")
-						.put("identities_set",
+						.put("identity_set",
 								Arrays.asList("id1  ", "anID", "\nid2"))
 						.build()));
 		
@@ -805,7 +805,7 @@ public class GlobusIdentityProviderTest {
 					"username", "aUsername2",
 					"name", null,
 					"email", null,
-					"identities_set", Arrays.asList("anID2  \n"))));
+					"identity_set", Arrays.asList("anID2  \n"))));
 		final IdentityProviderResponse ipr = idp.getIdentities(
 				authCode, "pkcepkcepkcepkcepkcepkce", true, env);
 		assertThat("incorrect ident set", ipr, is(IdentityProviderResponse.from(
