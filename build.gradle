@@ -197,7 +197,7 @@ dependencies {
 	implementation('org.glassfish.jersey.containers:jersey-container-servlet:2.23.2') {
 		exclude group: 'javax.inject', module: 'javax.inject'
 	}
-	implementation('org.glassfish.jersey.media:jersey-media-json-jackson:2.23.2') {
+	implementation('org.glassfish.jersey.media:jersey-media-json-jackson:3.1.11') {
 		exclude group: 'javax.inject', module: 'javax.inject'
 	}
 	implementation('org.glassfish.jersey.ext:jersey-mvc-mustache:2.23.2') {
