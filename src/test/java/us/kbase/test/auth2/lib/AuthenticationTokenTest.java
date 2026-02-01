@@ -46,6 +46,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchTokenException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.AuthStorage;
 import us.kbase.auth2.lib.token.IncomingToken;
+import us.kbase.auth2.lib.token.MFAStatus;
 import us.kbase.auth2.lib.token.NewToken;
 import us.kbase.auth2.lib.token.StoredToken;
 import us.kbase.auth2.lib.token.TokenName;
@@ -895,7 +896,9 @@ public class AuthenticationTokenTest {
 				new UserName("foo"), UID, new DisplayName("bar"), Instant.now())
 				.build();
 		
-		createToken(user, new HashMap<>(), 7 * 24 * 3600 * 1000L, TokenType.AGENT);
+		createToken(
+				user, new HashMap<>(), 7 * 24 * 3600 * 1000L, TokenType.AGENT, MFAStatus.NOT_USED
+		);
 	}
 	
 	@Test
@@ -916,7 +919,7 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.DEV_TOKEN).build();
 		
-		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV);
+		createToken(user, new HashMap<>(), 90 * 24 * 3600 * 1000L, TokenType.DEV, MFAStatus.USED);
 	}
 	
 	@Test
@@ -948,7 +951,13 @@ public class AuthenticationTokenTest {
 				.withEmailAddress(new EmailAddress("f@h.com"))
 				.withRole(Role.SERV_TOKEN).build();
 		
-		createToken(user, new HashMap<>(), 100_000_000L * 24 * 3600 * 1000L, TokenType.SERV);
+		createToken(
+				user,
+				new HashMap<>(),
+				100_000_000L * 24 * 3600 * 1000L,
+				TokenType.SERV,
+				MFAStatus.USED
+		);
 	}
 	
 	@Test
@@ -1051,6 +1060,15 @@ public class AuthenticationTokenTest {
 			final Map<TokenLifetimeType, Long> lifetimes,
 			final long expectedLifetime,
 			final TokenType tokenType) throws Exception {
+		createToken(user, lifetimes, expectedLifetime, tokenType, MFAStatus.UNKNOWN);
+	}
+	
+	private void createToken(
+			final AuthUser user,
+			final Map<TokenLifetimeType, Long> lifetimes,
+			final long expectedLifetime,
+			final TokenType tokenType,
+			final MFAStatus mfa) throws Exception {
 		final TestMocks testauth = initTestMocks();
 		final AuthStorage storage = testauth.storageMock;
 		final Authentication auth = testauth.auth;
@@ -1064,7 +1082,7 @@ public class AuthenticationTokenTest {
 		final Instant time = Instant.ofEpochMilli(100000);
 		final StoredToken ht = StoredToken.getBuilder(
 				TokenType.LOGIN, UUID.randomUUID(), user.getUserName())
-				.withLifeTime(Instant.now(), Instant.now()).build();
+				.withLifeTime(Instant.now(), Instant.now()).withMFA(mfa).build();
 		
 		when(storage.getToken(t.getHashedToken())).thenReturn(ht, (StoredToken) null);
 		
@@ -1088,6 +1106,7 @@ public class AuthenticationTokenTest {
 			verify(storage).storeToken(StoredToken.getBuilder(tokenType, id, user.getUserName())
 					.withLifeTime(time, expiration)
 					.withTokenName(new TokenName("a name"))
+					.withMFA(mfa)
 					.withContext(TokenCreationContext.getBuilder()
 							.withNullableDevice("device").build()).build(),
 					"p40z9I2zpElkQqSkhbW6KG3jSgMRFr3ummqjSe7OzOc=");
@@ -1100,6 +1119,7 @@ public class AuthenticationTokenTest {
 					StoredToken.getBuilder(tokenType, id, user.getUserName())
 							.withLifeTime(time, time.plusMillis(expectedLifetime))
 							.withTokenName(new TokenName("a name"))
+							.withMFA(mfa)
 							.withContext(TokenCreationContext.getBuilder()
 									.withNullableDevice("device").build()).build(),
 					"this is a token");

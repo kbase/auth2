@@ -226,7 +226,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 			final MultivaluedMap<String, String> formParameters = new MultivaluedHashMap<>();
 			formParameters.add("token", accessToken);
 			if (!ignoreSecondaries) {
-				formParameters.add("include", "identities_set");
+				formParameters.add("include", "identity_set");
 			}
 			
 			final Map<String, Object> m;
@@ -256,7 +256,7 @@ public class GlobusIdentityProviderFactory implements IdentityProviderFactory {
 					new RemoteIdentityID(NAME, id),
 					new RemoteIdentityDetails(username, name, email));
 			@SuppressWarnings("unchecked")
-			List<String> secids = (List<String>) m.get("identities_set");
+			List<String> secids = (List<String>) m.get("identity_set");
 			if (secids == null) {
 				secids = Collections.emptyList();
 			}

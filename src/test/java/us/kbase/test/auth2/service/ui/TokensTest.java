@@ -428,6 +428,7 @@ public class TokensTest {
 				TokenType.LOGIN, UUID.randomUUID(),
 						new UserName("whoo"))
 				.withLifeTime(Instant.ofEpochMilli(10000), 1000000000000000L)
+				.withMFA(MFAStatus.USED)
 				.build(),
 				token.getHashedToken().getTokenHash());
 		
@@ -464,11 +465,13 @@ public class TokensTest {
 	
 			UUID.fromString(id); // ensures the id is a valid uuid
 			TestCommon.assertCloseToNow(created);
-			assertThat("incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L));
+			assertThat(
+					"incorrect expires", expires, is(created + 100_000_000L * 24 * 3600 * 1000L)
+			);
 			
 			ServiceTestUtils.checkStoredToken(manager, newtoken, id, created,
 					ImmutableMap.of("foo", "bar", "baz", "bat"),
-					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
+					new UserName("whoo"), TokenType.SERV, MFAStatus.USED, "foo",
 					100_000_000L * 24 * 3600 * 1000L);
 				
 			
@@ -487,7 +490,7 @@ public class TokensTest {
 			
 			ServiceTestUtils.checkReturnedToken(manager, json,
 					ImmutableMap.of("foo", "bar", "baz", "bat"),
-					new UserName("whoo"), TokenType.SERV, MFAStatus.UNKNOWN, "foo",
+					new UserName("whoo"), TokenType.SERV, MFAStatus.USED, "foo",
 					100_000_000L * 24 * 3600 * 1000L, true);
 		}
 	}
