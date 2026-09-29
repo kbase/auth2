@@ -638,18 +638,19 @@ public class UserEndpointTest {
 	}
 	
 	@Test
-	public void getUserListFailMissingUser() throws Exception {
-		failGetUserList(" u1  ,   , u3", "foobar", 400, "Bad Request",
-				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
-						"Illegal user name [   ]: 30000 Missing input parameter: user name"));
+	public void getUserListSkipMissingUser() throws Exception {
+		getUserList(" baz  ,   , mua", ImmutableMap.of("baz", "fuz", "mua", "paz"));
 	}
 	
 	@Test
-	public void getUserListFailIllegalUser() throws Exception {
-		failGetUserList(" u1  , aA  , u3", "foobar", 400, "Bad Request",
-				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
-						"Illegal user name [ aA  ]: 30010 Illegal user name: " +
-						"Illegal character in user name aA: A"));
+	public void getUserListSkipIllegalUser() throws Exception {
+		getUserList(" baz  , aA  , mua, 9foo, ba*z, u3",
+				ImmutableMap.of("baz", "fuz", "mua", "paz"));
+	}
+	
+	@Test
+	public void getUserListOnlyIllegalUsers() throws Exception {
+		getUserList(" aA  ,   , 9foo", Collections.emptyMap());
 	}
 	
 	@Test
@@ -657,6 +658,15 @@ public class UserEndpointTest {
 		failGetUserList("u1", null, 400, "Bad Request",
 				new NoTokenProvidedException("No user token provided"));
 		failGetUserList("u1", "boobar", 401, "Unauthorized", new InvalidTokenException());
+	}
+	
+	@Test
+	public void getUserListFailBadTokenWithIllegalUsers() throws Exception {
+		// illegal names are skipped, so the token must still be checked
+		failGetUserList(" u1  , aA  ,   ", null, 400, "Bad Request",
+				new NoTokenProvidedException("No user token provided"));
+		failGetUserList(" u1  , aA  ,   ", "boobar", 401, "Unauthorized",
+				new InvalidTokenException());
 	}
 	
 	private void failGetUserList(

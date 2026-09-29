@@ -21,7 +21,6 @@ import us.kbase.auth2.lib.Authentication;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.UserName;
 import us.kbase.auth2.lib.UserSearchSpec;
-import us.kbase.auth2.lib.exceptions.ErrorType;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
 import us.kbase.auth2.lib.exceptions.MissingParameterException;
@@ -54,8 +53,11 @@ public class Users {
 				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
 	}
 
-	static Set<UserName> processUserListString(final String users)
-			throws IllegalParameterException {
+	/* Entries that are empty or not legal user names are skipped, in the same way names that
+	 * don't correspond to an account are omitted from the results, rather than failing the
+	 * entire call. An illegal user name can never correspond to an account.
+	 */
+	static Set<UserName> processUserListString(final String users) {
 		final Set<UserName> uns = new HashSet<>();
 		if (nullOrEmpty(users)) {
 			return uns;
@@ -65,9 +67,7 @@ public class Users {
 			try {
 				uns.add(new UserName(u.trim()));
 			} catch (MissingParameterException | IllegalParameterException e) {
-				//TODO CODE this exception could use some clean up
-				throw new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME, String.format(
-						"Illegal user name [%s]: %s", u, e.getMessage()));
+				// skip, see above
 			}
 		}
 		return uns;

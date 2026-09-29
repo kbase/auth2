@@ -88,7 +88,8 @@ keys `display` and `email`.
 
 `GET /api/V2/users/?list=<comma separated user names>`  
 Validate a set of user names and get the users' display names. Returns a map of username ->
-display name. Any usernames that do not correspond to accounts will not be included in the map.
+display name. Any usernames that do not correspond to accounts, as well as any empty or illegal
+usernames, will not be included in the map.
 
 `GET /api/V2/users/search/<prefix>/?fields=<comma separated fields>`  
 Find users based on a prefix of the username or any parts of the display name, where parts are

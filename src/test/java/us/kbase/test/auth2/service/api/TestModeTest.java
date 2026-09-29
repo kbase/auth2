@@ -272,14 +272,21 @@ public class TestModeTest {
 				new NoTokenProvidedException("No user token provided"));
 		failGetUserDisplayName(tm, "   \t   \n   ", "",
 				new NoTokenProvidedException("No user token provided"));
+	}
+	
+	@Test
+	public void getUserDisplayNameSkipMissingAndIllegalNames() throws Exception {
+		final Authentication auth = mock(Authentication.class);
+		final TestMode tm = new TestMode(auth);
 		
-		failGetUserDisplayName(tm, "token", "foo,  , bar",
-				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
-						"Illegal user name [  ]: 30000 Missing input parameter: user name"));
-		failGetUserDisplayName(tm, "token", "foo, MyName, bar",
-				new IllegalParameterException(ErrorType.ILLEGAL_USER_NAME,
-						"Illegal user name [ MyName]: 30010 Illegal user name: " +
-						"Illegal character in user name MyName: M"));
+		when(auth.testModeGetUserDisplayNames(new IncomingToken("token"),
+				set(new UserName("foo"), new UserName("bar"))))
+				.thenReturn(ImmutableMap.of(
+						new UserName("foo"), new DisplayName("whee"),
+						new UserName("bar"), new DisplayName("whoo")));
+		
+		assertThat("incorrect users", tm.getUsers("token", "foo,  , MyName, 9baz, bar"),
+				is(ImmutableMap.of("foo", "whee", "bar", "whoo")));
 	}
 	
 	@Test
