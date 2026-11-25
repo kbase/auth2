@@ -3,8 +3,11 @@ package us.kbase.auth2.service.api;
 import static us.kbase.auth2.service.common.ServiceCommon.getToken;
 import static us.kbase.auth2.service.common.ServiceCommon.nullOrEmpty;
 
+import java.time.Instant;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -26,8 +29,10 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import us.kbase.auth2.lib.Authentication;
+import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.Role;
 import us.kbase.auth2.lib.UserName;
+import us.kbase.auth2.lib.UserSearchSpec;
 import us.kbase.auth2.lib.exceptions.DisabledUserException;
 import us.kbase.auth2.lib.exceptions.IllegalParameterException;
 import us.kbase.auth2.lib.exceptions.InvalidTokenException;
@@ -37,6 +42,7 @@ import us.kbase.auth2.lib.exceptions.NoSuchUserException;
 import us.kbase.auth2.lib.exceptions.NoTokenProvidedException;
 import us.kbase.auth2.lib.exceptions.UnauthorizedException;
 import us.kbase.auth2.lib.storage.exceptions.AuthStorageException;
+import us.kbase.auth2.lib.user.AuthUser;
 import us.kbase.auth2.service.common.Fields;
 import us.kbase.auth2.service.common.IncomingJSON;
 
@@ -81,6 +87,87 @@ public class Admin {
 			}
 		}
 		return ids;
+	}
+
+	@GET
+	@Path(APIPaths.ADMIN_USERS)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, String> searchUsers(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
+			@QueryParam(Fields.SEARCH_PREFIX) final String prefix,
+			@QueryParam(Fields.FIELDS) final String fields,
+			@QueryParam(Fields.ROLES) final String roles,
+			@QueryParam(Fields.CUSTOM_ROLES) final String customRoles)
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+				UnauthorizedException, IllegalParameterException {
+		// including disabled users makes the library require an admin for every search here
+		final UserSearchSpec.Builder build = UserSearchSpec.getBuilder()
+				.withIncludeDisabled(true);
+		if (!nullOrEmpty(prefix)) {
+			build.withSearchPrefix(prefix);
+			for (final String f: splitList(fields)) {
+				if (f.equals(Fields.SEARCH_USER)) {
+					build.withSearchOnUserName(true);
+				} else if (f.equals(Fields.SEARCH_DISPLAY)) {
+					build.withSearchOnDisplayName(true);
+				}
+			}
+		}
+		for (final Role r: toRoles(splitList(roles))) {
+			build.withSearchOnRole(r);
+		}
+		for (final String r: splitList(customRoles)) {
+			build.withSearchOnCustomRole(r);
+		}
+		final Map<UserName, DisplayName> users = auth.getUserDisplayNames(
+				getToken(token), build.build());
+		return users.entrySet().stream().collect(
+				Collectors.toMap(e -> e.getKey().getName(), e -> e.getValue().getName()));
+	}
+
+	@GET
+	@Path(APIPaths.ADMIN_USER)
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, Object> getUser(
+			@HeaderParam(APIConstants.HEADER_TOKEN) final String token,
+			@PathParam(APIPaths.USERNAME) final String userName)
+			throws NoTokenProvidedException, InvalidTokenException, AuthStorageException,
+				UnauthorizedException, NoSuchUserException, MissingParameterException,
+				IllegalParameterException {
+		final AuthUser u = auth.getUserAsAdmin(getToken(token), new UserName(userName));
+		final Map<String, Object> ret = new HashMap<>();
+		ret.put(Fields.USER, u.getUserName().getName());
+		ret.put(Fields.DISPLAY, u.getDisplayName().getName());
+		ret.put(Fields.EMAIL, u.getEmail().getAddress());
+		ret.put(Fields.LOCAL, u.isLocal());
+		ret.put(Fields.CREATED, u.getCreated().toEpochMilli());
+		ret.put(Fields.LAST_LOGIN, u.getLastLogin().map(Instant::toEpochMilli).orElse(null));
+		ret.put(Fields.DISABLED, u.isDisabled());
+		ret.put(Fields.DISABLED_REASON,
+				u.getDisabledState().getDisabledReason().orElse(null));
+		final List<Map<String, String>> roles = new LinkedList<>();
+		for (final Role r: u.getRoles()) {
+			final Map<String, String> role = new HashMap<>();
+			role.put(Fields.ID, r.getID());
+			role.put(Fields.DESCRIPTION, r.getDescription());
+			roles.add(role);
+		}
+		ret.put(Fields.ROLES, roles);
+		ret.put(Fields.CUSTOM_ROLES, u.getCustomRoles());
+		return ret;
+	}
+
+	private static List<String> splitList(final String list) {
+		if (nullOrEmpty(list)) {
+			return Collections.emptyList();
+		}
+		final List<String> ret = new LinkedList<>();
+		for (final String s: list.split(",")) {
+			if (!s.trim().isEmpty()) {
+				ret.add(s.trim());
+			}
+		}
+		return ret;
 	}
 
 	/** Request body for updating user roles. */

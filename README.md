@@ -120,6 +120,59 @@ RETURNS:
 }
 ```
 
+`GET /api/v2/admin/users?prefix=<prefix>&fields=<fields>&roles=<roles>&customroles=<roles>`  
+Search for users, including disabled users. `Admin`, `CreateAdmin` or `Root` permission is
+required. Every parameter is optional; with none, every user is returned, up to 10000.
+`prefix` matches the start of the user name or of any part of the display name; `fields` is
+`username`, `displayname` or both, comma separated, and limits which of the two `prefix` is
+matched against. `roles` and `customroles` are comma separated role IDs; a returned user holds
+every role listed.
+
+RETURNS:
+```
+{
+  <user name 1>: <display name 1>,
+  ...
+  <user name N>: <display name N>
+}
+```
+
+`GET /api/v2/admin/users/<user name>`  
+Get a user's account details and roles. `Admin`, `CreateAdmin` or `Root` permission is
+required.
+
+RETURNS:
+```
+{
+  "user": <user name>,
+  "display": <display name>,
+  "email": <email address>,
+  "local": <true if the account is a local account>,
+  "created": <creation date in epoch ms>,
+  "lastlogin": <last login date in epoch ms, or null>,
+  "disabled": <true if the account is disabled>,
+  "disabledreason": <the reason the account was disabled, or null>,
+  "roles": [{"id": <built-in role ID>, "desc": <role description>}, ...],
+  "customroles": [<custom role ID>, ...]
+}
+```
+
+`POST /api/v2/admin/users/<user name>/roles`  
+Add and remove a user's roles. Every key is optional.
+
+```
+{
+  "addroles": [<built-in role ID>, ...],
+  "removeroles": [<built-in role ID>, ...],
+  "addcustomroles": [<custom role ID>, ...],
+  "removecustomroles": [<custom role ID>, ...]
+}
+```
+
+Built-in roles follow the same grant rules as the UI: `Root` grants `CreateAdmin`,
+`CreateAdmin` grants `Admin`, and `Admin` grants `DevToken` and `ServToken`. Changing custom
+roles requires `Admin`. A login token is required in both cases.
+
 #### Legacy
 
 Endpoints (mostly) identical to the original Globus and KBase auth endpoints are provided for

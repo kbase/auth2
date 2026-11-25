@@ -7,6 +7,9 @@ import static us.kbase.test.auth2.service.ServiceTestUtils.failRequestJSON;
 
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -24,8 +27,10 @@ import org.junit.BeforeClass;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import com.google.common.collect.ImmutableSet;
 
 import us.kbase.auth2.kbase.KBaseAuthConfig;
+import us.kbase.auth2.lib.CustomRole;
 import us.kbase.auth2.lib.DisplayName;
 import us.kbase.auth2.lib.PasswordHashAndSalt;
 import us.kbase.auth2.lib.Role;
@@ -200,7 +205,7 @@ public class AdminIntegrationTest {
 				.path("/api/V2/admin/users/targetuser/roles")
 				.build();
 
-		final String body = "{\"addRoles\": [\"ServToken\"], \"removeRoles\": [\"DevToken\"]}";
+		final String body = "{\"addroles\": [\"ServToken\"], \"removeroles\": [\"DevToken\"]}";
 
 		final Response res = CLI.target(target).request()
 				.header("authorization", token.getToken())
@@ -245,7 +250,7 @@ public class AdminIntegrationTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("authorization", token.getToken())
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.post(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+				.post(Entity.json("{\"addroles\": [\"Admin\"]}"));
 
 		// Non-admin users cannot grant Admin role - the error message includes the user and role
 		failRequestJSON(res, 403, "Forbidden", new UnauthorizedException(
@@ -261,7 +266,7 @@ public class AdminIntegrationTest {
 		final Response res = CLI.target(target).request()
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.post(Entity.json("{\"addRoles\": [\"Admin\"]}"));
+				.post(Entity.json("{\"addroles\": [\"Admin\"]}"));
 
 		// NoTokenProvidedException extends AuthException (not AuthenticationException)
 		// so it maps to 400 Bad Request
@@ -294,9 +299,151 @@ public class AdminIntegrationTest {
 				.header("accept", MediaType.APPLICATION_JSON)
 				.header("authorization", token.getToken())
 				.header("content-type", MediaType.APPLICATION_JSON)
-				.post(Entity.json("{\"addRoles\": [\"NotARealRole\"]}"));
+				.post(Entity.json("{\"addroles\": [\"NotARealRole\"]}"));
 
 		failRequestJSON(res, 400, "Bad Request",
 				new IllegalParameterException("Invalid role id: NotARealRole"));
+	}
+
+	/* custom roles, user lookup and role search */
+
+	private IncomingToken setUpAdminAndCustomRole() throws Exception {
+		final PasswordHashAndSalt pwd = new PasswordHashAndSalt(
+				"foobarbazbing".getBytes(), "aa".getBytes());
+		manager.storage.setCustomRole(new CustomRole("BERDL_USER", "lakehouse login"));
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("admin"), UUID.randomUUID(), new DisplayName("Admin"), inst(20000))
+				.withRole(Role.ADMIN)
+				.build(),
+				pwd);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("alice"), UUID.randomUUID(), new DisplayName("Alice A"), inst(30000))
+				.withCustomRole("BERDL_USER")
+				.build(),
+				pwd);
+		manager.storage.createLocalUser(LocalUser.getLocalUserBuilder(
+				new UserName("bob"), UUID.randomUUID(), new DisplayName("Bob B"), inst(30000))
+				.build(),
+				pwd);
+		final IncomingToken token = new IncomingToken("admintoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("admin")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+		return token;
+	}
+
+	@Test
+	public void updateUserCustomRoles() throws Exception {
+		final IncomingToken token = setUpAdminAndCustomRole();
+
+		final Response add = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/bob/roles").build()).request()
+				.header("authorization", token.getToken())
+				.post(Entity.json("{\"addcustomroles\": [\"BERDL_USER\"]}"));
+		assertThat("incorrect response code", add.getStatus(), is(204));
+		assertThat("incorrect custom roles",
+				manager.storage.getUser(new UserName("bob")).getCustomRoles(),
+				is(ImmutableSet.of("BERDL_USER")));
+
+		final Response remove = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/alice/roles").build()).request()
+				.header("authorization", token.getToken())
+				.post(Entity.json("{\"removecustomroles\": [\"BERDL_USER\"]}"));
+		assertThat("incorrect response code", remove.getStatus(), is(204));
+		assertThat("incorrect custom roles",
+				manager.storage.getUser(new UserName("alice")).getCustomRoles(),
+				is(Collections.emptySet()));
+	}
+
+	@Test
+	public void getUser() throws Exception {
+		final IncomingToken token = setUpAdminAndCustomRole();
+
+		final Response res = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/alice").build()).request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.get();
+		assertThat("incorrect response code", res.getStatus(), is(200));
+
+		@SuppressWarnings("unchecked")
+		final Map<String, Object> user = res.readEntity(Map.class);
+		final Map<String, Object> expected = new HashMap<>();
+		expected.put("user", "alice");
+		expected.put("display", "Alice A");
+		expected.put("email", null);
+		expected.put("local", true);
+		expected.put("created", 30000);
+		expected.put("lastlogin", null);
+		expected.put("disabled", false);
+		expected.put("disabledreason", null);
+		expected.put("roles", Collections.emptyList());
+		expected.put("customroles", Arrays.asList("BERDL_USER"));
+		assertThat("incorrect user", user, is(expected));
+	}
+
+	@Test
+	public void getUserFailNotAdmin() throws Exception {
+		setUpAdminAndCustomRole();
+		final IncomingToken token = new IncomingToken("bobtoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("bob")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+
+		final Response res = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users/alice").build()).request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.get();
+		assertThat("incorrect response code", res.getStatus(), is(403));
+	}
+
+	@Test
+	public void searchUsersByCustomRole() throws Exception {
+		final IncomingToken token = setUpAdminAndCustomRole();
+
+		final Response res = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users").queryParam("customroles", "BERDL_USER").build())
+				.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.get();
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		assertThat("incorrect users", res.readEntity(Map.class),
+				is(ImmutableMap.of("alice", "Alice A")));
+	}
+
+	@Test
+	public void searchUsersByPrefix() throws Exception {
+		final IncomingToken token = setUpAdminAndCustomRole();
+
+		final Response res = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users").queryParam("prefix", "bo")
+				.queryParam("fields", "username").build())
+				.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.get();
+		assertThat("incorrect response code", res.getStatus(), is(200));
+		assertThat("incorrect users", res.readEntity(Map.class),
+				is(ImmutableMap.of("bob", "Bob B")));
+	}
+
+	@Test
+	public void searchUsersFailNotAdmin() throws Exception {
+		setUpAdminAndCustomRole();
+		final IncomingToken token = new IncomingToken("bobtoken");
+		manager.storage.storeToken(StoredToken.getBuilder(TokenType.LOGIN, UUID.randomUUID(),
+				new UserName("bob")).withLifeTime(inst(10000), inst(1000000000000000L)).build(),
+				token.getHashedToken().getTokenHash());
+
+		final Response res = CLI.target(UriBuilder.fromUri(host)
+				.path("/api/V2/admin/users").queryParam("prefix", "al").build())
+				.request()
+				.header("accept", MediaType.APPLICATION_JSON)
+				.header("authorization", token.getToken())
+				.get();
+		failRequestJSON(res, 403, "Forbidden", new UnauthorizedException(
+				"Only admins may search with root or disabled users included"));
 	}
 }

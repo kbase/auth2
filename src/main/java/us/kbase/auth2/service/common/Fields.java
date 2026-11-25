@@ -128,13 +128,13 @@ public class Fields {
 	 */
 	public static final String CUSTOM_ROLE_FORM_PREFIX = "crole_";
 	/** Roles to add to a user. */
-	public static final String ADD_ROLES = "addRoles";
+	public static final String ADD_ROLES = "addroles";
 	/** Roles to remove from a user. */
-	public static final String REMOVE_ROLES = "removeRoles";
+	public static final String REMOVE_ROLES = "removeroles";
 	/** Custom roles to add to a user. */
-	public static final String ADD_CUSTOM_ROLES = "addCustomRoles";
+	public static final String ADD_CUSTOM_ROLES = "addcustomroles";
 	/** Custom roles to remove from a user. */
-	public static final String REMOVE_CUSTOM_ROLES = "removeCustomRoles";
+	public static final String REMOVE_CUSTOM_ROLES = "removecustomroles";
 	
 	/* search */
 	
